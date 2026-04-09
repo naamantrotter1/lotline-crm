@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NC &amp; SC Tax Lien Auction Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0b1f35;
+      --navy2:  #122b45;
+      --teal:   #1a9bb5;
+      --teal-l: #3ab5c8;
+      --gold:   #e6a817;
+      --bg:     #f2f6fa;
+      --card:   #ffffff;
+      --text:   #1a2533;
+      --muted:  #6b8394;
+      --border: #d4e1ea;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background: var(--navy);
+      color: #8fa8bc;
+      font-size: .75rem;
+      text-align: center;
+      padding: 6px 16px;
+      letter-spacing: .3px;
+    }
+    .topbar a { color: var(--teal-l); text-decoration: none; }
+
+    /* ── NAV ── */
+    .navbar {
+      background: var(--navy2);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      height: 62px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 3px 12px rgba(0,0,0,.3);
+      gap: 28px;
+    }
+    .brand {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      white-space: nowrap;
+    }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: var(--teal);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .brand em { color: var(--teal-l); font-style: normal; }
+    .nav-pill {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #cde;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+    .nav-spacer { flex: 1; }
+    .last-updated {
+      color: #6a8aa0;
+      font-size: .75rem;
+      font-style: italic;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(150deg, var(--navy) 0%, #0e3050 55%, #0e4a60 100%);
+      color: #fff;
+      padding: 56px 28px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(26,155,181,.15) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; max-width: 680px; margin: 0 auto; }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -.3px;
+      margin-bottom: 14px;
+    }
+    .hero h1 .hl { color: var(--teal-l); }
+    .hero p {
+      color: #a8c4d8;
+      font-size: 1rem;
+      line-height: 1.65;
+      max-width: 520px;
+      margin: 0 auto 24px;
+    }
+    .hero-states {
+      display: inline-flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .state-chip {
+      background: rgba(255,255,255,.1);
+      border: 1.5px solid rgba(255,255,255,.18);
+      border-radius: 22px;
+      padding: 7px 18px;
+      font-size: .85rem;
+      font-weight: 700;
+      color: #e8f4fa;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .state-chip .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .dot-nc { background: #4fc3f7; }
+    .dot-sc { background: var(--gold); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      background: var(--navy2);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding: 0 28px;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+    }
+    .stat-item {
+      padding: 18px 32px;
+      text-align: center;
+      border-right: 1px solid rgba(255,255,255,.07);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--teal-l);
+      line-height: 1;
+      display: block;
+    }
+    .stat-lbl {
+      font-size: .7rem;
+      color: #5a7a90;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-top: 3px;
+      display: block;
+    }
+
+    /* ── FILTERS ── */
+    .filters-bar {
+      max-width: 1140px;
+      margin: 28px auto 0;
+      padding: 0 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .filter-group label {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+    }
+    .filter-group select,
+    .filter-group input {
+      padding: 9px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: .88rem;
+      color: var(--text);
+      background: var(--card);
+      outline: none;
+      min-width: 150px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .filter-group select:focus,
+    .filter-group input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(26,155,181,.12);
+    }
+    .btn-reset {
+      padding: 9px 18px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      align-self: flex-end;
+    }
+    .btn-reset:hover { border-color: var(--teal); color: var(--teal); }
+    .filter-spacer { flex: 1; }
+    .results-count {
+      align-self: flex-end;
+      font-size: .8rem;
+      color: var(--muted);
+      padding-bottom: 10px;
+      white-space: nowrap;
+    }
+
+    /* ── TABLE SECTION ── */
+    .table-section {
+      max-width: 1140px;
+      margin: 20px auto 60px;
+      padding: 0 22px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .9px;
+      color: var(--muted);
+    }
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .table-card {
+      background: var(--card);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,.07);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead {
+      background: var(--navy);
+    }
+    th {
+      padding: 14px 18px;
+      text-align: left;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: #90adc0;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color .15s;
+    }
+    th:hover { color: var(--teal-l); }
+    th.sorted { color: var(--teal-l); }
+    .sort-arrow { margin-left: 4px; }
+
+    tbody tr {
+      border-bottom: 1px solid #eef3f7;
+      transition: background .12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f6fbfe; }
+
+    td {
+      padding: 14px 18px;
+      font-size: .87rem;
+      vertical-align: middle;
+    }
+
+    /* state badge */
+    .badge-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .4px;
+    }
+    .badge-nc { background: #ddf0fb; color: #094d70; }
+    .badge-sc { background: #fff4d6; color: #7a4a00; }
+
+    /* county */
+    .county-text {
+      color: var(--muted);
+      font-size: .84rem;
+    }
+
+    /* parcel */
+    .parcel-cell { display: flex; flex-direction: column; gap: 3px; }
+    .parcel-num {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: var(--navy);
+      font-size: .88rem;
+      letter-spacing: .3px;
+    }
+
+    /* date */
+    .date-text { font-weight: 600; }
+    .date-soon { color: #c05c00; }
+    .date-past { color: var(--muted); }
+    .days-chip {
+      display: inline-block;
+      background: #fff3e0;
+      color: #b45000;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: .68rem;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+    .days-chip.today { background: #fde8e8; color: #b00020; }
+    .days-chip.future { background: #e8f5fe; color: #0a5080; }
+
+    /* status */
+    .badge-status {
+      display: inline-block;
+      padding: 4px 11px;
+      border-radius: 12px;
+      font-size: .71rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .s-active    { background: #d6f5e6; color: #0b5c38; }
+    .s-upcoming  { background: #ddeeff; color: #1a3a8b; }
+    .s-cancelled { background: #fde8e8; color: #8b1a1a; text-decoration: line-through; }
+    .s-past      { background: #ebebeb; color: #666; }
+
+    /* source link */
+    .source-link {
+      color: var(--teal);
+      font-size: .75rem;
+      font-weight: 600;
+      display: block;
+      margin-top: 3px;
+      text-decoration: none;
+    }
+    .source-link:hover { text-decoration: underline; }
+
+    /* doc button */
+    .doc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 13px;
+      border: 1.5px solid var(--teal);
+      border-radius: 8px;
+      color: var(--teal);
+      font-size: .78rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .doc-btn:hover { background: var(--teal); color: #fff; }
+    .no-doc { color: #c0c8d0; font-size: .78rem; font-style: italic; }
+
+    /* empty state */
+    .empty-state {
+      display: none;
+      padding: 70px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state p { font-size: .95rem; }
+
+    /* ── SC COMING SOON BANNER ── */
+    .coming-soon-banner {
+      max-width: 1140px;
+      margin: 0 22px 22px;
+      background: linear-gradient(135deg, #fff9ec, #fff3d4);
+      border: 1.5px solid #f0c860;
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: .84rem;
+      color: #7a4a00;
+    }
+    .coming-soon-banner .icon { font-size: 1.2rem; }
+    .coming-soon-banner strong { font-weight: 700; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      color: #4a6a80;
+      padding: 30px 28px;
+      text-align: center;
+      font-size: .78rem;
+      line-height: 1.9;
+    }
+    footer a { color: var(--teal-l); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .footer-sources { margin-top: 10px; }
+
+    @media (max-width: 720px) {
+      .hero h1 { font-size: 1.6rem; }
+      .stat-item { padding: 14px 18px; }
+      td:nth-child(1), th:nth-child(1) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  Data sourced directly from official county government websites &mdash;
+  <a href="https://www.brunswickcountync.gov/912/Legal-Notices" target="_blank" rel="noopener">Brunswick County NC</a>
+  &nbsp;|&nbsp; More counties being added regularly
+</div>
+
+<nav class="navbar">
+  <a class="brand" href="#">
+    <div class="brand-icon">🏛</div>
+    <span>NC<em>&</em>SC <em>Tax Lien</em> Tracker</span>
+  </a>
+  <span class="nav-pill">North &amp; South Carolina</span>
+  <div class="nav-spacer"></div>
+  <span class="last-updated" id="lastUpdated"></span>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Tax Lien Property<br><span class="hl">Auction Tracker</span></h1>
+    <p>Track upcoming tax lien property auctions across North and South Carolina. Parcel numbers, auction dates, and official documents — all in one place.</p>
+    <div class="hero-states">
+      <span class="state-chip"><span class="dot dot-nc"></span> North Carolina</span>
+      <span class="state-chip"><span class="dot dot-sc"></span> South Carolina</span>
+    </div>
+  </div>
+</section>
+
+<div class="stats-strip">
+  <div class="stat-item">
+    <span class="stat-num" id="sTotal">—</span>
+    <span class="stat-lbl">Total Listings</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="sActive">—</span>
+    <span class="stat-lbl">Active / Upcoming</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="sNC">—</span>
+    <span class="stat-lbl">NC Properties</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="sSC">—</span>
+    <span class="stat-lbl">SC Properties</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="sNext">—</span>
+    <span class="stat-lbl">Next Auction</span>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <div class="filter-group">
+    <label for="fState">State</label>
+    <select id="fState" onchange="applyFilters()">
+      <option value="all">All States</option>
+      <option value="NC">North Carolina</option>
+      <option value="SC">South Carolina</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="fCounty">County</label>
+    <select id="fCounty" onchange="applyFilters()">
+      <option value="all">All Counties</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="fStatus">Status</label>
+    <select id="fStatus" onchange="applyFilters()">
+      <option value="all">All Statuses</option>
+      <option value="active">Active</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="cancelled">Cancelled</option>
+      <option value="past">Past</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="fParcel">Search Parcel #</label>
+    <input type="text" id="fParcel" placeholder="e.g. 156LA00502" oninput="applyFilters()" />
+  </div>
+  <button class="btn-reset" onclick="resetFilters()">✕ Reset</button>
+  <div class="filter-spacer"></div>
+  <span class="results-count" id="resultsCount"></span>
+</div>
+
+<!-- SC COMING SOON -->
+<div class="coming-soon-banner" style="max-width:1140px; margin: 16px auto 0;">
+  <span class="icon">⚠️</span>
+  <div>
+    <strong>South Carolina data coming soon.</strong> We're adding Horry, Myrtle Beach, and Charleston County SC listings. Currently showing Brunswick County, NC. More NC counties being added.
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-section">
+  <div class="section-header">
+    <span class="section-title">Tax Lien Auction Listings</span>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="table-card">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy(0)" id="th0">State <span class="sort-arrow">⇅</span></th>
+          <th onclick="sortBy(1)" id="th1">County <span class="sort-arrow">⇅</span></th>
+          <th onclick="sortBy(2)" id="th2">Parcel Number(s) <span class="sort-arrow">⇅</span></th>
+          <th onclick="sortBy(3)" id="th3">Auction Date <span class="sort-arrow">⇅</span></th>
+          <th onclick="sortBy(4)" id="th4">Status <span class="sort-arrow">⇅</span></th>
+          <th>Notice of Sale</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🔍</div>
+      <p>No listings match your current filters.<br>Try adjusting or resetting your search.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>
+    <strong style="color:#8fafc5">NC &amp; SC Tax Lien Auction Tracker</strong> &mdash; Informational use only. Always verify directly with the county before taking action.
+  </div>
+  <div class="footer-sources">
+    Sources: &nbsp;
+    <a href="https://www.brunswickcountync.gov/912/Legal-Notices" target="_blank" rel="noopener">Brunswick County NC Legal Notices</a>
+  </div>
+  <div style="margin-top:8px; color:#3a5a70; font-size:.72rem">
+    Tax lien data is pulled from official government websites. Cancellations and status changes may not be reflected immediately.
+  </div>
+</footer>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const LISTINGS = [
+  // BRUNSWICK COUNTY, NC — source: https://www.brunswickcountync.gov/912/Legal-Notices
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["172CA00101"],
+    date: "2026-02-06", status: "past",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/6991",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["156LA00502"],
+    date: "2026-04-10", status: "active",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7205",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["037CC019"],
+    date: "2026-04-10", status: "active",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7206",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["231JJ029", "231JJ030"],
+    date: "2026-04-10", status: "active",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7208",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["156KF004"],
+    date: "2026-04-10", status: "active",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7207",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["201LA051", "201LA052"],
+    date: "2026-04-10", status: "cancelled",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7210",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["141AA020"],
+    date: "2026-04-10", status: "active",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7209",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["141AC00201"],
+    date: "2026-05-08", status: "upcoming",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7289",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["243LC014"],
+    date: "2026-05-08", status: "upcoming",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7288",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  {
+    state: "NC", county: "Brunswick",
+    parcels: ["22900053"],
+    date: "2026-05-08", status: "upcoming",
+    docUrl: "https://www.brunswickcountync.gov/DocumentCenter/View/7290",
+    sourceUrl: "https://www.brunswickcountync.gov/912/Legal-Notices"
+  },
+  // Add SC listings here when available
+];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+
+function parseDate(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function formatDate(s) {
+  return parseDate(s).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function daysFrom(s) {
+  return Math.round((parseDate(s) - TODAY) / 86400000);
+}
+const STATUS_META = {
+  active:    { label: 'Active',               cls: 's-active'    },
+  upcoming:  { label: 'Upcoming',             cls: 's-upcoming'  },
+  cancelled: { label: 'Cancelled – Taxes Paid', cls: 's-cancelled' },
+  past:      { label: 'Auction Passed',        cls: 's-past'      },
+};
+
+// ── SORT STATE ────────────────────────────────────────────────────────────────
+let sortCol = 3, sortAsc = true;
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderTable(data) {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const days = daysFrom(r.date);
+    const sm = STATUS_META[r.status] || { label: r.status, cls: '' };
+
+    let daysHtml = '';
+    if (r.status !== 'cancelled' && r.status !== 'past') {
+      if (days === 0) {
+        daysHtml = '<span class="days-chip today">TODAY</span>';
+      } else if (days > 0 && days <= 30) {
+        daysHtml = `<span class="days-chip">in ${days}d</span>`;
+      } else if (days > 30) {
+        daysHtml = `<span class="days-chip future">in ${days}d</span>`;
+      }
+    }
+    const dateCls = days >= 0 && days <= 14 && r.status !== 'cancelled' ? 'date-soon' : (days < 0 ? 'date-past' : '');
+
+    const parcelsHtml = r.parcels.map(p => `<span class="parcel-num">${p}</span>`).join('');
+    const docHtml = r.docUrl
+      ? `<a class="doc-btn" href="${r.docUrl}" target="_blank" rel="noopener">📄 View Notice</a>`
+      : `<span class="no-doc">Not available</span>`;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="badge-state badge-${r.state.toLowerCase()}">${r.state}</span></td>
+      <td><span class="county-text">${r.county} County</span>
+          <a class="source-link" href="${r.sourceUrl}" target="_blank" rel="noopener">↗ County Source</a></td>
+      <td><div class="parcel-cell">${parcelsHtml}</div></td>
+      <td><span class="date-text ${dateCls}">${formatDate(r.date)}</span>${daysHtml}</td>
+      <td><span class="badge-status ${sm.cls}">${sm.label}</span></td>
+      <td>${docHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const empty = document.getElementById('emptyState');
+  document.getElementById('mainTable').style.display = data.length ? '' : 'none';
+  empty.style.display = data.length ? 'none' : 'block';
+  document.getElementById('resultsCount').textContent =
+    `Showing ${data.length} of ${LISTINGS.length} listing${LISTINGS.length !== 1 ? 's' : ''}`;
+}
+
+// ── SORT ─────────────────────────────────────────────────────────────────────
+function sortData(arr) {
+  return [...arr].sort((a, b) => {
+    let va, vb;
+    switch (sortCol) {
+      case 0: va = a.state;  vb = b.state;  break;
+      case 1: va = a.county; vb = b.county; break;
+      case 2: va = a.parcels[0]; vb = b.parcels[0]; break;
+      case 3: va = a.date;   vb = b.date;   break;
+      case 4: va = a.status; vb = b.status; break;
+      default: return 0;
+    }
+    return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+function sortBy(col) {
+  sortAsc = sortCol === col ? !sortAsc : true;
+  sortCol = col;
+  for (let i = 0; i < 5; i++) {
+    const th = document.getElementById('th' + i);
+    const arrow = i === col ? (sortAsc ? '↑' : '↓') : '⇅';
+    th.classList.toggle('sorted', i === col);
+    th.querySelector('.sort-arrow').textContent = arrow;
+  }
+  applyFilters();
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const st  = document.getElementById('fState').value;
+  const co  = document.getElementById('fCounty').value;
+  const ss  = document.getElementById('fStatus').value;
+  const q   = document.getElementById('fParcel').value.trim().toLowerCase();
+
+  let filtered = LISTINGS.filter(r => {
+    if (st !== 'all' && r.state  !== st)  return false;
+    if (co !== 'all' && r.county !== co)  return false;
+    if (ss !== 'all' && r.status !== ss)  return false;
+    if (q && !r.parcels.join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  renderTable(sortData(filtered));
+}
+function resetFilters() {
+  document.getElementById('fState').value  = 'all';
+  document.getElementById('fCounty').value = 'all';
+  document.getElementById('fStatus').value = 'all';
+  document.getElementById('fParcel').value = '';
+  applyFilters();
+}
+
+// ── COUNTY DROPDOWN ───────────────────────────────────────────────────────────
+function buildCountyDropdown() {
+  const sel = document.getElementById('fCounty');
+  [...new Set(LISTINGS.map(r => r.county))].sort().forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c + ' County';
+    sel.appendChild(o);
+  });
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const active = LISTINGS.filter(r => r.status === 'active' || r.status === 'upcoming').length;
+  const nc = LISTINGS.filter(r => r.state === 'NC').length;
+  const sc = LISTINGS.filter(r => r.state === 'SC').length;
+
+  const futureDates = LISTINGS
+    .filter(r => (r.status === 'active' || r.status === 'upcoming') && parseDate(r.date) >= TODAY)
+    .map(r => r.date).sort();
+
+  document.getElementById('sTotal').textContent  = LISTINGS.length;
+  document.getElementById('sActive').textContent = active;
+  document.getElementById('sNC').textContent     = nc;
+  document.getElementById('sSC').textContent     = sc || '—';
+  document.getElementById('sNext').textContent   = futureDates.length ? formatDate(futureDates[0]) : 'N/A';
+  document.getElementById('lastUpdated').textContent =
+    'Updated: ' + TODAY.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+buildCountyDropdown();
+updateStats();
+applyFilters();
+</script>
+</body>
+</html>

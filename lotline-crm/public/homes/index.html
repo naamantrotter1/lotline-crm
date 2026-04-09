@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LotLine Homes – Available Homes</title>
+  <link rel="stylesheet" href="styles.css?v=4" />
+  <style>
+    body { margin: 0; padding: 0; background: #f3f4f6; }
+    .homes-page { padding: 20px; }
+    .homes-page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .homes-page-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+      white-space: nowrap;
+    }
+    .zip-form-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .zip-form-inline input {
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.875rem;
+      width: 140px;
+      outline: none;
+    }
+    .zip-form-inline input:focus { border-color: #f97316; }
+    .zip-form-inline button {
+      background: #f97316;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .zip-form-inline button:hover { background: #ea6c0a; }
+  </style>
+</head>
+<body>
+
+  <div class="homes-page">
+    <div class="homes-page-header">
+      <h2>Available Homes</h2>
+      <form class="zip-form-inline" id="zipForm">
+        <span>📍</span>
+        <input type="text" placeholder="Enter ZIP code" maxlength="5" id="zipInput" />
+        <button type="submit">Find Homes →</button>
+      </form>
+    </div>
+
+    <div class="filters-bar">
+      <select class="filter-select" id="filterType">
+        <option value="">All Home Types</option>
+        <option value="single">Single-Wide (14–18 ft wide)</option>
+        <option value="double">Double-Wide (20–32 ft wide)</option>
+        <option value="triple">Triple-Wide (45+ ft wide)</option>
+      </select>
+      <select class="filter-select" id="filterBeds">
+        <option value="">Any Bedrooms</option>
+        <option value="2">2 Bedrooms</option>
+        <option value="3">3 Bedrooms</option>
+        <option value="4">4+ Bedrooms</option>
+      </select>
+      <select class="filter-select" id="filterPrice">
+        <option value="">Any Price</option>
+        <option value="80000">Up to $80,000</option>
+        <option value="120000">Up to $120,000</option>
+        <option value="180000">Up to $180,000</option>
+        <option value="250000">Up to $250,000</option>
+      </select>
+      <select class="filter-select" id="filterBrand">
+        <option value="">Any Manufacturer</option>
+        <option value="Clayton Homes">Clayton Homes</option>
+        <option value="Cavco Homes">Cavco Homes</option>
+      </select>
+      <select class="filter-select" id="filterSort">
+        <option value="default">Sort: Featured</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="sqft">Largest First</option>
+      </select>
+      <span class="results-count" id="resultsCount"></span>
+    </div>
+
+    <div class="homes-grid" id="homesGrid"></div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=3"></script>
+</body>
+</html>

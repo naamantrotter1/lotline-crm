@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "LotLine Homes",
+      "runtimeExecutable": "/usr/bin/ruby",
+      "runtimeArgs": ["-run", "-e", "httpd", "--", "-p", "3000", "/tmp/lotline"],
+      "port": 3000
+    }
+  ]
+}
