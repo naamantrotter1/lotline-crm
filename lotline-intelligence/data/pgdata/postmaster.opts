@@ -1,0 +1,1 @@
+/Users/naamantrotter/Land Acquisition/lotline-intelligence/backend/node_modules/@embedded-postgres/darwin-arm64/native/bin/postgres "-D" "/Users/naamantrotter/Land Acquisition/lotline-intelligence/data/pgdata" "-p" "5432"

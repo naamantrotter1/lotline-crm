@@ -1,0 +1,4682 @@
+{
+  "all": {
+    "37001": {
+      "dom": 83,
+      "str": 290.6,
+      "absorption": 74.4,
+      "mos": 4.2,
+      "medianPrice": 301023,
+      "medianPpa": 859353
+    },
+    "37003": {
+      "dom": 76,
+      "str": 295.7,
+      "absorption": 74.7,
+      "mos": 4.1,
+      "medianPrice": 240000,
+      "medianPpa": 190478
+    },
+    "37005": {
+      "dom": 83,
+      "str": 167.6,
+      "absorption": 62.6,
+      "mos": 7.3,
+      "medianPrice": 218750,
+      "medianPpa": 130040
+    },
+    "37007": {
+      "dom": 101,
+      "str": 165.1,
+      "absorption": 62.3,
+      "mos": 7.4,
+      "medianPrice": 177250,
+      "medianPpa": 114539
+    },
+    "37009": {
+      "dom": 75,
+      "str": 135.9,
+      "absorption": 57.6,
+      "mos": 8.9,
+      "medianPrice": 262000,
+      "medianPpa": 133712
+    },
+    "37011": {
+      "dom": 99,
+      "str": 117.7,
+      "absorption": 54.1,
+      "mos": 10.3,
+      "medianPrice": 340000,
+      "medianPpa": 439741
+    },
+    "37013": {
+      "dom": 85,
+      "str": 162.3,
+      "absorption": 61.9,
+      "mos": 7.5,
+      "medianPrice": 217500,
+      "medianPpa": 343131
+    },
+    "37015": {
+      "dom": 77,
+      "str": 190.2,
+      "absorption": 65.5,
+      "mos": 6.4,
+      "medianPrice": 119500,
+      "medianPpa": 135808
+    },
+    "37017": {
+      "dom": 105,
+      "str": 183.3,
+      "absorption": 64.7,
+      "mos": 6.6,
+      "medianPrice": 136000,
+      "medianPpa": 100506
+    },
+    "37019": {
+      "dom": 100,
+      "str": 172.1,
+      "absorption": 63.2,
+      "mos": 7.1,
+      "medianPrice": 344799,
+      "medianPpa": 1593134
+    },
+    "37021": {
+      "dom": 72,
+      "str": 170.4,
+      "absorption": 63,
+      "mos": 7.1,
+      "medianPrice": 434759,
+      "medianPpa": 948849
+    },
+    "37023": {
+      "dom": 77,
+      "str": 226.9,
+      "absorption": 69.4,
+      "mos": 5.4,
+      "medianPrice": 210000,
+      "medianPpa": 196768
+    },
+    "37025": {
+      "dom": 66,
+      "str": 247.1,
+      "absorption": 71.2,
+      "mos": 4.9,
+      "medianPrice": 368561,
+      "medianPpa": 1267963
+    },
+    "37027": {
+      "dom": 79,
+      "str": 217.6,
+      "absorption": 68.5,
+      "mos": 5.6,
+      "medianPrice": 225000,
+      "medianPpa": 276251
+    },
+    "37029": {
+      "dom": 68,
+      "str": 235.6,
+      "absorption": 70.2,
+      "mos": 5.2,
+      "medianPrice": 395000,
+      "medianPpa": 385944
+    },
+    "37031": {
+      "dom": 91,
+      "str": 183.5,
+      "absorption": 64.7,
+      "mos": 6.6,
+      "medianPrice": 394000,
+      "medianPpa": 1051758
+    },
+    "37033": {
+      "dom": 91,
+      "str": 214.8,
+      "absorption": 68.2,
+      "mos": 5.7,
+      "medianPrice": 185900,
+      "medianPpa": 23551
+    },
+    "37035": {
+      "dom": 70,
+      "str": 223.2,
+      "absorption": 69.1,
+      "mos": 5.5,
+      "medianPrice": 296859,
+      "medianPpa": 653007
+    },
+    "37037": {
+      "dom": 77,
+      "str": 208.6,
+      "absorption": 67.6,
+      "mos": 5.8,
+      "medianPrice": 575500,
+      "medianPpa": 1112060
+    },
+    "37039": {
+      "dom": 82,
+      "str": 108.8,
+      "absorption": 52.1,
+      "mos": 11.2,
+      "medianPrice": 233000,
+      "medianPpa": 114386
+    },
+    "37041": {
+      "dom": 111,
+      "str": 153,
+      "absorption": 60.5,
+      "mos": 8,
+      "medianPrice": 184750,
+      "medianPpa": 308217
+    },
+    "37043": {
+      "dom": 133,
+      "str": 74.4,
+      "absorption": 42.7,
+      "mos": 16.3,
+      "medianPrice": 232000,
+      "medianPpa": 90848
+    },
+    "37045": {
+      "dom": 83,
+      "str": 184.5,
+      "absorption": 64.8,
+      "mos": 6.6,
+      "medianPrice": 240000,
+      "medianPpa": 357878
+    },
+    "37047": {
+      "dom": 78,
+      "str": 162.3,
+      "absorption": 61.9,
+      "mos": 7.5,
+      "medianPrice": 160000,
+      "medianPpa": 112500
+    },
+    "37049": {
+      "dom": 79,
+      "str": 257.2,
+      "absorption": 72,
+      "mos": 4.7,
+      "medianPrice": 286732,
+      "medianPpa": 910319
+    },
+    "37051": {
+      "dom": 67,
+      "str": 187.5,
+      "absorption": 65.2,
+      "mos": 6.5,
+      "medianPrice": 248992,
+      "medianPpa": 678512
+    },
+    "37053": {
+      "dom": 85,
+      "str": 209.3,
+      "absorption": 67.7,
+      "mos": 5.8,
+      "medianPrice": 480000,
+      "medianPpa": 956535
+    },
+    "37055": {
+      "dom": 80,
+      "str": 283,
+      "absorption": 73.9,
+      "mos": 4.3,
+      "medianPrice": 615000,
+      "medianPpa": 2663383
+    },
+    "37057": {
+      "dom": 74,
+      "str": 284.4,
+      "absorption": 74,
+      "mos": 4.3,
+      "medianPrice": 272929,
+      "medianPpa": 432226
+    },
+    "37059": {
+      "dom": 73,
+      "str": 302.4,
+      "absorption": 75.1,
+      "mos": 4,
+      "medianPrice": 310000,
+      "medianPpa": 449281
+    },
+    "37061": {
+      "dom": 103,
+      "str": 206.4,
+      "absorption": 67.4,
+      "mos": 5.9,
+      "medianPrice": 160000,
+      "medianPpa": 125000
+    },
+    "37063": {
+      "dom": 57,
+      "str": 204.3,
+      "absorption": 67.1,
+      "mos": 6,
+      "medianPrice": 409941,
+      "medianPpa": 2184699
+    },
+    "37065": {
+      "dom": 88,
+      "str": 166.5,
+      "absorption": 62.5,
+      "mos": 7.3,
+      "medianPrice": 145000,
+      "medianPpa": 324557
+    },
+    "37067": {
+      "dom": 59,
+      "str": 253.1,
+      "absorption": 71.7,
+      "mos": 4.8,
+      "medianPrice": 289595,
+      "medianPpa": 892917
+    },
+    "37069": {
+      "dom": 85,
+      "str": 199.8,
+      "absorption": 66.6,
+      "mos": 6.1,
+      "medianPrice": 324870,
+      "medianPpa": 416844
+    },
+    "37071": {
+      "dom": 70,
+      "str": 196.4,
+      "absorption": 66.3,
+      "mos": 6.2,
+      "medianPrice": 295602,
+      "medianPpa": 805027
+    },
+    "37073": {
+      "dom": 78,
+      "str": 229.5,
+      "absorption": 69.7,
+      "mos": 5.3,
+      "medianPrice": 244000,
+      "medianPpa": 107353
+    },
+    "37075": {
+      "dom": 102,
+      "str": 83.8,
+      "absorption": 45.6,
+      "mos": 14.5,
+      "medianPrice": 199950,
+      "medianPpa": 150355
+    },
+    "37077": {
+      "dom": 68,
+      "str": 217.8,
+      "absorption": 68.5,
+      "mos": 5.6,
+      "medianPrice": 300000,
+      "medianPpa": 357143
+    },
+    "37079": {
+      "dom": 62,
+      "str": 281.9,
+      "absorption": 73.8,
+      "mos": 4.3,
+      "medianPrice": 146000,
+      "medianPpa": 154764
+    },
+    "37081": {
+      "dom": 59,
+      "str": 270.1,
+      "absorption": 73,
+      "mos": 4.5,
+      "medianPrice": 289842,
+      "medianPpa": 1031614
+    },
+    "37083": {
+      "dom": 80,
+      "str": 222.1,
+      "absorption": 69,
+      "mos": 5.5,
+      "medianPrice": 149900,
+      "medianPpa": 252407
+    },
+    "37085": {
+      "dom": 96,
+      "str": 180.2,
+      "absorption": 64.3,
+      "mos": 6.8,
+      "medianPrice": 319835,
+      "medianPpa": 688442
+    },
+    "37087": {
+      "dom": 87,
+      "str": 143.9,
+      "absorption": 59,
+      "mos": 8.5,
+      "medianPrice": 335000,
+      "medianPpa": 467646
+    },
+    "37089": {
+      "dom": 80,
+      "str": 193.7,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 412441,
+      "medianPpa": 766141
+    },
+    "37091": {
+      "dom": 67,
+      "str": 204.9,
+      "absorption": 67.2,
+      "mos": 5.9,
+      "medianPrice": 139500,
+      "medianPpa": 182994
+    },
+    "37093": {
+      "dom": 79,
+      "str": 226.9,
+      "absorption": 69.4,
+      "mos": 5.4,
+      "medianPrice": 305000,
+      "medianPpa": 706892
+    },
+    "37095": {
+      "dom": 91,
+      "str": 192.9,
+      "absorption": 65.9,
+      "mos": 6.3,
+      "medianPrice": 235000,
+      "medianPpa": 160000
+    },
+    "37097": {
+      "dom": 78,
+      "str": 210.5,
+      "absorption": 67.8,
+      "mos": 5.8,
+      "medianPrice": 366881,
+      "medianPpa": 961049
+    },
+    "37099": {
+      "dom": 101,
+      "str": 111.6,
+      "absorption": 52.7,
+      "mos": 10.9,
+      "medianPrice": 336250,
+      "medianPpa": 234541
+    },
+    "37101": {
+      "dom": 83,
+      "str": 204,
+      "absorption": 67.1,
+      "mos": 6,
+      "medianPrice": 346114,
+      "medianPpa": 661557
+    },
+    "37103": {
+      "dom": 85,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 200000,
+      "medianPpa": 163602
+    },
+    "37105": {
+      "dom": 79,
+      "str": 165.8,
+      "absorption": 62.4,
+      "mos": 7.3,
+      "medianPrice": 293100,
+      "medianPpa": 546166
+    },
+    "37107": {
+      "dom": 79,
+      "str": 245.2,
+      "absorption": 71,
+      "mos": 5,
+      "medianPrice": 180000,
+      "medianPpa": 357137
+    },
+    "37109": {
+      "dom": 78,
+      "str": 213,
+      "absorption": 68.1,
+      "mos": 5.7,
+      "medianPrice": 375000,
+      "medianPpa": 595604
+    },
+    "37111": {
+      "dom": 88,
+      "str": 153.2,
+      "absorption": 60.5,
+      "mos": 7.9,
+      "medianPrice": 225000,
+      "medianPpa": 143146
+    },
+    "37113": {
+      "dom": 79,
+      "str": 138.2,
+      "absorption": 58,
+      "mos": 8.8,
+      "medianPrice": 255000,
+      "medianPpa": 181516
+    },
+    "37115": {
+      "dom": 96,
+      "str": 136.4,
+      "absorption": 57.7,
+      "mos": 8.9,
+      "medianPrice": 325000,
+      "medianPpa": 75047
+    },
+    "37117": {
+      "dom": 96,
+      "str": 189.3,
+      "absorption": 65.4,
+      "mos": 6.4,
+      "medianPrice": 120000,
+      "medianPpa": 133288
+    },
+    "37119": {
+      "dom": 60,
+      "str": 240.1,
+      "absorption": 70.6,
+      "mos": 5.1,
+      "medianPrice": 462589,
+      "medianPpa": 2287898
+    },
+    "37121": {
+      "dom": 100,
+      "str": 128.3,
+      "absorption": 56.2,
+      "mos": 9.5,
+      "medianPrice": 223000,
+      "medianPpa": 84075
+    },
+    "37123": {
+      "dom": 100,
+      "str": 174.9,
+      "absorption": 63.6,
+      "mos": 7,
+      "medianPrice": 157750,
+      "medianPpa": 445524
+    },
+    "37125": {
+      "dom": 86,
+      "str": 218.3,
+      "absorption": 68.6,
+      "mos": 5.6,
+      "medianPrice": 406490,
+      "medianPpa": 850296
+    },
+    "37127": {
+      "dom": 90,
+      "str": 180.2,
+      "absorption": 64.3,
+      "mos": 6.8,
+      "medianPrice": 265000,
+      "medianPpa": 488380
+    },
+    "37129": {
+      "dom": 66,
+      "str": 267.8,
+      "absorption": 72.8,
+      "mos": 4.5,
+      "medianPrice": 460693,
+      "medianPpa": 2258499
+    },
+    "37131": {
+      "dom": 85,
+      "str": 172.3,
+      "absorption": 63.3,
+      "mos": 7.1,
+      "medianPrice": 150000,
+      "medianPpa": 252449
+    },
+    "37133": {
+      "dom": 70,
+      "str": 269.7,
+      "absorption": 73,
+      "mos": 4.5,
+      "medianPrice": 293277,
+      "medianPpa": 775326
+    },
+    "37135": {
+      "dom": 55,
+      "str": 240.1,
+      "absorption": 70.6,
+      "mos": 5.1,
+      "medianPrice": 489500,
+      "medianPpa": 1042772
+    },
+    "37137": {
+      "dom": 107,
+      "str": 113.2,
+      "absorption": 53.1,
+      "mos": 10.7,
+      "medianPrice": 225000,
+      "medianPpa": 186568
+    },
+    "37139": {
+      "dom": 76,
+      "str": 258.8,
+      "absorption": 72.1,
+      "mos": 4.7,
+      "medianPrice": 282500,
+      "medianPpa": 549565
+    },
+    "37141": {
+      "dom": 81,
+      "str": 224.3,
+      "absorption": 69.2,
+      "mos": 5.4,
+      "medianPrice": 404000,
+      "medianPpa": 995921
+    },
+    "37143": {
+      "dom": 106,
+      "str": 121.5,
+      "absorption": 54.8,
+      "mos": 10,
+      "medianPrice": 212500,
+      "medianPpa": 276923
+    },
+    "37145": {
+      "dom": 73,
+      "str": 280.2,
+      "absorption": 73.7,
+      "mos": 4.3,
+      "medianPrice": 234500,
+      "medianPpa": 205240
+    },
+    "37147": {
+      "dom": 71,
+      "str": 282.7,
+      "absorption": 73.9,
+      "mos": 4.3,
+      "medianPrice": 266266,
+      "medianPpa": 881356
+    },
+    "37149": {
+      "dom": 97,
+      "str": 114.4,
+      "absorption": 53.3,
+      "mos": 10.6,
+      "medianPrice": 369950,
+      "medianPpa": 138487
+    },
+    "37151": {
+      "dom": 61,
+      "str": 309.6,
+      "absorption": 75.6,
+      "mos": 3.9,
+      "medianPrice": 241082,
+      "medianPpa": 255766
+    },
+    "37153": {
+      "dom": 78,
+      "str": 155.1,
+      "absorption": 60.8,
+      "mos": 7.8,
+      "medianPrice": 142750,
+      "medianPpa": 151131
+    },
+    "37155": {
+      "dom": 94,
+      "str": 199.2,
+      "absorption": 66.6,
+      "mos": 6.1,
+      "medianPrice": 130000,
+      "medianPpa": 107744
+    },
+    "37157": {
+      "dom": 72,
+      "str": 276.2,
+      "absorption": 73.4,
+      "mos": 4.4,
+      "medianPrice": 199500,
+      "medianPpa": 268120
+    },
+    "37159": {
+      "dom": 71,
+      "str": 199.4,
+      "absorption": 66.6,
+      "mos": 6.1,
+      "medianPrice": 266708,
+      "medianPpa": 484068
+    },
+    "37161": {
+      "dom": 84,
+      "str": 116,
+      "absorption": 53.7,
+      "mos": 10.5,
+      "medianPrice": 220000,
+      "medianPpa": 138657
+    },
+    "37163": {
+      "dom": 81,
+      "str": 192.7,
+      "absorption": 65.8,
+      "mos": 6.3,
+      "medianPrice": 190000,
+      "medianPpa": 201192
+    },
+    "37165": {
+      "dom": 90,
+      "str": 155,
+      "absorption": 60.8,
+      "mos": 7.8,
+      "medianPrice": 131000,
+      "medianPpa": 203108
+    },
+    "37167": {
+      "dom": 70,
+      "str": 233.7,
+      "absorption": 70,
+      "mos": 5.2,
+      "medianPrice": 270000,
+      "medianPpa": 362505
+    },
+    "37169": {
+      "dom": 79,
+      "str": 266.4,
+      "absorption": 72.7,
+      "mos": 4.6,
+      "medianPrice": 230000,
+      "medianPpa": 135380
+    },
+    "37171": {
+      "dom": 76,
+      "str": 246,
+      "absorption": 71.1,
+      "mos": 4.9,
+      "medianPrice": 210000,
+      "medianPpa": 161481
+    },
+    "37173": {
+      "dom": 114,
+      "str": 87.3,
+      "absorption": 46.6,
+      "mos": 13.9,
+      "medianPrice": 250000,
+      "medianPpa": 146044
+    },
+    "37175": {
+      "dom": 92,
+      "str": 146,
+      "absorption": 59.3,
+      "mos": 8.3,
+      "medianPrice": 415000,
+      "medianPpa": 426576
+    },
+    "37177": {
+      "dom": 97,
+      "str": 188.2,
+      "absorption": 65.3,
+      "mos": 6.5,
+      "medianPrice": 95200,
+      "medianPpa": 126975
+    },
+    "37179": {
+      "dom": 64,
+      "str": 215.7,
+      "absorption": 68.3,
+      "mos": 5.6,
+      "medianPrice": 458634,
+      "medianPpa": 1426956
+    },
+    "37181": {
+      "dom": 70,
+      "str": 202.8,
+      "absorption": 67,
+      "mos": 6,
+      "medianPrice": 170000,
+      "medianPpa": 243954
+    },
+    "37183": {
+      "dom": 65,
+      "str": 236.7,
+      "absorption": 70.3,
+      "mos": 5.1,
+      "medianPrice": 481505,
+      "medianPpa": 2756380
+    },
+    "37185": {
+      "dom": 82,
+      "str": 182.9,
+      "absorption": 64.6,
+      "mos": 6.7,
+      "medianPrice": 187500,
+      "medianPpa": 102805
+    },
+    "37187": {
+      "dom": 78,
+      "str": 177.3,
+      "absorption": 63.9,
+      "mos": 6.9,
+      "medianPrice": 95400,
+      "medianPpa": 186316
+    },
+    "37189": {
+      "dom": 75,
+      "str": 161.8,
+      "absorption": 61.8,
+      "mos": 7.5,
+      "medianPrice": 450000,
+      "medianPpa": 544550
+    },
+    "37191": {
+      "dom": 77,
+      "str": 216.3,
+      "absorption": 68.4,
+      "mos": 5.6,
+      "medianPrice": 253000,
+      "medianPpa": 467918
+    },
+    "37193": {
+      "dom": 80,
+      "str": 208.1,
+      "absorption": 67.5,
+      "mos": 5.8,
+      "medianPrice": 185000,
+      "medianPpa": 72872
+    },
+    "37195": {
+      "dom": 74,
+      "str": 245.9,
+      "absorption": 71.1,
+      "mos": 4.9,
+      "medianPrice": 229900,
+      "medianPpa": 619800
+    },
+    "37197": {
+      "dom": 63,
+      "str": 328.4,
+      "absorption": 76.7,
+      "mos": 3.7,
+      "medianPrice": 214250,
+      "medianPpa": 115693
+    },
+    "37199": {
+      "dom": 105,
+      "str": 110.3,
+      "absorption": 52.4,
+      "mos": 11,
+      "medianPrice": 267000,
+      "medianPpa": 116667
+    },
+    "45001": {
+      "dom": 71,
+      "str": 157.3,
+      "absorption": 61.1,
+      "mos": 7.7,
+      "medianPrice": 175000,
+      "medianPpa": 91954
+    },
+    "45003": {
+      "dom": 91,
+      "str": 200.3,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 272009,
+      "medianPpa": 748682
+    },
+    "45005": {
+      "dom": 107,
+      "str": 160.7,
+      "absorption": 61.6,
+      "mos": 7.6,
+      "medianPrice": 100000,
+      "medianPpa": 97090
+    },
+    "45007": {
+      "dom": 70,
+      "str": 166.9,
+      "absorption": 62.5,
+      "mos": 7.3,
+      "medianPrice": 278670,
+      "medianPpa": 515836
+    },
+    "45009": {
+      "dom": 91,
+      "str": 75,
+      "absorption": 42.9,
+      "mos": 16.2,
+      "medianPrice": 145500,
+      "medianPpa": 134793
+    },
+    "45011": {
+      "dom": 83,
+      "str": 213.6,
+      "absorption": 68.1,
+      "mos": 5.7,
+      "medianPrice": 149950,
+      "medianPpa": 91819
+    },
+    "45013": {
+      "dom": 89,
+      "str": 169.8,
+      "absorption": 62.9,
+      "mos": 7.2,
+      "medianPrice": 549946,
+      "medianPpa": 2542245
+    },
+    "45015": {
+      "dom": 82,
+      "str": 205.8,
+      "absorption": 67.3,
+      "mos": 5.9,
+      "medianPrice": 389567,
+      "medianPpa": 2501695
+    },
+    "45017": {
+      "dom": 72,
+      "str": 120.8,
+      "absorption": 54.7,
+      "mos": 10.1,
+      "medianPrice": 190000,
+      "medianPpa": 102814
+    },
+    "45019": {
+      "dom": 66,
+      "str": 211.4,
+      "absorption": 67.9,
+      "mos": 5.8,
+      "medianPrice": 651811,
+      "medianPpa": 3213346
+    },
+    "45021": {
+      "dom": 69,
+      "str": 185.6,
+      "absorption": 65,
+      "mos": 6.6,
+      "medianPrice": 190000,
+      "medianPpa": 222834
+    },
+    "45023": {
+      "dom": 70,
+      "str": 151.6,
+      "absorption": 60.3,
+      "mos": 8,
+      "medianPrice": 265000,
+      "medianPpa": 361148
+    },
+    "45025": {
+      "dom": 89,
+      "str": 140.3,
+      "absorption": 58.4,
+      "mos": 8.7,
+      "medianPrice": 165900,
+      "medianPpa": 164707
+    },
+    "45027": {
+      "dom": 90,
+      "str": 138.6,
+      "absorption": 58.1,
+      "mos": 8.8,
+      "medianPrice": 185000,
+      "medianPpa": 189661
+    },
+    "45029": {
+      "dom": 88,
+      "str": 157,
+      "absorption": 61.1,
+      "mos": 7.8,
+      "medianPrice": 230000,
+      "medianPpa": 200003
+    },
+    "45031": {
+      "dom": 88,
+      "str": 225.6,
+      "absorption": 69.3,
+      "mos": 5.4,
+      "medianPrice": 200000,
+      "medianPpa": 295042
+    },
+    "45033": {
+      "dom": 104,
+      "str": 185.7,
+      "absorption": 65,
+      "mos": 6.6,
+      "medianPrice": 150000,
+      "medianPpa": 207692
+    },
+    "45035": {
+      "dom": 72,
+      "str": 212.4,
+      "absorption": 68,
+      "mos": 5.7,
+      "medianPrice": 366862,
+      "medianPpa": 2127791
+    },
+    "45037": {
+      "dom": 122,
+      "str": 134.9,
+      "absorption": 57.4,
+      "mos": 9,
+      "medianPrice": 299500,
+      "medianPpa": 473981
+    },
+    "45039": {
+      "dom": 116,
+      "str": 63.3,
+      "absorption": 38.8,
+      "mos": 19.2,
+      "medianPrice": 196900,
+      "medianPpa": 145000
+    },
+    "45041": {
+      "dom": 78,
+      "str": 212,
+      "absorption": 67.9,
+      "mos": 5.7,
+      "medianPrice": 223990,
+      "medianPpa": 558813
+    },
+    "45043": {
+      "dom": 96,
+      "str": 185.1,
+      "absorption": 64.9,
+      "mos": 6.6,
+      "medianPrice": 402700,
+      "medianPpa": 907911
+    },
+    "45045": {
+      "dom": 66,
+      "str": 194.4,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 347557,
+      "medianPpa": 1440370
+    },
+    "45047": {
+      "dom": 89,
+      "str": 189.2,
+      "absorption": 65.4,
+      "mos": 6.4,
+      "medianPrice": 219000,
+      "medianPpa": 433333
+    },
+    "45049": {
+      "dom": 111,
+      "str": 126.2,
+      "absorption": 55.8,
+      "mos": 9.6,
+      "medianPrice": 169500,
+      "medianPpa": 204430
+    },
+    "45051": {
+      "dom": 100,
+      "str": 165.5,
+      "absorption": 62.3,
+      "mos": 7.4,
+      "medianPrice": 347091,
+      "medianPpa": 1717587
+    },
+    "45053": {
+      "dom": 134,
+      "str": 181.4,
+      "absorption": 64.5,
+      "mos": 6.7,
+      "medianPrice": 412803,
+      "medianPpa": 2889184
+    },
+    "45055": {
+      "dom": 103,
+      "str": 93.9,
+      "absorption": 48.4,
+      "mos": 13,
+      "medianPrice": 242000,
+      "medianPpa": 251324
+    },
+    "45057": {
+      "dom": 75,
+      "str": 189.8,
+      "absorption": 65.5,
+      "mos": 6.4,
+      "medianPrice": 399995,
+      "medianPpa": 1649558
+    },
+    "45059": {
+      "dom": 83,
+      "str": 167,
+      "absorption": 62.5,
+      "mos": 7.3,
+      "medianPrice": 238000,
+      "medianPpa": 340000
+    },
+    "45061": {
+      "dom": 78,
+      "str": 124.2,
+      "absorption": 55.4,
+      "mos": 9.8,
+      "medianPrice": 170000,
+      "medianPpa": 145782
+    },
+    "45063": {
+      "dom": 68,
+      "str": 94.7,
+      "absorption": 48.6,
+      "mos": 12.9,
+      "medianPrice": 264578,
+      "medianPpa": 889047
+    },
+    "45065": {
+      "dom": 118,
+      "str": 60.6,
+      "absorption": 37.7,
+      "mos": 20.1,
+      "medianPrice": 296000,
+      "medianPpa": 257273
+    },
+    "45067": {
+      "dom": 89,
+      "str": 92.3,
+      "absorption": 48,
+      "mos": 13.2,
+      "medianPrice": 174700,
+      "medianPpa": 240575
+    },
+    "45069": {
+      "dom": 90,
+      "str": 229.2,
+      "absorption": 69.6,
+      "mos": 5.3,
+      "medianPrice": 110000,
+      "medianPpa": 128163
+    },
+    "45071": {
+      "dom": 106,
+      "str": 80.6,
+      "absorption": 44.6,
+      "mos": 15.1,
+      "medianPrice": 220000,
+      "medianPpa": 149900
+    },
+    "45073": {
+      "dom": 72,
+      "str": 177,
+      "absorption": 63.9,
+      "mos": 6.9,
+      "medianPrice": 245271,
+      "medianPpa": 321635
+    },
+    "45075": {
+      "dom": 105,
+      "str": 111.2,
+      "absorption": 52.6,
+      "mos": 10.9,
+      "medianPrice": 190000,
+      "medianPpa": 208728
+    },
+    "45077": {
+      "dom": 70,
+      "str": 206.1,
+      "absorption": 67.3,
+      "mos": 5.9,
+      "medianPrice": 276900,
+      "medianPpa": 540419
+    },
+    "45079": {
+      "dom": 68,
+      "str": 123,
+      "absorption": 55.2,
+      "mos": 9.9,
+      "medianPrice": 263487,
+      "medianPpa": 1018404
+    },
+    "45081": {
+      "dom": 81,
+      "str": 122.5,
+      "absorption": 55.1,
+      "mos": 9.9,
+      "medianPrice": 220000,
+      "medianPpa": 179750
+    },
+    "45083": {
+      "dom": 79,
+      "str": 189.6,
+      "absorption": 65.5,
+      "mos": 6.4,
+      "medianPrice": 270528,
+      "medianPpa": 773629
+    },
+    "45085": {
+      "dom": 80,
+      "str": 180.2,
+      "absorption": 64.3,
+      "mos": 6.8,
+      "medianPrice": 235000,
+      "medianPpa": 539196
+    },
+    "45087": {
+      "dom": 96,
+      "str": 165.3,
+      "absorption": 62.3,
+      "mos": 7.4,
+      "medianPrice": 180000,
+      "medianPpa": 114661
+    },
+    "45089": {
+      "dom": 86,
+      "str": 131,
+      "absorption": 56.7,
+      "mos": 9.3,
+      "medianPrice": 145000,
+      "medianPpa": 67889
+    },
+    "45091": {
+      "dom": 67,
+      "str": 228,
+      "absorption": 69.5,
+      "mos": 5.3,
+      "medianPrice": 396000,
+      "medianPpa": 1434379
+    }
+  },
+  "sf": {
+    "37001": {
+      "dom": 80,
+      "str": 309.6,
+      "absorption": 75.6,
+      "mos": 3.9,
+      "medianPrice": 335329,
+      "medianPpa": 900683
+    },
+    "37003": {
+      "dom": 67,
+      "str": 302.7,
+      "absorption": 75.2,
+      "mos": 4,
+      "medianPrice": 289900,
+      "medianPpa": 327876
+    },
+    "37005": {
+      "dom": 83,
+      "str": 237.5,
+      "absorption": 70.4,
+      "mos": 5.1,
+      "medianPrice": 302000,
+      "medianPpa": 251111
+    },
+    "37007": {
+      "dom": 89,
+      "str": 182.5,
+      "absorption": 64.6,
+      "mos": 6.7,
+      "medianPrice": 192000,
+      "medianPpa": 192000
+    },
+    "37009": {
+      "dom": 66,
+      "str": 204.3,
+      "absorption": 67.1,
+      "mos": 6,
+      "medianPrice": 352500,
+      "medianPpa": 275642
+    },
+    "37011": {
+      "dom": 98,
+      "str": 220.6,
+      "absorption": 68.8,
+      "mos": 5.5,
+      "medianPrice": 440500,
+      "medianPpa": 707301
+    },
+    "37013": {
+      "dom": 78,
+      "str": 236.2,
+      "absorption": 70.3,
+      "mos": 5.2,
+      "medianPrice": 275000,
+      "medianPpa": 543890
+    },
+    "37015": {
+      "dom": 76,
+      "str": 344.4,
+      "absorption": 77.5,
+      "mos": 3.5,
+      "medianPrice": 134500,
+      "medianPpa": 177217
+    },
+    "37017": {
+      "dom": 111,
+      "str": 195.1,
+      "absorption": 66.1,
+      "mos": 6.2,
+      "medianPrice": 206000,
+      "medianPpa": 229245
+    },
+    "37019": {
+      "dom": 101,
+      "str": 178.1,
+      "absorption": 64,
+      "mos": 6.8,
+      "medianPrice": 413249,
+      "medianPpa": 1894997
+    },
+    "37021": {
+      "dom": 67,
+      "str": 184.2,
+      "absorption": 64.8,
+      "mos": 6.6,
+      "medianPrice": 490607,
+      "medianPpa": 1136052
+    },
+    "37023": {
+      "dom": 70,
+      "str": 269.9,
+      "absorption": 73,
+      "mos": 4.5,
+      "medianPrice": 258000,
+      "medianPpa": 354944
+    },
+    "37025": {
+      "dom": 65,
+      "str": 268.5,
+      "absorption": 72.9,
+      "mos": 4.5,
+      "medianPrice": 383010,
+      "medianPpa": 1198472
+    },
+    "37027": {
+      "dom": 68,
+      "str": 302.1,
+      "absorption": 75.1,
+      "mos": 4,
+      "medianPrice": 255000,
+      "medianPpa": 386969
+    },
+    "37029": {
+      "dom": 68,
+      "str": 241.4,
+      "absorption": 70.7,
+      "mos": 5,
+      "medianPrice": 424950,
+      "medianPpa": 425319
+    },
+    "37031": {
+      "dom": 86,
+      "str": 182,
+      "absorption": 64.5,
+      "mos": 6.7,
+      "medianPrice": 500000,
+      "medianPpa": 1274481
+    },
+    "37033": {
+      "dom": 65,
+      "str": 229.6,
+      "absorption": 69.7,
+      "mos": 5.3,
+      "medianPrice": 227000,
+      "medianPpa": 110000
+    },
+    "37035": {
+      "dom": 68,
+      "str": 234.8,
+      "absorption": 70.1,
+      "mos": 5.2,
+      "medianPrice": 312368,
+      "medianPpa": 687636
+    },
+    "37037": {
+      "dom": 76,
+      "str": 241.5,
+      "absorption": 70.7,
+      "mos": 5,
+      "medianPrice": 661000,
+      "medianPpa": 1860012
+    },
+    "37039": {
+      "dom": 77,
+      "str": 144.7,
+      "absorption": 59.1,
+      "mos": 8.4,
+      "medianPrice": 295000,
+      "medianPpa": 244658
+    },
+    "37041": {
+      "dom": 79,
+      "str": 201.1,
+      "absorption": 66.8,
+      "mos": 6,
+      "medianPrice": 270000,
+      "medianPpa": 562500
+    },
+    "37043": {
+      "dom": 109,
+      "str": 116.1,
+      "absorption": 53.7,
+      "mos": 10.5,
+      "medianPrice": 385000,
+      "medianPpa": 276000
+    },
+    "37045": {
+      "dom": 83,
+      "str": 194.5,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 257500,
+      "medianPpa": 441188
+    },
+    "37047": {
+      "dom": 77,
+      "str": 179.2,
+      "absorption": 64.2,
+      "mos": 6.8,
+      "medianPrice": 225500,
+      "medianPpa": 270434
+    },
+    "37049": {
+      "dom": 80,
+      "str": 277.3,
+      "absorption": 73.5,
+      "mos": 4.4,
+      "medianPrice": 315000,
+      "medianPpa": 995871
+    },
+    "37051": {
+      "dom": 66,
+      "str": 192.4,
+      "absorption": 65.8,
+      "mos": 6.3,
+      "medianPrice": 264714,
+      "medianPpa": 734789
+    },
+    "37053": {
+      "dom": 84,
+      "str": 224.7,
+      "absorption": 69.2,
+      "mos": 5.4,
+      "medianPrice": 577500,
+      "medianPpa": 1281274
+    },
+    "37055": {
+      "dom": 79,
+      "str": 329.5,
+      "absorption": 76.7,
+      "mos": 3.7,
+      "medianPrice": 670000,
+      "medianPpa": 2911642
+    },
+    "37057": {
+      "dom": 72,
+      "str": 321.8,
+      "absorption": 76.3,
+      "mos": 3.8,
+      "medianPrice": 286592,
+      "medianPpa": 467398
+    },
+    "37059": {
+      "dom": 71,
+      "str": 343.8,
+      "absorption": 77.5,
+      "mos": 3.5,
+      "medianPrice": 330000,
+      "medianPpa": 552069
+    },
+    "37061": {
+      "dom": 100,
+      "str": 201.8,
+      "absorption": 66.9,
+      "mos": 6,
+      "medianPrice": 223000,
+      "medianPpa": 317200
+    },
+    "37063": {
+      "dom": 54,
+      "str": 253.9,
+      "absorption": 71.7,
+      "mos": 4.8,
+      "medianPrice": 443240,
+      "medianPpa": 1809328
+    },
+    "37065": {
+      "dom": 89,
+      "str": 207.1,
+      "absorption": 67.4,
+      "mos": 5.9,
+      "medianPrice": 149900,
+      "medianPpa": 357766
+    },
+    "37067": {
+      "dom": 58,
+      "str": 263.3,
+      "absorption": 72.5,
+      "mos": 4.6,
+      "medianPrice": 315181,
+      "medianPpa": 858803
+    },
+    "37069": {
+      "dom": 86,
+      "str": 208.6,
+      "absorption": 67.6,
+      "mos": 5.8,
+      "medianPrice": 387225,
+      "medianPpa": 638375
+    },
+    "37071": {
+      "dom": 68,
+      "str": 211.1,
+      "absorption": 67.9,
+      "mos": 5.8,
+      "medianPrice": 307538,
+      "medianPpa": 832679
+    },
+    "37073": {
+      "dom": 80,
+      "str": 247.6,
+      "absorption": 71.2,
+      "mos": 4.9,
+      "medianPrice": 285000,
+      "medianPpa": 180415
+    },
+    "37075": {
+      "dom": 101,
+      "str": 102.6,
+      "absorption": 50.6,
+      "mos": 11.9,
+      "medianPrice": 270000,
+      "medianPpa": 293670
+    },
+    "37077": {
+      "dom": 69,
+      "str": 223.2,
+      "absorption": 69.1,
+      "mos": 5.5,
+      "medianPrice": 335000,
+      "medianPpa": 587989
+    },
+    "37079": {
+      "dom": 58,
+      "str": 186.2,
+      "absorption": 65.1,
+      "mos": 6.5,
+      "medianPrice": 210000,
+      "medianPpa": 320279
+    },
+    "37081": {
+      "dom": 58,
+      "str": 313.8,
+      "absorption": 75.8,
+      "mos": 3.9,
+      "medianPrice": 321409,
+      "medianPpa": 917386
+    },
+    "37083": {
+      "dom": 72,
+      "str": 217.2,
+      "absorption": 68.5,
+      "mos": 5.6,
+      "medianPrice": 168500,
+      "medianPpa": 411446
+    },
+    "37085": {
+      "dom": 96,
+      "str": 171.8,
+      "absorption": 63.2,
+      "mos": 7.1,
+      "medianPrice": 342681,
+      "medianPpa": 746540
+    },
+    "37087": {
+      "dom": 78,
+      "str": 200.4,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 381250,
+      "medianPpa": 604773
+    },
+    "37089": {
+      "dom": 79,
+      "str": 236.4,
+      "absorption": 70.3,
+      "mos": 5.1,
+      "medianPrice": 451103,
+      "medianPpa": 846365
+    },
+    "37091": {
+      "dom": 55,
+      "str": 226.9,
+      "absorption": 69.4,
+      "mos": 5.4,
+      "medianPrice": 173250,
+      "medianPpa": 278951
+    },
+    "37093": {
+      "dom": 80,
+      "str": 238.9,
+      "absorption": 70.5,
+      "mos": 5.1,
+      "medianPrice": 310000,
+      "medianPpa": 777657
+    },
+    "37095": {
+      "dom": 120,
+      "str": 236,
+      "absorption": 70.2,
+      "mos": 5.2,
+      "medianPrice": 375000,
+      "medianPpa": 190300
+    },
+    "37097": {
+      "dom": 77,
+      "str": 234,
+      "absorption": 70.1,
+      "mos": 5.2,
+      "medianPrice": 385650,
+      "medianPpa": 1023490
+    },
+    "37099": {
+      "dom": 89,
+      "str": 146.9,
+      "absorption": 59.5,
+      "mos": 8.3,
+      "medianPrice": 560000,
+      "medianPpa": 441755
+    },
+    "37101": {
+      "dom": 82,
+      "str": 198.4,
+      "absorption": 66.5,
+      "mos": 6.1,
+      "medianPrice": 363859,
+      "medianPpa": 677874
+    },
+    "37103": {
+      "dom": 87,
+      "str": 237.8,
+      "absorption": 70.4,
+      "mos": 5.1,
+      "medianPrice": 243700,
+      "medianPpa": 319236
+    },
+    "37105": {
+      "dom": 77,
+      "str": 175.7,
+      "absorption": 63.7,
+      "mos": 6.9,
+      "medianPrice": 328000,
+      "medianPpa": 642857
+    },
+    "37107": {
+      "dom": 75,
+      "str": 253.4,
+      "absorption": 71.7,
+      "mos": 4.8,
+      "medianPrice": 215000,
+      "medianPpa": 432902
+    },
+    "37109": {
+      "dom": 76,
+      "str": 205,
+      "absorption": 67.2,
+      "mos": 5.9,
+      "medianPrice": 420000,
+      "medianPpa": 765965
+    },
+    "37111": {
+      "dom": 78,
+      "str": 171.6,
+      "absorption": 63.2,
+      "mos": 7.1,
+      "medianPrice": 290000,
+      "medianPpa": 284406
+    },
+    "37113": {
+      "dom": 71,
+      "str": 149.8,
+      "absorption": 60,
+      "mos": 8.1,
+      "medianPrice": 370000,
+      "medianPpa": 348963
+    },
+    "37115": {
+      "dom": 76,
+      "str": 147.9,
+      "absorption": 59.7,
+      "mos": 8.2,
+      "medianPrice": 400000,
+      "medianPpa": 229733
+    },
+    "37117": {
+      "dom": 92,
+      "str": 237.8,
+      "absorption": 70.4,
+      "mos": 5.1,
+      "medianPrice": 132750,
+      "medianPpa": 213951
+    },
+    "37119": {
+      "dom": 57,
+      "str": 309.6,
+      "absorption": 75.6,
+      "mos": 3.9,
+      "medianPrice": 492394,
+      "medianPpa": 1979905
+    },
+    "37121": {
+      "dom": 93,
+      "str": 149.1,
+      "absorption": 59.9,
+      "mos": 8.2,
+      "medianPrice": 280000,
+      "medianPpa": 164378
+    },
+    "37123": {
+      "dom": 83,
+      "str": 166.2,
+      "absorption": 62.4,
+      "mos": 7.3,
+      "medianPrice": 245000,
+      "medianPpa": 877406
+    },
+    "37125": {
+      "dom": 85,
+      "str": 224.4,
+      "absorption": 69.2,
+      "mos": 5.4,
+      "medianPrice": 449203,
+      "medianPpa": 1035879
+    },
+    "37127": {
+      "dom": 90,
+      "str": 200.5,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 286950,
+      "medianPpa": 566680
+    },
+    "37129": {
+      "dom": 62,
+      "str": 303.2,
+      "absorption": 75.2,
+      "mos": 4,
+      "medianPrice": 479840,
+      "medianPpa": 2092316
+    },
+    "37131": {
+      "dom": 87,
+      "str": 221.8,
+      "absorption": 68.9,
+      "mos": 5.5,
+      "medianPrice": 169500,
+      "medianPpa": 318334
+    },
+    "37133": {
+      "dom": 69,
+      "str": 309.4,
+      "absorption": 75.6,
+      "mos": 3.9,
+      "medianPrice": 311034,
+      "medianPpa": 777427
+    },
+    "37135": {
+      "dom": 54,
+      "str": 280,
+      "absorption": 73.7,
+      "mos": 4.3,
+      "medianPrice": 590000,
+      "medianPpa": 1035100
+    },
+    "37137": {
+      "dom": 88,
+      "str": 171.1,
+      "absorption": 63.1,
+      "mos": 7.1,
+      "medianPrice": 380000,
+      "medianPpa": 471158
+    },
+    "37139": {
+      "dom": 72,
+      "str": 244.3,
+      "absorption": 71,
+      "mos": 5,
+      "medianPrice": 317500,
+      "medianPpa": 705069
+    },
+    "37141": {
+      "dom": 80,
+      "str": 262.5,
+      "absorption": 72.4,
+      "mos": 4.6,
+      "medianPrice": 450000,
+      "medianPpa": 1189468
+    },
+    "37143": {
+      "dom": 96,
+      "str": 122,
+      "absorption": 55,
+      "mos": 10,
+      "medianPrice": 316250,
+      "medianPpa": 472803
+    },
+    "37145": {
+      "dom": 69,
+      "str": 279.8,
+      "absorption": 73.7,
+      "mos": 4.3,
+      "medianPrice": 280000,
+      "medianPpa": 292083
+    },
+    "37147": {
+      "dom": 68,
+      "str": 310.2,
+      "absorption": 75.6,
+      "mos": 3.9,
+      "medianPrice": 304000,
+      "medianPpa": 796310
+    },
+    "37149": {
+      "dom": 94,
+      "str": 148,
+      "absorption": 59.7,
+      "mos": 8.2,
+      "medianPrice": 444444,
+      "medianPpa": 218182
+    },
+    "37151": {
+      "dom": 60,
+      "str": 295.2,
+      "absorption": 74.7,
+      "mos": 4.1,
+      "medianPrice": 275000,
+      "medianPpa": 376311
+    },
+    "37153": {
+      "dom": 76,
+      "str": 206.3,
+      "absorption": 67.3,
+      "mos": 5.9,
+      "medianPrice": 165000,
+      "medianPpa": 234378
+    },
+    "37155": {
+      "dom": 89,
+      "str": 186.9,
+      "absorption": 65.1,
+      "mos": 6.5,
+      "medianPrice": 209000,
+      "medianPpa": 317115
+    },
+    "37157": {
+      "dom": 70,
+      "str": 269.1,
+      "absorption": 72.9,
+      "mos": 4.5,
+      "medianPrice": 225000,
+      "medianPpa": 364589
+    },
+    "37159": {
+      "dom": 69,
+      "str": 214.4,
+      "absorption": 68.2,
+      "mos": 5.7,
+      "medianPrice": 284900,
+      "medianPpa": 538824
+    },
+    "37161": {
+      "dom": 79,
+      "str": 176.8,
+      "absorption": 63.9,
+      "mos": 6.9,
+      "medianPrice": 269900,
+      "medianPpa": 246625
+    },
+    "37163": {
+      "dom": 82,
+      "str": 182.7,
+      "absorption": 64.6,
+      "mos": 6.7,
+      "medianPrice": 235000,
+      "medianPpa": 349313
+    },
+    "37165": {
+      "dom": 91,
+      "str": 187.8,
+      "absorption": 65.3,
+      "mos": 6.5,
+      "medianPrice": 180000,
+      "medianPpa": 306454
+    },
+    "37167": {
+      "dom": 67,
+      "str": 215.2,
+      "absorption": 68.3,
+      "mos": 5.7,
+      "medianPrice": 295000,
+      "medianPpa": 507740
+    },
+    "37169": {
+      "dom": 74,
+      "str": 333.1,
+      "absorption": 76.9,
+      "mos": 3.7,
+      "medianPrice": 289000,
+      "medianPpa": 250229
+    },
+    "37171": {
+      "dom": 67,
+      "str": 319.8,
+      "absorption": 76.2,
+      "mos": 3.8,
+      "medianPrice": 228500,
+      "medianPpa": 266171
+    },
+    "37173": {
+      "dom": 76,
+      "str": 144.1,
+      "absorption": 59,
+      "mos": 8.4,
+      "medianPrice": 335000,
+      "medianPpa": 266742
+    },
+    "37175": {
+      "dom": 82,
+      "str": 173.9,
+      "absorption": 63.5,
+      "mos": 7,
+      "medianPrice": 515000,
+      "medianPpa": 723886
+    },
+    "37177": {
+      "dom": 97,
+      "str": 290,
+      "absorption": 74.4,
+      "mos": 4.2,
+      "medianPrice": 200000,
+      "medianPpa": 524905
+    },
+    "37179": {
+      "dom": 63,
+      "str": 221.1,
+      "absorption": 68.9,
+      "mos": 5.5,
+      "medianPrice": 501137,
+      "medianPpa": 1576241
+    },
+    "37181": {
+      "dom": 74,
+      "str": 191.8,
+      "absorption": 65.7,
+      "mos": 6.3,
+      "medianPrice": 215000,
+      "medianPpa": 375012
+    },
+    "37183": {
+      "dom": 62,
+      "str": 265.7,
+      "absorption": 72.7,
+      "mos": 4.6,
+      "medianPrice": 542623,
+      "medianPpa": 2287076
+    },
+    "37185": {
+      "dom": 73,
+      "str": 231.6,
+      "absorption": 69.8,
+      "mos": 5.3,
+      "medianPrice": 350000,
+      "medianPpa": 462518
+    },
+    "37187": {
+      "dom": 70,
+      "str": 212.8,
+      "absorption": 68,
+      "mos": 5.7,
+      "medianPrice": 126000,
+      "medianPpa": 229091
+    },
+    "37189": {
+      "dom": 69,
+      "str": 223.4,
+      "absorption": 69.1,
+      "mos": 5.4,
+      "medianPrice": 585000,
+      "medianPpa": 829233
+    },
+    "37191": {
+      "dom": 77,
+      "str": 228.2,
+      "absorption": 69.5,
+      "mos": 5.3,
+      "medianPrice": 264900,
+      "medianPpa": 494419
+    },
+    "37193": {
+      "dom": 74,
+      "str": 281.5,
+      "absorption": 73.8,
+      "mos": 4.3,
+      "medianPrice": 250000,
+      "medianPpa": 227273
+    },
+    "37195": {
+      "dom": 79,
+      "str": 263.3,
+      "absorption": 72.5,
+      "mos": 4.6,
+      "medianPrice": 249900,
+      "medianPpa": 682829
+    },
+    "37197": {
+      "dom": 63,
+      "str": 306.7,
+      "absorption": 75.4,
+      "mos": 4,
+      "medianPrice": 259900,
+      "medianPpa": 200731
+    },
+    "37199": {
+      "dom": 97,
+      "str": 130.7,
+      "absorption": 56.7,
+      "mos": 9.3,
+      "medianPrice": 351667,
+      "medianPpa": 215160
+    },
+    "45001": {
+      "dom": 70,
+      "str": 202.2,
+      "absorption": 66.9,
+      "mos": 6,
+      "medianPrice": 226000,
+      "medianPpa": 201051
+    },
+    "45003": {
+      "dom": 89,
+      "str": 224.2,
+      "absorption": 69.2,
+      "mos": 5.4,
+      "medianPrice": 301399,
+      "medianPpa": 865705
+    },
+    "45005": {
+      "dom": 123,
+      "str": 144.4,
+      "absorption": 59.1,
+      "mos": 8.4,
+      "medianPrice": 96750,
+      "medianPpa": 148196
+    },
+    "45007": {
+      "dom": 70,
+      "str": 158,
+      "absorption": 61.2,
+      "mos": 7.7,
+      "medianPrice": 322124,
+      "medianPpa": 645612
+    },
+    "45009": {
+      "dom": 73,
+      "str": 86,
+      "absorption": 46.2,
+      "mos": 14.1,
+      "medianPrice": 160000,
+      "medianPpa": 205133
+    },
+    "45011": {
+      "dom": 94,
+      "str": 220.9,
+      "absorption": 68.8,
+      "mos": 5.5,
+      "medianPrice": 185000,
+      "medianPpa": 289067
+    },
+    "45013": {
+      "dom": 87,
+      "str": 186.9,
+      "absorption": 65.1,
+      "mos": 6.5,
+      "medianPrice": 632660,
+      "medianPpa": 2691507
+    },
+    "45015": {
+      "dom": 80,
+      "str": 226.2,
+      "absorption": 69.3,
+      "mos": 5.4,
+      "medianPrice": 413801,
+      "medianPpa": 2494499
+    },
+    "45017": {
+      "dom": 67,
+      "str": 107.4,
+      "absorption": 51.8,
+      "mos": 11.3,
+      "medianPrice": 268500,
+      "medianPpa": 167178
+    },
+    "45019": {
+      "dom": 65,
+      "str": 226.2,
+      "absorption": 69.3,
+      "mos": 5.4,
+      "medianPrice": 719748,
+      "medianPpa": 3106743
+    },
+    "45021": {
+      "dom": 66,
+      "str": 180.8,
+      "absorption": 64.4,
+      "mos": 6.7,
+      "medianPrice": 232950,
+      "medianPpa": 366784
+    },
+    "45023": {
+      "dom": 75,
+      "str": 157.9,
+      "absorption": 61.2,
+      "mos": 7.7,
+      "medianPrice": 279999,
+      "medianPpa": 637951
+    },
+    "45025": {
+      "dom": 86,
+      "str": 134.2,
+      "absorption": 57.3,
+      "mos": 9.1,
+      "medianPrice": 215000,
+      "medianPpa": 242105
+    },
+    "45027": {
+      "dom": 81,
+      "str": 115.7,
+      "absorption": 53.6,
+      "mos": 10.5,
+      "medianPrice": 275000,
+      "medianPpa": 662170
+    },
+    "45029": {
+      "dom": 76,
+      "str": 175.5,
+      "absorption": 63.7,
+      "mos": 6.9,
+      "medianPrice": 290000,
+      "medianPpa": 632370
+    },
+    "45031": {
+      "dom": 87,
+      "str": 189.5,
+      "absorption": 65.5,
+      "mos": 6.4,
+      "medianPrice": 239000,
+      "medianPpa": 419683
+    },
+    "45033": {
+      "dom": 84,
+      "str": 308.3,
+      "absorption": 75.5,
+      "mos": 3.9,
+      "medianPrice": 180000,
+      "medianPpa": 314585
+    },
+    "45035": {
+      "dom": 70,
+      "str": 217.6,
+      "absorption": 68.5,
+      "mos": 5.6,
+      "medianPrice": 391476,
+      "medianPpa": 2085080
+    },
+    "45037": {
+      "dom": 122,
+      "str": 174.8,
+      "absorption": 63.6,
+      "mos": 7,
+      "medianPrice": 325000,
+      "medianPpa": 691692
+    },
+    "45039": {
+      "dom": 92,
+      "str": 76.3,
+      "absorption": 43.3,
+      "mos": 16,
+      "medianPrice": 258800,
+      "medianPpa": 322476
+    },
+    "45041": {
+      "dom": 75,
+      "str": 225.7,
+      "absorption": 69.3,
+      "mos": 5.4,
+      "medianPrice": 250000,
+      "medianPpa": 679800
+    },
+    "45043": {
+      "dom": 96,
+      "str": 171.9,
+      "absorption": 63.2,
+      "mos": 7.1,
+      "medianPrice": 525000,
+      "medianPpa": 1464089
+    },
+    "45045": {
+      "dom": 63,
+      "str": 214.8,
+      "absorption": 68.2,
+      "mos": 5.7,
+      "medianPrice": 384539,
+      "medianPpa": 1420080
+    },
+    "45047": {
+      "dom": 86,
+      "str": 170.2,
+      "absorption": 63,
+      "mos": 7.1,
+      "medianPrice": 258950,
+      "medianPpa": 558296
+    },
+    "45049": {
+      "dom": 94,
+      "str": 157.1,
+      "absorption": 61.1,
+      "mos": 7.7,
+      "medianPrice": 182500,
+      "medianPpa": 275603
+    },
+    "45051": {
+      "dom": 101,
+      "str": 175,
+      "absorption": 63.6,
+      "mos": 7,
+      "medianPrice": 368980,
+      "medianPpa": 1820888
+    },
+    "45053": {
+      "dom": 133,
+      "str": 178,
+      "absorption": 64,
+      "mos": 6.8,
+      "medianPrice": 415990,
+      "medianPpa": 2854389
+    },
+    "45055": {
+      "dom": 85,
+      "str": 75.5,
+      "absorption": 43,
+      "mos": 16.1,
+      "medianPrice": 300000,
+      "medianPpa": 519111
+    },
+    "45057": {
+      "dom": 74,
+      "str": 211.7,
+      "absorption": 67.9,
+      "mos": 5.7,
+      "medianPrice": 440000,
+      "medianPpa": 1761400
+    },
+    "45059": {
+      "dom": 83,
+      "str": 155,
+      "absorption": 60.8,
+      "mos": 7.8,
+      "medianPrice": 285700,
+      "medianPpa": 569107
+    },
+    "45061": {
+      "dom": 85,
+      "str": 160,
+      "absorption": 61.5,
+      "mos": 7.6,
+      "medianPrice": 171000,
+      "medianPpa": 169667
+    },
+    "45063": {
+      "dom": 58,
+      "str": 100.5,
+      "absorption": 50.1,
+      "mos": 12.1,
+      "medianPrice": 273424,
+      "medianPpa": 967273
+    },
+    "45065": {
+      "dom": 122,
+      "str": 71.4,
+      "absorption": 41.7,
+      "mos": 17,
+      "medianPrice": 383800,
+      "medianPpa": 955908
+    },
+    "45067": {
+      "dom": 84,
+      "str": 119.8,
+      "absorption": 54.5,
+      "mos": 10.2,
+      "medianPrice": 180200,
+      "medianPpa": 333197
+    },
+    "45069": {
+      "dom": 84,
+      "str": 331.6,
+      "absorption": 76.8,
+      "mos": 3.7,
+      "medianPrice": 107500,
+      "medianPpa": 144671
+    },
+    "45071": {
+      "dom": 94,
+      "str": 53.6,
+      "absorption": 34.9,
+      "mos": 22.7,
+      "medianPrice": 202500,
+      "medianPpa": 151000
+    },
+    "45073": {
+      "dom": 70,
+      "str": 176.5,
+      "absorption": 63.8,
+      "mos": 6.9,
+      "medianPrice": 360000,
+      "medianPpa": 692576
+    },
+    "45075": {
+      "dom": 106,
+      "str": 121.9,
+      "absorption": 54.9,
+      "mos": 10,
+      "medianPrice": 230000,
+      "medianPpa": 338462
+    },
+    "45077": {
+      "dom": 68,
+      "str": 220.7,
+      "absorption": 68.8,
+      "mos": 5.5,
+      "medianPrice": 312000,
+      "medianPpa": 673408
+    },
+    "45079": {
+      "dom": 69,
+      "str": 135,
+      "absorption": 57.4,
+      "mos": 9,
+      "medianPrice": 274513,
+      "medianPpa": 1059691
+    },
+    "45081": {
+      "dom": 114,
+      "str": 65.2,
+      "absorption": 39.5,
+      "mos": 18.7,
+      "medianPrice": 243500,
+      "medianPpa": 179038
+    },
+    "45083": {
+      "dom": 80,
+      "str": 183.3,
+      "absorption": 64.7,
+      "mos": 6.6,
+      "medianPrice": 288380,
+      "medianPpa": 953522
+    },
+    "45085": {
+      "dom": 76,
+      "str": 199.8,
+      "absorption": 66.6,
+      "mos": 6.1,
+      "medianPrice": 247900,
+      "medianPpa": 595245
+    },
+    "45087": {
+      "dom": 92,
+      "str": 148,
+      "absorption": 59.7,
+      "mos": 8.2,
+      "medianPrice": 205694,
+      "medianPpa": 314826
+    },
+    "45089": {
+      "dom": 90,
+      "str": 122.6,
+      "absorption": 55.1,
+      "mos": 9.9,
+      "medianPrice": 155000,
+      "medianPpa": 158333
+    },
+    "45091": {
+      "dom": 66,
+      "str": 249.5,
+      "absorption": 71.4,
+      "mos": 4.9,
+      "medianPrice": 427123,
+      "medianPpa": 1332040
+    }
+  },
+  "mfg": {
+    "37001": {
+      "dom": 56,
+      "str": 340,
+      "absorption": 77.3,
+      "mos": 3.6,
+      "medianPrice": 222950,
+      "medianPpa": 156880
+    },
+    "37003": {
+      "dom": 49,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 185000,
+      "medianPpa": 97884
+    },
+    "37005": {
+      "dom": 62,
+      "str": 450,
+      "absorption": 81.8,
+      "mos": 2.7,
+      "medianPrice": 92500,
+      "medianPpa": 87137
+    },
+    "37007": {
+      "dom": 146,
+      "str": 600,
+      "absorption": 85.7,
+      "mos": 2,
+      "medianPrice": 149500,
+      "medianPpa": 40407
+    },
+    "37009": {
+      "dom": 76,
+      "str": 66.7,
+      "absorption": 40,
+      "mos": 18.3,
+      "medianPrice": 191000,
+      "medianPpa": 214295
+    },
+    "37011": {
+      "dom": 0,
+      "str": 0,
+      "absorption": 0,
+      "mos": 0,
+      "medianPrice": 0,
+      "medianPpa": 0
+    },
+    "37013": {
+      "dom": 245,
+      "str": 175,
+      "absorption": 63.6,
+      "mos": 7,
+      "medianPrice": 125000,
+      "medianPpa": 115944
+    },
+    "37015": {
+      "dom": 90,
+      "str": 180,
+      "absorption": 64.3,
+      "mos": 6.8,
+      "medianPrice": 110000,
+      "medianPpa": 216331
+    },
+    "37017": {
+      "dom": 58,
+      "str": 90.5,
+      "absorption": 47.5,
+      "mos": 13.4,
+      "medianPrice": 168000,
+      "medianPpa": 129730
+    },
+    "37019": {
+      "dom": 81,
+      "str": 157.2,
+      "absorption": 61.1,
+      "mos": 7.7,
+      "medianPrice": 175000,
+      "medianPpa": 458924
+    },
+    "37021": {
+      "dom": 75,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 150000,
+      "medianPpa": 214389
+    },
+    "37023": {
+      "dom": 124,
+      "str": 2000,
+      "absorption": 95.2,
+      "mos": 0.6,
+      "medianPrice": 120000,
+      "medianPpa": 83599
+    },
+    "37025": {
+      "dom": 277,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 100000,
+      "medianPpa": 107743
+    },
+    "37027": {
+      "dom": 0,
+      "str": 0,
+      "absorption": 0,
+      "mos": 0,
+      "medianPrice": 0,
+      "medianPpa": 0
+    },
+    "37029": {
+      "dom": 129,
+      "str": 366.7,
+      "absorption": 78.6,
+      "mos": 3.3,
+      "medianPrice": 205000,
+      "medianPpa": 165324
+    },
+    "37031": {
+      "dom": 57,
+      "str": 243.2,
+      "absorption": 70.9,
+      "mos": 5,
+      "medianPrice": 213000,
+      "medianPpa": 498532
+    },
+    "37033": {
+      "dom": 53,
+      "str": 362.5,
+      "absorption": 78.4,
+      "mos": 3.4,
+      "medianPrice": 206000,
+      "medianPpa": 111135
+    },
+    "37035": {
+      "dom": 56,
+      "str": 2350,
+      "absorption": 95.9,
+      "mos": 0.5,
+      "medianPrice": 150000,
+      "medianPpa": 136440
+    },
+    "37037": {
+      "dom": 104,
+      "str": 1100,
+      "absorption": 91.7,
+      "mos": 1.1,
+      "medianPrice": 220000,
+      "medianPpa": 74520
+    },
+    "37039": {
+      "dom": 62,
+      "str": 261.5,
+      "absorption": 72.3,
+      "mos": 4.7,
+      "medianPrice": 151250,
+      "medianPpa": 100813
+    },
+    "37041": {
+      "dom": 118,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 156500,
+      "medianPpa": 259021
+    },
+    "37043": {
+      "dom": 151,
+      "str": 120,
+      "absorption": 54.5,
+      "mos": 10.1,
+      "medianPrice": 185000,
+      "medianPpa": 219166
+    },
+    "37045": {
+      "dom": 69,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 130000,
+      "medianPpa": 74421
+    },
+    "37047": {
+      "dom": 75,
+      "str": 137,
+      "absorption": 57.8,
+      "mos": 8.9,
+      "medianPrice": 170000,
+      "medianPpa": 108000
+    },
+    "37049": {
+      "dom": 208,
+      "str": 215.4,
+      "absorption": 68.3,
+      "mos": 5.6,
+      "medianPrice": 152250,
+      "medianPpa": 192596
+    },
+    "37051": {
+      "dom": 76,
+      "str": 159,
+      "absorption": 61.4,
+      "mos": 7.7,
+      "medianPrice": 177500,
+      "medianPpa": 221651
+    },
+    "37053": {
+      "dom": 43,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 284000,
+      "medianPpa": 449749
+    },
+    "37055": {
+      "dom": 130,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 271000,
+      "medianPpa": 768032
+    },
+    "37057": {
+      "dom": 65,
+      "str": 243.3,
+      "absorption": 70.9,
+      "mos": 5,
+      "medianPrice": 205000,
+      "medianPpa": 179826
+    },
+    "37059": {
+      "dom": 72,
+      "str": 900,
+      "absorption": 90,
+      "mos": 1.4,
+      "medianPrice": 190000,
+      "medianPpa": 144315
+    },
+    "37061": {
+      "dom": 72,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 177500,
+      "medianPpa": 180220
+    },
+    "37063": {
+      "dom": 55,
+      "str": 600,
+      "absorption": 85.7,
+      "mos": 2,
+      "medianPrice": 197500,
+      "medianPpa": 158507
+    },
+    "37065": {
+      "dom": 77,
+      "str": 90.9,
+      "absorption": 47.6,
+      "mos": 13.4,
+      "medianPrice": 184450,
+      "medianPpa": 207907
+    },
+    "37067": {
+      "dom": 58,
+      "str": 393.3,
+      "absorption": 79.7,
+      "mos": 3.1,
+      "medianPrice": 165000,
+      "medianPpa": 182667
+    },
+    "37069": {
+      "dom": 61,
+      "str": 492.3,
+      "absorption": 83.1,
+      "mos": 2.5,
+      "medianPrice": 197000,
+      "medianPpa": 129171
+    },
+    "37071": {
+      "dom": 0,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 60000,
+      "medianPpa": 73912
+    },
+    "37073": {
+      "dom": 76,
+      "str": 480,
+      "absorption": 82.8,
+      "mos": 2.5,
+      "medianPrice": 256950,
+      "medianPpa": 122479
+    },
+    "37075": {
+      "dom": 72,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 218500,
+      "medianPpa": 157886
+    },
+    "37077": {
+      "dom": 61,
+      "str": 313.6,
+      "absorption": 75.8,
+      "mos": 3.9,
+      "medianPrice": 229000,
+      "medianPpa": 132076
+    },
+    "37079": {
+      "dom": 80,
+      "str": 1100,
+      "absorption": 91.7,
+      "mos": 1.1,
+      "medianPrice": 174500,
+      "medianPpa": 235215
+    },
+    "37081": {
+      "dom": 61,
+      "str": 490,
+      "absorption": 83.1,
+      "mos": 2.5,
+      "medianPrice": 209000,
+      "medianPpa": 138167
+    },
+    "37083": {
+      "dom": 53,
+      "str": 207.7,
+      "absorption": 67.5,
+      "mos": 5.9,
+      "medianPrice": 151500,
+      "medianPpa": 185000
+    },
+    "37085": {
+      "dom": 65,
+      "str": 367.3,
+      "absorption": 78.6,
+      "mos": 3.3,
+      "medianPrice": 190000,
+      "medianPpa": 221488
+    },
+    "37087": {
+      "dom": 108,
+      "str": 2200,
+      "absorption": 95.7,
+      "mos": 0.6,
+      "medianPrice": 133000,
+      "medianPpa": 201581
+    },
+    "37089": {
+      "dom": 44,
+      "str": 5700,
+      "absorption": 98.3,
+      "mos": 0.2,
+      "medianPrice": 181000,
+      "medianPpa": 264713
+    },
+    "37091": {
+      "dom": 224,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 143500,
+      "medianPpa": 114870
+    },
+    "37093": {
+      "dom": 45,
+      "str": 440,
+      "absorption": 81.5,
+      "mos": 2.8,
+      "medianPrice": 165000,
+      "medianPpa": 172223
+    },
+    "37095": {
+      "dom": 37,
+      "str": 700,
+      "absorption": 87.5,
+      "mos": 1.7,
+      "medianPrice": 200000,
+      "medianPpa": 538909
+    },
+    "37097": {
+      "dom": 44,
+      "str": 3000,
+      "absorption": 96.8,
+      "mos": 0.4,
+      "medianPrice": 93750,
+      "medianPpa": 122350
+    },
+    "37099": {
+      "dom": 89,
+      "str": 300,
+      "absorption": 75,
+      "mos": 4.1,
+      "medianPrice": 220750,
+      "medianPpa": 139087
+    },
+    "37101": {
+      "dom": 71,
+      "str": 391.7,
+      "absorption": 79.7,
+      "mos": 3.1,
+      "medianPrice": 215000,
+      "medianPpa": 166666
+    },
+    "37103": {
+      "dom": 136,
+      "str": 225,
+      "absorption": 69.2,
+      "mos": 5.4,
+      "medianPrice": 135000,
+      "medianPpa": 158824
+    },
+    "37105": {
+      "dom": 60,
+      "str": 1266.7,
+      "absorption": 92.7,
+      "mos": 1,
+      "medianPrice": 224000,
+      "medianPpa": 117476
+    },
+    "37107": {
+      "dom": 99,
+      "str": 253.3,
+      "absorption": 71.7,
+      "mos": 4.8,
+      "medianPrice": 112500,
+      "medianPpa": 191452
+    },
+    "37109": {
+      "dom": 63,
+      "str": 3800,
+      "absorption": 97.4,
+      "mos": 0.3,
+      "medianPrice": 104000,
+      "medianPpa": 127479
+    },
+    "37111": {
+      "dom": 111,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 180000,
+      "medianPpa": 100000
+    },
+    "37113": {
+      "dom": 82,
+      "str": 273.3,
+      "absorption": 73.2,
+      "mos": 4.5,
+      "medianPrice": 205000,
+      "medianPpa": 254545
+    },
+    "37115": {
+      "dom": 21,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 85000,
+      "medianPpa": 52469
+    },
+    "37117": {
+      "dom": 73,
+      "str": 157.1,
+      "absorption": 61.1,
+      "mos": 7.7,
+      "medianPrice": 159000,
+      "medianPpa": 128571
+    },
+    "37119": {
+      "dom": 0,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 227000,
+      "medianPpa": 118750
+    },
+    "37121": {
+      "dom": 0,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 149000,
+      "medianPpa": 157955
+    },
+    "37123": {
+      "dom": 88,
+      "str": 445.5,
+      "absorption": 81.7,
+      "mos": 2.7,
+      "medianPrice": 135000,
+      "medianPpa": 1000000
+    },
+    "37125": {
+      "dom": 63,
+      "str": 113.6,
+      "absorption": 53.2,
+      "mos": 10.7,
+      "medianPrice": 184500,
+      "medianPpa": 163361
+    },
+    "37127": {
+      "dom": 73,
+      "str": 318.2,
+      "absorption": 76.1,
+      "mos": 3.8,
+      "medianPrice": 221000,
+      "medianPpa": 191957
+    },
+    "37129": {
+      "dom": 81,
+      "str": 285.7,
+      "absorption": 74.1,
+      "mos": 4.3,
+      "medianPrice": 226000,
+      "medianPpa": 722360
+    },
+    "37131": {
+      "dom": 61,
+      "str": 380,
+      "absorption": 79.2,
+      "mos": 3.2,
+      "medianPrice": 158000,
+      "medianPpa": 113113
+    },
+    "37133": {
+      "dom": 65,
+      "str": 178.6,
+      "absorption": 64.1,
+      "mos": 6.8,
+      "medianPrice": 200000,
+      "medianPpa": 227028
+    },
+    "37135": {
+      "dom": 53,
+      "str": 290,
+      "absorption": 74.4,
+      "mos": 4.2,
+      "medianPrice": 199250,
+      "medianPpa": 135966
+    },
+    "37137": {
+      "dom": 41,
+      "str": 150,
+      "absorption": 60,
+      "mos": 8.1,
+      "medianPrice": 140500,
+      "medianPpa": 125541
+    },
+    "37139": {
+      "dom": 80,
+      "str": 257.1,
+      "absorption": 72,
+      "mos": 4.7,
+      "medianPrice": 250000,
+      "medianPpa": 266640
+    },
+    "37141": {
+      "dom": 65,
+      "str": 236.7,
+      "absorption": 70.3,
+      "mos": 5.1,
+      "medianPrice": 218000,
+      "medianPpa": 247915
+    },
+    "37143": {
+      "dom": 76,
+      "str": 420,
+      "absorption": 80.8,
+      "mos": 2.9,
+      "medianPrice": 187500,
+      "medianPpa": 209899
+    },
+    "37145": {
+      "dom": 68,
+      "str": 514.3,
+      "absorption": 83.7,
+      "mos": 2.4,
+      "medianPrice": 195500,
+      "medianPpa": 155000
+    },
+    "37147": {
+      "dom": 51,
+      "str": 516.7,
+      "absorption": 83.8,
+      "mos": 2.4,
+      "medianPrice": 118000,
+      "medianPpa": 148401
+    },
+    "37149": {
+      "dom": 0,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 278750,
+      "medianPpa": 38144
+    },
+    "37151": {
+      "dom": 52,
+      "str": 470.7,
+      "absorption": 82.5,
+      "mos": 2.6,
+      "medianPrice": 170000,
+      "medianPpa": 108889
+    },
+    "37153": {
+      "dom": 77,
+      "str": 180,
+      "absorption": 64.3,
+      "mos": 6.8,
+      "medianPrice": 118000,
+      "medianPpa": 111111
+    },
+    "37155": {
+      "dom": 74,
+      "str": 251.2,
+      "absorption": 71.5,
+      "mos": 4.8,
+      "medianPrice": 148500,
+      "medianPpa": 124704
+    },
+    "37157": {
+      "dom": 66,
+      "str": 459.1,
+      "absorption": 82.1,
+      "mos": 2.7,
+      "medianPrice": 170000,
+      "medianPpa": 92623
+    },
+    "37159": {
+      "dom": 79,
+      "str": 3000,
+      "absorption": 96.8,
+      "mos": 0.4,
+      "medianPrice": 141250,
+      "medianPpa": 101667
+    },
+    "37161": {
+      "dom": 95,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 80000,
+      "medianPpa": 67171
+    },
+    "37163": {
+      "dom": 83,
+      "str": 204.8,
+      "absorption": 67.2,
+      "mos": 5.9,
+      "medianPrice": 180000,
+      "medianPpa": 130432
+    },
+    "37165": {
+      "dom": 125,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 96000,
+      "medianPpa": 124306
+    },
+    "37167": {
+      "dom": 48,
+      "str": 2200,
+      "absorption": 95.7,
+      "mos": 0.6,
+      "medianPrice": 182500,
+      "medianPpa": 61690
+    },
+    "37169": {
+      "dom": 79,
+      "str": 233.3,
+      "absorption": 70,
+      "mos": 5.2,
+      "medianPrice": 195000,
+      "medianPpa": 108333
+    },
+    "37171": {
+      "dom": 79,
+      "str": 372.2,
+      "absorption": 78.8,
+      "mos": 3.3,
+      "medianPrice": 173500,
+      "medianPpa": 105953
+    },
+    "37173": {
+      "dom": 182,
+      "str": 160,
+      "absorption": 61.5,
+      "mos": 7.6,
+      "medianPrice": 171500,
+      "medianPpa": 331335
+    },
+    "37175": {
+      "dom": 0,
+      "str": 800,
+      "absorption": 88.9,
+      "mos": 1.5,
+      "medianPrice": 231500,
+      "medianPpa": 311135
+    },
+    "37177": {
+      "dom": 134,
+      "str": 350,
+      "absorption": 77.8,
+      "mos": 3.5,
+      "medianPrice": 120000,
+      "medianPpa": 304920
+    },
+    "37179": {
+      "dom": 44,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 250000,
+      "medianPpa": 63779
+    },
+    "37181": {
+      "dom": 57,
+      "str": 428.6,
+      "absorption": 81.1,
+      "mos": 2.8,
+      "medianPrice": 196000,
+      "medianPpa": 145193
+    },
+    "37183": {
+      "dom": 50,
+      "str": 925,
+      "absorption": 90.2,
+      "mos": 1.3,
+      "medianPrice": 220000,
+      "medianPpa": 230161
+    },
+    "37185": {
+      "dom": 83,
+      "str": 292.9,
+      "absorption": 74.5,
+      "mos": 4.2,
+      "medianPrice": 229000,
+      "medianPpa": 210094
+    },
+    "37187": {
+      "dom": 95,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 177000,
+      "medianPpa": 56110
+    },
+    "37189": {
+      "dom": 32,
+      "str": 3200,
+      "absorption": 97,
+      "mos": 0.4,
+      "medianPrice": 161250,
+      "medianPpa": 155546
+    },
+    "37191": {
+      "dom": 72,
+      "str": 477.8,
+      "absorption": 82.7,
+      "mos": 2.5,
+      "medianPrice": 160000,
+      "medianPpa": 157954
+    },
+    "37193": {
+      "dom": 67,
+      "str": 593.3,
+      "absorption": 85.6,
+      "mos": 2.1,
+      "medianPrice": 179999,
+      "medianPpa": 126358
+    },
+    "37195": {
+      "dom": 74,
+      "str": 235.7,
+      "absorption": 70.2,
+      "mos": 5.2,
+      "medianPrice": 170000,
+      "medianPpa": 155659
+    },
+    "37197": {
+      "dom": 61,
+      "str": 520,
+      "absorption": 83.9,
+      "mos": 2.3,
+      "medianPrice": 187500,
+      "medianPpa": 132957
+    },
+    "37199": {
+      "dom": 0,
+      "str": 100,
+      "absorption": 100,
+      "mos": 0,
+      "medianPrice": 75000,
+      "medianPpa": 56000
+    },
+    "45001": {
+      "dom": 70,
+      "str": 136,
+      "absorption": 57.6,
+      "mos": 8.9,
+      "medianPrice": 170000,
+      "medianPpa": 69979
+    },
+    "45003": {
+      "dom": 73,
+      "str": 215,
+      "absorption": 68.3,
+      "mos": 5.7,
+      "medianPrice": 199000,
+      "medianPpa": 99500
+    },
+    "45005": {
+      "dom": 68,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 129900,
+      "medianPpa": 137037
+    },
+    "45007": {
+      "dom": 68,
+      "str": 230.2,
+      "absorption": 69.7,
+      "mos": 5.3,
+      "medianPrice": 187000,
+      "medianPpa": 211154
+    },
+    "45009": {
+      "dom": 187,
+      "str": 50,
+      "absorption": 33.3,
+      "mos": 24.3,
+      "medianPrice": 125000,
+      "medianPpa": 24250
+    },
+    "45011": {
+      "dom": 73,
+      "str": 1050,
+      "absorption": 91.3,
+      "mos": 1.2,
+      "medianPrice": 165000,
+      "medianPpa": 48480
+    },
+    "45013": {
+      "dom": 64,
+      "str": 212.8,
+      "absorption": 68,
+      "mos": 5.7,
+      "medianPrice": 215000,
+      "medianPpa": 281000
+    },
+    "45015": {
+      "dom": 90,
+      "str": 221.8,
+      "absorption": 68.9,
+      "mos": 5.5,
+      "medianPrice": 270000,
+      "medianPpa": 250000
+    },
+    "45017": {
+      "dom": 64,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 180000,
+      "medianPpa": 189474
+    },
+    "45019": {
+      "dom": 75,
+      "str": 335.3,
+      "absorption": 77,
+      "mos": 3.6,
+      "medianPrice": 265000,
+      "medianPpa": 320000
+    },
+    "45021": {
+      "dom": 61,
+      "str": 404.8,
+      "absorption": 80.2,
+      "mos": 3,
+      "medianPrice": 145000,
+      "medianPpa": 75893
+    },
+    "45023": {
+      "dom": 0,
+      "str": 0,
+      "absorption": 0,
+      "mos": 0,
+      "medianPrice": 0,
+      "medianPpa": 0
+    },
+    "45025": {
+      "dom": 85,
+      "str": 81.8,
+      "absorption": 45,
+      "mos": 14.9,
+      "medianPrice": 179450,
+      "medianPpa": 66627
+    },
+    "45027": {
+      "dom": 98,
+      "str": 176.1,
+      "absorption": 63.8,
+      "mos": 6.9,
+      "medianPrice": 179950,
+      "medianPpa": 172324
+    },
+    "45029": {
+      "dom": 91,
+      "str": 192,
+      "absorption": 65.8,
+      "mos": 6.3,
+      "medianPrice": 219000,
+      "medianPpa": 121449
+    },
+    "45031": {
+      "dom": 74,
+      "str": 121.2,
+      "absorption": 54.8,
+      "mos": 10,
+      "medianPrice": 145850,
+      "medianPpa": 164583
+    },
+    "45033": {
+      "dom": 151,
+      "str": 150,
+      "absorption": 60,
+      "mos": 8.1,
+      "medianPrice": 162400,
+      "medianPpa": 183806
+    },
+    "45035": {
+      "dom": 81,
+      "str": 326.2,
+      "absorption": 76.5,
+      "mos": 3.7,
+      "medianPrice": 225000,
+      "medianPpa": 222770
+    },
+    "45037": {
+      "dom": 54,
+      "str": 220,
+      "absorption": 68.8,
+      "mos": 5.5,
+      "medianPrice": 157000,
+      "medianPpa": 94508
+    },
+    "45039": {
+      "dom": 63,
+      "str": 85.7,
+      "absorption": 46.2,
+      "mos": 14.2,
+      "medianPrice": 140500,
+      "medianPpa": 95634
+    },
+    "45041": {
+      "dom": 74,
+      "str": 212.5,
+      "absorption": 68,
+      "mos": 5.7,
+      "medianPrice": 143000,
+      "medianPpa": 170919
+    },
+    "45043": {
+      "dom": 95,
+      "str": 188.2,
+      "absorption": 65.3,
+      "mos": 6.5,
+      "medianPrice": 180000,
+      "medianPpa": 199000
+    },
+    "45045": {
+      "dom": 60,
+      "str": 381.4,
+      "absorption": 79.2,
+      "mos": 3.2,
+      "medianPrice": 191000,
+      "medianPpa": 268598
+    },
+    "45047": {
+      "dom": 59,
+      "str": 500,
+      "absorption": 83.3,
+      "mos": 2.4,
+      "medianPrice": 142950,
+      "medianPpa": 132130
+    },
+    "45049": {
+      "dom": 84,
+      "str": 200,
+      "absorption": 66.7,
+      "mos": 6.1,
+      "medianPrice": 149950,
+      "medianPpa": 89389
+    },
+    "45051": {
+      "dom": 88,
+      "str": 128.8,
+      "absorption": 56.3,
+      "mos": 9.4,
+      "medianPrice": 197500,
+      "medianPpa": 478250
+    },
+    "45053": {
+      "dom": 85,
+      "str": 194.1,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 200000,
+      "medianPpa": 164500
+    },
+    "45055": {
+      "dom": 133,
+      "str": 134.3,
+      "absorption": 57.3,
+      "mos": 9.1,
+      "medianPrice": 163300,
+      "medianPpa": 98171
+    },
+    "45057": {
+      "dom": 81,
+      "str": 2400,
+      "absorption": 96,
+      "mos": 0.5,
+      "medianPrice": 189868,
+      "medianPpa": 72660
+    },
+    "45059": {
+      "dom": 95,
+      "str": 233.3,
+      "absorption": 70,
+      "mos": 5.2,
+      "medianPrice": 199900,
+      "medianPpa": 131034
+    },
+    "45061": {
+      "dom": 57,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 140000,
+      "medianPpa": 191028
+    },
+    "45063": {
+      "dom": 85,
+      "str": 72.6,
+      "absorption": 42.1,
+      "mos": 16.8,
+      "medianPrice": 180000,
+      "medianPpa": 100728
+    },
+    "45065": {
+      "dom": 97,
+      "str": 140,
+      "absorption": 58.3,
+      "mos": 8.7,
+      "medianPrice": 162500,
+      "medianPpa": 71638
+    },
+    "45067": {
+      "dom": 71,
+      "str": 80.8,
+      "absorption": 44.7,
+      "mos": 15.1,
+      "medianPrice": 189500,
+      "medianPpa": 138671
+    },
+    "45069": {
+      "dom": 113,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 169000,
+      "medianPpa": 109900
+    },
+    "45071": {
+      "dom": 34,
+      "str": 92.3,
+      "absorption": 48,
+      "mos": 13.2,
+      "medianPrice": 262000,
+      "medianPpa": 127250
+    },
+    "45073": {
+      "dom": 64,
+      "str": 194,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 177000,
+      "medianPpa": 129033
+    },
+    "45075": {
+      "dom": 99,
+      "str": 159.3,
+      "absorption": 61.4,
+      "mos": 7.6,
+      "medianPrice": 188250,
+      "medianPpa": 176825
+    },
+    "45077": {
+      "dom": 70,
+      "str": 397.2,
+      "absorption": 79.9,
+      "mos": 3.1,
+      "medianPrice": 161500,
+      "medianPpa": 157000
+    },
+    "45079": {
+      "dom": 156,
+      "str": 193.9,
+      "absorption": 66,
+      "mos": 6.3,
+      "medianPrice": 155000,
+      "medianPpa": 93879
+    },
+    "45081": {
+      "dom": 0,
+      "str": 285.7,
+      "absorption": 74.1,
+      "mos": 4.3,
+      "medianPrice": 149950,
+      "medianPpa": 81324
+    },
+    "45083": {
+      "dom": 69,
+      "str": 205.9,
+      "absorption": 67.3,
+      "mos": 5.9,
+      "medianPrice": 195000,
+      "medianPpa": 170585
+    },
+    "45085": {
+      "dom": 60,
+      "str": 90.7,
+      "absorption": 47.6,
+      "mos": 13.4,
+      "medianPrice": 151250,
+      "medianPpa": 173960
+    },
+    "45087": {
+      "dom": 50,
+      "str": 71.4,
+      "absorption": 41.7,
+      "mos": 17,
+      "medianPrice": 204000,
+      "medianPpa": 110270
+    },
+    "45089": {
+      "dom": 71,
+      "str": 136.4,
+      "absorption": 57.7,
+      "mos": 8.9,
+      "medianPrice": 132000,
+      "medianPpa": 67889
+    },
+    "45091": {
+      "dom": 127,
+      "str": 100,
+      "absorption": 50,
+      "mos": 12.2,
+      "medianPrice": 85000,
+      "medianPpa": 1213515
+    }
+  },
+  "land": {
+    "37001": {
+      "dom": 67.0,
+      "str": 240.8,
+      "absorption": 70.7,
+      "mos": 5.1,
+      "medianPrice": 72500,
+      "medianPpa": 57143
+    },
+    "37003": {
+      "dom": 203.0,
+      "str": 236.5,
+      "absorption": 70.3,
+      "mos": 5.1,
+      "medianPrice": 47000,
+      "medianPpa": 15190
+    },
+    "37005": {
+      "dom": 101.0,
+      "str": 63.1,
+      "absorption": 38.7,
+      "mos": 19.3,
+      "medianPrice": 29250,
+      "medianPpa": 17573
+    },
+    "37007": {
+      "dom": 157.0,
+      "str": 87.8,
+      "absorption": 46.7,
+      "mos": 13.9,
+      "medianPrice": 38500,
+      "medianPpa": 13274
+    },
+    "37009": {
+      "dom": 98.0,
+      "str": 74.4,
+      "absorption": 42.7,
+      "mos": 16.4,
+      "medianPrice": 64000,
+      "medianPpa": 21487
+    },
+    "37011": {
+      "dom": 119.0,
+      "str": 43.3,
+      "absorption": 30.2,
+      "mos": 28.1,
+      "medianPrice": 80000,
+      "medianPpa": 61985
+    },
+    "37013": {
+      "dom": 119.0,
+      "str": 75.1,
+      "absorption": 42.9,
+      "mos": 16.2,
+      "medianPrice": 48000,
+      "medianPpa": 34483
+    },
+    "37015": {
+      "dom": 80.0,
+      "str": 71.4,
+      "absorption": 41.7,
+      "mos": 17.0,
+      "medianPrice": 54000,
+      "medianPpa": 30770
+    },
+    "37017": {
+      "dom": 114.0,
+      "str": 183.3,
+      "absorption": 64.7,
+      "mos": 6.6,
+      "medianPrice": 32500,
+      "medianPpa": 11844
+    },
+    "37019": {
+      "dom": 97.0,
+      "str": 155.4,
+      "absorption": 60.8,
+      "mos": 7.8,
+      "medianPrice": 65200,
+      "medianPpa": 159377
+    },
+    "37021": {
+      "dom": 130.0,
+      "str": 111.2,
+      "absorption": 52.7,
+      "mos": 10.9,
+      "medianPrice": 115000,
+      "medianPpa": 100140
+    },
+    "37023": {
+      "dom": 121.0,
+      "str": 158.3,
+      "absorption": 61.3,
+      "mos": 7.7,
+      "medianPrice": 47500,
+      "medianPpa": 22891
+    },
+    "37025": {
+      "dom": 73.0,
+      "str": 99.2,
+      "absorption": 49.8,
+      "mos": 12.3,
+      "medianPrice": 135000,
+      "medianPpa": 67165
+    },
+    "37027": {
+      "dom": 133.0,
+      "str": 114.9,
+      "absorption": 53.5,
+      "mos": 10.6,
+      "medianPrice": 60000,
+      "medianPpa": 37634
+    },
+    "37029": {
+      "dom": 54.0,
+      "str": 154.5,
+      "absorption": 60.7,
+      "mos": 7.9,
+      "medianPrice": 143000,
+      "medianPpa": 14500
+    },
+    "37031": {
+      "dom": 113.0,
+      "str": 129.9,
+      "absorption": 56.5,
+      "mos": 9.4,
+      "medianPrice": 125000,
+      "medianPpa": 231576
+    },
+    "37033": {
+      "dom": 131.0,
+      "str": 178.5,
+      "absorption": 64.1,
+      "mos": 6.8,
+      "medianPrice": 88750,
+      "medianPpa": 7953
+    },
+    "37035": {
+      "dom": 93.0,
+      "str": 102.7,
+      "absorption": 50.7,
+      "mos": 11.8,
+      "medianPrice": 68500,
+      "medianPpa": 53262
+    },
+    "37037": {
+      "dom": 98.0,
+      "str": 59.3,
+      "absorption": 37.2,
+      "mos": 20.5,
+      "medianPrice": 220000,
+      "medianPpa": 47826
+    },
+    "37039": {
+      "dom": 113.0,
+      "str": 69.5,
+      "absorption": 41.0,
+      "mos": 17.5,
+      "medianPrice": 35000,
+      "medianPpa": 15000
+    },
+    "37041": {
+      "dom": 149.0,
+      "str": 102.4,
+      "absorption": 50.6,
+      "mos": 11.9,
+      "medianPrice": 29000,
+      "medianPpa": 44444
+    },
+    "37043": {
+      "dom": 247.0,
+      "str": 49.3,
+      "absorption": 33.0,
+      "mos": 24.7,
+      "medianPrice": 59500,
+      "medianPpa": 20325
+    },
+    "37045": {
+      "dom": 88.0,
+      "str": 84.1,
+      "absorption": 45.7,
+      "mos": 14.5,
+      "medianPrice": 63000,
+      "medianPpa": 25000
+    },
+    "37047": {
+      "dom": 95.0,
+      "str": 137.3,
+      "absorption": 57.9,
+      "mos": 8.9,
+      "medianPrice": 45000,
+      "medianPpa": 13857
+    },
+    "37049": {
+      "dom": 97.0,
+      "str": 157.4,
+      "absorption": 61.1,
+      "mos": 7.7,
+      "medianPrice": 60000,
+      "medianPpa": 79376
+    },
+    "37051": {
+      "dom": 92.0,
+      "str": 163.6,
+      "absorption": 62.1,
+      "mos": 7.4,
+      "medianPrice": 65000,
+      "medianPpa": 35087
+    },
+    "37053": {
+      "dom": 103.0,
+      "str": 178.0,
+      "absorption": 64.0,
+      "mos": 6.8,
+      "medianPrice": 145000,
+      "medianPpa": 235300
+    },
+    "37055": {
+      "dom": 92.0,
+      "str": 169.6,
+      "absorption": 62.9,
+      "mos": 7.2,
+      "medianPrice": 212500,
+      "medianPpa": 585338
+    },
+    "37057": {
+      "dom": 110.0,
+      "str": 136.4,
+      "absorption": 57.7,
+      "mos": 8.9,
+      "medianPrice": 60000,
+      "medianPpa": 25758
+    },
+    "37059": {
+      "dom": 59.0,
+      "str": 217.3,
+      "absorption": 68.5,
+      "mos": 5.6,
+      "medianPrice": 120000,
+      "medianPpa": 53333
+    },
+    "37061": {
+      "dom": 125.0,
+      "str": 200.9,
+      "absorption": 66.8,
+      "mos": 6.1,
+      "medianPrice": 50000,
+      "medianPpa": 19827
+    },
+    "37063": {
+      "dom": 88.0,
+      "str": 113.0,
+      "absorption": 53.0,
+      "mos": 10.8,
+      "medianPrice": 111250,
+      "medianPpa": 135870
+    },
+    "37065": {
+      "dom": 106.0,
+      "str": 46.9,
+      "absorption": 31.9,
+      "mos": 26.0,
+      "medianPrice": 33500,
+      "medianPpa": 33091
+    },
+    "37067": {
+      "dom": 117.0,
+      "str": 191.2,
+      "absorption": 65.7,
+      "mos": 6.4,
+      "medianPrice": 54000,
+      "medianPpa": 46739
+    },
+    "37069": {
+      "dom": 96.0,
+      "str": 178.1,
+      "absorption": 64.0,
+      "mos": 6.8,
+      "medianPrice": 60000,
+      "medianPpa": 48781
+    },
+    "37071": {
+      "dom": 85.0,
+      "str": 157.7,
+      "absorption": 61.2,
+      "mos": 7.7,
+      "medianPrice": 80000,
+      "medianPpa": 81349
+    },
+    "37073": {
+      "dom": 70.0,
+      "str": 111.1,
+      "absorption": 52.6,
+      "mos": 11.0,
+      "medianPrice": 89500,
+      "medianPpa": 9495
+    },
+    "37075": {
+      "dom": 189.0,
+      "str": 62.9,
+      "absorption": 38.6,
+      "mos": 19.3,
+      "medianPrice": 110000,
+      "medianPpa": 14205
+    },
+    "37077": {
+      "dom": 86.0,
+      "str": 154.0,
+      "absorption": 60.6,
+      "mos": 7.9,
+      "medianPrice": 70000,
+      "medianPpa": 20895
+    },
+    "37079": {
+      "dom": 134.0,
+      "str": 400.0,
+      "absorption": 80.0,
+      "mos": 3.0,
+      "medianPrice": 30000,
+      "medianPpa": 39430
+    },
+    "37081": {
+      "dom": 84.0,
+      "str": 90.8,
+      "absorption": 47.6,
+      "mos": 13.4,
+      "medianPrice": 77500,
+      "medianPpa": 68086
+    },
+    "37083": {
+      "dom": 187.0,
+      "str": 139.5,
+      "absorption": 58.2,
+      "mos": 8.7,
+      "medianPrice": 20000,
+      "medianPpa": 16949
+    },
+    "37085": {
+      "dom": 72.0,
+      "str": 169.1,
+      "absorption": 62.8,
+      "mos": 7.2,
+      "medianPrice": 79500,
+      "medianPpa": 58333
+    },
+    "37087": {
+      "dom": 152.0,
+      "str": 53.6,
+      "absorption": 34.9,
+      "mos": 22.7,
+      "medianPrice": 64000,
+      "medianPpa": 37494
+    },
+    "37089": {
+      "dom": 92.0,
+      "str": 85.4,
+      "absorption": 46.1,
+      "mos": 14.3,
+      "medianPrice": 85000,
+      "medianPpa": 66228
+    },
+    "37091": {
+      "dom": 158.0,
+      "str": 69.6,
+      "absorption": 41.0,
+      "mos": 17.5,
+      "medianPrice": 18900,
+      "medianPpa": 14837
+    },
+    "37093": {
+      "dom": 98.0,
+      "str": 101.5,
+      "absorption": 50.4,
+      "mos": 12.0,
+      "medianPrice": 70000,
+      "medianPpa": 13863
+    },
+    "37095": {
+      "dom": 67.0,
+      "str": 87.5,
+      "absorption": 46.7,
+      "mos": 13.9,
+      "medianPrice": 117500,
+      "medianPpa": 9805
+    },
+    "37097": {
+      "dom": 113.0,
+      "str": 100.4,
+      "absorption": 50.1,
+      "mos": 12.1,
+      "medianPrice": 102000,
+      "medianPpa": 56963
+    },
+    "37099": {
+      "dom": 150.0,
+      "str": 79.8,
+      "absorption": 44.4,
+      "mos": 15.2,
+      "medianPrice": 82750,
+      "medianPpa": 32890
+    },
+    "37101": {
+      "dom": 95.0,
+      "str": 212.1,
+      "absorption": 68.0,
+      "mos": 5.7,
+      "medianPrice": 180000,
+      "medianPpa": 63333
+    },
+    "37103": {
+      "dom": 74.0,
+      "str": 74.1,
+      "absorption": 42.6,
+      "mos": 16.4,
+      "medianPrice": 87500,
+      "medianPpa": 10315
+    },
+    "37105": {
+      "dom": 83.0,
+      "str": 125.0,
+      "absorption": 55.6,
+      "mos": 9.7,
+      "medianPrice": 32150,
+      "medianPpa": 43501
+    },
+    "37107": {
+      "dom": 123.0,
+      "str": 192.3,
+      "absorption": 65.8,
+      "mos": 6.3,
+      "medianPrice": 25000,
+      "medianPpa": 23096
+    },
+    "37109": {
+      "dom": 84.0,
+      "str": 141.3,
+      "absorption": 58.6,
+      "mos": 8.6,
+      "medianPrice": 102000,
+      "medianPpa": 42654
+    },
+    "37111": {
+      "dom": 122.0,
+      "str": 127.1,
+      "absorption": 56.0,
+      "mos": 9.6,
+      "medianPrice": 80000,
+      "medianPpa": 28323
+    },
+    "37113": {
+      "dom": 114.0,
+      "str": 111.4,
+      "absorption": 52.7,
+      "mos": 10.9,
+      "medianPrice": 50000,
+      "medianPpa": 22000
+    },
+    "37115": {
+      "dom": 169.0,
+      "str": 103.3,
+      "absorption": 50.8,
+      "mos": 11.8,
+      "medianPrice": 60000,
+      "medianPpa": 12915
+    },
+    "37117": {
+      "dom": 98.0,
+      "str": 100.0,
+      "absorption": 50.0,
+      "mos": 12.2,
+      "medianPrice": 50000,
+      "medianPpa": 6839
+    },
+    "37119": {
+      "dom": 89.0,
+      "str": 69.0,
+      "absorption": 40.8,
+      "mos": 17.6,
+      "medianPrice": 192000,
+      "medianPpa": 265502
+    },
+    "37121": {
+      "dom": 159.0,
+      "str": 79.5,
+      "absorption": 44.3,
+      "mos": 15.3,
+      "medianPrice": 50500,
+      "medianPpa": 11164
+    },
+    "37123": {
+      "dom": 145.0,
+      "str": 100.7,
+      "absorption": 50.2,
+      "mos": 12.1,
+      "medianPrice": 39500,
+      "medianPpa": 23485
+    },
+    "37125": {
+      "dom": 98.0,
+      "str": 195.3,
+      "absorption": 66.1,
+      "mos": 6.2,
+      "medianPrice": 80000,
+      "medianPpa": 51097
+    },
+    "37127": {
+      "dom": 102.0,
+      "str": 102.4,
+      "absorption": 50.6,
+      "mos": 11.9,
+      "medianPrice": 60000,
+      "medianPpa": 31829
+    },
+    "37129": {
+      "dom": 97.0,
+      "str": 196.2,
+      "absorption": 66.2,
+      "mos": 6.2,
+      "medianPrice": 270000,
+      "medianPpa": 663014
+    },
+    "37131": {
+      "dom": 65.0,
+      "str": 50.0,
+      "absorption": 33.3,
+      "mos": 24.3,
+      "medianPrice": 22000,
+      "medianPpa": 20000
+    },
+    "37133": {
+      "dom": 97.0,
+      "str": 141.5,
+      "absorption": 58.6,
+      "mos": 8.6,
+      "medianPrice": 80200,
+      "medianPpa": 91670
+    },
+    "37135": {
+      "dom": 55.0,
+      "str": 134.4,
+      "absorption": 57.3,
+      "mos": 9.1,
+      "medianPrice": 250000,
+      "medianPpa": 52729
+    },
+    "37137": {
+      "dom": 189.0,
+      "str": 69.4,
+      "absorption": 41.0,
+      "mos": 17.5,
+      "medianPrice": 55000,
+      "medianPpa": 45097
+    },
+    "37139": {
+      "dom": 280.0,
+      "str": 177.6,
+      "absorption": 64.0,
+      "mos": 6.9,
+      "medianPrice": 75000,
+      "medianPpa": 23036
+    },
+    "37141": {
+      "dom": 96.0,
+      "str": 111.5,
+      "absorption": 52.7,
+      "mos": 10.9,
+      "medianPrice": 133000,
+      "medianPpa": 53957
+    },
+    "37143": {
+      "dom": 131.0,
+      "str": 71.3,
+      "absorption": 41.6,
+      "mos": 17.1,
+      "medianPrice": 41500,
+      "medianPpa": 26955
+    },
+    "37145": {
+      "dom": 92.0,
+      "str": 206.8,
+      "absorption": 67.4,
+      "mos": 5.9,
+      "medianPrice": 75000,
+      "medianPpa": 14991
+    },
+    "37147": {
+      "dom": 88.0,
+      "str": 132.7,
+      "absorption": 57.0,
+      "mos": 9.2,
+      "medianPrice": 72500,
+      "medianPpa": 16867
+    },
+    "37149": {
+      "dom": 161.0,
+      "str": 52.6,
+      "absorption": 34.5,
+      "mos": 23.1,
+      "medianPrice": 90000,
+      "medianPpa": 26418
+    },
+    "37151": {
+      "dom": 74.0,
+      "str": 314.5,
+      "absorption": 75.9,
+      "mos": 3.9,
+      "medianPrice": 50000,
+      "medianPpa": 24311
+    },
+    "37153": {
+      "dom": 85.0,
+      "str": 64.7,
+      "absorption": 39.3,
+      "mos": 18.8,
+      "medianPrice": 40000,
+      "medianPpa": 10216
+    },
+    "37155": {
+      "dom": 158.0,
+      "str": 195.8,
+      "absorption": 66.2,
+      "mos": 6.2,
+      "medianPrice": 34250,
+      "medianPpa": 9864
+    },
+    "37157": {
+      "dom": 101.0,
+      "str": 250.5,
+      "absorption": 71.5,
+      "mos": 4.9,
+      "medianPrice": 45000,
+      "medianPpa": 19024
+    },
+    "37159": {
+      "dom": 88.0,
+      "str": 91.8,
+      "absorption": 47.9,
+      "mos": 13.2,
+      "medianPrice": 75000,
+      "medianPpa": 46685
+    },
+    "37161": {
+      "dom": 119.0,
+      "str": 49.5,
+      "absorption": 33.1,
+      "mos": 24.6,
+      "medianPrice": 38500,
+      "medianPpa": 13158
+    },
+    "37163": {
+      "dom": 91.0,
+      "str": 124.6,
+      "absorption": 55.5,
+      "mos": 9.8,
+      "medianPrice": 48000,
+      "medianPpa": 14631
+    },
+    "37165": {
+      "dom": 82.0,
+      "str": 101.3,
+      "absorption": 50.3,
+      "mos": 12.0,
+      "medianPrice": 25000,
+      "medianPpa": 23810
+    },
+    "37167": {
+      "dom": 103.0,
+      "str": 269.9,
+      "absorption": 73.0,
+      "mos": 4.5,
+      "medianPrice": 114750,
+      "medianPpa": 26123
+    },
+    "37169": {
+      "dom": 100.0,
+      "str": 178.5,
+      "absorption": 64.1,
+      "mos": 6.8,
+      "medianPrice": 70000,
+      "medianPpa": 10135
+    },
+    "37171": {
+      "dom": 124.0,
+      "str": 122.5,
+      "absorption": 55.0,
+      "mos": 9.9,
+      "medianPrice": 90000,
+      "medianPpa": 10721
+    },
+    "37173": {
+      "dom": 240.0,
+      "str": 44.5,
+      "absorption": 30.8,
+      "mos": 27.3,
+      "medianPrice": 68000,
+      "medianPpa": 20574
+    },
+    "37175": {
+      "dom": 192.0,
+      "str": 101.7,
+      "absorption": 50.4,
+      "mos": 12.0,
+      "medianPrice": 85000,
+      "medianPpa": 44843
+    },
+    "37177": {
+      "dom": 79.0,
+      "str": 113.6,
+      "absorption": 53.2,
+      "mos": 10.7,
+      "medianPrice": 40000,
+      "medianPpa": 34883
+    },
+    "37179": {
+      "dom": 96.0,
+      "str": 106.0,
+      "absorption": 51.5,
+      "mos": 11.5,
+      "medianPrice": 220000,
+      "medianPpa": 47368
+    },
+    "37181": {
+      "dom": 86.0,
+      "str": 160.0,
+      "absorption": 61.5,
+      "mos": 7.6,
+      "medianPrice": 49750,
+      "medianPpa": 14027
+    },
+    "37183": {
+      "dom": 100.0,
+      "str": 151.3,
+      "absorption": 60.2,
+      "mos": 8.0,
+      "medianPrice": 353000,
+      "medianPpa": 518660
+    },
+    "37185": {
+      "dom": 125.0,
+      "str": 127.4,
+      "absorption": 56.0,
+      "mos": 9.5,
+      "medianPrice": 45000,
+      "medianPpa": 15000
+    },
+    "37187": {
+      "dom": 94.0,
+      "str": 113.0,
+      "absorption": 53.1,
+      "mos": 10.8,
+      "medianPrice": 52500,
+      "medianPpa": 23083
+    },
+    "37189": {
+      "dom": 94.0,
+      "str": 86.5,
+      "absorption": 46.4,
+      "mos": 14.1,
+      "medianPrice": 71500,
+      "medianPpa": 61000
+    },
+    "37191": {
+      "dom": 75.0,
+      "str": 90.6,
+      "absorption": 47.5,
+      "mos": 13.4,
+      "medianPrice": 35000,
+      "medianPpa": 28582
+    },
+    "37193": {
+      "dom": 114.0,
+      "str": 132.1,
+      "absorption": 56.9,
+      "mos": 9.2,
+      "medianPrice": 50000,
+      "medianPpa": 10863
+    },
+    "37195": {
+      "dom": 51.0,
+      "str": 171.4,
+      "absorption": 63.2,
+      "mos": 7.1,
+      "medianPrice": 100000,
+      "medianPpa": 42276
+    },
+    "37197": {
+      "dom": 63.0,
+      "str": 228.3,
+      "absorption": 69.5,
+      "mos": 5.3,
+      "medianPrice": 57000,
+      "medianPpa": 18224
+    },
+    "37199": {
+      "dom": 168.0,
+      "str": 78.1,
+      "absorption": 43.9,
+      "mos": 15.6,
+      "medianPrice": 50000,
+      "medianPpa": 18282
+    },
+    "45001": {
+      "dom": 71.0,
+      "str": 115.3,
+      "absorption": 53.6,
+      "mos": 10.6,
+      "medianPrice": 79000,
+      "medianPpa": 11813
+    },
+    "45003": {
+      "dom": 100.0,
+      "str": 93.2,
+      "absorption": 48.2,
+      "mos": 13.1,
+      "medianPrice": 79950,
+      "medianPpa": 15757
+    },
+    "45005": {
+      "dom": 236.0,
+      "str": 128.6,
+      "absorption": 56.3,
+      "mos": 9.5,
+      "medianPrice": 15000,
+      "medianPpa": 5451
+    },
+    "45007": {
+      "dom": 68.0,
+      "str": 145.2,
+      "absorption": 59.2,
+      "mos": 8.4,
+      "medianPrice": 70000,
+      "medianPpa": 46009
+    },
+    "45009": {
+      "dom": 157.0,
+      "str": 46.7,
+      "absorption": 31.8,
+      "mos": 26.1,
+      "medianPrice": 27850,
+      "medianPpa": 6667
+    },
+    "45011": {
+      "dom": 81.0,
+      "str": 92.7,
+      "absorption": 48.1,
+      "mos": 13.1,
+      "medianPrice": 53825,
+      "medianPpa": 9001
+    },
+    "45013": {
+      "dom": 114.0,
+      "str": 106.4,
+      "absorption": 51.6,
+      "mos": 11.4,
+      "medianPrice": 193000,
+      "medianPpa": 363175
+    },
+    "45015": {
+      "dom": 114.0,
+      "str": 118.4,
+      "absorption": 54.2,
+      "mos": 10.3,
+      "medianPrice": 127500,
+      "medianPpa": 59400
+    },
+    "45017": {
+      "dom": 147.0,
+      "str": 33.3,
+      "absorption": 25.0,
+      "mos": 36.5,
+      "medianPrice": 35000,
+      "medianPpa": 31509
+    },
+    "45019": {
+      "dom": 115.0,
+      "str": 129.3,
+      "absorption": 56.4,
+      "mos": 9.4,
+      "medianPrice": 308750,
+      "medianPpa": 312501
+    },
+    "45021": {
+      "dom": 112.0,
+      "str": 131.6,
+      "absorption": 56.8,
+      "mos": 9.2,
+      "medianPrice": 69000,
+      "medianPpa": 21631
+    },
+    "45023": {
+      "dom": 62.0,
+      "str": 77.8,
+      "absorption": 43.8,
+      "mos": 15.6,
+      "medianPrice": 86000,
+      "medianPpa": 12839
+    },
+    "45025": {
+      "dom": 101.0,
+      "str": 75.0,
+      "absorption": 42.9,
+      "mos": 16.2,
+      "medianPrice": 46025,
+      "medianPpa": 12315
+    },
+    "45027": {
+      "dom": 105.0,
+      "str": 78.4,
+      "absorption": 43.9,
+      "mos": 15.5,
+      "medianPrice": 43500,
+      "medianPpa": 13929
+    },
+    "45029": {
+      "dom": 117.0,
+      "str": 116.2,
+      "absorption": 53.8,
+      "mos": 10.5,
+      "medianPrice": 57500,
+      "medianPpa": 27316
+    },
+    "45031": {
+      "dom": 118.0,
+      "str": 107.3,
+      "absorption": 51.8,
+      "mos": 11.3,
+      "medianPrice": 41000,
+      "medianPpa": 11235
+    },
+    "45033": {
+      "dom": 145.0,
+      "str": 53.8,
+      "absorption": 35.0,
+      "mos": 22.6,
+      "medianPrice": 25000,
+      "medianPpa": 19102
+    },
+    "45035": {
+      "dom": 93.0,
+      "str": 119.1,
+      "absorption": 54.4,
+      "mos": 10.2,
+      "medianPrice": 120000,
+      "medianPpa": 63291
+    },
+    "45037": {
+      "dom": 77.0,
+      "str": 43.0,
+      "absorption": 30.1,
+      "mos": 28.3,
+      "medianPrice": 77000,
+      "medianPpa": 13726
+    },
+    "45039": {
+      "dom": 177.0,
+      "str": 33.6,
+      "absorption": 25.2,
+      "mos": 36.2,
+      "medianPrice": 129500,
+      "medianPpa": 12219
+    },
+    "45041": {
+      "dom": 107.0,
+      "str": 148.4,
+      "absorption": 59.7,
+      "mos": 8.2,
+      "medianPrice": 32000,
+      "medianPpa": 24500
+    },
+    "45043": {
+      "dom": 114.0,
+      "str": 184.2,
+      "absorption": 64.8,
+      "mos": 6.6,
+      "medianPrice": 89500,
+      "medianPpa": 112470
+    },
+    "45045": {
+      "dom": 115.0,
+      "str": 163.0,
+      "absorption": 62.0,
+      "mos": 7.5,
+      "medianPrice": 105000,
+      "medianPpa": 100000
+    },
+    "45047": {
+      "dom": 120.0,
+      "str": 135.3,
+      "absorption": 57.5,
+      "mos": 9.0,
+      "medianPrice": 49000,
+      "medianPpa": 17164
+    },
+    "45049": {
+      "dom": 188.0,
+      "str": 44.4,
+      "absorption": 30.8,
+      "mos": 27.4,
+      "medianPrice": 35000,
+      "medianPpa": 21250
+    },
+    "45051": {
+      "dom": 112.0,
+      "str": 112.8,
+      "absorption": 53.0,
+      "mos": 10.8,
+      "medianPrice": 120000,
+      "medianPpa": 99998
+    },
+    "45053": {
+      "dom": 128.0,
+      "str": 213.7,
+      "absorption": 68.1,
+      "mos": 5.7,
+      "medianPrice": 410442,
+      "medianPpa": 3427187
+    },
+    "45055": {
+      "dom": 178.0,
+      "str": 21.8,
+      "absorption": 17.9,
+      "mos": 55.7,
+      "medianPrice": 38950,
+      "medianPpa": 9660
+    },
+    "45057": {
+      "dom": 96.0,
+      "str": 128.8,
+      "absorption": 56.3,
+      "mos": 9.4,
+      "medianPrice": 115000,
+      "medianPpa": 35336
+    },
+    "45059": {
+      "dom": 83.0,
+      "str": 132.5,
+      "absorption": 57.0,
+      "mos": 9.2,
+      "medianPrice": 124000,
+      "medianPpa": 33974
+    },
+    "45061": {
+      "dom": 70.0,
+      "str": 66.7,
+      "absorption": 40.0,
+      "mos": 18.3,
+      "medianPrice": 51950,
+      "medianPpa": 9393
+    },
+    "45063": {
+      "dom": 172.0,
+      "str": 73.1,
+      "absorption": 42.2,
+      "mos": 16.6,
+      "medianPrice": 101000,
+      "medianPpa": 74726
+    },
+    "45065": {
+      "dom": 115.0,
+      "str": 40.9,
+      "absorption": 29.0,
+      "mos": 29.7,
+      "medianPrice": 55000,
+      "medianPpa": 34484
+    },
+    "45067": {
+      "dom": 125.0,
+      "str": 45.6,
+      "absorption": 31.3,
+      "mos": 26.7,
+      "medianPrice": 25000,
+      "medianPpa": 8632
+    },
+    "45069": {
+      "dom": 92.0,
+      "str": 78.9,
+      "absorption": 44.1,
+      "mos": 15.4,
+      "medianPrice": 34500,
+      "medianPpa": 7041
+    },
+    "45071": {
+      "dom": 212.0,
+      "str": 39.0,
+      "absorption": 28.1,
+      "mos": 31.2,
+      "medianPrice": 77500,
+      "medianPpa": 31111
+    },
+    "45073": {
+      "dom": 77.0,
+      "str": 158.7,
+      "absorption": 61.3,
+      "mos": 7.7,
+      "medianPrice": 47400,
+      "medianPpa": 44445
+    },
+    "45075": {
+      "dom": 119.0,
+      "str": 71.0,
+      "absorption": 41.5,
+      "mos": 17.1,
+      "medianPrice": 37250,
+      "medianPpa": 18934
+    },
+    "45077": {
+      "dom": 116.0,
+      "str": 131.2,
+      "absorption": 56.7,
+      "mos": 9.3,
+      "medianPrice": 76000,
+      "medianPpa": 47102
+    },
+    "45079": {
+      "dom": 43.0,
+      "str": 92.4,
+      "absorption": 48.0,
+      "mos": 13.2,
+      "medianPrice": 30500,
+      "medianPpa": 63292
+    },
+    "45081": {
+      "dom": 47.0,
+      "str": 27.6,
+      "absorption": 21.6,
+      "mos": 44.0,
+      "medianPrice": 45142,
+      "medianPpa": 7648
+    },
+    "45083": {
+      "dom": 70.0,
+      "str": 306.0,
+      "absorption": 75.4,
+      "mos": 4.0,
+      "medianPrice": 78000,
+      "medianPpa": 86767
+    },
+    "45085": {
+      "dom": 152.0,
+      "str": 57.8,
+      "absorption": 36.6,
+      "mos": 21.1,
+      "medianPrice": 27250,
+      "medianPpa": 26500
+    },
+    "45087": {
+      "dom": 137.0,
+      "str": 116.7,
+      "absorption": 53.8,
+      "mos": 10.4,
+      "medianPrice": 81500,
+      "medianPpa": 8851
+    },
+    "45089": {
+      "dom": 59.0,
+      "str": 83.3,
+      "absorption": 45.5,
+      "mos": 14.6,
+      "medianPrice": 112500,
+      "medianPpa": 5985
+    },
+    "45091": {
+      "dom": 85.0,
+      "str": 207.1,
+      "absorption": 67.4,
+      "mos": 5.9,
+      "medianPrice": 174900,
+      "medianPpa": 123911
+    }
+  }
+}

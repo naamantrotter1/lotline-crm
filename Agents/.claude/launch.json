@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Pipeline (Full Run)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["run_pipeline.py", "Polk County, FL"],
+      "port": null
+    },
+    {
+      "name": "Deal Finder",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["deal_finder.py", "Polk County, FL"],
+      "port": null
+    },
+    {
+      "name": "Due Diligence (Test Property)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["due_diligence.py"],
+      "port": null
+    }
+  ]
+}

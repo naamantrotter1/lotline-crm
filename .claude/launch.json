@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "/Users/naamantrotter/.nvm/versions/node/v22.22.2/bin/node",
+      "runtimeArgs": ["lotline-intelligence/backend/src/mock-server.js"],
+      "port": 3001
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["lotline-intelligence/run-frontend.sh"],
+      "port": 5173
+    }
+    ,{
+      "name": "crm",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["lotline-crm/run-crm.sh"],
+      "port": 3000
+    }
+  ]
+}
