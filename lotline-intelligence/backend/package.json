@@ -11,16 +11,18 @@
     "seed:fresh": "node src/seed/index.js --fresh"
   },
   "dependencies": {
-    "@embedded-postgres/darwin-arm64": "^18.3.0-beta.16",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "embedded-postgres": "^18.3.0-beta.16",
     "express": "^4.19.2",
     "express-validator": "^7.1.0",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
     "node-cron": "^3.0.3",
     "pg": "^8.11.5"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/darwin-arm64": "^18.3.0-beta.16",
+    "embedded-postgres": "^18.3.0-beta.16"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
