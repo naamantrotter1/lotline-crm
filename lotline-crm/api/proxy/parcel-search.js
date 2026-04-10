@@ -77,8 +77,8 @@ export default async function handler(req, res) {
   // ── Parcel ID (parno) search: NC OneMap + SC DOT ─────────────────────────
   if (type === 'parno') {
     const searchNC = async () => {
-      let where = `UPPER(parno) LIKE '${safeUpper}%'`;
-      if (safeCounty) where += ` AND UPPER(cntyname) LIKE '%${safeCounty}%'`;
+      let where = `parno LIKE '${safeUpper}%'`;
+      if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
       // MapServer/0 is attribute-only — must use returnGeometry:false
       const p = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '10', f: 'json' });
       const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => ({ features: [] }));
@@ -105,8 +105,8 @@ export default async function handler(req, res) {
     };
 
     const searchSC = () => {
-      let where = `UPPER(T_Map_Number) LIKE '${safeUpper}%'`;
-      if (safeCounty) where += ` AND UPPER(County) LIKE '%${safeCounty}%'`;
+      let where = `T_Map_Number LIKE '${safeUpper}%'`;
+      if (safeCounty) where += ` AND County LIKE '%${safeCounty}%'`;
       const p = new URLSearchParams({ where, outFields: 'T_Map_Number,County', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
       return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${p}`)
         .then(data => (data.features || []).map(f => {
@@ -132,8 +132,8 @@ export default async function handler(req, res) {
   if (type === 'owner') {
     const searchNC = async () => {
       if (state === 'SC') return [];
-      let where = `UPPER(ownname) LIKE '%${safeUpper}%'`;
-      if (safeCounty) where += ` AND UPPER(cntyname) LIKE '%${safeCounty}%'`;
+      let where = `ownname LIKE '%${safeUpper}%'`;
+      if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
       const p = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '10', f: 'json' });
       const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => ({ features: [] }));
       const features = data.features || [];
@@ -159,8 +159,8 @@ export default async function handler(req, res) {
 
     const searchSC = () => {
       if (state === 'NC') return Promise.resolve([]);
-      let where = `UPPER(Ownership) LIKE '%${safeUpper}%'`;
-      if (safeCounty) where += ` AND UPPER(County) LIKE '%${safeCounty}%'`;
+      let where = `Ownership LIKE '%${safeUpper}%'`;
+      if (safeCounty) where += ` AND County LIKE '%${safeCounty}%'`;
       const p = new URLSearchParams({ where, outFields: 'T_Map_Number,Ownership,County', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
       return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${p}`)
         .then(data => (data.features || []).map(f => {
