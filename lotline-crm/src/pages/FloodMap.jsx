@@ -5,10 +5,8 @@ import * as turf from '@turf/turf';
 import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle } from 'lucide-react';
 
 const LA_LS_KEY = 'lotline_custom_deals';
-const LA_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 
 function AddToPipelineModal({ parcelData, onClose }) {
-  const [stage,      setStage]      = useState('New Lead');
   const [address,    setAddress]    = useState(parcelData.siteAddr || '');
   const [county,     setCounty]     = useState(parcelData.county || '');
   const [dealState,  setDealState]  = useState(parcelData.state || 'NC');
@@ -24,7 +22,7 @@ function AddToPipelineModal({ parcelData, onClose }) {
     const deal = {
       id: 'map-' + Date.now(),
       pipeline: 'land-acquisition',
-      stage,
+      stage: 'New Lead',
       address: address.trim(),
       parcelId: parcelId.trim(),
       county: county.trim(),
@@ -60,15 +58,6 @@ function AddToPipelineModal({ parcelData, onClose }) {
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          {/* Stage */}
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Stage</label>
-            <select value={stage} onChange={e => setStage(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30">
-              {LA_STAGES.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-
           {/* Address */}
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Address *</label>
