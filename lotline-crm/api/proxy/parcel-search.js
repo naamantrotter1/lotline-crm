@@ -14,8 +14,8 @@ function fetchJson(u) {
 // MapServer/0 supports exact match and IN clauses but NOT LIKE.
 async function ncAttrs(parnos) {
   if (!parnos.length) return {};
-  const list = parnos.map(p => `'${p.replace(/'/g, "''")}'`).join(',');
-  const p = new URLSearchParams({ where: `parno IN (${list})`, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '50', f: 'json' });
+  const orClause = parnos.map(p => `parno = '${p.replace(/'/g, "''")}'`).join(' OR ');
+  const p = new URLSearchParams({ where: orClause, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '50', f: 'json' });
   const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => ({ features: [] }));
   const map = {};
   for (const f of data.features || []) {
@@ -172,7 +172,9 @@ export default async function handler(req, res) {
       // Get parcels in this county from FeatureServer/1 via attribute filter
       // FeatureServer/1 does NOT have cntyname; use MapServer/0 to find parno list
       // for this county, then fetch owner attrs. MapServer/0 supports cntyname = '...'
-      const countyWhere = `cntyname = '${safeCounty.replace(/'/g,"''")}'`;
+      // cntyname stored as title-case e.g. "Guilford" — convert safeCounty to title-case
+      const titleCounty = safeCounty.charAt(0) + safeCounty.slice(1).toLowerCase();
+      const countyWhere = `cntyname = '${titleCounty.replace(/'/g,"''")}'`;
       const cp = new URLSearchParams({ where: countyWhere, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '1000', f: 'json' });
       const countyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${cp}`).catch(() => ({ features: [] }));
       const all = (countyData.features || []).filter(f => (f.attributes?.ownname || '').toUpperCase().includes(safeUpper));
