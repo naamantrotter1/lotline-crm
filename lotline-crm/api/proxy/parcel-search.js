@@ -29,15 +29,20 @@ const NC_ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd
 async function ncAttrsBatch(parnos) {
   const entries = await Promise.all(parnos.slice(0, 10).map(async parno => {
     const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-    const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(e => ({ _err: e.message }));
-    const attrs = data?._err ? null : (data?.features?.[0]?.attributes || { _noFeatures: JSON.stringify(data).substring(0, 200) });
-    return [parno, attrs];
+    let data, fetchErr;
+    try { data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`); }
+    catch (e) { fetchErr = e.message; }
+    return { parno, data, fetchErr };
   }));
   const map = {};
-  for (const [inputParno, attrs] of entries) { if (attrs && !attrs._noFeatures && !attrs._err) map[inputParno] = attrs; }
-  // Surface first error/empty for debug
-  const firstBad = entries.find(([, a]) => a?._noFeatures || a?._err);
-  if (firstBad && Object.keys(map).length === 0) map._debug = { parno: firstBad[0], info: firstBad[1] };
+  for (const e of entries) {
+    if (e.fetchErr || !e.data?.features?.length) {
+      // Expose the first failure so callers can surface it
+      if (!map._firstErr) map._firstErr = e.fetchErr || JSON.stringify(e.data).substring(0, 300);
+      continue;
+    }
+    map[e.parno] = e.data.features[0].attributes;
+  }
   return map;
 }
 
@@ -102,6 +107,10 @@ export default async function handler(req, res) {
 
       // Filter by county client-side after fetching attrs
       const attrs = await ncAttrsBatch(parnos);
+
+      // Surface batch fetch errors for debugging
+      const hasAnyAttrs = parnos.some(p => attrs[p]);
+      if (!hasAnyAttrs && attrs._firstErr) return [{ _debug: { batchErr: attrs._firstErr, parnos: parnos.slice(0,3) } }];
 
       return parnos
         .filter(parno => !safeCounty || (attrs[parno]?.cntyname || '').toUpperCase().includes(safeCounty))
