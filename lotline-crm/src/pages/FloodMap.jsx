@@ -649,10 +649,10 @@ export default function FloodMap() {
               </button>
               {showStateMenu && (
                 <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]" style={{ minWidth: 100 }}>
-                  {['', 'NC', 'SC'].map(s => (
-                    <button key={s} onClick={() => { setSearchState(s); setSearchCounty(''); setShowStateMenu(false); if (s) setShowCountyMenu(true); }}
+                  {['NC', 'SC'].map(s => (
+                    <button key={s} onClick={() => { setSearchState(s); setSearchCounty(''); setShowStateMenu(false); setShowCountyMenu(true); }}
                       className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchState === s ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
-                      {s || 'Any'}
+                      {s}
                     </button>
                   ))}
                 </div>
@@ -677,10 +677,6 @@ export default function FloodMap() {
                     <p className="px-4 py-3 text-sm text-gray-400">Select a state first</p>
                   ) : (
                     <>
-                      <button onClick={() => { setSearchCounty(''); setShowCountyMenu(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${!searchCounty ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
-                        Any County
-                      </button>
                       {countyList.map(c => (
                         <button key={c} onClick={() => { setSearchCounty(c); setShowCountyMenu(false); }}
                           className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchCounty === c ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
