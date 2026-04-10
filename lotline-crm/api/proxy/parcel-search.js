@@ -93,8 +93,9 @@ export default async function handler(req, res) {
         .map(f => {
           const a = f.attributes || {};
           const { lat, lng } = geoMap[a.parno] || {};
-          const addr = [a.siteadd?.trim(), a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
-          return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+          const street = a.siteadd?.trim() || '';
+          const addr = street ? [street, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ') : null;
+          return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
         });
     };
 
@@ -148,8 +149,9 @@ export default async function handler(req, res) {
       return matches.map(f => {
         const a = f.attributes || {};
         const { lat, lng } = geoMap[a.parno] || {};
-        const addr = [a.siteadd?.trim(), a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
-        return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+        const street = a.siteadd?.trim() || '';
+        const addr = street ? [street, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ') : null;
+        return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
       });
     };
 
