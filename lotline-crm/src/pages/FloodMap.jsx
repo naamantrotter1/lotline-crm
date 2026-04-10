@@ -717,7 +717,9 @@ export default function FloodMap() {
           {/* Results dropdown */}
           {showSearchDrop && searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]">
-              {searchResults.map((r, i) => (
+              {searchResults.map((r, i) => r._hint ? (
+                <p key={i} className="px-4 py-3 text-sm text-gray-400">{r._hint}</p>
+              ) : (
                 <button
                   key={i}
                   onClick={() => handleSearchSelect(r)}
