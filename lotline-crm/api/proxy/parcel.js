@@ -21,7 +21,7 @@ async function reverseGeocode(lat, lng) {
     const a = data.address || {};
     const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
     // Only actual incorporated municipalities — suburb/neighbourhood/hamlet are community names
-    const city   = a.city || a.town || a.village || a.municipality ||
+    const city   = a.city || a.town || a.municipality ||
                    (a.county ? a.county.replace(/\s*County$/i, '') : '') || '';
     // state_code may come back as "US-NC"; strip the "US-" prefix if present
     const rawState = a.state_code || '';
