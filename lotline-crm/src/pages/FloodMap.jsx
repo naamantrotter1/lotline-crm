@@ -488,14 +488,13 @@ export default function FloodMap() {
           selectedParnoRef.current = newParno;
 
           // Draw highlight as a separate top layer with a thick green border.
-          // Using Canvas renderer so it sits in its own pane above the SVG parcel layer.
           let foundBounds = null;
           if (parcelBoundaryLayerRef.current && newParno && leafletMap.current?._mapPane) {
             parcelBoundaryLayerRef.current.eachLayer(l => {
               if (l.feature?.properties?.parno === newParno) {
                 foundBounds = l.getBounds();
                 const hl = L.geoJSON(l.toGeoJSON(), {
-                  style: { color: '#00ff00', weight: 6, fillOpacity: 0, opacity: 1 },
+                  style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
                   renderer: L.canvas(),
                 });
                 hl.addTo(leafletMap.current);
@@ -504,12 +503,23 @@ export default function FloodMap() {
             });
           }
 
-          // Pan to parcel center; never zoom out from current level
+          // Fallback: draw green highlight from API geometry when boundary layer doesn't have it
+          if (!selectedHighlightRef.current && data.geometry && leafletMap.current?._mapPane) {
+            const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
+              style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+              renderer: L.canvas(),
+            });
+            hl.addTo(leafletMap.current);
+            selectedHighlightRef.current = hl;
+            foundBounds = hl.getBounds();
+          }
+
+          // Fit map to highlighted parcel bounds
           const bounds = foundBounds || (data.geometry
             ? L.geoJSON({ type: 'Feature', geometry: data.geometry }).getBounds()
             : null);
           if (bounds?.isValid()) {
-            map.setView(bounds.getCenter(), Math.max(map.getZoom(), 14), { animate: true });
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
           }
         })
         .catch(err => { if (err.name !== 'AbortError') setParcelData({ error: 'Lookup failed. Try again.' }); })
