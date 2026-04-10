@@ -2,7 +2,140 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
-import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown } from 'lucide-react';
+import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle } from 'lucide-react';
+
+const LA_LS_KEY = 'lotline_custom_deals';
+const LA_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+
+function AddToPipelineModal({ parcelData, onClose }) {
+  const [stage,      setStage]      = useState('New Lead');
+  const [address,    setAddress]    = useState(parcelData.siteAddr || '');
+  const [county,     setCounty]     = useState(parcelData.county || '');
+  const [dealState,  setDealState]  = useState(parcelData.state || 'NC');
+  const [acreage,    setAcreage]    = useState(parcelData.acres != null ? String(Number(parcelData.acres).toFixed(2)) : '');
+  const [ownerName,  setOwnerName]  = useState(parcelData.owner || '');
+  const [parcelId,   setParcelId]   = useState(parcelData.parcelId || '');
+  const [notes,      setNotes]      = useState('');
+  const [saved,      setSaved]      = useState(false);
+
+  const handleSave = () => {
+    if (!address.trim()) return;
+    const existing = (() => { try { return JSON.parse(localStorage.getItem(LA_LS_KEY) || '[]'); } catch { return []; } })();
+    const deal = {
+      id: 'map-' + Date.now(),
+      pipeline: 'land-acquisition',
+      stage,
+      address: address.trim(),
+      parcelId: parcelId.trim(),
+      county: county.trim(),
+      state: dealState,
+      acreage: parseFloat(acreage) || undefined,
+      ownerName: ownerName.trim(),
+      arv: 0,
+      financing: 'Cash',
+      netProfit: 0,
+      land: parcelData.landVal || 0,
+      generalNotes: notes.trim(),
+      holdingMonths: 4,
+      holdingPerMonth: 250,
+      hudEngineer: 500, percTest: 2000, survey: 1500, footers: 6000, setup: 9000,
+      mobileHome: 0, clearLand: 0, water: 0, septic: 0, electric: 0, hvac: 4500,
+      underpinning: 6000, decks: 3500, driveway: 1200, landscaping: 0, waterSewer: 0,
+      mailbox: 170, gutters: 0, photos: 0, mobileTax: 300, staging: 0,
+    };
+    localStorage.setItem(LA_LS_KEY, JSON.stringify([...existing, deal]));
+    setSaved(true);
+    setTimeout(onClose, 1100);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <PlusCircle size={16} className="text-accent" />
+            <h2 className="text-sm font-bold text-sidebar">Add to Land Acquisition</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          {/* Stage */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Stage</label>
+            <select value={stage} onChange={e => setStage(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30">
+              {LA_STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Address *</label>
+            <input value={address} onChange={e => setAddress(e.target.value)}
+              placeholder="Property address"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+          </div>
+
+          {/* County / State / Acreage */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">County</label>
+              <input value={county} onChange={e => setCounty(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            </div>
+            <div className="col-span-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">State</label>
+              <select value={dealState} onChange={e => setDealState(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30">
+                <option value="NC">NC</option>
+                <option value="SC">SC</option>
+              </select>
+            </div>
+            <div className="col-span-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Acres</label>
+              <input type="number" value={acreage} onChange={e => setAcreage(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            </div>
+          </div>
+
+          {/* Owner / Parcel ID */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Owner</label>
+              <input value={ownerName} onChange={e => setOwnerName(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Parcel ID</label>
+              <input value={parcelId} onChange={e => setParcelId(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none" />
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={!address.trim() || saved}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              saved ? 'bg-green-500 text-white' : !address.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent text-white hover:bg-accent/90'
+            }`}
+          >
+            {saved ? '✓ Added to Pipeline!' : 'Add as New Lead'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PROXY = import.meta.env.VITE_API_URL || '';
@@ -87,6 +220,7 @@ export default function FloodMap() {
   const [buildability, setBuildability]         = useState(null); // { pct, flood, wetlands }
   const [buildabilityLoading, setBuildabilityLoading] = useState(false);
   const [showBuildability, setShowBuildability] = useState(false);
+  const [showAddToPipeline, setShowAddToPipeline] = useState(false);
   const parcelLayerRef = useRef(null);
   const buildabilityLayerRef = useRef(null);
   const contoursLayerRef = useRef(null);      // vector GeoJSON contour layer
@@ -1030,8 +1164,16 @@ export default function FloodMap() {
                     )}
                   </div>
                 )}
-                {/* Buildability button */}
-                <div className="pt-1 border-t border-gray-700/60">
+                {/* Action buttons */}
+                <div className="pt-1 border-t border-gray-700/60 space-y-1.5">
+                  <button
+                    onClick={() => setShowAddToPipeline(true)}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ backgroundColor: '#1a1f3a', color: '#818cf8', border: '1px solid #4338ca' }}
+                  >
+                    <PlusCircle size={12} />
+                    Add to Pipeline
+                  </button>
                   <button
                     onClick={() => {
                       if (showBuildability) {
@@ -1123,6 +1265,13 @@ export default function FloodMap() {
           </div>
         )}
       </div>
+
+      {showAddToPipeline && parcelData && (
+        <AddToPipelineModal
+          parcelData={parcelData}
+          onClose={() => setShowAddToPipeline(false)}
+        />
+      )}
     </div>
   );
 }
