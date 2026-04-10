@@ -27,21 +27,19 @@ function centroid(g) {
 // Use exact same field list and WHERE format as parcel.js which is known to work.
 const NC_ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 async function ncAttrsBatch(parnos) {
-  const entries = await Promise.all(parnos.slice(0, 10).map(async parno => {
+  const map = {};
+  // Sequential to avoid Vercel outbound connection limits
+  for (const parno of parnos.slice(0, 10)) {
     const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
     let data, fetchErr;
     try { data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`); }
     catch (e) { fetchErr = e.message; }
-    console.log('[ncAttrsBatch]', parno, 'features:', data?.features?.length, 'err:', fetchErr, 'ownname:', data?.features?.[0]?.attributes?.ownname);
-    return { parno, data, fetchErr };
-  }));
-  const map = {};
-  for (const e of entries) {
-    if (e.fetchErr || !e.data?.features?.length) {
-      if (!map._firstErr) map._firstErr = e.fetchErr || JSON.stringify(e.data).substring(0, 300);
-      continue;
+    console.log('[ncAttrsBatch]', parno, 'features:', data?.features?.length, 'err:', fetchErr);
+    if (!fetchErr && data?.features?.length) {
+      map[parno] = data.features[0].attributes;
+    } else if (!map._firstErr) {
+      map._firstErr = fetchErr || JSON.stringify(data).substring(0, 300);
     }
-    map[e.parno] = e.data.features[0].attributes;
   }
   return map;
 }
