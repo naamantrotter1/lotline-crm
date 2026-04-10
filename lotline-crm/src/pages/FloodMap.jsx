@@ -606,15 +606,34 @@ export default function FloodMap() {
     }, 400);
   };
 
-  const handleSearchSelect = (result) => {
+  const handleSearchSelect = async (result) => {
     const map = leafletMap.current;
-    if (!map || result.lat == null || result.lng == null) return;
+    if (!map) return;
     setShowSearchDrop(false);
     setSearchQuery(result.address || result.parno || '');
-    map.flyTo([result.lat, result.lng], 16, { animate: true, duration: 1.2 });
-    // Trigger parcel info fetch for this location
+
+    let lat = result.lat;
+    let lng = result.lng;
+
+    // If no coordinates but we have a parno, look up the parcel to get its location
+    if ((lat == null || lng == null) && result.parno) {
+      try {
+        const r = await fetch(`${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}${result.state ? `&state=${result.state}` : ''}`);
+        const d = await r.json();
+        if (d.geometry) {
+          const rings = d.geometry.coordinates?.[0] || d.geometry.coordinates?.[0]?.[0];
+          if (rings?.length) {
+            lat = rings.reduce((s, c) => s + c[1], 0) / rings.length;
+            lng = rings.reduce((s, c) => s + c[0], 0) / rings.length;
+          }
+        }
+      } catch {}
+    }
+
+    if (lat == null || lng == null) return;
+    map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     setTimeout(() => {
-      const ev = { latlng: L.latLng(result.lat, result.lng) };
+      const ev = { latlng: L.latLng(lat, lng) };
       clickedParnoRef.current = result.parno;
       fromSearchRef.current = true;
       map.fire('click', ev);
