@@ -21,8 +21,8 @@ async function reverseGeocode(lat, lng) {
     const a = data.address || {};
     const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
     // Only actual incorporated municipalities — suburb/neighbourhood/hamlet are community names
-    const city   = a.city || a.town || a.municipality ||
-                   (a.county ? a.county.replace(/\s*County$/i, '') : '') || '';
+    // County is already shown separately in the parcel panel, so omit it here.
+    const city   = a.city || a.town || a.municipality || '';
     // state_code may come back as "US-NC"; strip the "US-" prefix if present
     const rawState = a.state_code || '';
     const state  = rawState.replace(/^US-/i, '') ||
@@ -118,8 +118,8 @@ export default async function handler(req, res) {
   }
 
   // ── North Carolina ───────────────────────────────────────────────────────────
-  // szip added for complete site address; scity is the site city field
-  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
+  // stnum = street number (separate from siteadd in many counties); szip for zip
+  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,stnum,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 
   const getAttrUrl = async () => {
     if (qParno) {
@@ -172,13 +172,29 @@ export default async function handler(req, res) {
 
     // Build site address from NC OneMap fields; fall back to reverse geocoding
     // when county hasn't submitted a site address (common for many NC counties).
-    let siteAddr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : ''].filter(Boolean).join(', ') || null;
-    if (!siteAddr) {
-      // Use click/search coordinates, or centroid of fetched geometry
+    //
+    // Many counties store the street number separately in `stnum` and the street
+    // name (without number) in `siteadd`. Prepend stnum when siteadd doesn't
+    // already start with a digit.
+    let street = a.siteadd?.trim() || '';
+    if (street && !/^\d/.test(street) && a.stnum) street = `${a.stnum} ${street}`;
+    let siteAddr = [street, a.scity, a.szip ? `NC ${a.szip}` : ''].filter(Boolean).join(', ') || null;
+    if (!siteAddr || !/^\d/.test(siteAddr)) {
+      // Use click/search coordinates, or centroid of fetched geometry, to get a
+      // complete address including house number via reverse geocoding.
       const [gLat, gLng] = centroidOf(geometry);
       const rgLat = latN || gLat;
       const rgLng = lngN || gLng;
-      siteAddr = await reverseGeocode(rgLat, rgLng);
+      const rgAddr = await reverseGeocode(rgLat, rgLng);
+      if (rgAddr) {
+        // If we already have a street name but just need the number, extract it
+        const houseNum = rgAddr.match(/^(\d+[A-Za-z]?)\s/)?.[1];
+        if (houseNum && street && !/^\d/.test(street)) {
+          siteAddr = [`${houseNum} ${street}`, a.scity, a.szip ? `NC ${a.szip}` : ''].filter(Boolean).join(', ');
+        } else {
+          siteAddr = rgAddr;
+        }
+      }
     }
 
     return res.json({
