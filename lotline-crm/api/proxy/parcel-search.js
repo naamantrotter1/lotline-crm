@@ -32,12 +32,12 @@ async function ncAttrsBatch(parnos) {
     let data, fetchErr;
     try { data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`); }
     catch (e) { fetchErr = e.message; }
+    console.log('[ncAttrsBatch]', parno, 'features:', data?.features?.length, 'err:', fetchErr, 'ownname:', data?.features?.[0]?.attributes?.ownname);
     return { parno, data, fetchErr };
   }));
   const map = {};
   for (const e of entries) {
     if (e.fetchErr || !e.data?.features?.length) {
-      // Expose the first failure so callers can surface it
       if (!map._firstErr) map._firstErr = e.fetchErr || JSON.stringify(e.data).substring(0, 300);
       continue;
     }
