@@ -931,10 +931,9 @@ app.get('/api/proxy/parcel-boundaries', (req, res) => {
   const midLat = (south + north) / 2;
   const midLng = (west + east) / 2;
 
-  // Use same NC-priority logic as the /api/proxy/parcel endpoint:
-  // NC bounds fully contain the border region, so NC gets checked first.
+  // Check each state independently — query both in overlap zones and merge results.
   const midInNC = midLat >= 33.84 && midLat <= 36.6 && midLng >= -84.4 && midLng <= -75.4;
-  const midInSC = !midInNC && midLat >= 31.9 && midLat <= 35.3 && midLng >= -83.5 && midLng <= -78.4;
+  const midInSC = midLat >= 31.9 && midLat <= 35.3 && midLng >= -83.5 && midLng <= -78.4;
 
   const fetchJson = (u) => new Promise((resolve, reject) => {
     let body = '';
@@ -977,7 +976,7 @@ app.get('/api/proxy/parcel-boundaries', (req, res) => {
       .catch(() => ({ type: 'FeatureCollection', features: [] }));
   };
 
-  // Decide which services to query — NC takes priority over SC for overlapping regions
+  // Query both states independently and merge — each service returns empty for tiles outside its coverage
   const queries = [];
   if (midInNC) queries.push(queryNC());
   if (midInSC) queries.push(querySC());
