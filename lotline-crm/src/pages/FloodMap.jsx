@@ -626,7 +626,7 @@ export default function FloodMap() {
                 {SEARCH_TYPES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(true); setShowCountyMenu(false); } }}
+                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(true); setShowCountyMenu(true); } }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
                   >
                     {t.label}
