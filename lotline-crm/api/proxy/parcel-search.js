@@ -23,26 +23,9 @@ function centroid(g) {
   return { lat: g.y ?? null, lng: g.x ?? null };
 }
 
-// Fetch full attributes for NC parnos — MapServer/0 only supports single exact match.
-// Use exact same field list and WHERE format as parcel.js which is known to work.
 const NC_ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
-async function ncAttrsBatch(parnos) {
-  const map = {};
-  // Sequential to avoid Vercel outbound connection limits
-  for (const parno of parnos.slice(0, 10)) {
-    const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-    let data, fetchErr;
-    try { data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`); }
-    catch (e) { fetchErr = e.message; }
-    console.log('[ncAttrsBatch]', parno, 'features:', data?.features?.length, 'err:', fetchErr);
-    if (!fetchErr && data?.features?.length) {
-      map[parno] = data.features[0].attributes;
-    } else if (!map._firstErr) {
-      map._firstErr = fetchErr || JSON.stringify(data).substring(0, 300);
-    }
-  }
-  return map;
-}
+const NC_MAPSERVER = 'https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query';
+const NC_FEATSERVER1 = 'https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -53,7 +36,10 @@ export default async function handler(req, res) {
 
   const safe = q.trim().replace(/'/g, "''");
   const safeUpper = safe.toUpperCase();
-  const safeCounty = county.trim().replace(/'/g, "''").toUpperCase();
+  // County for client-side comparison (uppercase) and SQL (title-case, matching NC OneMap storage)
+  const safeCountyRaw = county.trim().replace(/'/g, "''");
+  const safeCounty = safeCountyRaw.toUpperCase();
+  const safeCountyTitle = safeCountyRaw.replace(/\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
   // ── Address search ────────────────────────────────────────────────────────
   if (type === 'address') {
@@ -85,38 +71,30 @@ export default async function handler(req, res) {
   }
 
   // ── Parcel ID search ──────────────────────────────────────────────────────
-  // FeatureServer/1 (polygon layer) supports LIKE on parno + returns geometry.
-  // Then fetch attributes individually from MapServer/0 (only supports = per parno).
+  // MapServer/0 supports LIKE on parno and returns attributes in one request.
+  // FeatureServer/1 returns geometry for the same prefix in one request.
   if (type === 'parno') {
     const searchNC = async () => {
       if (state === 'SC') return [];
-      const where = `parno LIKE '${safeUpper}%'`;
-      const p = new URLSearchParams({ where, outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
-      const geoData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${p}`).catch(() => ({ features: [] }));
-      const geoFeatures = geoData.features || [];
-      if (!geoFeatures.length) return [];
-
+      // Fetch attrs and geometry in parallel — both use single LIKE queries
+      const attrWhere = `parno LIKE '${safeUpper}%'`;
+      const geoWhere  = `parno LIKE '${safeUpper}%'`;
+      const [attrData, geoData] = await Promise.all([
+        fetchJson(`${NC_MAPSERVER}?${new URLSearchParams({ where: attrWhere, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '10', f: 'json' })}`).catch(() => ({ features: [] })),
+        fetchJson(`${NC_FEATSERVER1}?${new URLSearchParams({ where: geoWhere, outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' })}`).catch(() => ({ features: [] })),
+      ]);
       const geoMap = {};
-      const parnos = [];
-      for (const f of geoFeatures) {
+      for (const f of geoData.features || []) {
         const parno = f.attributes?.parno;
-        if (parno) { parnos.push(parno); geoMap[parno] = centroid(f.geometry); }
+        if (parno) geoMap[parno] = centroid(f.geometry);
       }
-
-      // Filter by county client-side after fetching attrs
-      const attrs = await ncAttrsBatch(parnos);
-
-      // Surface batch fetch errors for debugging
-      const hasAnyAttrs = parnos.some(p => attrs[p]);
-      if (!hasAnyAttrs && attrs._firstErr) return [{ _debug: { batchErr: attrs._firstErr, parnos: parnos.slice(0,3) } }];
-
-      return parnos
-        .filter(parno => !safeCounty || (attrs[parno]?.cntyname || '').toUpperCase().includes(safeCounty))
-        .map(parno => {
-          const a = attrs[parno] || {};
-          const { lat, lng } = geoMap[parno] || {};
-          const addr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
-          return { parno, owner: a.ownname || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+      return (attrData.features || [])
+        .filter(f => !safeCounty || (f.attributes?.cntyname || '').toUpperCase().includes(safeCounty))
+        .map(f => {
+          const a = f.attributes || {};
+          const { lat, lng } = geoMap[a.parno] || {};
+          const addr = [a.siteadd?.trim(), a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
+          return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
         });
     };
 
@@ -141,26 +119,26 @@ export default async function handler(req, res) {
   }
 
   // ── Owner search ──────────────────────────────────────────────────────────
-  // Try FeatureServer/0 (attribute FeatureServer layer) which supports LIKE on ownname.
-  // Falls back to county-required hint if no county is selected.
+  // MapServer/0 supports LIKE on ownname. County is required for NC to limit results.
+  // County names in NC OneMap are title-cased (e.g. "Guilford"), so we use safeCountyTitle.
   if (type === 'owner') {
     const searchNC = async () => {
       if (state === 'SC') return [];
       if (!safeCounty) return [{ _hint: 'Select a county to search by owner name' }];
 
-      // FeatureServer/0 is the attribute layer via FeatureServer protocol — supports LIKE
       let where = `ownname LIKE '%${safeUpper}%'`;
-      if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
-      const fp = new URLSearchParams({ where, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '20', f: 'json' });
-      const fsData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/0/query?${fp}`).catch(() => ({ features: [] }));
-      const matches = (fsData.features || []).slice(0, 10);
+      where += ` AND cntyname LIKE '%${safeCountyTitle}%'`;
+      const [attrData] = await Promise.all([
+        fetchJson(`${NC_MAPSERVER}?${new URLSearchParams({ where, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '20', f: 'json' })}`).catch(() => ({ features: [] })),
+      ]);
+      const matches = (attrData.features || []).slice(0, 10);
       if (!matches.length) return [];
 
-      // Get geometry from FeatureServer/1 using individual exact match requests
+      // Get geometry from FeatureServer/1 for each matched parno
       const parnos = matches.map(f => f.attributes?.parno).filter(Boolean);
       const geoResults = await Promise.all(parnos.map(async parno => {
         const gp = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: 'parno', returnGeometry: 'true', outSR: '4326', f: 'json' });
-        const d = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${gp}`).catch(() => null);
+        const d = await fetchJson(`${NC_FEATSERVER1}?${gp}`).catch(() => null);
         const f = d?.features?.[0];
         return f ? { parno, ...centroid(f.geometry) } : null;
       }));
@@ -170,8 +148,8 @@ export default async function handler(req, res) {
       return matches.map(f => {
         const a = f.attributes || {};
         const { lat, lng } = geoMap[a.parno] || {};
-        const addr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
-        return { parno: a.parno || null, owner: a.ownname || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+        const addr = [a.siteadd?.trim(), a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
+        return { parno: a.parno || null, owner: a.ownname?.trim() || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
       });
     };
 
