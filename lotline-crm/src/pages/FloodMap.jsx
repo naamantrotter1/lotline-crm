@@ -621,30 +621,60 @@ export default function FloodMap() {
     let lat = result.lat;
     let lng = result.lng;
 
-    // If no coordinates but we have a parno, look up the parcel to get its location
-    if ((lat == null || lng == null) && result.parno) {
-      try {
-        const r = await fetch(`${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}${result.state ? `&state=${result.state}` : ''}`);
-        const d = await r.json();
-        if (d.geometry) {
-          const rings = d.geometry.coordinates?.[0] || d.geometry.coordinates?.[0]?.[0];
-          if (rings?.length) {
-            lat = rings.reduce((s, c) => s + c[1], 0) / rings.length;
-            lng = rings.reduce((s, c) => s + c[0], 0) / rings.length;
-          }
-        }
-      } catch {}
-    }
+    // Cancel any in-flight requests and clear previous highlight
+    if (parcelInfoAbortRef.current) parcelInfoAbortRef.current.abort();
+    if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
 
-    if (lat == null || lng == null) return;
-    map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
-    setTimeout(() => {
-      const ev = { latlng: L.latLng(lat, lng) };
-      clickedParnoRef.current = result.parno;
-      clickedStateRef.current = result.state || null;
-      fromSearchRef.current = true;
-      map.fire('click', ev);
-    }, 1300);
+    setParcelLoading(true);
+    setParcelData(null);
+    const parcelInfoCtrl = new AbortController();
+    parcelInfoAbortRef.current = parcelInfoCtrl;
+
+    // Build parcel API URL — use parno directly so we always get the right parcel
+    let parcelUrl = result.parno
+      ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}&lat=${lat ?? 0}&lng=${lng ?? 0}`
+      : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
+    if (result.state) parcelUrl += `&state=${result.state}`;
+
+    try {
+      const r = await fetch(parcelUrl, { signal: parcelInfoCtrl.signal });
+      const data = await r.json();
+      if (data.error) { setParcelData({ error: data.error }); return; }
+      setParcelData(data);
+      setShowBuildability(false);
+      setBuildability(null);
+      if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
+      selectedParnoRef.current = data.parcelId;
+
+      // Draw highlight from API geometry
+      if (data.geometry && leafletMap.current?._mapPane) {
+        const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
+          style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+          renderer: L.canvas(),
+        });
+        hl.addTo(leafletMap.current);
+        selectedHighlightRef.current = hl;
+
+        const bounds = hl.getBounds();
+        if (bounds?.isValid()) {
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+          // After zoom settles, refresh boundaries so nearby parcels are visible
+          setTimeout(() => {
+            const m = leafletMap.current;
+            if (m && parcelBoundariesRef.current) fetchParcelBoundaries(m);
+          }, 900);
+        } else if (lat != null && lng != null) {
+          map.flyTo([lat, lng], 18, { animate: true, duration: 1.2 });
+        }
+      } else if (lat != null && lng != null) {
+        // No geometry — just fly to the search coords
+        map.flyTo([lat, lng], 18, { animate: true, duration: 1.2 });
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') setParcelData({ error: 'Lookup failed. Try again.' });
+    } finally {
+      if (!parcelInfoCtrl.signal.aborted) setParcelLoading(false);
+    }
   };
 
   const geojsonLayersActive = ['floodplain', 'wetlands', 'water'].some(k => layers[k]);
