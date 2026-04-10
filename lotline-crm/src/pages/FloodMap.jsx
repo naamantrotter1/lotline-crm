@@ -72,6 +72,7 @@ export default function FloodMap() {
   const parcelFetchAbortRef = useRef(null); // AbortController for in-flight boundary fetch
   const parcelInfoAbortRef = useRef(null);  // AbortController for in-flight parcel info fetch
   const selectedHighlightRef = useRef(null); // separate top-layer for the selected parcel highlight
+  const fromSearchRef = useRef(false);       // true when click was triggered by search result (use data.geometry directly)
 
   const [state,    setState]    = useState('Both');
   const [mapStyle, setMapStyle] = useState('satellite');
@@ -486,10 +487,27 @@ export default function FloodMap() {
 
           const newParno = data.parcelId;
           selectedParnoRef.current = newParno;
+          const isFromSearch = fromSearchRef.current;
+          fromSearchRef.current = false;
 
           // Draw highlight as a separate top layer with a thick green border.
           let foundBounds = null;
-          if (parcelBoundaryLayerRef.current && newParno && leafletMap.current?._mapPane) {
+
+          // For search results: always use the geometry returned by the API — it is
+          // guaranteed to match the resolved parcel. The boundary layer may still
+          // contain old-viewport data and could pick a neighbour.
+          if (isFromSearch && data.geometry && leafletMap.current?._mapPane) {
+            const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
+              style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+              renderer: L.canvas(),
+            });
+            hl.addTo(leafletMap.current);
+            selectedHighlightRef.current = hl;
+            foundBounds = hl.getBounds();
+          }
+
+          // For direct map clicks: try the boundary layer first (already loaded for viewport)
+          if (!isFromSearch && parcelBoundaryLayerRef.current && newParno && leafletMap.current?._mapPane) {
             parcelBoundaryLayerRef.current.eachLayer(l => {
               if (l.feature?.properties?.parno === newParno) {
                 foundBounds = l.getBounds();
@@ -590,6 +608,7 @@ export default function FloodMap() {
     setTimeout(() => {
       const ev = { latlng: L.latLng(result.lat, result.lng) };
       clickedParnoRef.current = result.parno;
+      fromSearchRef.current = true;
       map.fire('click', ev);
     }, 1300);
   };

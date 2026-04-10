@@ -35,11 +35,18 @@ export default async function handler(req, res) {
     if (qParno) {
       scParams = new URLSearchParams({ where: `T_Map_Number='${qParno.replace(/'/g, "''")}'`, outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', f: 'geojson' });
     } else {
-      const d = 0.002;
-      scParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', resultRecordCount: '5', f: 'geojson' });
+      // Use point query first (exact parcel containing the point), fall back to small bbox
+      const ptGeom = JSON.stringify({ x: lngN, y: latN, spatialReference: { wkid: 4326 } });
+      scParams = new URLSearchParams({ geometry: ptGeom, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', resultRecordCount: '3', f: 'geojson' });
     }
     try {
-      const data = await fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${scParams}`);
+      let data = await fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${scParams}`);
+      // If point query returned nothing (point on road/boundary), fall back to small bbox
+      if (!qParno && (data.error || !data.features?.length)) {
+        const d = 0.0002;
+        const fbParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', resultRecordCount: '3', f: 'geojson' });
+        data = await fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${fbParams}`);
+      }
       if (data.error || !data.features?.length) return res.status(404).json({ error: 'No parcel found. Try clicking inside a property boundary.' });
       const f = data.features[0]; const p = f.properties || {};
       return res.json({ parcelId: p.T_Map_Number||null, owner: p.Ownership?.trim()||null, mailAddr: [p.Mailing_Add,p.Mailing_City,p.Mailing_St,p.Mailing_Zip].filter(Boolean).join(', ')||null, siteAddr: null, acres: (p.Acreage>0?p.Acreage:null)??(p.Shape_Area>0?p.Shape_Area/43560:null), landVal: p.L_Value??null, bldgVal: null, totVal: p.M_Value??null, landUse: p.Land_Use?.trim()||null, zoning: p.Zoning?.trim()||null, saleYear: null, county: p.County||null, subdivision: null, state: 'SC', geometry: f.geometry||null });
@@ -53,9 +60,17 @@ export default async function handler(req, res) {
       const p = new URLSearchParams({ where: `parno='${qParno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
       return `https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`;
     }
-    const d = 0.001;
-    const polyParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,Shape__Area', returnGeometry: 'false', resultRecordCount: '5', f: 'json' });
-    const polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${polyParams}`);
+    // Use point query — returns only the parcel that contains the exact click point.
+    // Fall back to a tiny bbox if the point lands on a road/boundary with no parcel.
+    const ptGeom = JSON.stringify({ x: lngN, y: latN, spatialReference: { wkid: 4326 } });
+    let polyParams = new URLSearchParams({ geometry: ptGeom, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,Shape__Area', returnGeometry: 'false', resultRecordCount: '3', f: 'json' });
+    let polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${polyParams}`);
+    if (!polyData.features?.length) {
+      // fallback: tiny bbox (~11m box)
+      const d = 0.0001;
+      polyParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,Shape__Area', returnGeometry: 'false', resultRecordCount: '3', f: 'json' });
+      polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${polyParams}`);
+    }
     const features = polyData.features || [];
     if (!features.length) return null;
     const best = features.reduce((a,b) => (b.attributes?.Shape__Area??Infinity)<(a.attributes?.Shape__Area??Infinity)?b:a);
