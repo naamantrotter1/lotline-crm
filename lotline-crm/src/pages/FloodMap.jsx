@@ -5,7 +5,7 @@ import * as turf from '@turf/turf';
 import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown } from 'lucide-react';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const PROXY = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const PROXY = import.meta.env.VITE_API_URL || '';
 const MIN_GEOJSON_ZOOM = 8; // Below this the polygons are too small to be useful
 
 const LAYER_CONFIGS = {
