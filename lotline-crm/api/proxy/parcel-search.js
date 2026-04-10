@@ -24,10 +24,11 @@ function centroid(g) {
 }
 
 // Fetch full attributes for NC parnos — MapServer/0 only supports single exact match.
-// Run requests in parallel (up to 10).
+// Use exact same field list and WHERE format as parcel.js which is known to work.
+const NC_ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 async function ncAttrsBatch(parnos) {
   const results = await Promise.all(parnos.slice(0, 10).map(async parno => {
-    const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: 'parno,ownname,siteadd,cntyname,scity,szip', returnGeometry: 'false', f: 'json' });
+    const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
     const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => null);
     return data?.features?.[0]?.attributes || null;
   }));
@@ -139,7 +140,7 @@ export default async function handler(req, res) {
       // FeatureServer/0 is the attribute layer via FeatureServer protocol — supports LIKE
       let where = `ownname LIKE '%${safeUpper}%'`;
       if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
-      const fp = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,scity,szip', returnGeometry: 'false', resultRecordCount: '20', f: 'json' });
+      const fp = new URLSearchParams({ where, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '20', f: 'json' });
       const fsData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/0/query?${fp}`).catch(() => ({ features: [] }));
       const matches = (fsData.features || []).slice(0, 10);
       if (!matches.length) return [];
