@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
-import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal } from 'lucide-react';
+import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown } from 'lucide-react';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PROXY = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -93,6 +93,15 @@ export default function FloodMap() {
 
   const [contours, setContours] = useState(false);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+
+  // ── Parcel search bar ──────────────────────────────────────────────────────
+  const [searchType, setSearchType]       = useState('address');
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchDrop, setShowSearchDrop] = useState(false);
+  const [showTypeMenu, setShowTypeMenu]   = useState(false);
+  const searchDebounce = useRef(null);
 
   layersRef.current = layers;
   parcelModeRef.current = parcelMode;
@@ -523,6 +532,42 @@ export default function FloodMap() {
 
   const toggleLayer = key => setLayers(p => ({ ...p, [key]: !p[key] }));
 
+  const SEARCH_TYPES = [
+    { id: 'address', label: 'Address' },
+    { id: 'parno',   label: 'APN / Parcel ID' },
+    { id: 'owner',   label: 'Owner' },
+  ];
+
+  const handleSearchInput = (val) => {
+    setSearchQuery(val);
+    clearTimeout(searchDebounce.current);
+    if (val.trim().length < 2) { setSearchResults([]); setShowSearchDrop(false); return; }
+    searchDebounce.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const r = await fetch(`${PROXY}/api/proxy/parcel-search?type=${searchType}&q=${encodeURIComponent(val)}`);
+        const data = await r.json();
+        setSearchResults(Array.isArray(data) ? data : []);
+        setShowSearchDrop(true);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 400);
+  };
+
+  const handleSearchSelect = (result) => {
+    const map = leafletMap.current;
+    if (!map || result.lat == null || result.lng == null) return;
+    setShowSearchDrop(false);
+    setSearchQuery(result.address || result.parno || '');
+    map.flyTo([result.lat, result.lng], 17, { animate: true, duration: 1.2 });
+    // Trigger parcel info fetch for this location
+    setTimeout(() => {
+      const ev = { latlng: L.latLng(result.lat, result.lng) };
+      clickedParnoRef.current = result.parno;
+      map.fire('click', ev);
+    }, 1300);
+  };
+
   const geojsonLayersActive = ['floodplain', 'wetlands', 'water'].some(k => layers[k]);
   const showZoomHint = geojsonLayersActive && zoom < MIN_GEOJSON_ZOOM;
   const showParcelZoomHint = false;
@@ -548,6 +593,78 @@ export default function FloodMap() {
       {/* ── Map ── */}
       <div className="relative flex-1 min-h-0">
         <div ref={mapRef} className="w-full h-full" />
+
+        {/* ── Parcel Search Bar ── */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-0 shadow-2xl rounded-xl overflow-visible" style={{ minWidth: 420 }}>
+          {/* Type selector */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowTypeMenu(p => !p)}
+              className="flex items-center gap-1.5 px-3 h-10 rounded-l-xl text-sm font-semibold text-white border border-r-0 border-gray-600 bg-gray-800 hover:bg-gray-700 transition-colors whitespace-nowrap"
+            >
+              {SEARCH_TYPES.find(t => t.id === searchType)?.label}
+              <ChevronDown size={13} className="text-gray-400" />
+            </button>
+            {showTypeMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200] min-w-[160px]">
+                {SEARCH_TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Text input */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => handleSearchInput(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setShowSearchDrop(true)}
+              placeholder={searchType === 'parno' ? 'Enter parcel ID…' : searchType === 'owner' ? 'Enter owner name…' : 'Enter address…'}
+              className="w-full h-10 pl-3 pr-8 text-sm text-white bg-gray-900 border border-gray-600 focus:outline-none focus:border-orange-500 placeholder-gray-500"
+              style={{ minWidth: 220 }}
+            />
+            {searchLoading && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            )}
+          </div>
+
+          {/* Search button */}
+          <button
+            onClick={() => handleSearchInput(searchQuery)}
+            className="flex items-center justify-center w-10 h-10 bg-orange-500 hover:bg-orange-400 rounded-r-xl border border-orange-500 transition-colors flex-shrink-0"
+          >
+            <Search size={15} className="text-white" />
+          </button>
+
+          {/* Results dropdown */}
+          {showSearchDrop && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]">
+              {searchResults.map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSearchSelect(r)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-800 border-b border-gray-700/50 last:border-0 transition-colors"
+                >
+                  <p className="text-sm text-white font-medium truncate">{r.address || r.parno}</p>
+                  <p className="text-xs text-gray-400 truncate">{[r.owner, r.county, r.state].filter(Boolean).join(' · ')}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          {showSearchDrop && searchResults.length === 0 && !searchLoading && searchQuery.length >= 2 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl z-[1200]">
+              <p className="px-4 py-3 text-sm text-gray-400">No results found</p>
+            </div>
+          )}
+        </div>
 
         {/* Zoom hint */}
         {(showZoomHint || showParcelZoomHint || showContourZoomHint) && (
