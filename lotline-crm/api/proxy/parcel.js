@@ -118,8 +118,8 @@ export default async function handler(req, res) {
   }
 
   // ── North Carolina ───────────────────────────────────────────────────────────
-  // stnum = street number (separate from siteadd in many counties); szip for zip
-  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,stnum,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
+  // szip added for complete site address; stnum not available in MapServer/0
+  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 
   const getAttrUrl = async () => {
     if (qParno) {
@@ -173,11 +173,8 @@ export default async function handler(req, res) {
     // Build site address from NC OneMap fields; fall back to reverse geocoding
     // when county hasn't submitted a site address (common for many NC counties).
     //
-    // Many counties store the street number separately in `stnum` and the street
-    // name (without number) in `siteadd`. Prepend stnum when siteadd doesn't
-    // already start with a digit.
+    // siteadd sometimes lacks the house number; reverse geocoding will fill it in below.
     let street = a.siteadd?.trim() || '';
-    if (street && !/^\d/.test(street) && a.stnum) street = `${a.stnum} ${street}`;
     let siteAddr = [street, a.scity, a.szip ? `NC ${a.szip}` : ''].filter(Boolean).join(', ') || null;
     if (!siteAddr || !/^\d/.test(siteAddr)) {
       // Use click/search coordinates, or centroid of fetched geometry, to get a
