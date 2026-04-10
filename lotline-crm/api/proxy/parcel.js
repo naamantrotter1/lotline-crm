@@ -10,6 +10,41 @@ function fetchJson(u) {
   });
 }
 
+// Nominatim reverse geocoding — used as a fallback when the parcel database
+// lacks a site address (common for NC OneMap and all SC DOT parcels).
+async function reverseGeocode(lat, lng) {
+  if (!lat || !lng || lat === 0 || lng === 0) return null;
+  try {
+    const p = new URLSearchParams({ lat, lon: lng, format: 'json', addressdetails: '1' });
+    const data = await fetchJson(`https://nominatim.openstreetmap.org/reverse?${p}`);
+    if (!data || data.error) return null;
+    const a = data.address || {};
+    const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
+    const city   = a.city || a.town || a.village || a.suburb || '';
+    const state  = a.state_code || (a.state === 'North Carolina' ? 'NC' : a.state === 'South Carolina' ? 'SC' : '');
+    const zip    = a.postcode || '';
+    const parts  = [street, city, state, zip].filter(Boolean);
+    return parts.length >= 2 ? parts.join(', ') : null;
+  } catch {
+    return null;
+  }
+}
+
+// Extract a usable centroid [lat, lng] from a GeoJSON geometry
+function centroidOf(geometry) {
+  if (!geometry) return [0, 0];
+  try {
+    if (geometry.type === 'Point') return [geometry.coordinates[1], geometry.coordinates[0]];
+    const rings = geometry.type === 'Polygon'
+      ? geometry.coordinates[0]
+      : geometry.coordinates[0][0]; // MultiPolygon
+    const n = rings.length;
+    const lat = rings.reduce((s, c) => s + c[1], 0) / n;
+    const lng = rings.reduce((s, c) => s + c[0], 0) / n;
+    return [lat, lng];
+  } catch { return [0, 0]; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -29,6 +64,7 @@ export default async function handler(req, res) {
   const isSC = forcedSC || parnoIsSC || (!isNC && latN >= 31.9 && latN <= 35.3 && lngN >= -83.5 && lngN <= -78.4);
   if (!qParno && !isNC && !isSC) return res.status(404).json({ error: 'Outside NC/SC coverage area' });
 
+  // ── South Carolina ───────────────────────────────────────────────────────────
   if (isSC || (qParno && !isNC)) {
     const SC_FIELDS = 'T_Map_Number,County,L_Value,M_Value,Ownership,Mailing_Add,Mailing_City,Mailing_Zip,Zoning,Land_Use,Acreage,Shape_Area,Mailing_St';
     let scParams;
@@ -49,11 +85,36 @@ export default async function handler(req, res) {
       }
       if (data.error || !data.features?.length) return res.status(404).json({ error: 'No parcel found. Try clicking inside a property boundary.' });
       const f = data.features[0]; const p = f.properties || {};
-      return res.json({ parcelId: p.T_Map_Number||null, owner: p.Ownership?.trim()||null, mailAddr: [p.Mailing_Add,p.Mailing_City,p.Mailing_St,p.Mailing_Zip].filter(Boolean).join(', ')||null, siteAddr: null, acres: (p.Acreage>0?p.Acreage:null)??(p.Shape_Area>0?p.Shape_Area/43560:null), landVal: p.L_Value??null, bldgVal: null, totVal: p.M_Value??null, landUse: p.Land_Use?.trim()||null, zoning: p.Zoning?.trim()||null, saleYear: null, county: p.County||null, subdivision: null, state: 'SC', geometry: f.geometry||null });
+
+      // SC DOT has no site address — derive from geometry centroid via reverse geocode
+      const [gLat, gLng] = centroidOf(f.geometry);
+      const rgLat = latN || gLat;
+      const rgLng = lngN || gLng;
+      const siteAddr = await reverseGeocode(rgLat, rgLng);
+
+      return res.json({
+        parcelId: p.T_Map_Number||null,
+        owner: p.Ownership?.trim()||null,
+        mailAddr: [p.Mailing_Add, p.Mailing_City, p.Mailing_St, p.Mailing_Zip].filter(Boolean).join(', ')||null,
+        siteAddr,
+        acres: (p.Acreage>0 ? p.Acreage : null) ?? (p.Shape_Area>0 ? p.Shape_Area/43560 : null),
+        landVal: p.L_Value??null,
+        bldgVal: null,
+        totVal: p.M_Value??null,
+        landUse: p.Land_Use?.trim()||null,
+        zoning: p.Zoning?.trim()||null,
+        saleYear: null,
+        county: p.County||null,
+        subdivision: null,
+        state: 'SC',
+        geometry: f.geometry||null,
+      });
     } catch (err) { return res.status(502).json({ error: err.message }); }
   }
 
-  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
+  // ── North Carolina ───────────────────────────────────────────────────────────
+  // szip added for complete site address; scity is the site city field
+  const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 
   const getAttrUrl = async () => {
     if (qParno) {
@@ -89,6 +150,7 @@ export default async function handler(req, res) {
     if (!features.length) return res.status(404).json({ error: 'No parcel found. Try clicking inside a property boundary.' });
     const best = features.reduce((a,b) => (b.attributes?.gisacres??Infinity)<(a.attributes?.gisacres??Infinity)?b:a);
     const a = best.attributes;
+
     let geometry = null;
     const lookupParno = qParno || a.parno;
     if (lookupParno) {
@@ -98,9 +160,37 @@ export default async function handler(req, res) {
         geometry = polyData.features?.[0]?.geometry || null;
       } catch(e) {}
     }
+
     let saleYear = null;
     if (a.saledatetx) { const m = String(a.saledatetx).match(/(\d{4})/); if (m) saleYear = m[1]; }
     else if (a.saledate) { saleYear = new Date(a.saledate).getFullYear(); }
-    return res.json({ parcelId: a.parno||a.altparno||null, owner: a.ownname?.trim()||null, mailAddr: [a.mailadd,a.mcity,a.mstate,a.mzip].filter(Boolean).join(', ')||null, siteAddr: [a.siteadd,a.scity].filter(Boolean).join(', ')||null, acres: a.gisacres??null, landVal: a.landval??null, bldgVal: a.improvval??null, totVal: a.parval??null, landUse: a.parusedesc?.trim()||null, saleYear, county: a.cntyname||null, subdivision: a.subdivisio?.trim()||null, state: 'NC', geometry });
+
+    // Build site address from NC OneMap fields; fall back to reverse geocoding
+    // when county hasn't submitted a site address (common for many NC counties).
+    let siteAddr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : ''].filter(Boolean).join(', ') || null;
+    if (!siteAddr) {
+      // Use click/search coordinates, or centroid of fetched geometry
+      const [gLat, gLng] = centroidOf(geometry);
+      const rgLat = latN || gLat;
+      const rgLng = lngN || gLng;
+      siteAddr = await reverseGeocode(rgLat, rgLng);
+    }
+
+    return res.json({
+      parcelId: a.parno||a.altparno||null,
+      owner: a.ownname?.trim()||null,
+      mailAddr: [a.mailadd, a.mcity, a.mstate, a.mzip].filter(Boolean).join(', ')||null,
+      siteAddr,
+      acres: a.gisacres??null,
+      landVal: a.landval??null,
+      bldgVal: a.improvval??null,
+      totVal: a.parval??null,
+      landUse: a.parusedesc?.trim()||null,
+      saleYear,
+      county: a.cntyname||null,
+      subdivision: a.subdivisio?.trim()||null,
+      state: 'NC',
+      geometry,
+    });
   } catch (err) { return res.status(502).json({ error: err.message }); }
 }
