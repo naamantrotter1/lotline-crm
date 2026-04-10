@@ -626,7 +626,7 @@ export default function FloodMap() {
                 {SEARCH_TYPES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); }}
+                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(true); setShowCountyMenu(false); } }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
                   >
                     {t.label}
@@ -650,7 +650,7 @@ export default function FloodMap() {
               {showStateMenu && (
                 <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]" style={{ minWidth: 100 }}>
                   {['', 'NC', 'SC'].map(s => (
-                    <button key={s} onClick={() => { setSearchState(s); setSearchCounty(''); setShowStateMenu(false); }}
+                    <button key={s} onClick={() => { setSearchState(s); setSearchCounty(''); setShowStateMenu(false); if (s) setShowCountyMenu(true); }}
                       className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchState === s ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
                       {s || 'Any'}
                     </button>
