@@ -29,12 +29,15 @@ const NC_ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd
 async function ncAttrsBatch(parnos) {
   const entries = await Promise.all(parnos.slice(0, 10).map(async parno => {
     const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-    const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => null);
-    return [parno, data?.features?.[0]?.attributes || null];
+    const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(e => ({ _err: e.message }));
+    const attrs = data?._err ? null : (data?.features?.[0]?.attributes || { _noFeatures: JSON.stringify(data).substring(0, 200) });
+    return [parno, attrs];
   }));
   const map = {};
-  // Key by the input parno so lookup works even if stored parno format differs slightly
-  for (const [inputParno, attrs] of entries) { if (attrs) map[inputParno] = attrs; }
+  for (const [inputParno, attrs] of entries) { if (attrs && !attrs._noFeatures && !attrs._err) map[inputParno] = attrs; }
+  // Surface first error/empty for debug
+  const firstBad = entries.find(([, a]) => a?._noFeatures || a?._err);
+  if (firstBad && Object.keys(map).length === 0) map._debug = { parno: firstBad[0], info: firstBad[1] };
   return map;
 }
 
