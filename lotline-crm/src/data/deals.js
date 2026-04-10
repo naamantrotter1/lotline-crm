@@ -379,7 +379,7 @@ export const LAND_DEALS = [
   { id: 'land-016', pipeline: 'land-acquisition', stage: 'New Lead', address: '124 Speaks Rd, Olin, NC 28660', county: 'Iredell', state: 'NC', grade: 'D', arv: 250000, netProfit: 25544, financing: 'Hard Money Loan', tags: ['Low Margin 14%'] },
   { id: 'land-017', pipeline: 'land-acquisition', stage: 'New Lead', address: 'Frank Bullock Rd, Manson, NC 27553', county: 'Vance', state: 'NC', grade: null, arv: null, netProfit: -96670, financing: 'Cash', tags: ['Subdivide'] },
   { id: 'land-018', pipeline: 'land-acquisition', stage: 'New Lead', address: 'Clover, SC (exact address TBD)', county: 'York', state: 'SC', grade: 'A', arv: 300000, netProfit: 151830, financing: 'Cash' },
-  { id: 'land-019', pipeline: 'land-acquisition', stage: 'Underwriting', address: '4.27 Acres Horry County SC', county: 'Horry', state: 'SC', grade: 'A', arv: 250000, netProfit: 132080, financing: 'Cash' },
+  { id: 'land-019', pipeline: 'land-acquisition', stage: 'Underwriting', address: '4.27 Acres Horry County SC', county: 'Horry', state: 'SC', zip: '29581', acreage: 4.27, grade: 'A', arv: 250000, netProfit: 132080, financing: 'Cash', land: 67000, mobileHome: 0, hudEngineer: 500, percTest: 2000, survey: 1500, footers: 6000, setup: 9000, clearLand: 0, water: 0, septic: 0, electric: 0, hvac: 4500, underpinning: 6000, decks: 3500, driveway: 1200, landscaping: 0, waterSewer: 0, mailbox: 170, gutters: 0, photos: 0, mobileTax: 300, staging: 0, holdingMonths: 4, holdingPerMonth: 250, generalNotes: 'https://www.landwatch.com/horry-county-south-carolina-undeveloped-land-for-sale/pid/422771262', ownerType: 'Owner', utilityScenario: 'All Utilities Available' },
 ];
 
 export const ARCHIVED_DEALS = [
