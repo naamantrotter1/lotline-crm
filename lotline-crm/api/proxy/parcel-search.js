@@ -50,16 +50,23 @@ export default async function handler(req, res) {
           seen.add(key);
           return true;
         })
-        .map(r => ({
-          parno: null,
-          owner: null,
-          address: r.display_name?.split(',').slice(0, 3).join(',').trim() || q,
-          city: r.address?.city || r.address?.town || r.address?.village || r.address?.suburb || '',
-          county: (r.address?.county || '').replace(' County', ''),
-          state: r.address?.state === 'North Carolina' ? 'NC' : 'SC',
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon),
-        }));
+        .map(r => {
+          const a = r.address || {};
+          const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
+          const city   = a.city || a.town || a.municipality || '';
+          const state  = a.state === 'North Carolina' ? 'NC' : 'SC';
+          const address = [street, city, state].filter(Boolean).join(', ') || r.display_name?.split(',').slice(0,2).join(' ').trim() || q;
+          return {
+            parno: null,
+            owner: null,
+            address,
+            city,
+            county: (a.county || '').replace(' County', ''),
+            state,
+            lat: parseFloat(r.lat),
+            lng: parseFloat(r.lon),
+          };
+        });
 
       return res.json(mapped.slice(0, 8));
     } catch (err) {
