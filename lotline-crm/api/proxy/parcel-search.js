@@ -96,6 +96,12 @@ export default async function handler(req, res) {
         if (parno) { parnos.push(parno); geoMap[parno] = centroid(f.geometry); }
       }
 
+      // DEBUG: test first parno raw response from MapServer/0
+      if (parnos[0]) {
+        const _dp = new URLSearchParams({ where: `parno='${parnos[0].replace(/'/g,"''")}'`, outFields: NC_ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
+        const _dd = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${_dp}`).catch(e => ({ _fetchError: e.message }));
+        if (!_dd.features?.length) return [{ _debug: { parno: parnos[0], response: JSON.stringify(_dd).substring(0, 300) } }];
+      }
       // Filter by county client-side after fetching attrs
       const attrs = await ncAttrsBatch(parnos);
 
