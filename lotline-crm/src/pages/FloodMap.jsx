@@ -953,7 +953,6 @@ export default function FloodMap() {
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-gray-600">{parcelData.state} · NC OneMap public records</p>
               </div>
             )}
           </div>
