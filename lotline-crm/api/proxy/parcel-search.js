@@ -81,7 +81,8 @@ export default async function handler(req, res) {
       if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
       // MapServer/0 is attribute-only — must use returnGeometry:false
       const p = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '10', f: 'json' });
-      const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => ({ features: [] }));
+      const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(e => ({ _fetchError: e.message, features: [] }));
+      if (data.error || data._fetchError) return [{ _debug: { error: data.error, fetchError: data._fetchError, where } }];
       const features = data.features || [];
       if (!features.length) return [];
       // Fetch centroids from FeatureServer/1 which supports geometry
