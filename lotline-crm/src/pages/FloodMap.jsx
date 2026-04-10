@@ -153,6 +153,12 @@ export default function FloodMap() {
 
   // ── Refresh active GeoJSON layers on pan/zoom ─────────────────────────────
   const fetchParcelBoundaries = (map) => {
+    // Don't fetch when zoomed out — bbox would be too large and the API would time out
+    if (map.getZoom() < 12) {
+      if (parcelFetchAbortRef.current) parcelFetchAbortRef.current.abort();
+      if (parcelBoundaryLayerRef.current) { parcelBoundaryLayerRef.current.remove(); parcelBoundaryLayerRef.current = null; }
+      return;
+    }
     // Abort any in-flight request
     if (parcelFetchAbortRef.current) parcelFetchAbortRef.current.abort();
     const ctrl = new AbortController();
