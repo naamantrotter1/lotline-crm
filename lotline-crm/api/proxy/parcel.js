@@ -20,8 +20,9 @@ async function reverseGeocode(lat, lng) {
     if (!data || data.error) return null;
     const a = data.address || {};
     const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
-    // Use only actual municipal names — suburb/neighbourhood are community names, not cities
-    const city   = a.city || a.town || a.village || a.municipality || a.hamlet || '';
+    // Only actual incorporated municipalities — suburb/neighbourhood/hamlet are community names
+    const city   = a.city || a.town || a.village || a.municipality ||
+                   (a.county ? a.county.replace(/\s*County$/i, '') : '') || '';
     // state_code may come back as "US-NC"; strip the "US-" prefix if present
     const rawState = a.state_code || '';
     const state  = rawState.replace(/^US-/i, '') ||
