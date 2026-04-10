@@ -626,7 +626,7 @@ export default function FloodMap() {
                 {SEARCH_TYPES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(true); setShowCountyMenu(true); } }}
+                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(false); setShowCountyMenu(false); } }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
                   >
                     {t.label}
@@ -660,8 +660,8 @@ export default function FloodMap() {
             </div>
           )}
 
-          {/* County selector — only for APN search with a state selected */}
-          {searchType === 'parno' && searchState && (
+          {/* County selector — only for APN search */}
+          {searchType === 'parno' && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => { setShowCountyMenu(p => !p); setShowStateMenu(false); setShowTypeMenu(false); }}
@@ -673,16 +673,22 @@ export default function FloodMap() {
               </button>
               {showCountyMenu && (
                 <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]" style={{ minWidth: 160, maxHeight: 260, overflowY: 'auto' }}>
-                  <button onClick={() => { setSearchCounty(''); setShowCountyMenu(false); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${!searchCounty ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
-                    Any County
-                  </button>
-                  {countyList.map(c => (
-                    <button key={c} onClick={() => { setSearchCounty(c); setShowCountyMenu(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchCounty === c ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
-                      {c}
-                    </button>
-                  ))}
+                  {!searchState ? (
+                    <p className="px-4 py-3 text-sm text-gray-400">Select a state first</p>
+                  ) : (
+                    <>
+                      <button onClick={() => { setSearchCounty(''); setShowCountyMenu(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${!searchCounty ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
+                        Any County
+                      </button>
+                      {countyList.map(c => (
+                        <button key={c} onClick={() => { setSearchCounty(c); setShowCountyMenu(false); }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchCounty === c ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
+                          {c}
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
