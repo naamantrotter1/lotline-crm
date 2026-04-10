@@ -538,6 +538,14 @@ export default function FloodMap() {
             : null);
           if (bounds?.isValid()) {
             map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+            // After fitBounds animation settles, force a boundary refresh so neighbouring
+            // parcels around the searched property are visible.
+            if (isFromSearch) {
+              setTimeout(() => {
+                const m = leafletMap.current;
+                if (m && parcelBoundariesRef.current) fetchParcelBoundaries(m);
+              }, 900);
+            }
           }
         })
         .catch(err => { if (err.name !== 'AbortError') setParcelData({ error: 'Lookup failed. Try again.' }); })
@@ -603,7 +611,7 @@ export default function FloodMap() {
     if (!map || result.lat == null || result.lng == null) return;
     setShowSearchDrop(false);
     setSearchQuery(result.address || result.parno || '');
-    map.flyTo([result.lat, result.lng], 17, { animate: true, duration: 1.2 });
+    map.flyTo([result.lat, result.lng], 16, { animate: true, duration: 1.2 });
     // Trigger parcel info fetch for this location
     setTimeout(() => {
       const ev = { latlng: L.latLng(result.lat, result.lng) };
