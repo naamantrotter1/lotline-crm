@@ -641,6 +641,7 @@ export default function FloodMap() {
     setTimeout(() => {
       const ev = { latlng: L.latLng(lat, lng) };
       clickedParnoRef.current = result.parno;
+      clickedStateRef.current = result.state || null;
       fromSearchRef.current = true;
       map.fire('click', ev);
     }, 1300);
