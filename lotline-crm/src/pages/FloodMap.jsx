@@ -595,8 +595,8 @@ export default function FloodMap() {
       setSearchLoading(true);
       try {
         const params = new URLSearchParams({ type: searchType, q: val });
-        if (searchType === 'parno' && searchState) params.set('state', searchState);
-        if (searchType === 'parno' && searchCounty) params.set('county', searchCounty);
+        if ((searchType === 'parno' || searchType === 'owner') && searchState) params.set('state', searchState);
+        if ((searchType === 'parno' || searchType === 'owner') && searchCounty) params.set('county', searchCounty);
         const r = await fetch(`${PROXY}/api/proxy/parcel-search?${params}`);
         const data = await r.json();
         setSearchResults(Array.isArray(data) ? data : []);
@@ -663,7 +663,7 @@ export default function FloodMap() {
                 {SEARCH_TYPES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'parno') { setShowStateMenu(false); setShowCountyMenu(false); } }}
+                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'address') { setSearchState(''); setSearchCounty(''); setShowStateMenu(false); setShowCountyMenu(false); } }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
                   >
                     {t.label}
@@ -673,8 +673,8 @@ export default function FloodMap() {
             )}
           </div>
 
-          {/* State selector — only for APN search */}
-          {searchType === 'parno' && (
+          {/* State selector — for APN and Owner search */}
+          {(searchType === 'parno' || searchType === 'owner') && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => { setShowStateMenu(p => !p); setShowCountyMenu(false); setShowTypeMenu(false); }}
@@ -697,8 +697,8 @@ export default function FloodMap() {
             </div>
           )}
 
-          {/* County selector — only for APN search */}
-          {searchType === 'parno' && (
+          {/* County selector — for APN and Owner search */}
+          {(searchType === 'parno' || searchType === 'owner') && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => { setShowCountyMenu(p => !p); setShowStateMenu(false); setShowTypeMenu(false); }}

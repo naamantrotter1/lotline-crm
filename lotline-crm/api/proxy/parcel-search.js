@@ -114,11 +114,12 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Owner search: NC OneMap + SC DOT (requires county for performance) ───
+  // ── Owner search: NC OneMap + SC DOT ────────────────────────────────────
   if (type === 'owner') {
     const searchNC = () => {
-      if (!safeCounty) return Promise.resolve([]);
-      const where = `UPPER(ownname) LIKE '%${safeUpper}%' AND UPPER(cntyname) LIKE '%${safeCounty}%'`;
+      if (state === 'SC') return Promise.resolve([]);
+      let where = `UPPER(ownname) LIKE '%${safeUpper}%'`;
+      if (safeCounty) where += ` AND UPPER(cntyname) LIKE '%${safeCounty}%'`;
       const p = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
       return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`)
         .then(data => (data.features || []).map(f => {
@@ -130,9 +131,25 @@ export default async function handler(req, res) {
         })).catch(() => []);
     };
 
+    const searchSC = () => {
+      if (state === 'NC') return Promise.resolve([]);
+      let where = `UPPER(Ownership) LIKE '%${safeUpper}%'`;
+      if (safeCounty) where += ` AND UPPER(County) LIKE '%${safeCounty}%'`;
+      const p = new URLSearchParams({ where, outFields: 'T_Map_Number,Ownership,County', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
+      return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${p}`)
+        .then(data => (data.features || []).map(f => {
+          const a = f.attributes || {}; const g = f.geometry;
+          const lat = g?.y ?? (g?.rings?.[0]?.reduce((s, c) => s + c[1], 0) / (g?.rings?.[0]?.length || 1));
+          const lng = g?.x ?? (g?.rings?.[0]?.reduce((s, c) => s + c[0], 0) / (g?.rings?.[0]?.length || 1));
+          return { parno: a.T_Map_Number, owner: a.Ownership?.trim() || null, address: null, city: null, county: a.County, state: 'SC', lat, lng };
+        })).catch(() => []);
+    };
+
     try {
-      const results = await searchNC();
-      if (!safeCounty) return res.json([{ _hint: 'Select a county to search by owner name' }]);
+      const queries = [];
+      if (state !== 'SC') queries.push(searchNC());
+      if (state !== 'NC') queries.push(searchSC());
+      const results = (await Promise.all(queries)).flat();
       return res.json(results.slice(0, 10));
     } catch (err) {
       return res.status(502).json({ error: err.message });
