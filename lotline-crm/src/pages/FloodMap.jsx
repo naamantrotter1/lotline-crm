@@ -101,7 +101,15 @@ export default function FloodMap() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchDrop, setShowSearchDrop] = useState(false);
   const [showTypeMenu, setShowTypeMenu]   = useState(false);
+  const [searchState, setSearchState]     = useState('');   // 'NC' | 'SC' | ''
+  const [searchCounty, setSearchCounty]   = useState('');
+  const [showStateMenu, setShowStateMenu] = useState(false);
+  const [showCountyMenu, setShowCountyMenu] = useState(false);
   const searchDebounce = useRef(null);
+
+  const NC_COUNTIES = ['Alamance','Alexander','Alleghany','Anson','Ashe','Avery','Beaufort','Bertie','Bladen','Brunswick','Buncombe','Burke','Cabarrus','Caldwell','Camden','Carteret','Caswell','Catawba','Chatham','Cherokee','Chowan','Clay','Cleveland','Columbus','Craven','Cumberland','Currituck','Dare','Davidson','Davie','Duplin','Durham','Edgecombe','Forsyth','Franklin','Gaston','Gates','Graham','Granville','Greene','Guilford','Halifax','Harnett','Haywood','Henderson','Hertford','Hoke','Hyde','Iredell','Jackson','Johnston','Jones','Lee','Lenoir','Lincoln','Macon','Madison','Martin','McDowell','Mecklenburg','Mitchell','Montgomery','Moore','Nash','New Hanover','Northampton','Onslow','Orange','Pamlico','Pasquotank','Pender','Perquimans','Person','Pitt','Polk','Randolph','Richmond','Robeson','Rockingham','Rowan','Rutherford','Sampson','Scotland','Stanly','Stokes','Surry','Swain','Transylvania','Tyrrell','Union','Vance','Wake','Warren','Washington','Watauga','Wayne','Wilkes','Wilson','Yadkin','Yancey'];
+  const SC_COUNTIES = ['Abbeville','Aiken','Allendale','Anderson','Bamberg','Barnwell','Beaufort','Berkeley','Calhoun','Charleston','Cherokee','Chester','Chesterfield','Clarendon','Colleton','Darlington','Dillon','Dorchester','Edgefield','Fairfield','Florence','Georgetown','Greenville','Greenwood','Hampton','Horry','Jasper','Kershaw','Lancaster','Laurens','Lee','Lexington','Marion','Marlboro','McCormick','Newberry','Oconee','Orangeburg','Pickens','Richland','Saluda','Spartanburg','Sumter','Union','Williamsburg','York'];
+  const countyList = searchState === 'NC' ? NC_COUNTIES : searchState === 'SC' ? SC_COUNTIES : [];
 
   layersRef.current = layers;
   parcelModeRef.current = parcelMode;
@@ -545,7 +553,10 @@ export default function FloodMap() {
     searchDebounce.current = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const r = await fetch(`${PROXY}/api/proxy/parcel-search?type=${searchType}&q=${encodeURIComponent(val)}`);
+        const params = new URLSearchParams({ type: searchType, q: val });
+        if (searchType === 'parno' && searchState) params.set('state', searchState);
+        if (searchType === 'parno' && searchCounty) params.set('county', searchCounty);
+        const r = await fetch(`${PROXY}/api/proxy/parcel-search?${params}`);
         const data = await r.json();
         setSearchResults(Array.isArray(data) ? data : []);
         setShowSearchDrop(true);
@@ -620,6 +631,58 @@ export default function FloodMap() {
             )}
           </div>
 
+          {/* State selector — only for APN search */}
+          {searchType === 'parno' && (
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => { setShowStateMenu(p => !p); setShowCountyMenu(false); setShowTypeMenu(false); }}
+                className="flex items-center gap-1 px-3 h-10 text-sm font-medium text-white border border-l-0 border-gray-600 bg-gray-800 hover:bg-gray-700 transition-colors whitespace-nowrap"
+                style={{ minWidth: 80 }}
+              >
+                {searchState || 'State'}
+                <ChevronDown size={12} className="text-gray-400" />
+              </button>
+              {showStateMenu && (
+                <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]" style={{ minWidth: 100 }}>
+                  {['', 'NC', 'SC'].map(s => (
+                    <button key={s} onClick={() => { setSearchState(s); setSearchCounty(''); setShowStateMenu(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchState === s ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
+                      {s || 'Any'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* County selector — only for APN search with a state selected */}
+          {searchType === 'parno' && searchState && (
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => { setShowCountyMenu(p => !p); setShowStateMenu(false); setShowTypeMenu(false); }}
+                className="flex items-center gap-1 px-3 h-10 text-sm font-medium text-white border border-l-0 border-gray-600 bg-gray-800 hover:bg-gray-700 transition-colors whitespace-nowrap"
+                style={{ minWidth: 110 }}
+              >
+                <span className="truncate" style={{ maxWidth: 90 }}>{searchCounty || 'County'}</span>
+                <ChevronDown size={12} className="text-gray-400 flex-shrink-0" />
+              </button>
+              {showCountyMenu && (
+                <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]" style={{ minWidth: 160, maxHeight: 260, overflowY: 'auto' }}>
+                  <button onClick={() => { setSearchCounty(''); setShowCountyMenu(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${!searchCounty ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
+                    Any County
+                  </button>
+                  {countyList.map(c => (
+                    <button key={c} onClick={() => { setSearchCounty(c); setShowCountyMenu(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchCounty === c ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Text input */}
           <div className="relative flex-1">
             <input
@@ -629,7 +692,7 @@ export default function FloodMap() {
               onFocus={() => searchResults.length > 0 && setShowSearchDrop(true)}
               placeholder={searchType === 'parno' ? 'Enter parcel ID…' : searchType === 'owner' ? 'Enter owner name…' : 'Enter address…'}
               className="w-full h-10 pl-3 pr-8 text-sm text-white bg-gray-900 border border-gray-600 focus:outline-none focus:border-orange-500 placeholder-gray-500"
-              style={{ minWidth: 220 }}
+              style={{ minWidth: 160 }}
             />
             {searchLoading && (
               <div className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />

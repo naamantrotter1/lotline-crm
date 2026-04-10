@@ -14,16 +14,18 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { type, q, state = 'both' } = req.query;
+  const { type, q, state = 'both', county = '' } = req.query;
   if (!type || !q || q.trim().length < 2) return res.status(400).json({ error: 'type and q required (min 2 chars)' });
 
   const safe = q.trim().replace(/'/g, "''").toUpperCase();
+  const safeCounty = county.trim().replace(/'/g, "''").toUpperCase();
 
   const searchNC = () => {
     let where;
     if (type === 'parno') where = `UPPER(parno) LIKE '${safe}%'`;
     else if (type === 'owner') where = `UPPER(ownname) LIKE '%${safe}%'`;
     else where = `UPPER(siteadd) LIKE '%${safe}%'`;
+    if (safeCounty) where += ` AND UPPER(cntyname) LIKE '%${safeCounty}%'`;
     const p = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
     return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`)
       .then(data => (data.features || []).map(f => {
@@ -36,7 +38,8 @@ export default async function handler(req, res) {
 
   const searchSC = () => {
     if (type !== 'parno') return Promise.resolve([]);
-    const where = `UPPER(T_Map_Number) LIKE '${safe}%'`;
+    let where = `UPPER(T_Map_Number) LIKE '${safe}%'`;
+    if (safeCounty) where += ` AND UPPER(County) LIKE '%${safeCounty}%'`;
     const p = new URLSearchParams({ where, outFields: 'T_Map_Number,County', returnGeometry: 'true', outSR: '4326', resultRecordCount: '10', f: 'json' });
     return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${p}`)
       .then(data => (data.features || []).map(f => {
