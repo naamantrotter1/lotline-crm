@@ -85,7 +85,8 @@ export default async function handler(req, res) {
           const a = f.attributes || {}; const g = f.geometry;
           const lat = g?.y ?? (g?.rings?.[0]?.reduce((s, c) => s + c[1], 0) / (g?.rings?.[0]?.length || 1));
           const lng = g?.x ?? (g?.rings?.[0]?.reduce((s, c) => s + c[0], 0) / (g?.rings?.[0]?.length || 1));
-          return { parno: a.parno, owner: a.ownname, address: a.siteadd, city: a.stpostal, county: a.cntyname, state: 'NC', lat, lng };
+          const addr = [a.siteadd, a.stpostal, 'NC'].filter(Boolean).join(', ');
+          return { parno: a.parno, owner: a.ownname, address: addr, city: a.stpostal, county: a.cntyname, state: 'NC', lat, lng };
         })).catch(() => []);
     };
 
@@ -124,7 +125,8 @@ export default async function handler(req, res) {
           const a = f.attributes || {}; const g = f.geometry;
           const lat = g?.y ?? (g?.rings?.[0]?.reduce((s, c) => s + c[1], 0) / (g?.rings?.[0]?.length || 1));
           const lng = g?.x ?? (g?.rings?.[0]?.reduce((s, c) => s + c[0], 0) / (g?.rings?.[0]?.length || 1));
-          return { parno: a.parno, owner: a.ownname, address: a.siteadd, city: a.stpostal, county: a.cntyname, state: 'NC', lat, lng };
+          const addr = [a.siteadd, a.stpostal, 'NC'].filter(Boolean).join(', ');
+          return { parno: a.parno, owner: a.ownname, address: addr, city: a.stpostal, county: a.cntyname, state: 'NC', lat, lng };
         })).catch(() => []);
     };
 
