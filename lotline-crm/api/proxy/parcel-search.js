@@ -27,7 +27,7 @@ function centroid(g) {
 // Run requests in parallel (up to 10).
 async function ncAttrsBatch(parnos) {
   const results = await Promise.all(parnos.slice(0, 10).map(async parno => {
-    const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', f: 'json' });
+    const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: 'parno,ownname,siteadd,cntyname,scity,szip', returnGeometry: 'false', f: 'json' });
     const data = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`).catch(() => null);
     return data?.features?.[0]?.attributes || null;
   }));
@@ -103,8 +103,8 @@ export default async function handler(req, res) {
         .map(parno => {
           const a = attrs[parno] || {};
           const { lat, lng } = geoMap[parno] || {};
-          const addr = [a.siteadd, a.stpostal, 'NC'].filter(Boolean).join(', ');
-          return { parno, owner: a.ownname || null, address: addr || null, city: a.stpostal || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+          const addr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
+          return { parno, owner: a.ownname || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
         });
     };
 
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
       // FeatureServer/0 is the attribute layer via FeatureServer protocol — supports LIKE
       let where = `ownname LIKE '%${safeUpper}%'`;
       if (safeCounty) where += ` AND cntyname LIKE '%${safeCounty}%'`;
-      const fp = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,stpostal', returnGeometry: 'false', resultRecordCount: '20', f: 'json' });
+      const fp = new URLSearchParams({ where, outFields: 'parno,ownname,siteadd,cntyname,scity,szip', returnGeometry: 'false', resultRecordCount: '20', f: 'json' });
       const fsData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/0/query?${fp}`).catch(() => ({ features: [] }));
       const matches = (fsData.features || []).slice(0, 10);
       if (!matches.length) return [];
@@ -158,8 +158,8 @@ export default async function handler(req, res) {
       return matches.map(f => {
         const a = f.attributes || {};
         const { lat, lng } = geoMap[a.parno] || {};
-        const addr = [a.siteadd, a.stpostal, 'NC'].filter(Boolean).join(', ');
-        return { parno: a.parno || null, owner: a.ownname || null, address: addr || null, city: a.stpostal || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
+        const addr = [a.siteadd, a.scity, a.szip ? `NC ${a.szip}` : 'NC'].filter(Boolean).join(', ');
+        return { parno: a.parno || null, owner: a.ownname || null, address: addr || null, city: a.scity || null, county: a.cntyname || null, state: 'NC', lat: lat ?? null, lng: lng ?? null };
       });
     };
 
