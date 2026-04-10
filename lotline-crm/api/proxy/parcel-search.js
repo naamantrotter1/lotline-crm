@@ -21,40 +21,47 @@ export default async function handler(req, res) {
   const safeUpper = safe.toUpperCase();
   const safeCounty = county.trim().replace(/'/g, "''").toUpperCase();
 
-  // ── Address search: use Nominatim geocoding ──────────────────────────────
+  // ── Address search: Nominatim geocoding for fuzzy address suggestions ───
   if (type === 'address') {
-    const stateFilter = state === 'NC' ? 'North Carolina' : state === 'SC' ? 'South Carolina' : 'North Carolina, South Carolina';
-    const searchQ = `${q.trim()}, ${stateFilter}, USA`;
-    const nomParams = new URLSearchParams({
-      q: searchQ,
-      format: 'json',
-      addressdetails: '1',
-      limit: '8',
-      countrycodes: 'us',
-    });
+    const searches = [];
+
+    if (state !== 'SC') {
+      const p = new URLSearchParams({ q: `${q.trim()}, North Carolina, USA`, format: 'json', addressdetails: '1', limit: '6', countrycodes: 'us' });
+      searches.push(fetchJson(`https://nominatim.openstreetmap.org/search?${p}`).catch(() => []));
+    }
+    if (state !== 'NC') {
+      const p = new URLSearchParams({ q: `${q.trim()}, South Carolina, USA`, format: 'json', addressdetails: '1', limit: '6', countrycodes: 'us' });
+      searches.push(fetchJson(`https://nominatim.openstreetmap.org/search?${p}`).catch(() => []));
+    }
+
     try {
-      const results = await fetchJson(`https://nominatim.openstreetmap.org/search?${nomParams}`);
-      if (!Array.isArray(results)) return res.json([]);
+      const allResults = (await Promise.all(searches)).flat();
 
-      const filtered = results.filter(r => {
-        const addrState = r.address?.state || '';
-        if (state === 'NC') return addrState === 'North Carolina';
-        if (state === 'SC') return addrState === 'South Carolina';
-        return addrState === 'North Carolina' || addrState === 'South Carolina';
-      });
+      // Filter to NC/SC only and deduplicate by lat/lng
+      const seen = new Set();
+      const mapped = allResults
+        .filter(r => {
+          const s = r.address?.state || '';
+          return s === 'North Carolina' || s === 'South Carolina';
+        })
+        .filter(r => {
+          const key = `${parseFloat(r.lat).toFixed(4)},${parseFloat(r.lon).toFixed(4)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map(r => ({
+          parno: null,
+          owner: null,
+          address: r.display_name?.split(',').slice(0, 3).join(',').trim() || q,
+          city: r.address?.city || r.address?.town || r.address?.village || r.address?.suburb || '',
+          county: (r.address?.county || '').replace(' County', ''),
+          state: r.address?.state === 'North Carolina' ? 'NC' : 'SC',
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }));
 
-      const mapped = filtered.map(r => ({
-        parno: null,
-        owner: null,
-        address: r.display_name?.split(',').slice(0, 2).join(',').trim() || q,
-        city: r.address?.city || r.address?.town || r.address?.village || '',
-        county: r.address?.county?.replace(' County', '') || '',
-        state: r.address?.state === 'North Carolina' ? 'NC' : 'SC',
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lon),
-      }));
-
-      return res.json(mapped.slice(0, 6));
+      return res.json(mapped.slice(0, 8));
     } catch (err) {
       return res.status(502).json({ error: err.message });
     }
