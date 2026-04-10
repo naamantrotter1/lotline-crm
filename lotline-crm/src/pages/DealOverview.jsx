@@ -1,51 +1,90 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Star, User, DollarSign, Calendar } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
-import { GradeBadge, Tag } from '../components/UI/Badge';
+import { GradeBadge } from '../components/UI/Badge';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const start = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.floor((today - start) / 86400000));
+}
+
+function formatCloseDate(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-');
+  return `${m}/${d}/${y}`;
+}
+
 function DealCard({ deal, onClick }) {
+  const [starred, setStarred] = useState(false);
   const netProfit = calcNetProfit(deal);
+  const days = daysSince(deal.contractDate);
+
   return (
     <div
       onClick={onClick}
       className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 mb-2 cursor-pointer hover:shadow-md transition-shadow"
     >
-      <div className="flex justify-between items-start mb-2 gap-2">
-        <span className="text-xs font-semibold text-gray-800 leading-tight flex-1">{deal.address}</span>
-        <GradeBadge grade={deal.grade} />
+      {/* Address + star + grade */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <span className="text-xs font-semibold text-gray-800 leading-snug flex-1">{deal.address}</span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); setStarred(p => !p); }}
+            className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
+          >
+            <Star size={13} fill={starred ? 'currentColor' : 'none'} />
+          </button>
+          {deal.grade && <GradeBadge grade={deal.grade} />}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {deal.investor && deal.investor !== 'Cash' && (
-          <Tag type="investor">{deal.investor}</Tag>
-        )}
-        {(deal.tags || []).map((tag) => (
-          <Tag key={tag} type={tag}>{tag}</Tag>
-        ))}
-      </div>
-      <div className="text-xs text-gray-500">
+
+      {/* Investor pill */}
+      {deal.investor && deal.investor !== 'Cash' && (
+        <div className="flex items-center gap-1 mb-2">
+          <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
+            <User size={10} />
+            {deal.investor}
+          </span>
+        </div>
+      )}
+
+      {/* ARV */}
+      <div className="text-xs text-gray-500 mb-1">
         ARV: <span className="font-medium text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
       </div>
-      <div className="flex items-center gap-1 mt-1">
-        <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-          ${netProfit.toLocaleString()}
+
+      {/* Profit */}
+      <div className="flex items-center gap-1 mb-1">
+        <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
+        <span className={`text-xs font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+          ${Math.abs(netProfit).toLocaleString()}
         </span>
-        <span className="text-xs font-normal text-gray-400">({deal.financing})</span>
+        {deal.financing && (
+          <span className="text-xs text-gray-400">({deal.financing})</span>
+        )}
       </div>
-      {deal.daysInPipeline !== undefined && (
-        <div className="mt-2">
-          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-            Day {deal.daysInPipeline}
+
+      {/* Close date + day counter */}
+      <div className="flex items-center justify-between mt-1">
+        {deal.closeDate ? (
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <Calendar size={10} />
+            Closing: {formatCloseDate(deal.closeDate)}
           </span>
-        </div>
-      )}
-      {deal.closeDate && (
-        <div className="mt-2">
-          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-            Closing: {deal.closeDate}
+        ) : <span />}
+        {days !== null && (
+          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+            Day {days}
           </span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
