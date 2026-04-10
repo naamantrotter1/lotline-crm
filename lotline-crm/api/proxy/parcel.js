@@ -14,15 +14,19 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { lat, lng, parno: qParno } = req.query;
+  const { lat, lng, parno: qParno, state: qState } = req.query;
   if (!qParno && (!lat || !lng)) return res.status(400).json({ error: 'lat/lng or parno required' });
 
   const latN = parseFloat(lat) || 0;
   const lngN = parseFloat(lng) || 0;
 
-  const parnoIsSC = qParno ? /\d{6}-\d{2}-\d{3}/.test(qParno) || (qParno.includes('-') && !/^[A-Z]/.test(qParno)) : false;
-  const isNC = !parnoIsSC && latN >= 33.84 && latN <= 36.6 && lngN >= -84.4 && lngN <= -75.4;
-  const isSC = parnoIsSC || (!isNC && latN >= 31.9 && latN <= 35.3 && lngN >= -83.5 && lngN <= -78.4);
+  // If caller explicitly passes state (from boundary feature), trust it
+  const forcedNC = qState === 'NC';
+  const forcedSC = qState === 'SC';
+
+  const parnoIsSC = forcedSC || (!forcedNC && qParno ? /\d{6}-\d{2}-\d{3}/.test(qParno) || (qParno.includes('-') && !/^[A-Z]/.test(qParno)) : false);
+  const isNC = forcedNC || (!forcedSC && !parnoIsSC && latN >= 33.84 && latN <= 36.6 && lngN >= -84.4 && lngN <= -75.4);
+  const isSC = forcedSC || parnoIsSC || (!isNC && latN >= 31.9 && latN <= 35.3 && lngN >= -83.5 && lngN <= -78.4);
   if (!qParno && !isNC && !isSC) return res.status(404).json({ error: 'Outside NC/SC coverage area' });
 
   if (isSC || (qParno && !isNC)) {

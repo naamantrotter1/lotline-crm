@@ -27,7 +27,11 @@ export default async function handler(req, res) {
   const queryNC = () => {
     const params = new URLSearchParams({ geometry: bbox, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '500', f: 'geojson' });
     return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${params}`)
-      .then(data => (data.error || !data.features) ? { type: 'FeatureCollection', features: [] } : data)
+      .then(data => {
+        if (data.error || !data.features) return { type: 'FeatureCollection', features: [] };
+        data.features.forEach(f => { if (f.properties) f.properties.state = 'NC'; });
+        return data;
+      })
       .catch(() => ({ type: 'FeatureCollection', features: [] }));
   };
 
@@ -36,7 +40,7 @@ export default async function handler(req, res) {
     return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${params}`)
       .then(data => {
         if (data.error || !data.features) return { type: 'FeatureCollection', features: [] };
-        data.features.forEach(f => { if (f.properties) f.properties.parno = f.properties.T_Map_Number || ''; });
+        data.features.forEach(f => { if (f.properties) { f.properties.parno = f.properties.T_Map_Number || ''; f.properties.state = 'SC'; } });
         return data;
       })
       .catch(() => ({ type: 'FeatureCollection', features: [] }));

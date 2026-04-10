@@ -66,7 +66,8 @@ export default function FloodMap() {
   const parcelModeRef = useRef(false);
   const parcelBoundaryLayerRef = useRef(null);
   const parcelBoundariesRef = useRef(false);
-  const clickedParnoRef = useRef(null); // set by boundary polygon click before map click fires
+  const clickedParnoRef = useRef(null);  // set by boundary polygon click before map click fires
+  const clickedStateRef = useRef(null);  // 'NC' | 'SC' — from boundary feature property
   const selectedParnoRef = useRef(null); // currently highlighted parcel parno
   const parcelFetchAbortRef = useRef(null); // AbortController for in-flight boundary fetch
   const parcelInfoAbortRef = useRef(null);  // AbortController for in-flight parcel info fetch
@@ -172,6 +173,7 @@ export default function FloodMap() {
               onEachFeature: (feature, layer) => {
                 layer.on('click', () => {
                   if (feature.properties?.parno) clickedParnoRef.current = feature.properties.parno;
+                  if (feature.properties?.state) clickedStateRef.current = feature.properties.state;
                 });
               },
             })
@@ -466,10 +468,13 @@ export default function FloodMap() {
       parcelInfoAbortRef.current = parcelInfoCtrl;
 
       const parno = clickedParnoRef.current;
+      const clickedState = clickedStateRef.current;
       clickedParnoRef.current = null;
-      const parcelUrl = parno
+      clickedStateRef.current = null;
+      let parcelUrl = parno
         ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(parno)}&lat=${lat}&lng=${lng}`
         : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
+      if (clickedState) parcelUrl += `&state=${clickedState}`;
       fetch(parcelUrl, { signal: parcelInfoCtrl.signal })
         .then(r => r.json())
         .then(data => {
