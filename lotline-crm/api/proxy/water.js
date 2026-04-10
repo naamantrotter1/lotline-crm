@@ -1,4 +1,4 @@
-const https = require('https');
+import https from 'https';
 
 function fetchLayer(layer, baseParams) {
   return new Promise((resolve) => {
@@ -11,7 +11,7 @@ function fetchLayer(layer, baseParams) {
   });
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -19,18 +19,12 @@ module.exports = async function handler(req, res) {
   if (!bbox) return res.status(400).json({ error: 'bbox required' });
   const [minLng, minLat, maxLng, maxLat] = bbox.split(',').map(Number);
   const geometry = JSON.stringify({ xmin: minLng, ymin: minLat, xmax: maxLng, ymax: maxLat, spatialReference: { wkid: 4326 } });
-  const baseParams = {
-    where: '1=1', geometryType: 'esriGeometryEnvelope', geometry,
-    inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
-    outFields: 'GNIS_NAME,FType', maxAllowableOffset: '0', f: 'geojson', resultRecordCount: '500',
-  };
+  const baseParams = { where: '1=1', geometryType: 'esriGeometryEnvelope', geometry, inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'GNIS_NAME,FType', maxAllowableOffset: '0', f: 'geojson', resultRecordCount: '500' };
 
   try {
     const [flowlines, waterbodies] = await Promise.all([fetchLayer(3, baseParams), fetchLayer(9, baseParams)]);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=600');
     return res.json({ type: 'FeatureCollection', features: [...flowlines, ...waterbodies] });
-  } catch (err) {
-    return res.status(502).json({ error: err.message });
-  }
-};
+  } catch (err) { return res.status(502).json({ error: err.message }); }
+}

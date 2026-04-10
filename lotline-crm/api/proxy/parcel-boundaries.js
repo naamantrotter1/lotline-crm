@@ -1,4 +1,4 @@
-const https = require('https');
+import https from 'https';
 
 function fetchJson(u) {
   return new Promise((resolve, reject) => {
@@ -10,7 +10,7 @@ function fetchJson(u) {
   });
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -25,22 +25,14 @@ module.exports = async function handler(req, res) {
   const midInSC = !midInNC && midLat >= 31.9 && midLat <= 35.3 && midLng >= -83.5 && midLng <= -78.4;
 
   const queryNC = () => {
-    const params = new URLSearchParams({
-      geometry: bbox, geometryType: 'esriGeometryEnvelope', inSR: '4326',
-      spatialRel: 'esriSpatialRelIntersects', outFields: 'parno',
-      returnGeometry: 'true', outSR: '4326', resultRecordCount: '500', f: 'geojson',
-    });
+    const params = new URLSearchParams({ geometry: bbox, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '500', f: 'geojson' });
     return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${params}`)
       .then(data => (data.error || !data.features) ? { type: 'FeatureCollection', features: [] } : data)
       .catch(() => ({ type: 'FeatureCollection', features: [] }));
   };
 
   const querySC = () => {
-    const params = new URLSearchParams({
-      geometry: bbox, geometryType: 'esriGeometryEnvelope', inSR: '4326',
-      spatialRel: 'esriSpatialRelIntersects', outFields: 'T_Map_Number,County',
-      returnGeometry: 'true', outSR: '4326', resultRecordCount: '500', f: 'geojson',
-    });
+    const params = new URLSearchParams({ geometry: bbox, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'T_Map_Number,County', returnGeometry: 'true', outSR: '4326', resultRecordCount: '500', f: 'geojson' });
     return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${params}`)
       .then(data => {
         if (data.error || !data.features) return { type: 'FeatureCollection', features: [] };
@@ -55,13 +47,10 @@ module.exports = async function handler(req, res) {
     if (midInNC) queries.push(queryNC());
     if (midInSC) queries.push(querySC());
     if (queries.length === 0) queries.push(queryNC());
-
     const results = await Promise.all(queries);
     const allFeatures = results.flatMap(r => r.features || []);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=300');
     return res.json({ type: 'FeatureCollection', features: allFeatures });
-  } catch (err) {
-    return res.status(502).json({ error: err.message });
-  }
-};
+  } catch (err) { return res.status(502).json({ error: err.message }); }
+}
