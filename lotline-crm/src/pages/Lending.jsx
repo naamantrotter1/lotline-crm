@@ -24,12 +24,14 @@ const DUMMY_PARTNERSHIPS = [
 
 // ── Empty forms ────────────────────────────────────────────────────────────
 const COST_FIELDS = [
-  { key: 'mobileHome',   label: 'Manufactured Home' },
+  { key: 'land',         label: 'Land' },
+  { key: 'mobileHome',   label: 'Mobile Home' },
   { key: 'hudEngineer',  label: 'HUD Engineer' },
   { key: 'percTest',     label: 'Perc Test / Permit' },
   { key: 'survey',       label: 'Land Survey' },
   { key: 'footers',      label: 'Footers' },
   { key: 'setup',        label: 'Setup' },
+  { key: 'clearLand',    label: 'Clear Land' },
   { key: 'water',        label: 'Water' },
   { key: 'septic',       label: 'Septic' },
   { key: 'electric',     label: 'Electric / Power Pole' },
@@ -40,7 +42,10 @@ const COST_FIELDS = [
   { key: 'landscaping',  label: 'Landscaping / Final Grading' },
   { key: 'waterSewer',   label: 'Water / Sewer Hook Up' },
   { key: 'mailbox',      label: 'Mailbox' },
+  { key: 'gutters',      label: 'Gutters' },
+  { key: 'photos',       label: 'Professional Photos' },
   { key: 'mobileTax',    label: 'Mobile Home Tax' },
+  { key: 'staging',      label: 'Staging' },
 ];
 const EMPTY_COSTS = Object.fromEntries(COST_FIELDS.map(f => [f.key, '']));
 
@@ -54,6 +59,7 @@ const EMPTY_PARTNER = {
   purchasePrice: '', repairCosts: '', arv: '', projectedProfit: '',
   needs: [], split: '', yourRole: 'Deal Finder', summary: '',
   dealFlyerName: '', supportingDocsName: '',
+  costs: EMPTY_COSTS, costsOpen: false,
 };
 
 // ── Badge configs ──────────────────────────────────────────────────────────
@@ -167,6 +173,11 @@ export default function Lending() {
     setLoanForm(p => ({ ...p, costs: { ...p.costs, [key]: value } }));
   };
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(loanForm.costs?.[f.key]) || 0), 0);
+
+  const handlePartnerCostChange = (key, value) => {
+    setPartnerForm(p => ({ ...p, costs: { ...p.costs, [key]: value } }));
+  };
+  const totalPartnerCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(partnerForm.costs?.[f.key]) || 0), 0);
 
   const handleLoanSubmit = (e) => {
     e.preventDefault();
@@ -394,8 +405,8 @@ export default function Lending() {
                 </Field>
               </div>
 
-              {/* Property Costs accordion */}
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
+              {/* Property Costs accordion — Land + Home Package only */}
+              {loanForm.loanType === 'Land + Home Package' && <div className="rounded-lg border border-gray-200 overflow-hidden">
                 <button type="button"
                   onClick={() => setLoanForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
@@ -424,7 +435,7 @@ export default function Lending() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Estimated ARV ($)">
                   <input name="arv" type="number" min="0" value={loanForm.arv} onChange={handleLoanChange} className={inp} placeholder="0" />
@@ -496,6 +507,40 @@ export default function Lending() {
                   <input name="repairCosts" type="number" min="0" value={partnerForm.repairCosts} onChange={handlePartnerChange} className={inp} placeholder="0" />
                 </Field>
               </div>
+              {/* Build Cost accordion — Land + Home Package only */}
+              {partnerForm.dealType === 'Land + Home Package' && (
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <button type="button"
+                    onClick={() => setPartnerForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Build Costs
+                      {totalPartnerCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalPartnerCosts.toLocaleString()}</span>}
+                    </span>
+                    <ChevronRight size={14} className={`text-gray-400 transition-transform ${partnerForm.costsOpen ? 'rotate-90' : ''}`} />
+                  </button>
+                  {partnerForm.costsOpen && (
+                    <div className="px-4 py-3 space-y-2 bg-white">
+                      {COST_FIELDS.map(f => (
+                        <div key={f.key} className="flex items-center justify-between gap-3">
+                          <label className="text-xs text-gray-500 flex-1">{f.label}</label>
+                          <div className="relative w-32">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                            <input type="number" min="0" value={partnerForm.costs?.[f.key] || ''}
+                              onChange={e => handlePartnerCostChange(f.key, e.target.value)}
+                              className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                        <span className="text-xs font-bold text-gray-600">Total Build Cost</span>
+                        <span className="text-xs font-bold text-sidebar">${totalPartnerCosts.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <Field label="After Repair Value ($)">
                   <input name="arv" type="number" min="0" value={partnerForm.arv} onChange={handlePartnerChange} className={inp} placeholder="0" />
