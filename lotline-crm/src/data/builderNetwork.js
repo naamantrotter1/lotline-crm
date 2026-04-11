@@ -19,16 +19,46 @@ export const COUNTIES = [
     state: 'NC',
     comingSoon: false,
     builders: [
-      { rank: 1,  name: 'DR Horton',                permits: 28, specialty: 'Single Family', status: 'Dominant'    },
-      { rank: 2,  name: 'Garman Homes',              permits: 16, specialty: 'Custom',        status: 'Very Active' },
-      { rank: 3,  name: 'Keystone Group',            permits: 10, specialty: 'Single Family', status: 'Very Active' },
-      { rank: 4,  name: 'Clayton Properties Group',  permits: 9,  specialty: 'Single Family', status: 'Active'      },
-      { rank: 5,  name: 'Windsor Investments LLC',   permits: 7,  specialty: 'Mixed',         status: 'Active'      },
-      { rank: 6,  name: 'Wise Master Builders',      permits: 5,  specialty: 'Custom',        status: 'Active'      },
-      { rank: 7,  name: 'M & J Developers',          permits: 5,  specialty: 'Multi-Family',  status: 'Active'      },
-      { rank: 8,  name: 'CJ Builders',               permits: 5,  specialty: 'Single Family', status: 'Active'      },
-      { rank: 9,  name: 'Gingerich Homes',           permits: 4,  specialty: 'Custom',        status: 'Active'      },
-      { rank: 10, name: 'D Stone Builders',          permits: 4,  specialty: 'Custom',        status: 'Active'      },
+      {
+        rank: 1, name: 'DR Horton', permits: 28, specialty: 'Single Family', status: 'Dominant',
+        contact: { phone: '(336) 499-7450', website: 'https://www.drhorton.com', email: null, address: '4150 Mendenhall Oaks Pkwy, High Point, NC 27265' },
+      },
+      {
+        rank: 2, name: 'Garman Homes', permits: 16, specialty: 'Custom', status: 'Very Active',
+        contact: { phone: '(984) 217-3220', website: 'https://www.garmanhomes.com', email: null, address: '4000 Paramount Pkwy, Suite 250, Morrisville, NC 27560' },
+      },
+      {
+        rank: 3, name: 'Keystone Group', permits: 10, specialty: 'Single Family', status: 'Very Active',
+        contact: { phone: '(336) 500-1638', website: 'https://www.gokeystone.com', email: 'salesandmarketing@gokeystone.com', address: '3708 Alliance Dr., Greensboro, NC 27407' },
+      },
+      {
+        rank: 4, name: 'Clayton Properties Group', permits: 9, specialty: 'Single Family', status: 'Active',
+        contact: { phone: '(803) 749-9000', website: 'https://www.claytonhomebuildinggroup.com', email: 'CustomerAdvocacy@claytonhomes.com', address: 'Winston-Salem, NC 27104' },
+      },
+      {
+        rank: 5, name: 'Windsor Investments LLC', permits: 7, specialty: 'Mixed', status: 'Active',
+        contact: { phone: '(336) 282-3535', website: 'https://www.windsorhomes.us', email: 'info@windsorhomes.us', address: '5603 New Garden Village Dr., Greensboro, NC 27410' },
+      },
+      {
+        rank: 6, name: 'Wise Master Builders', permits: 5, specialty: 'Custom', status: 'Active',
+        contact: { phone: '(336) 501-5578', website: 'https://wisemasterbuildersconstruction.com', email: null, address: '6907 Wittington Ct., Oak Ridge, NC 27310' },
+      },
+      {
+        rank: 7, name: 'M & J Developers', permits: 5, specialty: 'Multi-Family', status: 'Active',
+        contact: { phone: '(336) 601-7259', website: 'https://www.mjdevelopers.com', email: null, address: '3714 Alliance Drive, Suite 300, Greensboro, NC 27407' },
+      },
+      {
+        rank: 8, name: 'CJ Builders', permits: 5, specialty: 'Single Family', status: 'Active',
+        contact: { phone: '(336) 706-2658', website: 'https://www.cjbuilders.biz', email: null, address: '7251F US Highway 158, Stokesdale, NC 27357' },
+      },
+      {
+        rank: 9, name: 'Gingerich Homes', permits: 4, specialty: 'Custom', status: 'Active',
+        contact: { phone: '(336) 669-7708', website: 'http://www.gingerichhomes.com', email: null, address: '6352 Poplar Forest Dr., Summerfield, NC 27358' },
+      },
+      {
+        rank: 10, name: 'D Stone Builders', permits: 4, specialty: 'Custom', status: 'Active',
+        contact: { phone: '(336) 288-9393', website: 'https://www.dstonebuilders.com', email: null, address: '2904 Lawndale Drive, Greensboro, NC 27408' },
+      },
     ],
   },
 

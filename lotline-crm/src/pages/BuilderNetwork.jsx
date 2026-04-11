@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Search, X, Building2, Send, CheckCircle, ChevronRight, Users, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Search, X, Building2, Send, CheckCircle, ChevronRight, Users, TrendingUp, Phone, Globe, Mail, MapPin } from 'lucide-react';
 import Button from '../components/UI/Button';
 import { COUNTIES, totalPermits, topBuilder } from '../data/builderNetwork';
 
@@ -145,6 +145,37 @@ function ConnectDrawer({ open, builder, county, onClose }) {
 
             <form onSubmit={submit} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+                {/* ── Builder Contact Card ── */}
+                {builder?.contact && (
+                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2">
+                    <p className="text-xs font-bold text-accent uppercase tracking-widest mb-1">Builder Contact</p>
+                    {builder.contact.phone && (
+                      <a href={`tel:${builder.contact.phone}`} className="flex items-center gap-2 text-sm text-sidebar hover:text-accent transition-colors">
+                        <Phone size={13} className="text-gray-400 flex-shrink-0" />
+                        {builder.contact.phone}
+                      </a>
+                    )}
+                    {builder.contact.website && (
+                      <a href={builder.contact.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-sidebar hover:text-accent transition-colors truncate">
+                        <Globe size={13} className="text-gray-400 flex-shrink-0" />
+                        {builder.contact.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    )}
+                    {builder.contact.email && (
+                      <a href={`mailto:${builder.contact.email}`} className="flex items-center gap-2 text-sm text-sidebar hover:text-accent transition-colors">
+                        <Mail size={13} className="text-gray-400 flex-shrink-0" />
+                        {builder.contact.email}
+                      </a>
+                    )}
+                    {builder.contact.address && (
+                      <div className="flex items-start gap-2 text-sm text-gray-500">
+                        <MapPin size={13} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                        {builder.contact.address}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Step 1: Land Details ── */}
                 {step === 1 && (
