@@ -1347,16 +1347,16 @@ function HeatMap() {
             );
           })()}
 
-          {/* Search */}
-          <div className="relative">
-            <div className={`flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border text-xs transition-all
+          {/* Search — fills remaining space */}
+          <div className="relative flex-1 min-w-0">
+            <div className={`flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border text-xs transition-all w-full
               ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
               : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
               : 'border-gray-200 bg-white hover:border-gray-300'}`}>
               <Search size={11} className="text-gray-400 shrink-0" />
               <input type="text" placeholder="County or ZIP…" value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-28 text-xs bg-transparent outline-none placeholder-gray-400" />
+                className="flex-1 min-w-0 text-xs bg-transparent outline-none placeholder-gray-400" />
               {searchQuery && (
                 <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
                   className="text-gray-400 hover:text-gray-600">
