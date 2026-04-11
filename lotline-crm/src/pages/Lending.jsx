@@ -28,7 +28,7 @@ const EMPTY_LOAN = {
   exitStrategy: 'Sell', notes: '',
 };
 const EMPTY_PARTNER = {
-  address: '', propertyType: 'Single Family', dealType: 'Wholesale',
+  address: '', propertyType: 'Manufactured Home', dealType: 'Land + Home Package',
   purchasePrice: '', repairCosts: '', arv: '', projectedProfit: '',
   needs: [], split: '', yourRole: 'Deal Finder', summary: '',
   dealFlyerName: '', supportingDocsName: '',
@@ -410,12 +410,12 @@ export default function Lending() {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Property Type">
                   <select name="propertyType" value={partnerForm.propertyType} onChange={handlePartnerChange} className={inp}>
-                    <option>Single Family</option><option>Multi-Family</option><option>Mobile Home</option><option>Land</option><option>Commercial</option>
+                    <option>Manufactured Home</option><option>Single Family</option><option>Multi-Family</option><option>Land</option><option>Commercial</option>
                   </select>
                 </Field>
                 <Field label="Deal Type">
                   <select name="dealType" value={partnerForm.dealType} onChange={handlePartnerChange} className={inp}>
-                    <option>Wholesale</option><option>Fix &amp; Flip</option><option>Buy &amp; Hold</option><option>New Construction</option><option>Land Deal</option>
+                    <option>Land + Home Package</option><option>Wholesale</option><option>Fix &amp; Flip</option><option>Buy &amp; Hold</option><option>New Construction</option><option>Land Deal</option>
                   </select>
                 </Field>
               </div>
