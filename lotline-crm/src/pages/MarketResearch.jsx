@@ -695,6 +695,73 @@ function getActiveMetric(statistic, status) {
   return 'absorptionRate';
 }
 
+// ── Per-type data adjustments ─────────────────────────────────────────────────
+// Each property type uses income + land metrics to derive realistic type-specific
+// prices, DOM, absorption, and supply figures. "Land" = raw data unchanged.
+const DATA_TYPE_FILTERS = {
+  Land:        () => true,
+  House:       () => true,
+  Townhouse:   c => c.medianIncome > 42000,      // suburban/urban markets only
+  Condo:       c => c.medianIncome > 50000,       // urban markets only
+  MultiFamily: c => c.medianIncome > 38000,
+  Mobile:      () => true,
+};
+
+function applyDataType(counties, dataType) {
+  if (dataType === 'Land') return counties;
+  return counties.map(c => {
+    const inc = c.medianIncome;
+    switch (dataType) {
+      case 'House':
+        return { ...c,
+          medianSalePrice: Math.round(inc * 4.0),
+          medianDOM:       Math.round(c.medianDOM * 0.72),
+          absorptionRate:  Math.min(90, +(c.absorptionRate * 1.18).toFixed(1)),
+          monthsSupply:    +(c.monthsSupply * 0.72).toFixed(1),
+          sellThrough:     Math.min(380, +(c.sellThrough * 1.14).toFixed(1)),
+        };
+      case 'Townhouse':
+        return { ...c,
+          medianSalePrice: Math.round(inc * 3.2),
+          medianDOM:       Math.round(c.medianDOM * 0.68),
+          absorptionRate:  Math.min(90, +(c.absorptionRate * 1.14).toFixed(1)),
+          monthsSupply:    +(c.monthsSupply * 0.65).toFixed(1),
+          sellThrough:     Math.min(380, +(c.sellThrough * 1.12).toFixed(1)),
+        };
+      case 'Condo':
+        return { ...c,
+          medianSalePrice: Math.round(inc * 2.6),
+          medianDOM:       Math.round(c.medianDOM * 0.55),
+          absorptionRate:  Math.min(90, +(c.absorptionRate * 1.22).toFixed(1)),
+          monthsSupply:    +(c.monthsSupply * 0.55).toFixed(1),
+          sellThrough:     Math.min(380, +(c.sellThrough * 1.20).toFixed(1)),
+        };
+      case 'MultiFamily':
+        return { ...c,
+          medianSalePrice: Math.round(inc * 5.5),
+          medianDOM:       Math.round(c.medianDOM * 1.08),
+          absorptionRate:  +(c.absorptionRate * 0.88).toFixed(1),
+          monthsSupply:    +(c.monthsSupply * 1.12).toFixed(1),
+          sellThrough:     +(c.sellThrough * 0.90).toFixed(1),
+        };
+      case 'Mobile':
+        return { ...c,
+          medianSalePrice: Math.round(c.medianSalePrice * (c.mhFriendly ? 1.05 : 0.68)),
+          medianDOM:       Math.round(c.medianDOM * (c.mhFriendly ? 0.88 : 1.18)),
+          absorptionRate:  c.mhFriendly
+            ? Math.min(90, +(c.absorptionRate * 1.12).toFixed(1))
+            : +(c.absorptionRate * 0.80).toFixed(1),
+          monthsSupply:    +(c.monthsSupply * (c.mhFriendly ? 0.85 : 1.22)).toFixed(1),
+          sellThrough:     c.mhFriendly
+            ? Math.min(380, +(c.sellThrough * 1.10).toFixed(1))
+            : +(c.sellThrough * 0.82).toFixed(1),
+        };
+      default:
+        return c;
+    }
+  });
+}
+
 // ── LandPortal-style filter dropdown ─────────────────────────────────────────
 function FilterDropdown({ label, value, options, onChange }) {
   const [open, setOpen] = useState(false);
@@ -774,17 +841,20 @@ function HeatMap() {
   const metric = getActiveMetric(statistic, status);
   const cfg    = METRIC_CONFIG[metric];
 
-  // Apply acreage + dataType filters to the county dataset
+  // 1. Filter by acreage + data-type availability
   const filteredCounties = COUNTY_DATA.filter(c => {
-    if (!ACREAGE_FILTER[acreage]?.(c)) return false;
-    if (dataType === 'Land'  && c.medianPpa > 500000) return false; // exclude extreme urban $/ac
-    if (dataType === 'Homes' && c.homeValue  < 100000) return false;
+    if (!ACREAGE_FILTER[acreage]?.(c))         return false;
+    if (!(DATA_TYPE_FILTERS[dataType]?.(c)))   return false;
+    if (dataType === 'Land' && c.medianPpa > 500000) return false; // exclude extreme urban $/ac
     return true;
   });
 
+  // 2. Apply per-type metric adjustments (changes prices, DOM, absorption, etc.)
+  const displayCounties = applyDataType(filteredCounties, dataType);
+
   const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
 
-  const values = filteredCounties.map(c => c[metric]).filter(v => v != null);
+  const values = displayCounties.map(c => c[metric]).filter(v => v != null);
   const minV   = values.length ? Math.min(...values) : 0;
   const maxV   = values.length ? Math.max(...values) : 1;
 
@@ -829,27 +899,27 @@ function HeatMap() {
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
         const fips   = String(feature.id).padStart(5, '0');
-        const county = filteredCounties.find(c => c.fips === fips);
+        const county = displayCounties.find(c => c.fips === fips);
         if (!county || county[metric] == null) {
-          return { fillColor: '#e5e7eb', fillOpacity: 0.5, color: '#fff', weight: 0.8 };
+          return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 0.8 };
         }
         const norm  = normalize(county[metric], minV, maxV);
         const color = scoreToColor(norm, cfg.higherIsBetter);
-        return { fillColor: color, fillOpacity: 0.78, color: '#fff', weight: 0.8 };
+        return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 0.8 };
       },
       onEachFeature: (feature, lyr) => {
         const fips   = String(feature.id).padStart(5, '0');
-        const county = filteredCounties.find(c => c.fips === fips);
+        const county = displayCounties.find(c => c.fips === fips);
         lyr.on({
           mouseover: (e) => {
-            e.target.setStyle({ weight: 2.5, color: '#f97316', fillOpacity: 0.92 });
+            e.target.setStyle({ weight: 2.5, color: '#16a34a', fillOpacity: 0.95 });
             if (county) {
               const val     = county[metric] != null ? cfg.fmt(county[metric]) : '–';
               const timeVal = statistic === 'Counts'
                 ? `~${Math.round(county.absorptionRate * timeFactor * 8)} est. transactions`
-                : `${timePeriod} period`;
+                : timePeriod;
               e.target.bindTooltip(
-                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${timeVal}</span>`,
+                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${dataType} · ${timeVal}</span>`,
                 { sticky: true, className: 'leaflet-tooltip-custom' }
               ).openTooltip();
             }
@@ -861,7 +931,7 @@ function HeatMap() {
     });
     layer.addTo(map);
     choropleth.current = layer;
-  }, [geojson, metric, filteredCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod]);
+  }, [geojson, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
 
   // ── Tooltip context label ─────────────────────────────────────────────────
   const statInfo = {
@@ -922,11 +992,11 @@ function HeatMap() {
 
           <FilterDropdown label="Time" value={timePeriod} onChange={setTimePeriod}
             options={['7 days','14 days','30 days','90 days','6 months','1 year']} />
-          <FilterDropdown label="Data" value={dataType} onChange={setDataType}
-            options={['Land','Homes','All']} />
+          <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
+            options={['Land','House','Townhouse','Condo','MultiFamily','Mobile']} />
 
           <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-            <span>{filteredCounties.length} counties shown</span>
+            <span>{displayCounties.length} counties shown</span>
           </div>
         </div>
 
@@ -1014,7 +1084,7 @@ function HeatMap() {
           <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-md px-3 py-2">
             <p className="text-xs text-gray-500 font-medium">{statistic} · {acreage === 'All' ? 'All Sizes' : acreage}</p>
             <p className="text-base font-bold text-gray-800 tabular-nums">
-              {filteredCounties.length} <span className="text-xs font-normal text-gray-400">counties</span>
+              {displayCounties.length} <span className="text-xs font-normal text-gray-400">counties</span>
             </p>
           </div>
         </div>
@@ -1027,7 +1097,7 @@ function HeatMap() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-0.5">
-                    {selected.state} · {selected.priority ? '★ Priority' : 'County'}
+                    {selected.state} · {dataType} · {selected.priority ? '★ Priority' : 'County'}
                   </p>
                   <h3 className="text-lg font-bold text-gray-900 leading-tight">{selected.name} County</h3>
                 </div>
@@ -1113,11 +1183,11 @@ function HeatMap() {
             <p className="text-sm font-bold text-gray-800">{cfg.label} — Top Counties</p>
             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{statistic} · {status} · {timePeriod}</span>
           </div>
-          <span className="text-xs text-gray-400">{filteredCounties.length} shown</span>
+          <span className="text-xs text-gray-400">{displayCounties.length} shown</span>
         </div>
         <div className="overflow-x-auto">
           <div className="grid divide-y divide-gray-50" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {[...filteredCounties]
+            {[...displayCounties]
               .filter(c => c[metric] != null)
               .sort((a, b) => cfg.higherIsBetter === false ? a[metric] - b[metric] : b[metric] - a[metric])
               .slice(0, 30)
@@ -1145,9 +1215,9 @@ function HeatMap() {
               })}
           </div>
         </div>
-        {filteredCounties.length > 30 && (
+        {displayCounties.length > 30 && (
           <div className="px-5 py-3 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">Showing top 30 of {filteredCounties.length} counties · Use Market Stats tab for full table</p>
+            <p className="text-xs text-gray-400">Showing top 30 of {displayCounties.length} counties · Use Market Stats tab for full table</p>
           </div>
         )}
       </div>
