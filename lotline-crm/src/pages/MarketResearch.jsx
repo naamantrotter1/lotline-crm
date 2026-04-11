@@ -1070,13 +1070,13 @@ function CompFinder() {
 // ── TAB 4: Heat Map ───────────────────────────────────────────────────────────
 const METRIC_CONFIG = {
   // breaks = [b0, b1, b2, b3] → 5 bands: <b0, b0-b1, b1-b2, b2-b3, ≥b3
-  oppScore:        { label: 'Opportunity Score',  higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 60, 70]   },
-  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 60, 70]   },
+  oppScore:        { label: 'Opportunity Score',  higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 60, 72]   },
+  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 60, 72]   },
   medianSalePrice: { label: 'Median Sale Price',  higherIsBetter: null,  fmt: v => '$' + Math.round(v/1000) + 'k' },
-  medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd',   breaks: [60, 80, 100, 175] },
-  monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) + ' mo', breaks: [5,  8,  12,  18]  },
-  absorptionRate:  { label: 'Absorption Rate',    higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [35, 50, 60,  70]  },
-  sellThrough:     { label: 'Sell-Through Rate',  higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [60, 110, 150, 200] },
+  medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd',   breaks: [40, 60, 100, 150] },
+  monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) + ' mo', breaks: [3,  5,  10,  16]  },
+  absorptionRate:  { label: 'Absorption Rate',    higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [35, 50, 65,  75]  },
+  sellThrough:     { label: 'Sell-Through Rate',  higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [60, 100, 150, 200] },
   popGrowth:       { label: 'Pop. Growth',        higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [-1, 0.5, 2,   4]  },
   medianIncome:    { label: 'Median Income',      higherIsBetter: true,  fmt: v => '$' + Math.round(v/1000) + 'k' },
   medianPpa:       { label: '$ / Acre',           higherIsBetter: null,  fmt: v => '$' + Math.round(v).toLocaleString() },
