@@ -863,6 +863,9 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
+  const stateLayer    = useRef(null);
+  const [stateGeojson, setStateGeojson] = useState(null);
+
   // ── Pipeline overlay state ────────────────────────────────────────────────
   const [showDealOverview,  setShowDealOverview]  = useState(false);
   const [showLandAcq,       setShowLandAcq]       = useState(false);
@@ -1050,9 +1053,10 @@ function HeatMap() {
   // Redraw county choropleth when filters or geojson change
   useEffect(() => {
     const map = leafletMap.current;
-    if (!map || !geojson || groupBy === 'Zip Code') return;
+    if (!map || !geojson || groupBy === 'Zip Code' || groupBy === 'State') return;
     if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
     if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
+    if (stateLayer.current) { stateLayer.current.remove(); stateLayer.current = null; }
 
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
@@ -1132,6 +1136,75 @@ function HeatMap() {
     layer.addTo(map);
     zipLayer.current = layer;
   }, [zipGeojson, groupBy, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
+
+  // Load state boundaries lazily when State view is selected
+  useEffect(() => {
+    if (groupBy !== 'State' || stateGeojson) return;
+    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+      .then(r => r.json())
+      .then(async us => {
+        const { feature } = await import('topojson-client');
+        const gj = feature(us, us.objects.states);
+        setStateGeojson({
+          ...gj,
+          features: gj.features.filter(f =>
+            String(f.id) === '37' || String(f.id) === '45'
+          ),
+        });
+      });
+  }, [groupBy, stateGeojson]);
+
+  // Redraw state choropleth
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map || !stateGeojson || groupBy !== 'State') return;
+    if (stateLayer.current)  { stateLayer.current.remove();  stateLayer.current  = null; }
+    if (choropleth.current)  { choropleth.current.remove();  choropleth.current  = null; }
+    if (zipLayer.current)    { zipLayer.current.remove();    zipLayer.current    = null; }
+
+    // Aggregate metrics per state
+    const stateData = {};
+    ['NC', 'SC'].forEach(st => {
+      const counties = displayCounties.filter(c => c.state === st && c[metric] != null);
+      if (!counties.length) return;
+      const avg = counties.reduce((s, c) => s + c[metric], 0) / counties.length;
+      stateData[st === 'NC' ? '37' : '45'] = { state: st, value: avg, counties };
+    });
+
+    const stateValues = Object.values(stateData).map(d => d.value);
+    const sMin = stateValues.length ? Math.min(...stateValues) : 0;
+    const sMax = stateValues.length ? Math.max(...stateValues) : 1;
+
+    const layer = L.geoJSON(stateGeojson, {
+      style: (feature) => {
+        const id   = String(feature.id);
+        const data = stateData[id];
+        if (!data) return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 1.5 };
+        const norm  = normalize(data.value, sMin, sMax);
+        const color = scoreToColor(norm, cfg.higherIsBetter);
+        return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 2 };
+      },
+      onEachFeature: (feature, lyr) => {
+        const id   = String(feature.id);
+        const data = stateData[id];
+        lyr.on({
+          mouseover: (e) => {
+            e.target.setStyle({ weight: 3, color: '#16a34a', fillOpacity: 0.95 });
+            if (data) {
+              e.target.bindTooltip(
+                `<strong>${data.state}</strong><br/>${cfg.label}: <strong>${cfg.fmt(data.value)}</strong><br/><span style="color:#888;font-size:11px">avg of ${data.counties.length} counties · ${dataType}</span>`,
+                { sticky: true, className: 'leaflet-tooltip-custom' }
+              ).openTooltip();
+            }
+          },
+          mouseout: (e) => { layer.resetStyle(e.target); e.target.unbindTooltip(); },
+        });
+      },
+    });
+    layer.addTo(map);
+    stateLayer.current = layer;
+    map.flyToBounds(layer.getBounds(), { padding: [30, 30], duration: 0.8 });
+  }, [stateGeojson, groupBy, metric, displayCounties, cfg, dataType, timePeriod]);
 
   // ── Pipeline deal markers ─────────────────────────────────────────────────
   function makePipelineLayer(deals, color, labelFn) {
@@ -1249,7 +1322,7 @@ function HeatMap() {
           <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
             options={['Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
 
-          {/* Info icon for statistic */}
+          {/* Info icon */}
           <div className="relative">
             <button onMouseEnter={() => setShowStatInfo(true)} onMouseLeave={() => setShowStatInfo(false)}
               className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -1259,35 +1332,6 @@ function HeatMap() {
               <div className="absolute left-0 top-6 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed">
                 {statInfo[statistic]}
               </div>
-            )}
-          </div>
-
-          {/* Search */}
-          <div className="relative ml-auto">
-            <div className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg border text-xs transition-all
-              ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
-              : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
-              : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <Search size={12} className="text-gray-400 shrink-0" />
-              <input type="text" placeholder="County or ZIP…" value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-36 text-xs bg-transparent outline-none placeholder-gray-400" />
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
-                  className="text-gray-400 hover:text-gray-600">
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-            {searchStatus === 'found' && searchInfo && (
-              <span className="absolute -bottom-4 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
-                {searchInfo.label}
-              </span>
-            )}
-            {searchStatus === 'error' && (
-              <span className="absolute -bottom-4 left-0 text-xs text-red-500 whitespace-nowrap">
-                Not found in NC/SC
-              </span>
             )}
           </div>
 
@@ -1319,6 +1363,35 @@ function HeatMap() {
               </div>
             );
           })()}
+
+          {/* Search — pushed to the right */}
+          <div className="relative ml-auto">
+            <div className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg border text-xs transition-all
+              ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
+              : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
+              : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <Search size={12} className="text-gray-400 shrink-0" />
+              <input type="text" placeholder="County or ZIP…" value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-36 text-xs bg-transparent outline-none placeholder-gray-400" />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+            {searchStatus === 'found' && searchInfo && (
+              <span className="absolute -bottom-4 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
+                {searchInfo.label}
+              </span>
+            )}
+            {searchStatus === 'error' && (
+              <span className="absolute -bottom-4 left-0 text-xs text-red-500 whitespace-nowrap">
+                Not found in NC/SC
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
