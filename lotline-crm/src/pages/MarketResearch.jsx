@@ -1069,14 +1069,15 @@ function CompFinder() {
 
 // ── TAB 4: Heat Map ───────────────────────────────────────────────────────────
 const METRIC_CONFIG = {
-  oppScore:        { label: 'Opportunity Score',  higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100' },
-  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100' },
+  // breaks = [b0, b1, b2, b3] → 5 bands: <b0, b0-b1, b1-b2, b2-b3, ≥b3
+  oppScore:        { label: 'Opportunity Score',  higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [25, 40, 55, 70]   },
+  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [25, 40, 55, 70]   },
   medianSalePrice: { label: 'Median Sale Price',  higherIsBetter: null,  fmt: v => '$' + Math.round(v/1000) + 'k' },
-  medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd' },
-  monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) },
-  absorptionRate:  { label: 'Absorption Rate',    higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
-  sellThrough:     { label: 'Sell-Through Rate',  higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
-  popGrowth:       { label: 'Pop. Growth',        higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
+  medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd',   breaks: [80, 130, 175, 200] },
+  monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) + ' mo', breaks: [3,  7,  12,  20]   },
+  absorptionRate:  { label: 'Absorption Rate',    higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [25, 40, 55, 70]    },
+  sellThrough:     { label: 'Sell-Through Rate',  higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [50, 100, 150, 200] },
+  popGrowth:       { label: 'Pop. Growth',        higherIsBetter: true,  fmt: v => v.toFixed(1) + '%',   breaks: [-1, 0.5, 2,   4]   },
   medianIncome:    { label: 'Median Income',      higherIsBetter: true,  fmt: v => '$' + Math.round(v/1000) + 'k' },
   medianPpa:       { label: '$ / Acre',           higherIsBetter: null,  fmt: v => '$' + Math.round(v).toLocaleString() },
 };
@@ -1258,6 +1259,20 @@ function makePercentileNorm(values) {
       if (sorted[mid] < val) lo = mid + 1; else hi = mid;
     }
     return lo / (n - 1);
+  };
+}
+
+// Fixed-threshold normalization: maps a value to [0,1] using 4 breakpoints.
+// Values ≥ b3 are capped at 1.0 (avoids outliers skewing the whole scale).
+function makeThresholdNorm(breaks) {
+  const [b0, b1, b2, b3] = breaks;
+  return function(val) {
+    if (val >= b3) return 1.0;
+    if (val >= b2) return 0.75 + ((val - b2) / (b3 - b2)) * 0.25;
+    if (val >= b1) return 0.50 + ((val - b1) / (b2 - b1)) * 0.25;
+    if (val >= b0) return 0.25 + ((val - b0) / (b1 - b0)) * 0.25;
+    if (b0 === 0)  return 0;
+    return Math.max(0, (val / b0) * 0.25);
   };
 }
 
@@ -1513,7 +1528,7 @@ function HeatMap() {
     if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
     if (stateLayer.current) { stateLayer.current.remove(); stateLayer.current = null; }
 
-    const pctNorm = makePercentileNorm(values);
+    const pctNorm = cfg.breaks ? makeThresholdNorm(cfg.breaks) : makePercentileNorm(values);
 
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
@@ -1556,7 +1571,7 @@ function HeatMap() {
     if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
     if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
 
-    const pctNorm = makePercentileNorm(values);
+    const pctNorm = cfg.breaks ? makeThresholdNorm(cfg.breaks) : makePercentileNorm(values);
 
     const layer = L.geoJSON(zipGeojson, {
       style: (feature) => {
@@ -1629,7 +1644,7 @@ function HeatMap() {
     });
 
     const stateValues = Object.values(stateData).map(d => d.value);
-    const sPctNorm = makePercentileNorm(stateValues);
+    const sPctNorm = cfg.breaks ? makeThresholdNorm(cfg.breaks) : makePercentileNorm(stateValues);
 
     const layer = L.geoJSON(stateGeojson, {
       style: (feature) => {
@@ -1851,26 +1866,46 @@ function HeatMap() {
 
           {/* Legend — bottom left, LandPortal style */}
           {(() => {
-            const sorted = [...values].sort((a, b) => a - b);
-            const pct = (p) => sorted.length ? sorted[Math.round(p * (sorted.length - 1))] : null;
             const isInverse = cfg.higherIsBetter === false;
-            // Left of gradient = red (worst), right = green (best)
-            // For inverse metrics (DOM, monthsSupply): worst = highest value
-            const segments = isInverse
-              ? [
-                  { label: 'High',    color: 'hsl(0,85%,38%)',   val: pct(1)    },
-                  { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: pct(0.75) },
-                  { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  },
-                  { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: pct(0.25) },
-                  { label: 'Low',     color: 'hsl(120,85%,44%)', val: pct(0)    },
-                ]
-              : [
-                  { label: 'Low',     color: 'hsl(0,85%,38%)',   val: pct(0)    },
-                  { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: pct(0.25) },
-                  { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  },
-                  { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: pct(0.75) },
-                  { label: 'High',    color: 'hsl(120,85%,44%)', val: pct(1)    },
-                ];
+            const breaks = cfg.breaks;
+            let segments;
+            if (breaks) {
+              const [b0, b1, b2, b3] = breaks;
+              const f = cfg.fmt;
+              segments = isInverse
+                ? [
+                    { label: 'High',    color: 'hsl(0,85%,38%)',   val: f(b3) + '+' },
+                    { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: f(b2) + '–' + f(b3) },
+                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: f(b1) + '–' + f(b2) },
+                    { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: f(b0) + '–' + f(b1) },
+                    { label: 'Low',     color: 'hsl(120,85%,44%)', val: '<' + f(b0) },
+                  ]
+                : [
+                    { label: 'Low',     color: 'hsl(0,85%,38%)',   val: '<' + f(b0) },
+                    { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: f(b0) + '–' + f(b1) },
+                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: f(b1) + '–' + f(b2) },
+                    { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: f(b2) + '–' + f(b3) },
+                    { label: 'High',    color: 'hsl(120,85%,44%)', val: f(b3) + '+' },
+                  ];
+            } else {
+              const sorted = [...values].sort((a, b) => a - b);
+              const pct = (p) => sorted.length ? sorted[Math.round(p * (sorted.length - 1))] : null;
+              segments = isInverse
+                ? [
+                    { label: 'High',    color: 'hsl(0,85%,38%)',   val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
+                    { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
+                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
+                    { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
+                    { label: 'Low',     color: 'hsl(120,85%,44%)', val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
+                  ]
+                : [
+                    { label: 'Low',     color: 'hsl(0,85%,38%)',   val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
+                    { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
+                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
+                    { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
+                    { label: 'High',    color: 'hsl(120,85%,44%)', val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
+                  ];
+            }
             return (
               <div className="absolute bottom-5 left-5 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg px-4 py-3 pointer-events-none" style={{ minWidth: 220 }}>
                 <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Color scale · {cfg.label}</p>
@@ -1885,7 +1920,7 @@ function HeatMap() {
                   {segments.map((s, i) => (
                     <div key={i} className="flex flex-col items-center" style={{ flex: 1 }}>
                       <span className="text-[10px] font-semibold text-gray-600 leading-tight">{s.label}</span>
-                      <span className="text-[9px] text-gray-400 leading-tight">{s.val != null ? cfg.fmt(s.val) : '–'}</span>
+                      <span className="text-[9px] text-gray-400 leading-tight">{s.val ?? '–'}</span>
                     </div>
                   ))}
                 </div>
