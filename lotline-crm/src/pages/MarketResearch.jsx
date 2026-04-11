@@ -1323,7 +1323,7 @@ function HeatMap() {
       </div>
 
       {/* ── Map + Side Panel ─────────────────────────────────────────────── */}
-      <div className="flex border-x border-b border-gray-200 rounded-b-xl overflow-hidden shadow-sm bg-white" style={{ height: 580 }}>
+      <div className="flex border-x border-b border-gray-200 rounded-b-xl overflow-hidden shadow-sm bg-white" style={{ height: 720 }}>
 
         {/* Map */}
         <div className="relative flex-1 overflow-hidden">
@@ -1447,51 +1447,6 @@ function HeatMap() {
         </div>
       </div>
 
-      {/* ── Rankings Table ────────────────────────────────────────────────── */}
-      <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <p className="text-sm font-bold text-gray-800">{cfg.label} — Top Counties</p>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{statistic} · {status} · {timePeriod}</span>
-          </div>
-          <span className="text-xs text-gray-400">{displayCounties.length} shown</span>
-        </div>
-        <div className="overflow-x-auto">
-          <div className="grid divide-y divide-gray-50" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {[...displayCounties]
-              .filter(c => c[metric] != null)
-              .sort((a, b) => cfg.higherIsBetter === false ? a[metric] - b[metric] : b[metric] - a[metric])
-              .slice(0, 30)
-              .map((c, i) => {
-                const norm  = normalize(c[metric], minV, maxV);
-                const color = scoreToColor(norm, cfg.higherIsBetter);
-                const barW  = Math.round(norm * 100);
-                return (
-                  <div key={c.fips}
-                    onClick={() => setSelected(c)}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/80 transition-colors group ${selected?.fips === c.fips ? 'bg-green-50/60' : ''}`}>
-                    <span className="text-xs text-gray-400 w-6 text-right font-mono tabular-nums flex-shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-green-700 transition-colors">
-                        {c.name} <span className="font-normal text-gray-400 text-xs">{c.state}</span>
-                      </p>
-                      <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: barW + '%', backgroundColor: color }} />
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold tabular-nums flex-shrink-0" style={{ color }}>{cfg.fmt(c[metric])}</span>
-                    {c.priority && <span className="text-amber-400 flex-shrink-0 text-xs">★</span>}
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-        {displayCounties.length > 30 && (
-          <div className="px-5 py-3 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">Showing top 30 of {displayCounties.length} counties · Use Market Stats tab for full table</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
