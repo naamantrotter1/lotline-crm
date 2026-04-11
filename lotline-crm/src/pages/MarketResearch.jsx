@@ -412,22 +412,44 @@ const SORT_COLS = [
 ];
 
 function MarketStats() {
-  const [stateFilter, setStateFilter] = useState('Both');
-  const [sort, setSort] = useState({ col: 'oppScore', dir: -1 });
-  const [search, setSearch] = useState('');
+  const [timePeriod, setTimePeriod] = useState('90 days');
+  const [dataType,   setDataType]   = useState('Manufactured');
+  const [acreage,    setAcreage]    = useState('All');
+  const [status,     setStatus]     = useState('Sold');
+  const [sort,       setSort]       = useState({ col: 'oppScore', dir: -1 });
+  const [search,     setSearch]     = useState('');
 
   const handleSort = (col) => setSort(p => p.col === col ? { col, dir: -p.dir } : { col, dir: -1 });
 
-  const filtered = COUNTY_DATA
-    .filter(r => stateFilter === 'Both' || r.state === stateFilter)
-    .filter(r => !search || r.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const va = a[sort.col], vb = b[sort.col];
-      if (va == null && vb == null) return 0;
-      if (va == null) return 1;
-      if (vb == null) return -1;
-      return sort.dir * (va < vb ? -1 : va > vb ? 1 : 0);
-    });
+  const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
+
+  const filtered = applyDataType(
+    COUNTY_DATA
+      .filter(r => !search || r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r => ACREAGE_FILTER[acreage]?.(r))
+      .filter(r => DATA_TYPE_FILTERS[dataType]?.(r))
+      .filter(r => !(dataType === 'Land' && r.medianPpa > 500000)),
+    dataType
+  ).map(c => {
+    const volatility = 1 - timeFactor;
+    const g = Math.max(-2, Math.min(4, c.popGrowth));
+    const activityBoost = g > 0.5 ? 1 + volatility * 0.30 * (g / 4) : g < -0.3 ? 1 - volatility * 0.22 * Math.abs(g / 3) : 1 + volatility * 0.02;
+    const priceBoost = 1 + volatility * (g > 1 ? 0.07 : g < 0 ? -0.04 : 0.01);
+    return {
+      ...c,
+      absorptionRate:  +(c.absorptionRate * activityBoost).toFixed(1),
+      sellThrough:     +(c.sellThrough    * activityBoost).toFixed(1),
+      medianDOM:       Math.round(c.medianDOM  / activityBoost),
+      medianSalePrice: Math.round(c.medianSalePrice * priceBoost),
+      medianPpa:       Math.round(c.medianPpa       * priceBoost),
+    };
+  }).sort((a, b) => {
+    const va = a[sort.col], vb = b[sort.col];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return sort.dir * (va < vb ? -1 : va > vb ? 1 : 0);
+  });
 
   const exportCsv = () => {
     const cols = SORT_COLS.map(c => c.key);
@@ -441,23 +463,24 @@ function MarketStats() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="bg-card rounded-xl border border-gray-100 shadow-sm px-5 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-          {['Both', 'NC', 'SC'].map(s => (
-            <button key={s} onClick={() => setStateFilter(s)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${stateFilter === s ? 'bg-white text-sidebar shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {s}
-            </button>
-          ))}
-        </div>
-        <div className="relative ml-2">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      {/* Filter bar */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-3 py-2 flex items-center gap-1.5">
+        <FilterDropdown label="Status"    value={status}     onChange={setStatus}
+          options={['Sold','For Sale']} />
+        <FilterDropdown label="Time"      value={timePeriod} onChange={setTimePeriod}
+          options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
+        <FilterDropdown label="Data"      value={dataType}   onChange={v => setDataType(v)}
+          options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
+        <FilterDropdown label="Acreage"   value={acreage}    onChange={setAcreage}
+          options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
+        <div className="flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border border-gray-200 bg-white flex-1 min-w-0">
+          <Search size={11} className="text-gray-400 shrink-0" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Filter county..." className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 w-40" />
+            placeholder="Search county…"
+            className="flex-1 min-w-0 text-xs bg-transparent outline-none placeholder-gray-400" />
+          {search && <button onClick={() => setSearch('')} className="text-gray-400 hover:text-gray-600"><X size={11} /></button>}
         </div>
-        <span className="text-xs text-gray-400 ml-2">{filtered.length} counties</span>
-        <button onClick={exportCsv} className="ml-auto text-xs text-gray-500 hover:text-accent transition-colors font-medium">Export CSV</button>
+        <button onClick={exportCsv} className="text-xs text-gray-500 hover:text-accent transition-colors font-medium whitespace-nowrap shrink-0">Export CSV</button>
       </div>
 
       {/* Table */}
@@ -513,7 +536,7 @@ function MarketStats() {
           </table>
         </div>
         <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-400 bg-gray-50">
-          {filtered.length} of {COUNTY_DATA.length} counties · Manufactured home market data
+          {filtered.length} of {COUNTY_DATA.length} counties · {dataType} · {timePeriod} · {status}
         </div>
       </div>
     </div>
