@@ -692,7 +692,7 @@ const ACREAGE_FILTER = {
 };
 
 function getActiveMetric(statistic, status) {
-  if (statistic === 'Counts')                  return status === 'For Sale' ? 'monthsSupply' : 'absorptionRate';
+  if (statistic === 'Transactions')            return status === 'For Sale' ? 'monthsSupply' : 'absorptionRate';
   if (statistic === 'Median Price')            return 'medianSalePrice';
   if (statistic === 'Median Price/Acre')       return 'medianPpa';
   if (statistic === 'Sell Through Rate (STR)') return 'sellThrough';
@@ -860,7 +860,7 @@ function HeatMap() {
   const [timePeriod, setTimePeriod] = useState('1 year');
   const [dataType,   setDataType]   = useState('Land');
   const [acreage,    setAcreage]    = useState('All');
-  const [statistic,  setStatistic]  = useState('Counts');
+  const [statistic,  setStatistic]  = useState('Transactions');
 
   // ── Zip code filter ───────────────────────────────────────────────────────
   const [zipFilter, setZipFilter] = useState('');
@@ -1023,7 +1023,7 @@ function HeatMap() {
             e.target.setStyle({ weight: 2.5, color: '#16a34a', fillOpacity: 0.95 });
             if (county) {
               const val     = county[metric] != null ? cfg.fmt(county[metric]) : '–';
-              const timeVal = statistic === 'Counts'
+              const timeVal = statistic === 'Transactions'
                 ? `~${Math.round(county.absorptionRate * timeFactor * 8)} est. transactions`
                 : timePeriod;
               e.target.bindTooltip(
@@ -1085,7 +1085,7 @@ function HeatMap() {
 
   // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
   const statInfo = {
-    Counts:                    'Estimated number of transactions in the selected time period based on absorption rate.',
+    Transactions:              'Estimated number of transactions in the selected time period based on absorption rate.',
     'Median Price':            'Total median sale price of land parcels closed in the selected period.',
     'Median Price/Acre':       'Median price per acre — lower values indicate larger, rural parcels.',
     'Sell Through Rate (STR)': 'Percentage of listed properties that sold (sell-through rate).',
@@ -1182,7 +1182,7 @@ function HeatMap() {
           <FilterDropdown label="Acreages" value={acreage} onChange={setAcreage}
             options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
           <FilterDropdown label="Statistics" value={statistic} onChange={setStatistic}
-            options={['Counts','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
+            options={['Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
 
           {/* What is X? info */}
           <div className="relative flex items-center gap-1.5 ml-1">
@@ -1208,10 +1208,10 @@ function HeatMap() {
               <button key={key}
                 onClick={() => {
                   const toStat = {
-                    absorptionRate:'Counts', monthsSupply:'Counts',
+                    absorptionRate:'Transactions', monthsSupply:'Transactions',
                     medianSalePrice:'Value', medianIncome:'Value',
                     medianPpa:'$/Acre', sellThrough:'Sell Rate',
-                    medianDOM:'DOM', oppScore:'Counts', demandScore:'Counts', popGrowth:'Counts',
+                    medianDOM:'DOM', oppScore:'Transactions', demandScore:'Transactions', popGrowth:'Transactions',
                   };
                   if (toStat[key]) setStatistic(toStat[key]);
                 }}
@@ -1290,7 +1290,7 @@ function HeatMap() {
                 <p className="text-2xl font-bold text-green-800 tabular-nums">
                   {selected[metric] != null ? cfg.fmt(selected[metric]) : '–'}
                 </p>
-                {statistic === 'Counts' && (
+                {statistic === 'Transactions' && (
                   <p className="text-xs text-green-600 mt-1">
                     ~{Math.round(selected.absorptionRate * timeFactor * 8)} est. in {timePeriod}
                   </p>
