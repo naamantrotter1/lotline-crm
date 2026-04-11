@@ -1411,8 +1411,9 @@ function HeatMap() {
     return true;
   });
 
-  // 2. Apply per-type metric adjustments + time-period scaling
+  // 2. Apply per-type metric adjustments + time-period scaling + status adjustment
   const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
+  const sadj = STATUS_ADJ[status] ?? STATUS_ADJ['Sold'];
 
   const displayCounties = applyDataType(filteredCounties, dataType).map(c => {
     // Shorter periods show more market volatility: growing markets look hotter,
@@ -1425,11 +1426,12 @@ function HeatMap() {
     const priceBoost = 1 + volatility * (g > 1 ? 0.07 : g < 0 ? -0.04 : 0.01);
     return {
       ...c,
-      absorptionRate:  +(c.absorptionRate * activityBoost).toFixed(1),
-      sellThrough:     +(c.sellThrough    * activityBoost).toFixed(1),
-      medianDOM:       Math.round(c.medianDOM  / activityBoost),
-      medianSalePrice: Math.round(c.medianSalePrice * priceBoost),
-      medianPpa:       Math.round(c.medianPpa       * priceBoost),
+      absorptionRate:  +(c.absorptionRate * activityBoost * sadj.act).toFixed(1),
+      sellThrough:     +(c.sellThrough    * activityBoost * sadj.act).toFixed(1),
+      medianDOM:       Math.round(c.medianDOM  / activityBoost * sadj.dom),
+      medianSalePrice: Math.round(c.medianSalePrice * priceBoost * sadj.price),
+      medianPpa:       Math.round(c.medianPpa       * priceBoost * sadj.price),
+      monthsSupply:    +(c.monthsSupply * sadj.supply).toFixed(1),
     };
   });
 
