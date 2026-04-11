@@ -118,7 +118,7 @@ function Drawer({ open, onClose, title, children }) {
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-[520px] max-w-full bg-white z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-screen w-[520px] max-w-full bg-white z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-sidebar">{title}</h2>
@@ -383,7 +383,7 @@ export default function Lending() {
           </div>
         ) : (
           <form onSubmit={handleLoanSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
               <Field label="Deal / Property Address">
                 <input name="address" required value={loanForm.address} onChange={handleLoanChange} className={inp} placeholder="123 Main St, City, NC 28000" />
               </Field>
@@ -483,7 +483,7 @@ export default function Lending() {
           </div>
         ) : (
           <form onSubmit={handlePartnerSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
 
               <SectionHeading>Deal Details</SectionHeading>
 
