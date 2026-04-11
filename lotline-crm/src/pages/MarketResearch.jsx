@@ -1420,7 +1420,7 @@ function HeatMap() {
   const minV   = values.length ? Math.min(...values) : 0;
   const maxV   = values.length ? Math.max(...values) : 1;
 
-  // Load NC+SC county boundaries from CDN
+  // Load NC/SC/GA/TN/VA county boundaries from CDN
   useEffect(() => {
     setLoading(true);
     fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json')
@@ -1430,9 +1430,11 @@ function HeatMap() {
         const gj = feature(us, us.objects.counties);
         setGeojson({
           ...gj,
-          features: gj.features.filter(f =>
-            String(f.id).startsWith('37') || String(f.id).startsWith('45')
-          ),
+          features: gj.features.filter(f => {
+            const id = String(f.id);
+            return id.startsWith('37') || id.startsWith('45') ||
+                   id.startsWith('13') || id.startsWith('47') || id.startsWith('51');
+          }),
         });
         setLoading(false);
       })
@@ -1446,8 +1448,11 @@ function HeatMap() {
     Promise.all([
       fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/nc_north_carolina_zip_codes_geo.min.json').then(r => r.json()),
       fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/sc_south_carolina_zip_codes_geo.min.json').then(r => r.json()),
-    ]).then(([nc, sc]) => {
-      setZipGeojson({ type: 'FeatureCollection', features: [...nc.features, ...sc.features] });
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ga_georgia_zip_codes_geo.min.json').then(r => r.json()),
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tn_tennessee_zip_codes_geo.min.json').then(r => r.json()),
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/va_virginia_zip_codes_geo.min.json').then(r => r.json()),
+    ]).then(([nc, sc, ga, tn, va]) => {
+      setZipGeojson({ type: 'FeatureCollection', features: [...nc.features, ...sc.features, ...ga.features, ...tn.features, ...va.features] });
       setZipLoading(false);
     }).catch(() => setZipLoading(false));
   }, [groupBy, zipGeojson]);
