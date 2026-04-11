@@ -710,7 +710,7 @@ const DATA_TYPE_FILTERS = {
   Townhouse:   c => c.medianIncome > 42000,
   Condo:       c => c.medianIncome > 50000,
   MultiFamily: c => c.medianIncome > 38000,
-  Mobile:      () => true,
+  Manufactured:      () => true,
 };
 
 function applyDataType(counties, dataType) {
@@ -751,7 +751,7 @@ function applyDataType(counties, dataType) {
           monthsSupply:    +(c.monthsSupply * 1.12).toFixed(1),
           sellThrough:     +(c.sellThrough * 0.90).toFixed(1),
         };
-      case 'Mobile':
+      case 'Manufactured':
         return { ...c,
           medianSalePrice: Math.round(inc * 1.8),
           medianDOM:       Math.round(c.medianDOM * (c.mhFriendly ? 0.88 : 1.18)),
@@ -858,7 +858,7 @@ function HeatMap() {
   const [groupBy,    setGroupBy]    = useState('County');
   const [status,     setStatus]     = useState('Sold');
   const [timePeriod, setTimePeriod] = useState('90 days');
-  const [dataType,   setDataType]   = useState('Mobile');
+  const [dataType,   setDataType]   = useState('Manufactured');
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
@@ -1132,7 +1132,7 @@ function HeatMap() {
           <FilterDropdown label="Time" value={timePeriod} onChange={setTimePeriod}
             options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
           <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
-            options={['All','Land','House','Townhouse','Condo','MultiFamily','Mobile']} />
+            options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
 
           {/* ZIP code filter */}
           <div className="relative flex items-center ml-1">
