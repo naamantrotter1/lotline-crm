@@ -1329,8 +1329,10 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
-  const stateLayer    = useRef(null);
+  const stateLayer       = useRef(null);
+  const stateBorderLayer = useRef(null);
   const [stateGeojson, setStateGeojson] = useState(null);
+  const [stateBorderGeojson, setStateBorderGeojson] = useState(null);
 
   // ── Pipeline overlay state ────────────────────────────────────────────────
   const [showDealOverview,  setShowDealOverview]  = useState(false);
@@ -1459,7 +1461,7 @@ function HeatMap() {
   const minV   = values.length ? Math.min(...values) : 0;
   const maxV   = values.length ? Math.max(...values) : 1;
 
-  // Load NC/SC/GA/TN/VA county boundaries from CDN
+  // Load NC/SC/GA/TN/VA county boundaries + state outlines from CDN
   useEffect(() => {
     setLoading(true);
     fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json')
@@ -1475,10 +1477,36 @@ function HeatMap() {
                    id.startsWith('13') || id.startsWith('47') || id.startsWith('51');
           }),
         });
+        // State outlines — filtered to the same 5 states
+        const stateGj = feature(us, us.objects.states);
+        setStateBorderGeojson({
+          ...stateGj,
+          features: stateGj.features.filter(f => {
+            const id = String(f.id);
+            return ['37','45','13','47','51'].includes(id);
+          }),
+        });
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Draw permanent state border overlay (always on top of county/zip choropleth)
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map || !stateBorderGeojson) return;
+    if (stateBorderLayer.current) { stateBorderLayer.current.remove(); stateBorderLayer.current = null; }
+    stateBorderLayer.current = L.geoJSON(stateBorderGeojson, {
+      style: {
+        fillColor:   'transparent',
+        fillOpacity: 0,
+        color:       '#1e293b',
+        weight:      2.5,
+        opacity:     0.75,
+      },
+      interactive: false,
+    }).addTo(map);
+  }, [stateBorderGeojson, leafletMap.current]);
 
   // Load zip code boundaries when Zip Code view is selected
   useEffect(() => {
