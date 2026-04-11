@@ -817,7 +817,6 @@ function scoreToColor(norm, higherIsBetter) {
   const lght = Math.round(90 - t * 55);   // 90% (light) → 35% (dark)
   return `hsl(${hue}, ${sat}%, ${lght}%)`;
 }
-function scoreToColorHex(norm, higherIsBetter) { return scoreToColor(norm, higherIsBetter); }
 
 function HeatMap() {
   const mapRef     = useRef(null);
