@@ -126,7 +126,9 @@ function Drawer({ open, onClose, title, children }) {
             <X size={18} />
           </button>
         </div>
-        {children}
+        <div className="flex flex-col flex-1 min-h-0">
+          {children}
+        </div>
       </div>
     </>
   );
@@ -382,7 +384,7 @@ export default function Lending() {
             <Button onClick={closeDrawer} className="mt-2">Close</Button>
           </div>
         ) : (
-          <form onSubmit={handleLoanSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={handleLoanSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
               <Field label="Deal / Property Address">
                 <input name="address" required value={loanForm.address} onChange={handleLoanChange} className={inp} placeholder="123 Main St, City, NC 28000" />
@@ -482,7 +484,7 @@ export default function Lending() {
             <Button onClick={closeDrawer} className="mt-2">Close</Button>
           </div>
         ) : (
-          <form onSubmit={handlePartnerSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={handlePartnerSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
 
               <SectionHeading>Deal Details</SectionHeading>
