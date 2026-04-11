@@ -1533,12 +1533,9 @@ function HeatMap() {
           mouseover: (e) => {
             e.target.setStyle({ weight: 2.5, color: '#16a34a', fillOpacity: 0.95 });
             if (county) {
-              const val     = county[metric] != null ? cfg.fmt(county[metric]) : '–';
-              const timeVal = statistic === 'Transactions'
-                ? `~${Math.round(county.absorptionRate * timeFactor * 8)} est. transactions`
-                : timePeriod;
+              const val = county[metric] != null ? cfg.fmt(county[metric]) : '–';
               e.target.bindTooltip(
-                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${dataType} · ${timeVal}</span>`,
+                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: <strong>${val}</strong>`,
                 { sticky: true, className: 'leaflet-tooltip-custom' }
               ).openTooltip();
             }
@@ -1582,7 +1579,7 @@ function HeatMap() {
             if (county) {
               const val = county[metric] != null ? cfg.fmt(county[metric]) : '–';
               e.target.bindTooltip(
-                `<strong>ZIP ${zip}</strong><br/>${county.name} County, ${county.state}<br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${dataType} · ${timePeriod}</span>`,
+                `<strong>ZIP ${zip}</strong><br/>${county.name} County, ${county.state}<br/>${cfg.label}: <strong>${val}</strong>`,
                 { sticky: true, className: 'leaflet-tooltip-custom' }
               ).openTooltip();
             }
