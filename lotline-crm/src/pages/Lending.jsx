@@ -146,7 +146,10 @@ export default function Lending() {
     if (location.state?.prefillLoan) {
       setLoanForm({ ...EMPTY_LOAN, ...location.state.prefillLoan });
       setDrawer('financing');
-      // Clear the router state so a back-navigation doesn't re-open it
+      window.history.replaceState({}, '');
+    } else if (location.state?.prefillPartner) {
+      setPartnerForm({ ...EMPTY_PARTNER, ...location.state.prefillPartner });
+      setDrawer('partnership');
       window.history.replaceState({}, '');
     }
   }, []);
