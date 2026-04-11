@@ -1127,6 +1127,8 @@ function getActiveMetric(statistic, status) {
   if (statistic === 'Median Price/Acre')       return 'medianPpa';
   if (statistic === 'Sell Through Rate (STR)') return 'sellThrough';
   if (statistic === 'Days on Market')          return 'medianDOM';
+  if (statistic === 'Opportunity Score')       return 'oppScore';
+  if (statistic === 'Demand Score')            return 'demandScore';
   return 'absorptionRate';
 }
 
@@ -1307,7 +1309,7 @@ function HeatMap() {
   const [timePeriod, setTimePeriod] = useState('90 days');
   const [dataType,   setDataType]   = useState('Manufactured');
   const [acreage,    setAcreage]    = useState('All');
-  const [statistic,  setStatistic]  = useState('Days on Market');
+  const [statistic,  setStatistic]  = useState('Opportunity Score');
 
   const stateLayer    = useRef(null);
   const [stateGeojson, setStateGeojson] = useState(null);
@@ -1433,7 +1435,7 @@ function HeatMap() {
       medianPpa:       Math.round(c.medianPpa       * priceBoost * sadj.price),
       monthsSupply:    +(c.monthsSupply * sadj.supply).toFixed(1),
     };
-  });
+  }).map(c => _score(c));
 
   const values = displayCounties.map(c => c[metric]).filter(v => v != null);
   const minV   = values.length ? Math.min(...values) : 0;
@@ -1731,6 +1733,8 @@ function HeatMap() {
 
   // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
   const statInfo = {
+    'Opportunity Score':       'Composite 0–100 score combining absorption rate, months of supply, and population growth. Higher = better market opportunity.',
+    'Demand Score':            'Composite 0–100 score combining sell-through rate, days on market, and absorption rate. Higher = stronger buyer demand.',
     Transactions:              'Estimated number of transactions in the selected time period based on absorption rate.',
     'Median Price':            'Total median sale price of land parcels closed in the selected period.',
     'Median Price/Acre':       'Median price per acre — lower values indicate larger, rural parcels.',
@@ -1760,7 +1764,7 @@ function HeatMap() {
           <FilterDropdown label="Acreage"    value={acreage}    onChange={setAcreage}
             options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
           <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
-            options={['Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
+            options={['Opportunity Score','Demand Score','Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
 
           {/* Info icon */}
           <div className="relative">
