@@ -1212,102 +1212,48 @@ function HeatMap() {
   return (
     <div className="space-y-0 -mx-1">
 
-      {/* ── LandPortal-style Filter Bar ──────────────────────────────────── */}
+      {/* ── Filter Bar ───────────────────────────────────────────────────── */}
       <div className="bg-white border border-gray-200 rounded-t-xl shadow-sm">
 
-        {/* Row 1 */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 flex-wrap">
-          {/* County / State / Zip Code toggle */}
-          <div className="flex mr-1">
-            {['County', 'State', 'Zip Code'].map(v => (
-              <button key={v}
-                onClick={() => setGroupBy(v)}
-                className={`px-4 py-1.5 text-sm font-semibold transition-all first:rounded-l-lg last:rounded-r-lg border
-                  ${groupBy === v
-                    ? 'bg-green-500 text-white border-green-500 z-10'
-                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+        {/* Row 1 — primary filters */}
+        <div className="flex items-center gap-2 px-4 py-2.5 flex-wrap">
+
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+            {['County','State','Zip Code'].map(v => (
+              <button key={v} onClick={() => setGroupBy(v)}
+                className={`px-3 py-1.5 text-xs font-semibold transition-all
+                  ${groupBy === v ? 'bg-green-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
                 {v}
               </button>
             ))}
           </div>
 
-          {/* Status toggle (Sold / For Sale) */}
-          <div className="flex mr-1">
-            {['Sold', 'For Sale'].map(s => (
-              <button key={s}
-                onClick={() => setStatus(s)}
-                className={`px-3.5 py-1.5 text-sm font-semibold transition-all first:rounded-l-lg last:rounded-r-lg border
-                  ${status === s
-                    ? 'bg-green-500 text-white border-green-500 z-10'
-                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+          {/* Status toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+            {['Sold','For Sale'].map(s => (
+              <button key={s} onClick={() => setStatus(s)}
+                className={`px-3 py-1.5 text-xs font-semibold transition-all
+                  ${status === s ? 'bg-green-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
                 {s}
               </button>
             ))}
           </div>
 
-          <FilterDropdown label="Time" value={timePeriod} onChange={setTimePeriod}
+          <FilterDropdown label="Time"       value={timePeriod} onChange={setTimePeriod}
             options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
-          <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
+          <FilterDropdown label="Data"       value={dataType}   onChange={v => { setDataType(v); setSelected(null); }}
             options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
-
-          {/* Unified search bar — county name or ZIP */}
-          <div className="relative flex items-center ml-1">
-            <div className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all
-              ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
-              : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
-              : searchStatus === 'loading' ? 'border-gray-300 bg-gray-50'
-              : 'border-gray-300 bg-white hover:border-gray-400'}`}>
-              <Search size={13} className="text-gray-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="County or ZIP code"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-40 text-sm bg-transparent outline-none placeholder-gray-400"
-              />
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            {searchStatus === 'found' && searchInfo && (
-              <span className="absolute -bottom-5 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
-                {searchInfo.label}
-              </span>
-            )}
-            {searchStatus === 'error' && (
-              <span className="absolute -bottom-5 left-0 text-xs text-red-500 whitespace-nowrap">
-                Not found in NC/SC
-              </span>
-            )}
-          </div>
-
-          <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-            {zipLoading
-              ? <span className="text-green-500 font-medium">Loading zip boundaries…</span>
-              : <span>{displayCounties.length} {groupBy === 'Zip Code' ? 'zip codes' : 'counties'} shown</span>
-            }
-          </div>
-        </div>
-
-        {/* Row 2 */}
-        <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
-          <FilterDropdown label="Acreages" value={acreage} onChange={setAcreage}
+          <FilterDropdown label="Acreage"    value={acreage}    onChange={setAcreage}
             options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
-          <FilterDropdown label="Statistics" value={statistic} onChange={setStatistic}
+          <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
             options={['Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
 
-          {/* What is X? info */}
-          <div className="relative flex items-center gap-1.5 ml-1">
-            <button
-              onMouseEnter={() => setShowStatInfo(true)}
-              onMouseLeave={() => setShowStatInfo(false)}
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <Info size={13} className="text-gray-400" />
-              <span>What is {statistic}?</span>
+          {/* Info icon for statistic */}
+          <div className="relative">
+            <button onMouseEnter={() => setShowStatInfo(true)} onMouseLeave={() => setShowStatInfo(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Info size={14} />
             </button>
             {showStatInfo && (
               <div className="absolute left-0 top-6 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed">
@@ -1316,48 +1262,57 @@ function HeatMap() {
             )}
           </div>
 
-          {/* Metric override pills */}
-          <div className="ml-auto flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400 mr-1">Color by:</span>
-            {Object.entries(METRIC_CONFIG).map(([key, { label }]) => (
-              <button key={key}
-                onClick={() => {
-                  const toStat = {
-                    absorptionRate:'Transactions', monthsSupply:'Transactions',
-                    medianSalePrice:'Value', medianIncome:'Value',
-                    medianPpa:'$/Acre', sellThrough:'Sell Rate',
-                    medianDOM:'DOM', oppScore:'Transactions', demandScore:'Transactions', popGrowth:'Transactions',
-                  };
-                  if (toStat[key]) setStatistic(toStat[key]);
-                }}
-                className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-all
-                  ${metric === key
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}>
-                {label}
-              </button>
-            ))}
+          {/* Search */}
+          <div className="relative ml-auto">
+            <div className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg border text-xs transition-all
+              ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
+              : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
+              : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <Search size={12} className="text-gray-400 shrink-0" />
+              <input type="text" placeholder="County or ZIP…" value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-36 text-xs bg-transparent outline-none placeholder-gray-400" />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+            {searchStatus === 'found' && searchInfo && (
+              <span className="absolute -bottom-4 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
+                {searchInfo.label}
+              </span>
+            )}
+            {searchStatus === 'error' && (
+              <span className="absolute -bottom-4 left-0 text-xs text-red-500 whitespace-nowrap">
+                Not found in NC/SC
+              </span>
+            )}
           </div>
+
+          {/* Count */}
+          <span className="text-xs text-gray-400 shrink-0">
+            {zipLoading ? <span className="text-green-500">Loading…</span>
+              : `${displayCounties.length} ${groupBy === 'Zip Code' ? 'ZIPs' : 'counties'}`}
+          </span>
         </div>
 
-        {/* Row 3 — Pipeline overlays */}
-        <div className="flex items-center gap-2 px-4 py-2 border-t border-gray-100 flex-wrap">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Show on Map:</span>
+        {/* Row 2 — pipeline toggles */}
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-gray-100">
+          <span className="text-xs text-gray-400 shrink-0">Pipelines:</span>
           {[
-            { label: 'Deal Overview', state: showDealOverview, set: setShowDealOverview, color: 'bg-blue-500 border-blue-500' },
-            { label: 'Land Acquisition', state: showLandAcq, set: setShowLandAcq, color: 'bg-amber-500 border-amber-500' },
-            { label: 'Sales', state: showSales, set: setShowSales, color: 'bg-emerald-500 border-emerald-500' },
-          ].map(({ label, state, set, color }) => (
+            { label: 'Deal Overview',    state: showDealOverview, set: setShowDealOverview, dot: 'bg-blue-500' },
+            { label: 'Land Acquisition', state: showLandAcq,      set: setShowLandAcq,      dot: 'bg-amber-500' },
+            { label: 'Sales',            state: showSales,         set: setShowSales,         dot: 'bg-emerald-500' },
+          ].map(({ label, state, set, dot }) => (
             <button key={label} onClick={() => set(v => !v)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
-                ${state ? `${color} text-white` : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
-              <span className={`w-2 h-2 rounded-full ${state ? 'bg-white' : color.replace('border-','bg-').split(' ')[0]}`} />
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border transition-all
+                ${state ? 'border-transparent text-white ' + dot : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${state ? 'bg-white' : dot}`} />
               {label}
             </button>
           ))}
-          <span className="ml-2 text-xs text-gray-400">
-            {[showDealOverview && '● Deal Overview', showLandAcq && '● Land Acq.', showSales && '● Sales'].filter(Boolean).join('  ') || 'Pipelines hidden'}
-          </span>
         </div>
       </div>
 
