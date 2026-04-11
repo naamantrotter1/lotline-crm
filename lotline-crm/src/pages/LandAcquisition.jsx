@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, ChevronRight, Star, MapPin, Archive } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, ChevronRight, Star, MapPin, Archive, Landmark } from 'lucide-react';
 import { LAND_DEALS } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 
@@ -50,6 +51,7 @@ function calcScore(profitPct, roi, costArvPct) {
 
 // ── Deal Modal ────────────────────────────────────────────────────────────────
 function DealModal({ deal, onClose }) {
+  const navigate = useNavigate();
   const [tab,    setTab]    = useState('Overview');
   const [stage,  setStage]  = useState(deal.stage || 'New Lead');
 
@@ -549,11 +551,52 @@ function DealModal({ deal, onClose }) {
                 />
               </div>
 
-              {/* Archive */}
-              <div className="pb-2">
+              {/* Footer actions */}
+              <div className="pb-2 flex items-center justify-between">
                 <button className="flex items-center gap-2 border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
                   <Archive size={14} />
                   Archive
+                </button>
+                <button
+                  onClick={() => {
+                    const prefillLoan = {
+                      address:      address,
+                      purchasePrice: String(costs.land || ''),
+                      loanAmount:   '',
+                      loanType:     'Land + Home Package',
+                      propertyType: 'Manufactured Home',
+                      arv:          String(arv || ''),
+                      creditScore:  '700+',
+                      exitStrategy: 'Sell',
+                      notes:        notes,
+                      costsOpen:    true,
+                      costs: {
+                        mobileHome:   String(costs.mobileHome   || ''),
+                        hudEngineer:  String(costs.hudEngineer  || ''),
+                        percTest:     String(costs.percTest     || ''),
+                        survey:       String(costs.survey       || ''),
+                        footers:      String(costs.footers      || ''),
+                        setup:        String(costs.setup        || ''),
+                        water:        String(costs.water        || ''),
+                        septic:       String(costs.septic       || ''),
+                        electric:     String(costs.electric     || ''),
+                        hvac:         String(costs.hvac         || ''),
+                        underpinning: String(costs.underpinning || ''),
+                        decks:        String(costs.decks        || ''),
+                        driveway:     String(costs.driveway     || ''),
+                        landscaping:  String(costs.landscaping  || ''),
+                        waterSewer:   String(costs.waterSewer   || ''),
+                        mailbox:      String(costs.mailbox      || ''),
+                        mobileTax:    String(costs.mobileTax    || ''),
+                      },
+                    };
+                    onClose();
+                    navigate('/lending', { state: { prefillLoan } });
+                  }}
+                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+                >
+                  <Landmark size={14} />
+                  Request Financing
                 </button>
               </div>
             </>

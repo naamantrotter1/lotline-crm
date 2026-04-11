@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Landmark, Handshake, Clock, CheckCircle, XCircle,
   AlertCircle, MessageSquare, Send, X, ChevronRight,
@@ -127,11 +128,22 @@ function Drawer({ open, onClose, title, children }) {
 
 // ══════════════════════════════════════════════════════════════════════════
 export default function Lending() {
+  const location = useLocation();
   const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership'
   const [activeTab, setActiveTab] = useState('loans');
 
   // Loan request state
   const [loanForm, setLoanForm]     = useState(EMPTY_LOAN);
+
+  // Pre-populate form if navigated from Land Acquisition
+  useEffect(() => {
+    if (location.state?.prefillLoan) {
+      setLoanForm({ ...EMPTY_LOAN, ...location.state.prefillLoan });
+      setDrawer('financing');
+      // Clear the router state so a back-navigation doesn't re-open it
+      window.history.replaceState({}, '');
+    }
+  }, []);
   const [loanConfirm, setLoanConfirm] = useState(null);
   const [loanRequests, setLoanRequests] = useState(() => {
     try { const s = localStorage.getItem(LOAN_KEY); return s ? JSON.parse(s) : DUMMY_LOANS; }
