@@ -21,6 +21,7 @@ import ArchivedDeals from './pages/ArchivedDeals';
 import FloodMap from './pages/FloodMap';
 import Homes from './pages/Homes';
 import Settings from './pages/Settings';
+import Lending from './pages/Lending';
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="archived" element={<ArchivedDeals />} />
           <Route path="flood-map" element={<FloodMap />} />
           <Route path="homes" element={<Homes />} />
+          <Route path="lending" element={<Lending />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

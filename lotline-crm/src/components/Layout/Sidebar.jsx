@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, Database, MapPin, HardHat, Archive, Settings,
-  Droplets, ChevronRight, Globe,
+  Droplets, ChevronRight, Globe, Landmark,
 } from 'lucide-react';
 
 const navSections = [
@@ -33,6 +33,7 @@ const navSections = [
       { icon: Globe, label: 'Map Search', to: '/flood-map' },
       { icon: Map, label: 'Market Research', to: '/intelligence' },
       { icon: Home, label: 'Homes', to: '/homes' },
+      { icon: Landmark, label: 'Lending', to: '/lending' },
       { icon: Calculator, label: 'Deal Calculator', to: '/calculator' },
       { icon: Building, label: 'Home Models', to: '/home-models' },
       { icon: Database, label: 'County Database', to: '/counties' },
