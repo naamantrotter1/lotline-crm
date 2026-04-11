@@ -872,15 +872,37 @@
     "type": "single",
     "beds": 3,
     "baths": 2,
-    "sqft": 1216,
+    "sqft": 1140,
     "price": 42245,
     "badge": "",
     "badgeClass": "",
     "emoji": "🏡",
     "year": 2026,
     "brand": "Cavco Homes",
-    "desc": "The Phoenix 16763A by Cavco Hamlet is our largest single-wide — 3 bedrooms, 2 baths, and 1,216 sq ft in a 16×76 ft footprint. It features LED lighting, thermopane windows, a steel front door, and quality vinyl flooring, delivering a surprisingly spacious feel in a single-wide package.",
-    "features": ["3 bedrooms", "2 full baths", "1,216 sq ft", "16×76 ft", "LED lighting", "Thermopane windows", "Steel front door"],
-    "photos": []
+    "desc": "The Phoenix 16763A by Cavco Hamlet is our largest single-wide — 3 bedrooms, 2 baths, and 1,140 sq ft in a 76×15 ft footprint. Features LED can lights throughout, thermopane windows, steel front door with storm door, garden tub with separate shower, dishwasher, and a full cabinetry package with pantry.",
+    "features": ["3 bedrooms", "2 full baths", "1,140 sq ft", "76×15 ft single-wide", "Garden tub & separate shower", "Kitchen dishwasher", "LED can lights"],
+    "photos": [
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-kit-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-int-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-int-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-kit-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-kit-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-bed-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-bed-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-bed-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-bath-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-bath-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-uti-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/The%20Phoenix%2076%2016763A-25-ext-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/3397/floorplan/231424/16763%20floor-plans-SMALL%20%281%29.jpg"
+    ],
+    "specs": {
+      "construction": "Floor Joists: 2x8 / Insulation Zone 3: R30-11-11",
+      "exterior": "Steel Front Door w/Storm Door / Cottage Rear Door / Thermopane Windows / Exterior Lights Front & Rear / Exterior Faucet",
+      "interior": "8ft Flat Ceilings / Stomped Ceiling / LED Can Lights T/O",
+      "utilities": "40 Gallon Electric Water Heater / Whole House Water Cut Off / AC Ready",
+      "baths": "Garden Tub and Separate Shower / Vinyl Flooring T/O",
+      "kitchen": "Vinyl Flooring T/O / Metal Faucets / Dishwasher / Module Craft Cabinet System / 30\" Overhead / Adjustable Shelves / Pantry / Utility Shelf"
+    }
   }
 ]
