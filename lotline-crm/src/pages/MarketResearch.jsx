@@ -779,15 +779,15 @@ function FilterDropdown({ label, value, options, onChange }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1 pl-3 pr-2.5 py-1.5 rounded-lg border text-sm transition-all whitespace-nowrap select-none
+        className={`flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-lg border text-xs transition-all whitespace-nowrap select-none
           ${open
             ? 'border-gray-400 bg-white shadow-sm ring-1 ring-gray-200'
-            : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50/60'
+            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60'
           }`}
       >
-        <span className="text-gray-500 font-normal">{label}:</span>
-        <span className="font-semibold text-gray-800 ml-0.5">{value}</span>
-        <ChevronDown size={13} className={`ml-1 text-gray-500 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <span className="text-gray-400 font-normal">{label}:</span>
+        <span className="font-semibold text-gray-700 ml-0.5">{value}</span>
+        <ChevronDown size={11} className={`ml-0.5 text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute top-full left-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[2000] min-w-[160px] py-1.5 overflow-hidden">
@@ -1289,7 +1289,7 @@ function HeatMap() {
       <div className="bg-white border border-gray-200 rounded-t-xl shadow-sm">
 
         {/* Row 1 — primary filters */}
-        <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto">
+        <div className="flex items-center gap-1.5 px-3 py-2">
 
           <FilterDropdown label="View"   value={groupBy} onChange={setGroupBy}
             options={['County','State','Zip Code']} />
@@ -1328,8 +1328,8 @@ function HeatMap() {
             const activeCount = pipelines.filter(p => p.state).length;
             return (
               <div className="relative group">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 transition-all">
-                  <Map size={12} className="text-gray-400" />
+                <button className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 transition-all">
+                  <Map size={11} className="text-gray-400" />
                   Pipelines{activeCount > 0 ? ` (${activeCount})` : ''}
                   <ChevronDown size={11} className="text-gray-400" />
                 </button>
@@ -1349,14 +1349,14 @@ function HeatMap() {
 
           {/* Search */}
           <div className="relative">
-            <div className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg border text-xs transition-all
+            <div className={`flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border text-xs transition-all
               ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
               : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
               : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <Search size={12} className="text-gray-400 shrink-0" />
+              <Search size={11} className="text-gray-400 shrink-0" />
               <input type="text" placeholder="County or ZIP…" value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-36 text-xs bg-transparent outline-none placeholder-gray-400" />
+                className="w-28 text-xs bg-transparent outline-none placeholder-gray-400" />
               {searchQuery && (
                 <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
                   className="text-gray-400 hover:text-gray-600">
