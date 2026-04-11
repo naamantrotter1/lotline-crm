@@ -991,7 +991,7 @@ function HeatMap() {
 
           <FilterDropdown label="Time" value={timePeriod} onChange={setTimePeriod}
             options={['7 days','14 days','30 days','90 days','6 months','1 year']} />
-          <FilterDropdown label="Property Type" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
+          <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
             options={['Land','House','Townhouse','Condo','MultiFamily','Mobile']} />
 
           <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
