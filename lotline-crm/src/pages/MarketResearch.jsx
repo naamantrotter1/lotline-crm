@@ -421,7 +421,8 @@ function MarketStats() {
 
   const handleSort = (col) => setSort(p => p.col === col ? { col, dir: -p.dir } : { col, dir: -1 });
 
-  const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
+  const adj  = TIME_ADJ[timePeriod]  ?? TIME_ADJ['90 days'];
+  const sadj = STATUS_ADJ[status]    ?? STATUS_ADJ['Sold'];
 
   const filtered = applyDataType(
     COUNTY_DATA
@@ -430,20 +431,15 @@ function MarketStats() {
       .filter(r => DATA_TYPE_FILTERS[dataType]?.(r))
       .filter(r => !(dataType === 'Land' && r.medianPpa > 500000)),
     dataType
-  ).map(c => {
-    const volatility = 1 - timeFactor;
-    const g = Math.max(-2, Math.min(4, c.popGrowth));
-    const activityBoost = g > 0.5 ? 1 + volatility * 0.30 * (g / 4) : g < -0.3 ? 1 - volatility * 0.22 * Math.abs(g / 3) : 1 + volatility * 0.02;
-    const priceBoost = 1 + volatility * (g > 1 ? 0.07 : g < 0 ? -0.04 : 0.01);
-    return {
-      ...c,
-      absorptionRate:  +(c.absorptionRate * activityBoost).toFixed(1),
-      sellThrough:     +(c.sellThrough    * activityBoost).toFixed(1),
-      medianDOM:       Math.round(c.medianDOM  / activityBoost),
-      medianSalePrice: Math.round(c.medianSalePrice * priceBoost),
-      medianPpa:       Math.round(c.medianPpa       * priceBoost),
-    };
-  }).sort((a, b) => {
+  ).map(c => ({
+    ...c,
+    absorptionRate:  Math.min(98,  +(c.absorptionRate * adj.act   * sadj.act).toFixed(1)),
+    sellThrough:     Math.min(500, +(c.sellThrough    * adj.act   * sadj.act).toFixed(1)),
+    medianDOM:       Math.round(c.medianDOM       * adj.dom   * sadj.dom),
+    medianSalePrice: Math.round(c.medianSalePrice * adj.price * sadj.price),
+    medianPpa:       Math.round(c.medianPpa       * adj.price * sadj.price),
+    monthsSupply:    +(c.monthsSupply * sadj.supply).toFixed(1),
+  })).map(c => _score(c)).sort((a, b) => {
     const va = a[sort.col], vb = b[sort.col];
     if (va == null && vb == null) return 0;
     if (va == null) return 1;
@@ -699,6 +695,25 @@ const TIME_FACTOR = {
   '7 days': 7/365, '14 days': 14/365, '30 days': 30/365,
   '90 days': 90/365, '6 months': 0.5, '1 year': 1.0,
   '2 years': 2.0, '3 years': 3.0, '5 years': 5.0,
+};
+
+// Absolute multipliers for Market Stats table (90 days = baseline 1.0)
+const TIME_ADJ = {
+  '7 days':   { act: 1.42, price: 1.12, dom: 0.70 },
+  '14 days':  { act: 1.30, price: 1.08, dom: 0.78 },
+  '30 days':  { act: 1.16, price: 1.05, dom: 0.87 },
+  '90 days':  { act: 1.00, price: 1.00, dom: 1.00 },
+  '6 months': { act: 0.92, price: 0.96, dom: 1.10 },
+  '1 year':   { act: 0.84, price: 0.92, dom: 1.18 },
+  '2 years':  { act: 0.76, price: 0.86, dom: 1.28 },
+  '3 years':  { act: 0.68, price: 0.80, dom: 1.38 },
+  '5 years':  { act: 0.58, price: 0.73, dom: 1.52 },
+};
+
+// Status-based multipliers: For Sale = active listing metrics vs Sold = closed metrics
+const STATUS_ADJ = {
+  'Sold':     { price: 1.00, dom: 1.00, act: 1.00, supply: 1.00 },
+  'For Sale': { price: 1.06, dom: 1.32, act: 0.78, supply: 1.45 },
 };
 
 const ACREAGE_FILTER = {
