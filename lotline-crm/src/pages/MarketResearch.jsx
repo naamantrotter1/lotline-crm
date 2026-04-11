@@ -1291,28 +1291,34 @@ function HeatMap() {
             )}
           </div>
 
-          {/* Count */}
-          <span className="text-xs text-gray-400 shrink-0">
-            {zipLoading ? <span className="text-green-500">Loading…</span>
-              : `${displayCounties.length} ${groupBy === 'Zip Code' ? 'ZIPs' : 'counties'}`}
-          </span>
-        </div>
-
-        {/* Row 2 — pipeline toggles */}
-        <div className="flex items-center gap-2 px-4 py-2 border-t border-gray-100">
-          <span className="text-xs text-gray-400 shrink-0">Pipelines:</span>
-          {[
-            { label: 'Deal Overview',    state: showDealOverview, set: setShowDealOverview, dot: 'bg-blue-500' },
-            { label: 'Land Acquisition', state: showLandAcq,      set: setShowLandAcq,      dot: 'bg-amber-500' },
-            { label: 'Sales',            state: showSales,         set: setShowSales,         dot: 'bg-emerald-500' },
-          ].map(({ label, state, set, dot }) => (
-            <button key={label} onClick={() => set(v => !v)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border transition-all
-                ${state ? 'border-transparent text-white ' + dot : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${state ? 'bg-white' : dot}`} />
-              {label}
-            </button>
-          ))}
+          {/* Pipeline dropdown */}
+          {(() => {
+            const pipelines = [
+              { label: 'Deal Overview',    state: showDealOverview, set: setShowDealOverview, dot: 'bg-blue-500' },
+              { label: 'Land Acquisition', state: showLandAcq,      set: setShowLandAcq,      dot: 'bg-amber-500' },
+              { label: 'Sales',            state: showSales,         set: setShowSales,         dot: 'bg-emerald-500' },
+            ];
+            const activeCount = pipelines.filter(p => p.state).length;
+            return (
+              <div className="relative group">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 transition-all">
+                  <Map size={12} className="text-gray-400" />
+                  Pipelines{activeCount > 0 ? ` (${activeCount})` : ''}
+                  <ChevronDown size={11} className="text-gray-400" />
+                </button>
+                <div className="absolute left-0 top-full mt-1 z-[3000] bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[170px] hidden group-focus-within:block group-hover:block">
+                  {pipelines.map(({ label, state, set, dot }) => (
+                    <button key={label} onClick={() => set(v => !v)}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-lg hover:bg-gray-50 transition-all text-left">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${dot} ${state ? 'ring-2 ring-offset-1 ring-gray-300' : 'opacity-40'}`} />
+                      <span className={state ? 'font-semibold text-gray-800' : 'text-gray-500'}>{label}</span>
+                      {state && <span className="ml-auto text-green-500 font-bold text-xs">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
