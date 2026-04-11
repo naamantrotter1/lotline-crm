@@ -848,10 +848,27 @@ function HeatMap() {
     return true;
   });
 
-  // 2. Apply per-type metric adjustments (changes prices, DOM, absorption, etc.)
-  const displayCounties = applyDataType(filteredCounties, dataType);
-
+  // 2. Apply per-type metric adjustments + time-period scaling
   const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
+
+  const displayCounties = applyDataType(filteredCounties, dataType).map(c => {
+    // Shorter periods show more market volatility: growing markets look hotter,
+    // declining markets look cooler relative to the annual average.
+    const volatility = 1 - timeFactor;           // 0 at "1 year", ~0.98 at "7 days"
+    const g = Math.max(-2, Math.min(4, c.popGrowth));
+    const activityBoost = g >  0.5 ? 1 + volatility * 0.30 * (g / 4)
+                        : g < -0.3 ? 1 - volatility * 0.22 * Math.abs(g / 3)
+                        : 1 + volatility * 0.02;
+    const priceBoost = 1 + volatility * (g > 1 ? 0.07 : g < 0 ? -0.04 : 0.01);
+    return {
+      ...c,
+      absorptionRate:  +(c.absorptionRate * activityBoost).toFixed(1),
+      sellThrough:     +(c.sellThrough    * activityBoost).toFixed(1),
+      medianDOM:       Math.round(c.medianDOM  / activityBoost),
+      medianSalePrice: Math.round(c.medianSalePrice * priceBoost),
+      medianPpa:       Math.round(c.medianPpa       * priceBoost),
+    };
+  });
 
   const values = displayCounties.map(c => c[metric]).filter(v => v != null);
   const minV   = values.length ? Math.min(...values) : 0;
