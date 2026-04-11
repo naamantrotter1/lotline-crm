@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Calculator, TrendingUp, Search, ExternalLink, Map,
-  ArrowUpRight, ArrowDownRight, Minus, X,
+  ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info,
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -664,9 +664,92 @@ const METRIC_CONFIG = {
   medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd' },
   monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) },
   absorptionRate:  { label: 'Absorption Rate',    higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
+  sellThrough:     { label: 'Sell-Through Rate',  higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
   popGrowth:       { label: 'Pop. Growth',        higherIsBetter: true,  fmt: v => v.toFixed(1) + '%' },
   medianIncome:    { label: 'Median Income',      higherIsBetter: true,  fmt: v => '$' + Math.round(v/1000) + 'k' },
+  medianPpa:       { label: '$ / Acre',           higherIsBetter: null,  fmt: v => '$' + Math.round(v).toLocaleString() },
 };
+
+// ── Filter config ─────────────────────────────────────────────────────────────
+const TIME_FACTOR = {
+  '7 days': 7/365, '14 days': 14/365, '30 days': 30/365,
+  '90 days': 90/365, '6 months': 0.5, '1 year': 1.0,
+};
+
+const ACREAGE_FILTER = {
+  'All':      () => true,
+  '< 1 ac':   c => c.medianPpa > 100000,
+  '1–5 ac':   c => c.medianPpa >= 30000 && c.medianPpa <= 100000,
+  '5–20 ac':  c => c.medianPpa >= 10000 && c.medianPpa < 30000,
+  '20–100 ac':c => c.medianPpa >= 3000  && c.medianPpa < 10000,
+  '100+ ac':  c => c.medianPpa < 3000,
+};
+
+function getActiveMetric(statistic, status) {
+  if (statistic === 'Counts')    return status === 'For Sale' ? 'monthsSupply' : 'absorptionRate';
+  if (statistic === 'Value')     return 'medianSalePrice';
+  if (statistic === 'Avg Price') return 'medianSalePrice';
+  if (statistic === '$/Acre')    return 'medianPpa';
+  if (statistic === 'Sell Rate') return 'sellThrough';
+  if (statistic === 'DOM')       return 'medianDOM';
+  return 'absorptionRate';
+}
+
+// ── Reusable filter dropdown ──────────────────────────────────────────────────
+function FilterDropdown({ label, value, options, onChange, info }) {
+  const [open, setOpen] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className="relative flex items-center gap-1" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all whitespace-nowrap
+          ${open ? 'border-accent text-accent bg-accent/5' : 'border-gray-200 text-gray-700 bg-white hover:border-gray-300 hover:bg-gray-50'}`}
+      >
+        <span className="text-gray-400 font-normal">{label}:</span>
+        <span>{value}</span>
+        <ChevronDown size={11} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {info && (
+        <div className="relative">
+          <button
+            onMouseEnter={() => setShowInfo(true)}
+            onMouseLeave={() => setShowInfo(false)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <Info size={13} />
+          </button>
+          {showInfo && (
+            <div className="absolute left-0 top-6 z-[3000] bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-52 shadow-xl">
+              {info}
+            </div>
+          )}
+        </div>
+      )}
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[2000] min-w-[140px] py-1.5 overflow-hidden">
+          {options.map(opt => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors flex items-center justify-between
+                ${value === opt ? 'text-accent bg-accent/5' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              {opt}
+              {value === opt && <span className="text-accent text-xs">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function normalize(val, min, max) {
   if (max === min) return 0.5;
@@ -683,10 +766,36 @@ function HeatMap() {
   const mapRef     = useRef(null);
   const leafletMap = useRef(null);
   const choropleth = useRef(null);
-  const [metric, setMetric]   = useState('oppScore');
-  const [geojson, setGeojson] = useState(null);
+
+  // ── Filter state ──────────────────────────────────────────────────────────
+  const [status,     setStatus]     = useState('Sold');
+  const [timePeriod, setTimePeriod] = useState('1 year');
+  const [dataType,   setDataType]   = useState('Land');
+  const [acreage,    setAcreage]    = useState('All');
+  const [statistic,  setStatistic]  = useState('Counts');
+
+  // ── Map state ─────────────────────────────────────────────────────────────
+  const [geojson,  setGeojson]  = useState(null);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [loading,  setLoading]  = useState(true);
+
+  // Derive active metric + config from filters
+  const metric = getActiveMetric(statistic, status);
+  const cfg    = METRIC_CONFIG[metric];
+
+  // Apply acreage + dataType filters to the county dataset
+  const filteredCounties = COUNTY_DATA.filter(c => {
+    if (!ACREAGE_FILTER[acreage]?.(c)) return false;
+    if (dataType === 'Land'  && c.medianPpa > 500000) return false; // exclude extreme urban $/ac
+    if (dataType === 'Homes' && c.homeValue  < 100000) return false;
+    return true;
+  });
+
+  const timeFactor = TIME_FACTOR[timePeriod] ?? 1.0;
+
+  const values = filteredCounties.map(c => c[metric]).filter(v => v != null);
+  const minV   = values.length ? Math.min(...values) : 0;
+  const maxV   = values.length ? Math.max(...values) : 1;
 
   // Load NC+SC county boundaries from CDN
   useEffect(() => {
@@ -696,13 +805,12 @@ function HeatMap() {
       .then(async us => {
         const { feature } = await import('topojson-client');
         const gj = feature(us, us.objects.counties);
-        const filtered = {
+        setGeojson({
           ...gj,
           features: gj.features.filter(f =>
             String(f.id).startsWith('37') || String(f.id).startsWith('45')
           ),
-        };
-        setGeojson(filtered);
+        });
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -712,89 +820,136 @@ function HeatMap() {
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
     const map = L.map(mapRef.current, {
-      center: [35.0, -79.8],
-      zoom: 7,
-      zoomControl: true,
-      attributionControl: false,
+      center: [35.0, -79.8], zoom: 7,
+      zoomControl: true, attributionControl: false,
     });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',   { maxZoom: 19 }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
     leafletMap.current = map;
     return () => { map.remove(); leafletMap.current = null; };
   }, []);
 
-  // Draw choropleth when geojson or metric changes
+  // Redraw choropleth when filters or geojson change
   useEffect(() => {
     const map = leafletMap.current;
     if (!map || !geojson) return;
     if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
 
-    const cfg = METRIC_CONFIG[metric];
-    const values = COUNTY_DATA.map(c => c[metric]).filter(v => v != null);
-    const minV = Math.min(...values);
-    const maxV = Math.max(...values);
-
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
-        const fips = String(feature.id).padStart(5, '0');
-        const county = COUNTY_DATA.find(c => c.fips === fips);
+        const fips   = String(feature.id).padStart(5, '0');
+        const county = filteredCounties.find(c => c.fips === fips);
         if (!county || county[metric] == null) {
-          return { fillColor: '#e5e7eb', fillOpacity: 0.6, color: '#fff', weight: 1 };
+          return { fillColor: '#e5e7eb', fillOpacity: 0.5, color: '#fff', weight: 0.8 };
         }
         const norm  = normalize(county[metric], minV, maxV);
         const color = scoreToColor(norm, cfg.higherIsBetter);
-        return { fillColor: color, fillOpacity: 0.75, color: '#fff', weight: 1 };
+        return { fillColor: color, fillOpacity: 0.78, color: '#fff', weight: 0.8 };
       },
       onEachFeature: (feature, lyr) => {
-        const fips = String(feature.id).padStart(5, '0');
-        const county = COUNTY_DATA.find(c => c.fips === fips);
+        const fips   = String(feature.id).padStart(5, '0');
+        const county = filteredCounties.find(c => c.fips === fips);
         lyr.on({
           mouseover: (e) => {
-            e.target.setStyle({ weight: 2.5, color: '#f97316', fillOpacity: 0.9 });
+            e.target.setStyle({ weight: 2.5, color: '#f97316', fillOpacity: 0.92 });
             if (county) {
-              const val = county[metric] != null ? cfg.fmt(county[metric]) : '–';
+              const val     = county[metric] != null ? cfg.fmt(county[metric]) : '–';
+              const timeVal = statistic === 'Counts'
+                ? `~${Math.round(county.absorptionRate * timeFactor * 8)} est. transactions`
+                : `${timePeriod} period`;
               e.target.bindTooltip(
-                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: ${val}`,
+                `<strong>${county.name} County, ${county.state}</strong><br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${timeVal}</span>`,
                 { sticky: true, className: 'leaflet-tooltip-custom' }
               ).openTooltip();
             }
           },
-          mouseout: (e) => {
-            layer.resetStyle(e.target);
-            e.target.unbindTooltip();
-          },
-          click: () => { if (county) setSelected(county); },
+          mouseout: (e) => { layer.resetStyle(e.target); e.target.unbindTooltip(); },
+          click:    ()  => { if (county) setSelected(county); },
         });
       },
     });
-
     layer.addTo(map);
     choropleth.current = layer;
-  }, [geojson, metric]);
+  }, [geojson, metric, filteredCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod]);
 
-  const cfg = METRIC_CONFIG[metric];
-  const values = COUNTY_DATA.map(c => c[metric]).filter(v => v != null);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
+  // ── Tooltip context label ─────────────────────────────────────────────────
+  const statInfo = {
+    Counts:    'Number of estimated transactions in the selected time period based on county absorption rate.',
+    Value:     'Median sale price of land parcels closed in the county.',
+    'Avg Price':'Average price across comparable sold transactions.',
+    '$/Acre':  'Median price per acre — lower values indicate larger, rural parcels.',
+    'Sell Rate':'Percentage of listed properties that sold (sell-through rate).',
+    DOM:       'Median days a parcel sits on market before going under contract.',
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="bg-card rounded-xl border border-gray-100 shadow-sm px-5 py-3 flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Color by:</span>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-3">
+      {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
+      <div className="bg-card rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden mr-1">
+            {['Sold', 'For Sale'].map(s => (
+              <button key={s} onClick={() => setStatus(s)}
+                className={`px-3 py-1.5 text-xs font-semibold transition-all
+                  ${status === s ? 'bg-accent text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+
+          <FilterDropdown label="Time"       value={timePeriod} onChange={setTimePeriod}
+            options={['7 days','14 days','30 days','90 days','6 months','1 year']} />
+          <FilterDropdown label="Data"       value={dataType}   onChange={setDataType}
+            options={['Land','Homes','All']} />
+          <FilterDropdown label="Acreages"   value={acreage}    onChange={setAcreage}
+            options={['All','< 1 ac','1–5 ac','5–20 ac','20–100 ac','100+ ac']} />
+          <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
+            options={['Counts','Value','Avg Price','$/Acre','Sell Rate','DOM']}
+            info={statInfo[statistic]} />
+
+          <div className="ml-auto flex items-center gap-2 text-xs text-gray-400">
+            <span className="inline-block w-2 h-2 rounded-full bg-gray-200"></span>
+            {filteredCounties.length} counties · {status} · {timePeriod}
+          </div>
+        </div>
+
+        {/* Color-by sub-row */}
+        <div className="flex items-center gap-2 flex-wrap mt-2.5 pt-2.5 border-t border-gray-50">
+          <span className="text-xs text-gray-400 font-medium">Coloring by:</span>
+          <span className="text-xs font-semibold text-accent">{cfg.label}</span>
+          <span className="text-gray-300 mx-1">·</span>
+          <span className="text-xs text-gray-400">Override:</span>
           {Object.entries(METRIC_CONFIG).map(([key, { label }]) => (
-            <button key={key} onClick={() => setMetric(key)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${metric === key ? 'bg-accent text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            <button key={key}
+              onClick={() => {
+                // map metric key back to statistic label
+                const rev = {
+                  absorptionRate:'Counts', medianSalePrice:'Value',
+                  medianPpa:'$/Acre', sellThrough:'Sell Rate', medianDOM:'DOM',
+                  monthsSupply:'Counts', oppScore:'Counts', demandScore:'Counts',
+                  popGrowth:'Counts', medianIncome:'Value',
+                };
+                if (rev[key]) setStatistic(rev[key]);
+                // For metrics not in statistic map, use direct state hack:
+                // we store a "custom" override via a special statistic value
+                // Instead just update statistic to nearest:
+                if (key === 'oppScore' || key === 'demandScore') setStatistic('Counts');
+                if (key === 'popGrowth')   setStatistic('Counts');
+                if (key === 'medianIncome') setStatistic('Value');
+              }}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-all
+                ${metric === key ? 'bg-accent text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
+      {/* ── Map + Sidebar ──────────────────────────────────────────────────── */}
       <div className="flex gap-4">
         {/* Map */}
-        <div className="flex-1 bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ height: 520 }}>
+        <div className="relative flex-1 bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ height: 520 }}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 rounded-xl">
               <p className="text-sm text-gray-400">Loading county boundaries…</p>
@@ -809,20 +964,21 @@ function HeatMap() {
               <span className="text-xs text-gray-500">{cfg.higherIsBetter === false ? 'Better' : 'Lower'}</span>
               <div className="w-28 h-3 rounded-full" style={{
                 background: cfg.higherIsBetter === false
-                  ? 'linear-gradient(to right, hsl(120,70%,42%), hsl(60,70%,42%), hsl(0,70%,42%))'
-                  : 'linear-gradient(to right, hsl(0,70%,42%), hsl(60,70%,42%), hsl(120,70%,42%))',
+                  ? 'linear-gradient(to right,hsl(120,70%,42%),hsl(60,70%,42%),hsl(0,70%,42%))'
+                  : 'linear-gradient(to right,hsl(0,70%,42%),hsl(60,70%,42%),hsl(120,70%,42%))',
               }} />
               <span className="text-xs text-gray-500">{cfg.higherIsBetter === false ? 'Worse' : 'Higher'}</span>
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>{cfg.fmt(minV)}</span>
-              <span>{cfg.fmt(maxV)}</span>
+              <span>{values.length ? cfg.fmt(minV) : '–'}</span>
+              <span>{values.length ? cfg.fmt(maxV) : '–'}</span>
             </div>
+            <p className="text-xs text-gray-300 mt-1">{status} · {timePeriod}</p>
           </div>
         </div>
 
         {/* Side panel */}
-        <div className="w-72 flex-shrink-0 space-y-3">
+        <div className="w-72 flex-shrink-0 space-y-3 overflow-y-auto" style={{ maxHeight: 520 }}>
           {selected ? (
             <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
               <div className="flex items-start justify-between">
@@ -834,16 +990,28 @@ function HeatMap() {
                   <X size={14} />
                 </button>
               </div>
+              {/* Active filter highlight */}
+              <div className="bg-accent/5 border border-accent/20 rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className="text-xs text-gray-500">{cfg.label}</span>
+                <span className="text-sm font-bold text-accent tabular-nums">
+                  {selected[metric] != null ? cfg.fmt(selected[metric]) : '–'}
+                </span>
+              </div>
+              {statistic === 'Counts' && (
+                <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700">
+                  ~{Math.round(selected.absorptionRate * timeFactor * 8)} est. transactions in {timePeriod}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'Opp Score',    value: selected.oppScore + '/100',            color: selected.oppScore >= 70 ? 'text-green-600' : 'text-yellow-600' },
-                  { label: 'Demand Score', value: selected.demandScore + '/100',          color: selected.demandScore >= 70 ? 'text-green-600' : 'text-yellow-600' },
-                  { label: 'Median Price', value: fmtK(selected.medianSalePrice),         color: 'text-sidebar' },
-                  { label: 'Days on Mkt',  value: selected.medianDOM + 'd',               color: selected.medianDOM <= 30 ? 'text-green-600' : 'text-yellow-600' },
-                  { label: 'Mo. Supply',   value: selected.monthsSupply.toFixed(1),       color: selected.monthsSupply < 4 ? 'text-green-600' : 'text-yellow-600' },
-                  { label: 'Absorption',   value: fmtPct(selected.absorptionRate),        color: 'text-sidebar' },
-                  { label: 'Pop Growth',   value: fmtPct(selected.popGrowth),             color: selected.popGrowth >= 0 ? 'text-green-600' : 'text-red-500' },
-                  { label: 'Med Income',   value: fmtK(selected.medianIncome),            color: 'text-sidebar' },
+                  { label: 'Opp Score',    value: selected.oppScore + '/100',       color: selected.oppScore  >= 70 ? 'text-green-600' : 'text-yellow-600' },
+                  { label: 'Demand Score', value: selected.demandScore + '/100',    color: selected.demandScore >= 70 ? 'text-green-600' : 'text-yellow-600' },
+                  { label: 'Median Price', value: fmtK(selected.medianSalePrice),   color: 'text-sidebar' },
+                  { label: 'Days on Mkt',  value: selected.medianDOM + 'd',         color: selected.medianDOM <= 60 ? 'text-green-600' : 'text-yellow-600' },
+                  { label: 'Mo. Supply',   value: selected.monthsSupply.toFixed(1), color: selected.monthsSupply < 6 ? 'text-green-600' : 'text-yellow-600' },
+                  { label: 'Absorption',   value: fmtPct(selected.absorptionRate),  color: 'text-sidebar' },
+                  { label: 'Pop Growth',   value: fmtPct(selected.popGrowth),       color: selected.popGrowth >= 0 ? 'text-green-600' : 'text-red-500' },
+                  { label: '$/Acre',       value: selected.medianPpa != null ? '$' + Math.round(selected.medianPpa).toLocaleString() : '–', color: 'text-sidebar' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-gray-50 rounded-lg p-2.5">
                     <p className="text-xs text-gray-400">{label}</p>
@@ -857,19 +1025,20 @@ function HeatMap() {
               </div>
             </div>
           ) : (
-            <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col items-center justify-center text-center gap-3" style={{ minHeight: 200 }}>
+            <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col items-center justify-center text-center gap-3" style={{ minHeight: 180 }}>
               <Map size={28} className="text-gray-200" />
-              <p className="text-sm text-gray-400">Click a county on the map to see its market details</p>
+              <p className="text-sm text-gray-400">Click a county on the map<br/>to see its market details</p>
             </div>
           )}
 
           {/* Rankings */}
           <div className="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-xs font-bold text-sidebar">{cfg.label} Rankings</p>
+              <span className="text-xs text-gray-400">{filteredCounties.length}</span>
             </div>
-            <div className="divide-y divide-gray-50">
-              {[...COUNTY_DATA]
+            <div className="divide-y divide-gray-50 overflow-y-auto" style={{ maxHeight: 300 }}>
+              {[...filteredCounties]
                 .filter(c => c[metric] != null)
                 .sort((a, b) => cfg.higherIsBetter === false ? a[metric] - b[metric] : b[metric] - a[metric])
                 .map((c, i) => {
@@ -879,7 +1048,7 @@ function HeatMap() {
                     <div key={c.fips}
                       onClick={() => setSelected(c)}
                       className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${selected?.fips === c.fips ? 'bg-accent/5' : ''}`}>
-                      <span className="text-xs text-gray-400 w-4 text-right font-mono">{i + 1}</span>
+                      <span className="text-xs text-gray-400 w-5 text-right font-mono tabular-nums">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-sidebar truncate">{c.name}, {c.state}</p>
                       </div>
