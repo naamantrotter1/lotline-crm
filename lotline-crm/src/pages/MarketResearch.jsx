@@ -821,10 +821,38 @@ function scoreToColor(norm, higherIsBetter) {
   return `hsl(${hue}, ${sat}%, ${lght}%)`;
 }
 
+// ── Zip choropleth helpers ────────────────────────────────────────────────────
+function getFeatureCentroid(feature) {
+  const coords = feature.geometry.type === 'Polygon'
+    ? feature.geometry.coordinates[0]
+    : feature.geometry.coordinates[0][0];
+  let sx = 0, sy = 0;
+  coords.forEach(([x, y]) => { sx += x; sy += y; });
+  return [sx / coords.length, sy / coords.length];
+}
+
+function pointInFeature([px, py], feature) {
+  let inside = false;
+  const polys = feature.geometry.type === 'Polygon'
+    ? [feature.geometry.coordinates]
+    : feature.geometry.coordinates;
+  polys.forEach(poly => {
+    const ring = poly[0];
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi))
+        inside = !inside;
+    }
+  });
+  return inside;
+}
+
 function HeatMap() {
-  const mapRef     = useRef(null);
-  const leafletMap = useRef(null);
-  const choropleth = useRef(null);
+  const mapRef       = useRef(null);
+  const leafletMap   = useRef(null);
+  const choropleth   = useRef(null);
+  const zipLayer     = useRef(null);
+  const zipCountyMap = useRef({});
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [groupBy,    setGroupBy]    = useState('County');
@@ -865,9 +893,11 @@ function HeatMap() {
   }, [zipFilter]);
 
   // ── Map state ─────────────────────────────────────────────────────────────
-  const [geojson,  setGeojson]  = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [geojson,     setGeojson]     = useState(null);
+  const [zipGeojson,  setZipGeojson]  = useState(null);
+  const [zipLoading,  setZipLoading]  = useState(false);
+  const [selected,    setSelected]    = useState(null);
+  const [loading,     setLoading]     = useState(true);
 
   // Derive active metric + config from filters
   const metric = getActiveMetric(statistic, status);
@@ -927,6 +957,33 @@ function HeatMap() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Load zip code boundaries when Zip Code view is selected
+  useEffect(() => {
+    if (groupBy !== 'Zip Code' || zipGeojson) return;
+    setZipLoading(true);
+    Promise.all([
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/nc_north_carolina_zip_codes_geo.min.json').then(r => r.json()),
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/sc_south_carolina_zip_codes_geo.min.json').then(r => r.json()),
+    ]).then(([nc, sc]) => {
+      setZipGeojson({ type: 'FeatureCollection', features: [...nc.features, ...sc.features] });
+      setZipLoading(false);
+    }).catch(() => setZipLoading(false));
+  }, [groupBy, zipGeojson]);
+
+  // Pre-compute zip → county FIPS mapping once both GeoJSONs are available
+  useEffect(() => {
+    if (!zipGeojson || !geojson || Object.keys(zipCountyMap.current).length > 0) return;
+    const mapping = {};
+    zipGeojson.features.forEach(zf => {
+      const zip = zf.properties.ZCTA5CE10 || zf.properties.ZCTA5CE20 || zf.properties.ZIP_CODE;
+      if (!zip) return;
+      const c = getFeatureCentroid(zf);
+      const match = geojson.features.find(cf => pointInFeature(c, cf));
+      if (match) mapping[zip] = String(match.id).padStart(5, '0');
+    });
+    zipCountyMap.current = mapping;
+  }, [zipGeojson, geojson]);
+
   // Init Leaflet
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
@@ -940,11 +997,12 @@ function HeatMap() {
     return () => { map.remove(); leafletMap.current = null; };
   }, []);
 
-  // Redraw choropleth when filters or geojson change
+  // Redraw county choropleth when filters or geojson change
   useEffect(() => {
     const map = leafletMap.current;
-    if (!map || !geojson) return;
+    if (!map || !geojson || groupBy === 'Zip Code') return;
     if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
+    if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
 
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
@@ -981,7 +1039,49 @@ function HeatMap() {
     });
     layer.addTo(map);
     choropleth.current = layer;
-  }, [geojson, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
+  }, [geojson, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType, groupBy]);
+
+  // Redraw zip code choropleth
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map || !zipGeojson || groupBy !== 'Zip Code') return;
+    if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
+    if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
+
+    const layer = L.geoJSON(zipGeojson, {
+      style: (feature) => {
+        const zip    = feature.properties.ZCTA5CE10 || feature.properties.ZCTA5CE20 || feature.properties.ZIP_CODE;
+        const fips   = zipCountyMap.current[zip];
+        const county = fips ? displayCounties.find(c => c.fips === fips) : null;
+        if (!county || county[metric] == null)
+          return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 0.5 };
+        const norm  = normalize(county[metric], minV, maxV);
+        const color = scoreToColor(norm, cfg.higherIsBetter);
+        return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 0.5 };
+      },
+      onEachFeature: (feature, lyr) => {
+        const zip    = feature.properties.ZCTA5CE10 || feature.properties.ZCTA5CE20 || feature.properties.ZIP_CODE;
+        const fips   = zipCountyMap.current[zip];
+        const county = fips ? displayCounties.find(c => c.fips === fips) : null;
+        lyr.on({
+          mouseover: (e) => {
+            e.target.setStyle({ weight: 2, color: '#16a34a', fillOpacity: 0.95 });
+            if (county) {
+              const val = county[metric] != null ? cfg.fmt(county[metric]) : '–';
+              e.target.bindTooltip(
+                `<strong>ZIP ${zip}</strong><br/>${county.name} County, ${county.state}<br/>${cfg.label}: <strong>${val}</strong><br/><span style="color:#888;font-size:11px">${dataType} · ${timePeriod}</span>`,
+                { sticky: true, className: 'leaflet-tooltip-custom' }
+              ).openTooltip();
+            }
+          },
+          mouseout: (e) => { layer.resetStyle(e.target); e.target.unbindTooltip(); },
+          click:    ()  => { if (county) setSelected(county); },
+        });
+      },
+    });
+    layer.addTo(map);
+    zipLayer.current = layer;
+  }, [zipGeojson, groupBy, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
 
   // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
   const statInfo = {
@@ -1001,9 +1101,9 @@ function HeatMap() {
 
         {/* Row 1 */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 flex-wrap">
-          {/* County / State toggle */}
+          {/* County / State / Zip Code toggle */}
           <div className="flex mr-1">
-            {['County', 'State'].map(v => (
+            {['County', 'State', 'Zip Code'].map(v => (
               <button key={v}
                 onClick={() => setGroupBy(v)}
                 className={`px-4 py-1.5 text-sm font-semibold transition-all first:rounded-l-lg last:rounded-r-lg border
@@ -1070,7 +1170,10 @@ function HeatMap() {
           </div>
 
           <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-            <span>{displayCounties.length} counties shown</span>
+            {zipLoading
+              ? <span className="text-green-500 font-medium">Loading zip boundaries…</span>
+              : <span>{displayCounties.length} {groupBy === 'Zip Code' ? 'zip codes' : 'counties'} shown</span>
+            }
           </div>
         </div>
 
