@@ -862,6 +862,13 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
+  // ── Map state (declared early so searchQuery useEffect can reference geojson) ─
+  const [geojson,     setGeojson]     = useState(null);
+  const [zipGeojson,  setZipGeojson]  = useState(null);
+  const [zipLoading,  setZipLoading]  = useState(false);
+  const [selected,    setSelected]    = useState(null);
+  const [loading,     setLoading]     = useState(true);
+
   // ── Unified search (county name or ZIP) ──────────────────────────────────
   const [searchQuery,  setSearchQuery]  = useState('');
   const [searchInfo,   setSearchInfo]   = useState(null); // { lat, lon, fips, label, type:'zip'|'county' }
@@ -931,13 +938,6 @@ function HeatMap() {
       setSearchStatus('');
     }
   }, [searchQuery, geojson]);
-
-  // ── Map state ─────────────────────────────────────────────────────────────
-  const [geojson,     setGeojson]     = useState(null);
-  const [zipGeojson,  setZipGeojson]  = useState(null);
-  const [zipLoading,  setZipLoading]  = useState(false);
-  const [selected,    setSelected]    = useState(null);
-  const [loading,     setLoading]     = useState(true);
 
   // Derive active metric + config from filters
   const metric = getActiveMetric(statistic, status);
