@@ -1339,14 +1339,12 @@ function HeatMap() {
           <div className="absolute bottom-5 left-5 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg px-4 py-3 pointer-events-none min-w-[180px]">
             <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">{cfg.label}</p>
             <div className="relative h-3 rounded-full overflow-hidden mb-1.5" style={{
-              background: cfg.higherIsBetter === false
-                ? 'linear-gradient(to right, hsl(120,85%,44%), hsl(60,85%,44%), hsl(0,85%,38%))'
-                : 'linear-gradient(to right, hsl(0,85%,38%), hsl(60,85%,44%), hsl(120,85%,44%))',
+              background: 'linear-gradient(to right, hsl(0,85%,38%), hsl(60,85%,44%), hsl(120,85%,44%))',
             }} />
             <div className="flex justify-between text-xs text-gray-500">
-              <span>{values.length ? cfg.fmt(minV) : '–'}</span>
+              <span>{values.length ? cfg.fmt(cfg.higherIsBetter === false ? maxV : minV) : '–'}</span>
               <span className="text-gray-400">→</span>
-              <span>{values.length ? cfg.fmt(maxV) : '–'}</span>
+              <span>{values.length ? cfg.fmt(cfg.higherIsBetter === false ? minV : maxV) : '–'}</span>
             </div>
             <p className="text-xs text-gray-400 mt-1.5 border-t border-gray-100 pt-1.5">
               {status} · {timePeriod} · {dataType}
