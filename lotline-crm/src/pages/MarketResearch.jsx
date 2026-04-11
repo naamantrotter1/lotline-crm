@@ -1278,10 +1278,13 @@ function makeThresholdNorm(breaks) {
 
 function scoreToColor(norm, higherIsBetter) {
   const t    = higherIsBetter === false ? (1 - norm) : norm;
-  // Red (low) → Yellow (mid) → Green (high)
-  const hue  = Math.round(t * 120);  // 0 (red) → 60 (yellow) → 120 (green)
+  const hue  = Math.round(t * 120);
   const sat  = 85;
-  const lght = Math.round(38 + t * 12); // 38% (dark red) → 50% (bright green)
+  // Lightness peaks in the middle (yellow) and drops at both ends,
+  // making deep red and deep green clearly distinct from their neighbors.
+  const lght = t < 0.5
+    ? Math.round(38 + t * 16)          // 38% at t=0 (red) → 46% at t=0.5 (yellow)
+    : Math.round(46 - (t - 0.5) * 24); // 46% at t=0.5 → 34% at t=1 (green)
   return `hsl(${hue}, ${sat}%, ${lght}%)`;
 }
 
@@ -1876,16 +1879,16 @@ function HeatMap() {
                 ? [
                     { label: 'High',    color: 'hsl(0,85%,38%)',   val: f(b3) + '+' },
                     { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: f(b2) + '–' + f(b3) },
-                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: f(b1) + '–' + f(b2) },
-                    { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: f(b0) + '–' + f(b1) },
-                    { label: 'Low',     color: 'hsl(120,85%,44%)', val: '<' + f(b0) },
+                    { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: f(b1) + '–' + f(b2) },
+                    { label: 'Midlow',  color: 'hsl(90,85%,40%)',  val: f(b0) + '–' + f(b1) },
+                    { label: 'Low',     color: 'hsl(120,85%,34%)', val: '<' + f(b0) },
                   ]
                 : [
                     { label: 'Low',     color: 'hsl(0,85%,38%)',   val: '<' + f(b0) },
                     { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: f(b0) + '–' + f(b1) },
-                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: f(b1) + '–' + f(b2) },
-                    { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: f(b2) + '–' + f(b3) },
-                    { label: 'High',    color: 'hsl(120,85%,44%)', val: f(b3) + '+' },
+                    { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: f(b1) + '–' + f(b2) },
+                    { label: 'Midhigh', color: 'hsl(90,85%,40%)',  val: f(b2) + '–' + f(b3) },
+                    { label: 'High',    color: 'hsl(120,85%,34%)', val: f(b3) + '+' },
                   ];
             } else {
               const sorted = [...values].sort((a, b) => a - b);
@@ -1894,16 +1897,16 @@ function HeatMap() {
                 ? [
                     { label: 'High',    color: 'hsl(0,85%,38%)',   val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
                     { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
-                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
-                    { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
-                    { label: 'Low',     color: 'hsl(120,85%,44%)', val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
+                    { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
+                    { label: 'Midlow',  color: 'hsl(90,85%,40%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
+                    { label: 'Low',     color: 'hsl(120,85%,34%)', val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
                   ]
                 : [
                     { label: 'Low',     color: 'hsl(0,85%,38%)',   val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
                     { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
-                    { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
-                    { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
-                    { label: 'High',    color: 'hsl(120,85%,44%)', val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
+                    { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
+                    { label: 'Midhigh', color: 'hsl(90,85%,40%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
+                    { label: 'High',    color: 'hsl(120,85%,34%)', val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
                   ];
             }
             return (
