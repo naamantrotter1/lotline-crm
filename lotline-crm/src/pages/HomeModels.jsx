@@ -160,14 +160,33 @@ export default function HomeModels() {
                 <TH col="sqft" label="Sq Ft" />
                 <TH col="price" label="Price" />
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Link</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((model) => (
-                <tr key={model.id} className="border-b border-gray-100 hover:bg-white/60 transition-colors">
+                <tr key={model.id} className="group relative border-b border-gray-100 hover:bg-white/60 transition-colors">
                   <td className="py-3 px-4 text-sm font-medium text-sidebar">{model.manufacturer}</td>
-                  <td className="py-3 px-4 text-sm text-gray-700">{model.model}</td>
+                  <td className="py-3 px-4 text-sm text-gray-700">
+                    <span className="flex items-center gap-2">
+                      {model.model}
+                      <span className="hidden group-hover:flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(model)}
+                          className="text-gray-400 hover:text-accent transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(model.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </span>
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                       model.sections === 'Single-Wide'
@@ -189,24 +208,6 @@ export default function HomeModels() {
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(model)}
-                        className="text-gray-400 hover:text-accent transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(model.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}
