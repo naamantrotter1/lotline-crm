@@ -33,7 +33,7 @@ const navSections = [
       { icon: Globe, label: 'Map Search', to: '/flood-map' },
       { icon: Map, label: 'Market Research', to: '/intelligence' },
       { icon: Home, label: 'Homes', to: '/homes' },
-      { icon: Landmark, label: 'Capital', to: '/lending' },
+      { icon: Landmark, label: 'Capital & Partnerships', to: '/lending' },
       { icon: Calculator, label: 'Deal Calculator', to: '/calculator' },
       { icon: Building, label: 'Home Models', to: '/home-models' },
       { icon: Database, label: 'County Database', to: '/counties' },
