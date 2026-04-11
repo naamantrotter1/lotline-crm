@@ -1847,20 +1847,51 @@ function HeatMap() {
           <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
 
           {/* Legend — bottom left, LandPortal style */}
-          <div className="absolute bottom-5 left-5 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg px-4 py-3 pointer-events-none min-w-[180px]">
-            <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">{cfg.label}</p>
-            <div className="relative h-3 rounded-full overflow-hidden mb-1.5" style={{
-              background: 'linear-gradient(to right, hsl(0,85%,38%), hsl(60,85%,44%), hsl(120,85%,44%))',
-            }} />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>{values.length ? cfg.fmt(cfg.higherIsBetter === false ? maxV : minV) : '–'}</span>
-              <span className="text-gray-400">→</span>
-              <span>{values.length ? cfg.fmt(cfg.higherIsBetter === false ? minV : maxV) : '–'}</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5 border-t border-gray-100 pt-1.5">
-              {status} · {timePeriod} · {dataType}
-            </p>
-          </div>
+          {(() => {
+            const sorted = [...values].sort((a, b) => a - b);
+            const pct = (p) => sorted.length ? sorted[Math.round(p * (sorted.length - 1))] : null;
+            const isInverse = cfg.higherIsBetter === false;
+            // Left of gradient = red (worst), right = green (best)
+            // For inverse metrics (DOM, monthsSupply): worst = highest value
+            const segments = isInverse
+              ? [
+                  { label: 'High',    color: 'hsl(0,85%,38%)',   val: pct(1)    },
+                  { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: pct(0.75) },
+                  { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  },
+                  { label: 'Midlow',  color: 'hsl(90,85%,44%)',  val: pct(0.25) },
+                  { label: 'Low',     color: 'hsl(120,85%,44%)', val: pct(0)    },
+                ]
+              : [
+                  { label: 'Low',     color: 'hsl(0,85%,38%)',   val: pct(0)    },
+                  { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: pct(0.25) },
+                  { label: 'Medium',  color: 'hsl(60,85%,44%)',  val: pct(0.5)  },
+                  { label: 'Midhigh', color: 'hsl(90,85%,44%)',  val: pct(0.75) },
+                  { label: 'High',    color: 'hsl(120,85%,44%)', val: pct(1)    },
+                ];
+            return (
+              <div className="absolute bottom-5 left-5 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg px-4 py-3 pointer-events-none" style={{ minWidth: 220 }}>
+                <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Color scale · {cfg.label}</p>
+                {/* Gradient bar */}
+                <div className="flex h-3 rounded-full overflow-hidden mb-1">
+                  {segments.map((s, i) => (
+                    <div key={i} style={{ flex: 1, background: s.color }} />
+                  ))}
+                </div>
+                {/* 5 labels with values */}
+                <div className="flex">
+                  {segments.map((s, i) => (
+                    <div key={i} className="flex flex-col items-center" style={{ flex: 1 }}>
+                      <span className="text-[10px] font-semibold text-gray-600 leading-tight">{s.label}</span>
+                      <span className="text-[9px] text-gray-400 leading-tight">{s.val != null ? cfg.fmt(s.val) : '–'}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5 border-t border-gray-100 pt-1.5">
+                  {status} · {timePeriod} · {dataType}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Stat badge — top right, shows active filter context */}
           <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-md px-3 py-2">
