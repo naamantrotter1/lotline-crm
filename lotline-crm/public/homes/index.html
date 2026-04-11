@@ -107,6 +107,26 @@
     </div>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <!-- ORDER DRAWER -->
+  <div class="order-overlay" id="orderOverlay"></div>
+  <div class="order-drawer" id="orderDrawer">
+    <div class="drawer-header">
+      <span class="drawer-title">Order a Home</span>
+      <button class="drawer-close" id="drawerClose">&times;</button>
+    </div>
+    <div class="order-progress" id="orderProgress">
+      <div class="progress-steps">
+        <div class="progress-step" id="ps1"></div>
+        <div class="progress-step" id="ps2"></div>
+        <div class="progress-step" id="ps3"></div>
+        <div class="progress-step" id="ps4"></div>
+      </div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-footer" id="drawerFooter"></div>
+  </div>
+
+  <script src="app.js?v=4"></script>
 </body>
 </html>

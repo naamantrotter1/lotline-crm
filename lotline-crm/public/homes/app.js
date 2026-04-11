@@ -101,7 +101,10 @@ function renderHomes() {
             <div class="card-price">${h.price > 0 ? '$' + h.price.toLocaleString() : (h.priceLabel || 'Call for Price')}</div>
             <div class="card-price-note">${h.price > 0 ? 'includes delivery &amp; taxes' : 'contact us for pricing'}</div>
           </div>
-          <button class="btn btn-red btn-card">View Details</button>
+          <div class="card-footer-btns">
+            <button class="btn btn-outline btn-card" onclick="event.stopPropagation();openModal(${h.id})">View Details</button>
+            <button class="btn btn-red btn-card" onclick="event.stopPropagation();openOrderDrawer(${h.id})">Order</button>
+          </div>
         </div>
       </div>
     </div>
@@ -283,5 +286,210 @@ document.getElementById('contactForm').addEventListener('submit', async function
 document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('navLinks').classList.toggle('mobile-open');
 });
+
+// ===== ORDER DRAWER =====
+let _orderHome = null;
+let _orderStep = 1;
+let _orderData = {};
+
+const STEP_LABELS = ['Confirm Selection', 'Your Info', 'Delivery Details', 'Financing'];
+
+function openOrderDrawer(id) {
+  const h = homes.find(x => x.id === id);
+  if (!h) return;
+  _orderHome = h;
+  _orderStep = 1;
+  _orderData = {};
+  // Pre-fill from CRM session if available
+  try {
+    const u = JSON.parse(localStorage.getItem('crm_user') || '{}');
+    if (u.name) _orderData.name = u.name;
+    if (u.email) _orderData.email = u.email;
+  } catch {}
+  document.getElementById('orderOverlay').classList.add('open');
+  document.getElementById('orderDrawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderOrderStep();
+}
+
+function closeOrderDrawer() {
+  document.getElementById('orderOverlay').classList.remove('open');
+  document.getElementById('orderDrawer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('orderOverlay').addEventListener('click', closeOrderDrawer);
+document.getElementById('drawerClose').addEventListener('click', closeOrderDrawer);
+
+function renderOrderStep() {
+  const body = document.getElementById('drawerBody');
+  const footer = document.getElementById('drawerFooter');
+  const progressEl = document.getElementById('orderProgress');
+  const steps = document.querySelectorAll('.progress-step');
+  const label = document.getElementById('progressLabel');
+  const isConfirm = _orderStep === 5;
+
+  progressEl.style.display = isConfirm ? 'none' : '';
+  steps.forEach((el, i) => el.classList.toggle('done', i < _orderStep));
+
+  body.scrollTop = 0;
+
+  if (_orderStep === 1) {
+    label.textContent = 'Step 1 of 4 \u2014 Confirm Selection';
+    const h = _orderHome;
+    const thumb = h.photos && h.photos.length
+      ? `<img src="${h.photos[0]}" alt="${h.name}">`
+      : `<span>${h.emoji}</span>`;
+    const typeLabel = h.type === 'single' ? 'Single-Wide' : h.type === 'double' ? 'Double-Wide' : 'Triple-Wide';
+    body.innerHTML = `
+      <div class="order-home-preview">
+        <div class="order-home-thumb">${thumb}</div>
+        <div class="order-home-info">
+          <h3>${h.name}</h3>
+          <div class="order-home-price">${h.price > 0 ? '$' + h.price.toLocaleString() : (h.priceLabel || 'Call for Price')}</div>
+          <div class="order-home-specs">${h.beds} bed &middot; ${h.baths} bath &middot; ${h.sqft.toLocaleString()} sq ft &middot; ${typeLabel}</div>
+        </div>
+      </div>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.75;margin:0">
+        You're reserving your spot for the <strong>${h.name}</strong>. No payment is collected now &mdash; one of our home specialists will reach out to confirm details and walk you through next steps.
+      </p>`;
+    footer.innerHTML = `<button class="btn btn-red" onclick="orderNext()">Looks good, continue &rarr;</button>`;
+
+  } else if (_orderStep === 2) {
+    label.textContent = 'Step 2 of 4 \u2014 Your Info';
+    body.innerHTML = `
+      <div class="order-field">
+        <label>Full Name</label>
+        <input type="text" id="of-name" value="${_orderData.name || ''}" placeholder="Jane Smith" />
+      </div>
+      <div class="order-field">
+        <label>Phone Number</label>
+        <input type="tel" id="of-phone" value="${_orderData.phone || ''}" placeholder="(555) 000-0000" />
+      </div>
+      <div class="order-field">
+        <label>Email Address</label>
+        <input type="email" id="of-email" value="${_orderData.email || ''}" placeholder="jane@example.com" />
+      </div>
+      <div class="order-field">
+        <label>Best Time to Contact</label>
+        <select id="of-time">
+          <option value="">Select a time...</option>
+          ${['Morning','Afternoon','Evening'].map(v =>
+            `<option value="${v}"${_orderData.contactTime === v ? ' selected' : ''}>${v}</option>`
+          ).join('')}
+        </select>
+      </div>`;
+    footer.innerHTML = `<button class="btn btn-red" onclick="orderNext()">Continue &rarr;</button>`;
+
+  } else if (_orderStep === 3) {
+    label.textContent = 'Step 3 of 4 \u2014 Delivery Details';
+    body.innerHTML = `
+      <div class="order-field">
+        <label>Delivery Zip Code</label>
+        <input type="text" id="of-zip" value="${_orderData.zip || ''}" placeholder="e.g. 28601" maxlength="5" />
+      </div>
+      <div class="order-field" style="margin-top:18px">
+        <label>Do you own land?</label>
+        <div class="radio-group">
+          ${['Yes','No','Currently Looking'].map(v => `
+            <label class="radio-option${_orderData.land === v ? ' selected' : ''}">
+              <input type="radio" name="land" value="${v}"${_orderData.land === v ? ' checked' : ''} onchange="orderRadio('land','${v}',this)"> ${v}
+            </label>`).join('')}
+        </div>
+      </div>
+      <div class="order-field" style="margin-top:18px">
+        <label>Timeline</label>
+        <div class="radio-group">
+          ${['ASAP','1\u20133 Months','Just Exploring'].map(v => `
+            <label class="radio-option${_orderData.timeline === v ? ' selected' : ''}">
+              <input type="radio" name="timeline" value="${v}"${_orderData.timeline === v ? ' checked' : ''} onchange="orderRadio('timeline','${v}',this)"> ${v}
+            </label>`).join('')}
+        </div>
+      </div>`;
+    footer.innerHTML = `<button class="btn btn-red" onclick="orderNext()">Continue &rarr;</button>`;
+
+  } else if (_orderStep === 4) {
+    label.textContent = 'Step 4 of 4 \u2014 Financing';
+    body.innerHTML = `
+      <div class="order-field">
+        <label>How will you pay?</label>
+        <div class="radio-group">
+          ${['Cash','Need Financing','Not Sure Yet'].map(v => `
+            <label class="radio-option${_orderData.financing === v ? ' selected' : ''}">
+              <input type="radio" name="financing" value="${v}"${_orderData.financing === v ? ' checked' : ''} onchange="orderRadio('financing','${v}',this)"> ${v}
+            </label>`).join('')}
+        </div>
+      </div>
+      <div class="order-field" style="margin-top:18px">
+        <label>Trade-in or existing home? <span style="font-weight:500;text-transform:none;letter-spacing:0;font-size:10px">(optional)</span></label>
+        <input type="text" id="of-tradein" value="${_orderData.tradein || ''}" placeholder="Describe your current home, if any..." />
+      </div>`;
+    footer.innerHTML = `<button class="btn btn-red" onclick="orderSubmit()">Submit Order Request</button>`;
+
+  } else if (_orderStep === 5) {
+    const ref = _orderData._ref;
+    body.innerHTML = `
+      <div class="order-confirm">
+        <div class="confirm-icon">&#127968;</div>
+        <div class="confirm-ref">${ref}</div>
+        <div class="confirm-title">You're on the list!</div>
+        <p class="confirm-msg">
+          Thanks${_orderData.name ? ', <strong>' + _orderData.name + '</strong>' : ''}! We've received your request for the <strong>${_orderHome.name}</strong>.
+          A home specialist will be in touch${_orderData.contactTime ? ' in the ' + _orderData.contactTime.toLowerCase() : ' soon'} to walk you through next steps.
+        </p>
+      </div>`;
+    footer.innerHTML = `<button class="btn btn-outline" onclick="closeOrderDrawer()">Close</button>`;
+  }
+}
+
+function orderRadio(field, value, el) {
+  _orderData[field] = value;
+  const group = el.closest('.radio-group');
+  group.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  el.closest('.radio-option').classList.add('selected');
+}
+
+function orderNext() {
+  if (_orderStep === 2) {
+    _orderData.name = (document.getElementById('of-name').value || '').trim();
+    _orderData.phone = (document.getElementById('of-phone').value || '').trim();
+    _orderData.email = (document.getElementById('of-email').value || '').trim();
+    _orderData.contactTime = document.getElementById('of-time').value;
+    if (!_orderData.name || !_orderData.phone || !_orderData.email) {
+      alert('Please fill in your name, phone, and email to continue.');
+      return;
+    }
+  } else if (_orderStep === 3) {
+    _orderData.zip = (document.getElementById('of-zip').value || '').trim();
+  }
+  _orderStep++;
+  renderOrderStep();
+}
+
+function orderSubmit() {
+  const tradeinEl = document.getElementById('of-tradein');
+  if (tradeinEl) _orderData.tradein = tradeinEl.value.trim();
+  const ref = 'ORD-' + Math.random().toString(36).toUpperCase().slice(2, 6);
+  _orderData._ref = ref;
+  const order = {
+    ref,
+    home: { id: _orderHome.id, name: _orderHome.name, price: _orderHome.price },
+    customer: {
+      name: _orderData.name,
+      phone: _orderData.phone,
+      email: _orderData.email,
+      contactTime: _orderData.contactTime,
+      zip: _orderData.zip,
+      land: _orderData.land,
+      timeline: _orderData.timeline,
+      financing: _orderData.financing,
+      tradein: _orderData.tradein,
+    },
+    submittedAt: new Date().toISOString(),
+  };
+  console.log('\uD83D\uDCE6 New Order Request:', order);
+  _orderStep = 5;
+  renderOrderStep();
+}
 
 // homes loaded via fetch above

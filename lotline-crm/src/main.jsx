@@ -7,4 +7,7 @@ if (localStorage.getItem('darkMode') === 'true') {
   document.documentElement.classList.add('dark');
 }
 
+// Expose CRM user for Homes iframe pre-fill
+localStorage.setItem('crm_user', JSON.stringify({ name: 'Naaman Trotter', email: '' }));
+
 createRoot(document.getElementById('root')).render(<App />)
