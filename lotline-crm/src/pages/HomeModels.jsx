@@ -1,12 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HOME_MODELS } from '../data/homeModels';
-import { Search, Plus, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, ExternalLink, ChevronUp, ChevronDown, Pencil, Trash2, X } from 'lucide-react';
 import Button from '../components/UI/Button';
 
+const STORAGE_KEY = 'homeModels_data';
+
+const EMPTY_MODEL = {
+  model: '',
+  manufacturer: 'Clayton',
+  sections: 'Single-Wide',
+  beds: 3,
+  baths: 2,
+  sqft: '',
+  price: '',
+  link: '',
+};
+
 export default function HomeModels() {
+  const [models, setModels] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : HOME_MODELS;
+    } catch {
+      return HOME_MODELS;
+    }
+  });
+
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('price');
   const [sortDir, setSortDir] = useState('asc');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingModel, setEditingModel] = useState(null); // null = add new
+  const [form, setForm] = useState(EMPTY_MODEL);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(models));
+  }, [models]);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -17,7 +46,53 @@ export default function HomeModels() {
     }
   };
 
-  const filtered = HOME_MODELS
+  const openAdd = () => {
+    setEditingModel(null);
+    setForm(EMPTY_MODEL);
+    setModalOpen(true);
+  };
+
+  const openEdit = (model) => {
+    setEditingModel(model);
+    setForm({ ...model });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingModel(null);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = () => {
+    const parsed = {
+      ...form,
+      beds: parseInt(form.beds) || 0,
+      baths: parseFloat(form.baths) || 0,
+      sqft: parseInt(form.sqft) || 0,
+      price: parseInt(form.price) || 0,
+    };
+
+    if (editingModel) {
+      setModels((prev) => prev.map((m) => (m.id === editingModel.id ? { ...parsed, id: editingModel.id } : m)));
+    } else {
+      const newId = Math.max(0, ...models.map((m) => m.id)) + 1;
+      setModels((prev) => [...prev, { ...parsed, id: newId }]);
+    }
+    closeModal();
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Delete this model?')) {
+      setModels((prev) => prev.filter((m) => m.id !== id));
+    }
+  };
+
+  const filtered = models
     .filter((m) =>
       [m.model, m.manufacturer, m.sections].some((v) =>
         v.toLowerCase().includes(search.toLowerCase())
@@ -51,9 +126,9 @@ export default function HomeModels() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-sidebar">Home Models</h1>
-          <p className="text-sm text-gray-500 mt-1">{HOME_MODELS.length} models in catalog</p>
+          <p className="text-sm text-gray-500 mt-1">{models.length} models in catalog</p>
         </div>
-        <Button>
+        <Button onClick={openAdd}>
           <Plus size={14} className="mr-1" />
           Add Model
         </Button>
@@ -85,6 +160,7 @@ export default function HomeModels() {
                 <TH col="sqft" label="Sq Ft" />
                 <TH col="price" label="Price" />
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Link</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -114,6 +190,24 @@ export default function HomeModels() {
                       <span className="text-gray-300">—</span>
                     )}
                   </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEdit(model)}
+                        className="text-gray-400 hover:text-accent transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(model.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -124,10 +218,10 @@ export default function HomeModels() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Models', value: HOME_MODELS.length },
-          { label: 'Single-Wide', value: HOME_MODELS.filter((m) => m.sections === 'Single-Wide').length },
-          { label: 'Double-Wide', value: HOME_MODELS.filter((m) => m.sections === 'Double-Wide').length },
-          { label: 'Avg Price', value: `$${Math.round(HOME_MODELS.reduce((s, m) => s + m.price, 0) / HOME_MODELS.length).toLocaleString()}` },
+          { label: 'Total Models', value: models.length },
+          { label: 'Single-Wide', value: models.filter((m) => m.sections === 'Single-Wide').length },
+          { label: 'Double-Wide', value: models.filter((m) => m.sections === 'Double-Wide').length },
+          { label: 'Avg Price', value: models.length ? `$${Math.round(models.reduce((s, m) => s + m.price, 0) / models.length).toLocaleString()}` : '$0' },
         ].map((c) => (
           <div key={c.label} className="bg-card rounded-xl shadow-sm p-4 text-center">
             <p className="text-2xl font-bold text-sidebar">{c.value}</p>
@@ -135,6 +229,135 @@ export default function HomeModels() {
           </div>
         ))}
       </div>
+
+      {/* Edit / Add Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-sidebar">
+                {editingModel ? 'Edit Model' : 'Add Model'}
+              </h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Manufacturer</label>
+                  <select
+                    name="manufacturer"
+                    value={form.manufacturer}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    <option>Clayton</option>
+                    <option>Cavco</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Model Name</label>
+                  <input
+                    name="model"
+                    value={form.model}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    placeholder="e.g. Tide"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                  <select
+                    name="sections"
+                    value={form.sections}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    <option>Single-Wide</option>
+                    <option>Double-Wide</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Price ($)</label>
+                  <input
+                    name="price"
+                    type="number"
+                    value={form.price}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Beds</label>
+                  <input
+                    name="beds"
+                    type="number"
+                    value={form.beds}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Baths</label>
+                  <input
+                    name="baths"
+                    type="number"
+                    step="0.5"
+                    value={form.baths}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Sq Ft</label>
+                  <input
+                    name="sqft"
+                    type="number"
+                    value={form.sqft}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Manufacturer Link (optional)</label>
+                <input
+                  name="link"
+                  type="url"
+                  value={form.link}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <Button onClick={handleSave}>
+                {editingModel ? 'Save Changes' : 'Add Model'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
