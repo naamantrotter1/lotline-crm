@@ -1289,7 +1289,7 @@ function HeatMap() {
       <div className="bg-white border border-gray-200 rounded-t-xl shadow-sm">
 
         {/* Row 1 — primary filters */}
-        <div className="flex items-center gap-2 px-4 py-2.5 flex-wrap">
+        <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto">
 
           <FilterDropdown label="View"   value={groupBy} onChange={setGroupBy}
             options={['County','State','Zip Code']} />
@@ -1347,8 +1347,8 @@ function HeatMap() {
             );
           })()}
 
-          {/* Search — pushed to the right */}
-          <div className="relative ml-auto">
+          {/* Search */}
+          <div className="relative">
             <div className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg border text-xs transition-all
               ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
               : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
