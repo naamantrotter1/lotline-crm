@@ -255,7 +255,7 @@ function toggleFaq(btn) {
 }
 
 // ===== CONTACT FORM =====
-document.getElementById('contactForm').addEventListener('submit', async function(e) {
+document.getElementById('contactForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const form = this;
   const btn = form.querySelector('button[type="submit"]');
@@ -283,8 +283,8 @@ document.getElementById('contactForm').addEventListener('submit', async function
 });
 
 // ===== HAMBURGER =====
-document.getElementById('hamburger').addEventListener('click', () => {
-  document.getElementById('navLinks').classList.toggle('mobile-open');
+document.getElementById('hamburger')?.addEventListener('click', () => {
+  document.getElementById('navLinks')?.classList.toggle('mobile-open');
 });
 
 // ===== ORDER DRAWER =====
