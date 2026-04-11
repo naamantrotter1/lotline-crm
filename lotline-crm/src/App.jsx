@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard';
 import BigRocks from './pages/BigRocks';
 import PnlDashboard from './pages/PnlDashboard';
 import Analytics from './pages/Analytics';
-import IntelligenceView from './pages/IntelligenceView';
+import MarketResearch from './pages/MarketResearch';
 import InvestorPortal from './pages/InvestorPortal';
 import DealOverview from './pages/DealOverview';
 import LandAcquisition from './pages/LandAcquisition';
@@ -33,7 +33,7 @@ export default function App() {
           <Route path="big-rocks" element={<BigRocks />} />
           <Route path="pnl" element={<PnlDashboard />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="intelligence" element={<IntelligenceView />} />
+          <Route path="intelligence" element={<MarketResearch />} />
           <Route path="investors" element={<InvestorPortal />} />
           <Route path="pipelines/deal-overview" element={<DealOverview />} />
           <Route path="pipelines/land" element={<LandAcquisition />} />
