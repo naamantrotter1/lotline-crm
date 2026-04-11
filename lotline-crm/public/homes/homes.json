@@ -791,16 +791,38 @@
     "type": "single",
     "beds": 3,
     "baths": 2,
-    "sqft": 960,
+    "sqft": 937,
     "price": 37595,
     "badge": "",
     "badgeClass": "",
     "emoji": "🏡",
     "year": 2026,
     "brand": "Cavco Homes",
-    "desc": "The Phoenix 16603A by Cavco Hamlet packs 3 bedrooms and 2 baths into 960 sq ft of well-designed single-wide living. A smart choice for buyers who need 3 bedrooms at a budget-friendly price, with quality Cavco construction and practical finishes throughout.",
-    "features": ["3 bedrooms", "2 full baths", "960 sq ft", "Single-wide", "Steel front door", "Thermopane windows", "Vinyl flooring"],
-    "photos": []
+    "tourUrl": "https://my.matterport.com/show/?play=1&m=wjLDToz3VMm",
+    "desc": "The Liberty Series LB-16603A built by Cavco Phoenix is a thoughtfully designed 3-bedroom, 2-bath single-wide offering 937 square feet of comfortable ranch-style living. Features 8ft flat ceilings, architectural shingles, and a well-appointed kitchen with steel appliances and square-edge countertops.",
+    "features": ["3 bedrooms", "2 full baths", "937 sq ft", "16x60 ft", "Single-wide", "Ranch style", "8ft flat ceilings", "Architectural shingles", "Square-edge countertops", "Steel appliances", "Laminate backsplash", "Recessed can lights"],
+    "specs": {
+      "construction": { "Wall Studs": "24\" on center", "Wall Height": "8ft interior and exterior with flat ceiling" },
+      "exterior": { "Shingles": "Architectural shingles" },
+      "interior": { "Window Treatment": "No wood window valances" },
+      "baths": { "Lighting": "Recessed can lights (no vanity wall light)", "Countertops": "Square edge", "Shower": "Tub/shower combo", "Mirror": "Frameless", "Backsplash": "Laminate" },
+      "kitchen": { "Drawers": "One bank of drawers (no drawers over doors)", "Countertops": "Square edge", "Backsplash": "Laminate", "Appliances": "Steel appliances" }
+    },
+    "photos": [
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-ext-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-int-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-int-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-int-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-kit-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-kit-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-kit-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-bed-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-bed-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-bed-3.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-bath-1.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/Liberty%20Series%20LB-16603A-bath-2.jpg",
+      "https://d132mt2yijm03y.cloudfront.net/manufacturer/2049/floorplan/233897/LB-16603A.jpg"
+    ]
   },
   {
     "id": 29,
