@@ -1327,7 +1327,7 @@ function HeatMap() {
   const [timePeriod, setTimePeriod] = useState('90 days');
   const [dataType,   setDataType]   = useState('Manufactured');
   const [acreage,    setAcreage]    = useState('All');
-  const [statistic,  setStatistic]  = useState('Opportunity Score');
+  const [statistic,  setStatistic]  = useState('Days on Market');
 
   const stateLayer    = useRef(null);
   const [stateGeojson, setStateGeojson] = useState(null);
