@@ -410,7 +410,7 @@ export default function Lending() {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Property Type">
                   <select name="propertyType" value={partnerForm.propertyType} onChange={handlePartnerChange} className={inp}>
-                    <option>Manufactured Home</option><option>Single Family</option><option>Multi-Family</option><option>Land</option><option>Commercial</option>
+                    <option>Manufactured Home</option><option>Modular Home</option><option>Single Family</option><option>Multi-Family</option><option>Land</option><option>Commercial</option>
                   </select>
                 </Field>
                 <Field label="Deal Type">
