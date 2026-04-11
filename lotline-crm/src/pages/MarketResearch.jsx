@@ -1242,6 +1242,23 @@ function normalize(val, min, max) {
   return Math.max(0, Math.min(1, (val - min) / (max - min)));
 }
 
+// Percentile-rank normalization: colors by rank so there's always a full
+// red→yellow→green spread regardless of how tightly the data clusters.
+function makePercentileNorm(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  return function percentileNorm(val) {
+    if (n === 0) return 0.5;
+    if (n === 1) return 0.5;
+    let lo = 0, hi = n - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sorted[mid] < val) lo = mid + 1; else hi = mid;
+    }
+    return lo / (n - 1);
+  };
+}
+
 function scoreToColor(norm, higherIsBetter) {
   const t    = higherIsBetter === false ? (1 - norm) : norm;
   // Red (low) → Yellow (mid) → Green (high)
@@ -1492,6 +1509,8 @@ function HeatMap() {
     if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
     if (stateLayer.current) { stateLayer.current.remove(); stateLayer.current = null; }
 
+    const pctNorm = makePercentileNorm(values);
+
     const layer = L.geoJSON(geojson, {
       style: (feature) => {
         const fips   = String(feature.id).padStart(5, '0');
@@ -1499,7 +1518,7 @@ function HeatMap() {
         if (!county || county[metric] == null) {
           return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 0.8 };
         }
-        const norm  = normalize(county[metric], minV, maxV);
+        const norm  = pctNorm(county[metric]);
         const color = scoreToColor(norm, cfg.higherIsBetter);
         return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 0.8 };
       },
@@ -1536,6 +1555,8 @@ function HeatMap() {
     if (zipLayer.current)   { zipLayer.current.remove();   zipLayer.current   = null; }
     if (choropleth.current) { choropleth.current.remove(); choropleth.current = null; }
 
+    const pctNorm = makePercentileNorm(values);
+
     const layer = L.geoJSON(zipGeojson, {
       style: (feature) => {
         const zip    = feature.properties.ZCTA5CE10 || feature.properties.ZCTA5CE20 || feature.properties.ZIP_CODE;
@@ -1543,7 +1564,7 @@ function HeatMap() {
         const county = fips ? displayCounties.find(c => c.fips === fips) : null;
         if (!county || county[metric] == null)
           return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 0.5 };
-        const norm  = normalize(county[metric], minV, maxV);
+        const norm  = pctNorm(county[metric]);
         const color = scoreToColor(norm, cfg.higherIsBetter);
         return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 0.5 };
       },
@@ -1607,15 +1628,14 @@ function HeatMap() {
     });
 
     const stateValues = Object.values(stateData).map(d => d.value);
-    const sMin = stateValues.length ? Math.min(...stateValues) : 0;
-    const sMax = stateValues.length ? Math.max(...stateValues) : 1;
+    const sPctNorm = makePercentileNorm(stateValues);
 
     const layer = L.geoJSON(stateGeojson, {
       style: (feature) => {
         const id   = String(feature.id);
         const data = stateData[id];
         if (!data) return { fillColor: '#e5e7eb', fillOpacity: 0.45, color: '#fff', weight: 1.5 };
-        const norm  = normalize(data.value, sMin, sMax);
+        const norm  = sPctNorm(data.value);
         const color = scoreToColor(norm, cfg.higherIsBetter);
         return { fillColor: color, fillOpacity: 0.82, color: '#fff', weight: 2 };
       },
