@@ -121,12 +121,6 @@ document.getElementById('filterBrand').addEventListener('change', function() {
 });
 
 
-// ===== ZIP FORM =====
-document.getElementById('zipForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  document.getElementById('homes').scrollIntoView({ behavior: 'smooth' });
-});
-
 // ===== MODAL =====
 function openModal(id) {
   const h = homes.find(x => x.id === id);

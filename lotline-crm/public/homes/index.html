@@ -9,45 +9,8 @@
     body { margin: 0; padding: 0; background: #f3f4f6; }
     .homes-page { padding: 20px; }
     .homes-page-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
       margin-bottom: 16px;
     }
-    .homes-page-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #111827;
-      white-space: nowrap;
-    }
-    .zip-form-inline {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .zip-form-inline input {
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 0.875rem;
-      width: 140px;
-      outline: none;
-    }
-    .zip-form-inline input:focus { border-color: #f97316; }
-    .zip-form-inline button {
-      background: #f97316;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 14px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .zip-form-inline button:hover { background: #ea6c0a; }
   </style>
 </head>
 <body>
@@ -55,11 +18,6 @@
   <div class="homes-page">
     <div class="homes-page-header">
       <h2>Available Homes</h2>
-      <form class="zip-form-inline" id="zipForm">
-        <span>📍</span>
-        <input type="text" placeholder="Enter ZIP code" maxlength="5" id="zipInput" />
-        <button type="submit">Find Homes →</button>
-      </form>
     </div>
 
     <div class="filters-bar">
