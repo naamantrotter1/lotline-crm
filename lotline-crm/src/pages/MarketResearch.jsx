@@ -932,17 +932,7 @@ function HeatMap() {
     choropleth.current = layer;
   }, [geojson, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
 
-  // ── Tooltip context label ─────────────────────────────────────────────────
-  const statInfo = {
-    Counts:    'Number of estimated transactions in the selected time period based on county absorption rate.',
-    Value:     'Median sale price of land parcels closed in the county.',
-    'Avg Price':'Average price across comparable sold transactions.',
-    '$/Acre':  'Median price per acre — lower values indicate larger, rural parcels.',
-    'Sell Rate':'Percentage of listed properties that sold (sell-through rate).',
-    DOM:       'Median days a parcel sits on market before going under contract.',
-  };
-
-  // Info text per statistic (for "What is X?" tooltip)
+  // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
   const statInfo = {
     Counts:      'Estimated number of transactions in the selected time period based on absorption rate.',
     Value:       'Total median sale price of land parcels closed in the selected period.',
