@@ -862,35 +862,75 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
-  // ── Zip code filter ───────────────────────────────────────────────────────
-  const [zipFilter, setZipFilter] = useState('');
-  const [zipInfo,   setZipInfo]   = useState(null); // { lat, lon, fips, label }
-  const [zipStatus, setZipStatus] = useState('');   // '' | 'loading' | 'error'
+  // ── Unified search (county name or ZIP) ──────────────────────────────────
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [searchInfo,   setSearchInfo]   = useState(null); // { lat, lon, fips, label, type:'zip'|'county' }
+  const [searchStatus, setSearchStatus] = useState('');   // '' | 'loading' | 'found' | 'error'
+
+  // Keep backward-compat aliases used in filter/choropleth logic
+  const zipFilter = searchInfo?.type === 'zip'    ? searchInfo.zip    : '';
+  const zipInfo   = searchInfo?.type === 'zip'    ? searchInfo        : null;
 
   useEffect(() => {
-    if (!/^\d{5}$/.test(zipFilter)) { setZipInfo(null); setZipStatus(''); return; }
-    setZipStatus('loading');
-    fetch(`https://api.zippopotam.us/us/${zipFilter}`)
-      .then(r => r.ok ? r.json() : Promise.reject('not found'))
-      .then(async data => {
-        const place = data.places[0];
-        const lat = parseFloat(place.latitude);
-        const lon = parseFloat(place.longitude);
-        const stateAbbr = place['state abbreviation'];
-        // Get county FIPS from FCC API
-        const fcc = await fetch(
-          `https://geo.fcc.gov/api/census/block/find?latitude=${lat}&longitude=${lon}&showall=false&format=json`
-        ).then(r => r.json());
-        const fips        = fcc.County?.FIPS?.substring(0, 5);
-        const countyName  = fcc.County?.name;
-        const inRegion    = fips?.startsWith('37') || fips?.startsWith('45');
-        if (!inRegion) { setZipStatus('error'); setZipInfo(null); return; }
-        setZipInfo({ lat, lon, fips, label: `${countyName} Co., ${stateAbbr}` });
-        setZipStatus('found');
-        if (leafletMap.current) leafletMap.current.flyTo([lat, lon], 10, { duration: 1 });
-      })
-      .catch(() => { setZipStatus('error'); setZipInfo(null); });
-  }, [zipFilter]);
+    const q = searchQuery.trim();
+    if (!q) { setSearchInfo(null); setSearchStatus(''); return; }
+
+    // ── ZIP code (5 digits) ──────────────────────────────────────────────
+    if (/^\d{5}$/.test(q)) {
+      setSearchStatus('loading');
+      fetch(`https://api.zippopotam.us/us/${q}`)
+        .then(r => r.ok ? r.json() : Promise.reject('not found'))
+        .then(async data => {
+          const place     = data.places[0];
+          const lat       = parseFloat(place.latitude);
+          const lon       = parseFloat(place.longitude);
+          const stateAbbr = place['state abbreviation'];
+          const fcc = await fetch(
+            `https://geo.fcc.gov/api/census/block/find?latitude=${lat}&longitude=${lon}&showall=false&format=json`
+          ).then(r => r.json());
+          const fips       = fcc.County?.FIPS?.substring(0, 5);
+          const countyName = fcc.County?.name;
+          const inRegion   = fips?.startsWith('37') || fips?.startsWith('45');
+          if (!inRegion) { setSearchStatus('error'); setSearchInfo(null); return; }
+          setSearchInfo({ type: 'zip', zip: q, lat, lon, fips, label: `ZIP ${q} — ${countyName} Co., ${stateAbbr}` });
+          setSearchStatus('found');
+          setGroupBy('Zip Code');
+          if (leafletMap.current) leafletMap.current.flyTo([lat, lon], 12, { duration: 1 });
+        })
+        .catch(() => { setSearchStatus('error'); setSearchInfo(null); });
+      return;
+    }
+
+    // ── County name (text) ───────────────────────────────────────────────
+    const match = COUNTY_DATA.find(c =>
+      c.name.toLowerCase().startsWith(q.toLowerCase())
+    ) || COUNTY_DATA.find(c =>
+      c.name.toLowerCase().includes(q.toLowerCase())
+    );
+    if (match) {
+      // Find county centroid from geojson if available, else use a rough lat/lon lookup
+      setSearchInfo({ type: 'county', fips: match.fips, label: `${match.name} County, ${match.state}` });
+      setSearchStatus('found');
+      setGroupBy('County');
+      // Fly to county using geojson centroid if loaded
+      if (geojson) {
+        const feat = geojson.features.find(f => {
+          const id = String(f.id ?? f.properties?.GEOID ?? f.properties?.GEO_ID ?? '').replace(/^0500000US/, '');
+          return id === match.fips;
+        });
+        if (feat) {
+          const [cx, cy] = getFeatureCentroid(feat);
+          if (leafletMap.current) leafletMap.current.flyTo([cy, cx], 9, { duration: 1 });
+        }
+      }
+    } else if (q.length >= 2) {
+      setSearchStatus('error');
+      setSearchInfo(null);
+    } else {
+      setSearchInfo(null);
+      setSearchStatus('');
+    }
+  }, [searchQuery, geojson]);
 
   // ── Map state ─────────────────────────────────────────────────────────────
   const [geojson,     setGeojson]     = useState(null);
@@ -903,9 +943,10 @@ function HeatMap() {
   const metric = getActiveMetric(statistic, status);
   const cfg    = METRIC_CONFIG[metric];
 
-  // 1. Filter by zip, acreage + data-type availability
+  // 1. Filter by search (zip or county), acreage + data-type availability
   const filteredCounties = COUNTY_DATA.filter(c => {
-    if (zipInfo && c.fips !== zipInfo.fips)    return false;
+    if (searchInfo?.type === 'zip'    && c.fips !== searchInfo.fips) return false;
+    if (searchInfo?.type === 'county' && c.fips !== searchInfo.fips) return false;
     if (!ACREAGE_FILTER[acreage]?.(c))         return false;
     if (!(DATA_TYPE_FILTERS[dataType]?.(c)))   return false;
     if (dataType === 'Land' && c.medianPpa > 500000) return false;
@@ -1134,37 +1175,36 @@ function HeatMap() {
           <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
             options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
 
-          {/* ZIP code filter */}
+          {/* Unified search bar — county name or ZIP */}
           <div className="relative flex items-center ml-1">
             <div className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all
-              ${zipStatus === 'error'  ? 'border-red-300 bg-red-50'
-              : zipStatus === 'found'  ? 'border-green-400 bg-green-50'
-              : zipStatus === 'loading'? 'border-gray-300 bg-gray-50'
+              ${searchStatus === 'error'   ? 'border-red-300 bg-red-50'
+              : searchStatus === 'found'   ? 'border-green-400 bg-green-50'
+              : searchStatus === 'loading' ? 'border-gray-300 bg-gray-50'
               : 'border-gray-300 bg-white hover:border-gray-400'}`}>
               <Search size={13} className="text-gray-400 shrink-0" />
               <input
                 type="text"
-                inputMode="numeric"
-                placeholder="ZIP code"
-                value={zipFilter}
-                onChange={e => setZipFilter(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                className="w-20 text-sm bg-transparent outline-none placeholder-gray-400"
+                placeholder="County or ZIP code"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-40 text-sm bg-transparent outline-none placeholder-gray-400"
               />
-              {zipFilter && (
-                <button onClick={() => { setZipFilter(''); setZipInfo(null); setZipStatus(''); }}
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setSearchInfo(null); setSearchStatus(''); }}
                   className="text-gray-400 hover:text-gray-600 transition-colors">
                   <X size={12} />
                 </button>
               )}
             </div>
-            {zipStatus === 'found' && zipInfo && (
+            {searchStatus === 'found' && searchInfo && (
               <span className="absolute -bottom-5 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
-                {zipInfo.label}
+                {searchInfo.label}
               </span>
             )}
-            {zipStatus === 'error' && (
+            {searchStatus === 'error' && (
               <span className="absolute -bottom-5 left-0 text-xs text-red-500 whitespace-nowrap">
-                ZIP not in NC/SC
+                Not found in NC/SC
               </span>
             )}
           </div>
