@@ -834,6 +834,36 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Counts');
 
+  // ── Zip code filter ───────────────────────────────────────────────────────
+  const [zipFilter, setZipFilter] = useState('');
+  const [zipInfo,   setZipInfo]   = useState(null); // { lat, lon, fips, label }
+  const [zipStatus, setZipStatus] = useState('');   // '' | 'loading' | 'error'
+
+  useEffect(() => {
+    if (!/^\d{5}$/.test(zipFilter)) { setZipInfo(null); setZipStatus(''); return; }
+    setZipStatus('loading');
+    fetch(`https://api.zippopotam.us/us/${zipFilter}`)
+      .then(r => r.ok ? r.json() : Promise.reject('not found'))
+      .then(async data => {
+        const place = data.places[0];
+        const lat = parseFloat(place.latitude);
+        const lon = parseFloat(place.longitude);
+        const stateAbbr = place['state abbreviation'];
+        // Get county FIPS from FCC API
+        const fcc = await fetch(
+          `https://geo.fcc.gov/api/census/block/find?latitude=${lat}&longitude=${lon}&showall=false&format=json`
+        ).then(r => r.json());
+        const fips        = fcc.County?.FIPS?.substring(0, 5);
+        const countyName  = fcc.County?.name;
+        const inRegion    = fips?.startsWith('37') || fips?.startsWith('45');
+        if (!inRegion) { setZipStatus('error'); setZipInfo(null); return; }
+        setZipInfo({ lat, lon, fips, label: `${countyName} Co., ${stateAbbr}` });
+        setZipStatus('found');
+        if (leafletMap.current) leafletMap.current.flyTo([lat, lon], 10, { duration: 1 });
+      })
+      .catch(() => { setZipStatus('error'); setZipInfo(null); });
+  }, [zipFilter]);
+
   // ── Map state ─────────────────────────────────────────────────────────────
   const [geojson,  setGeojson]  = useState(null);
   const [selected, setSelected] = useState(null);
@@ -843,11 +873,12 @@ function HeatMap() {
   const metric = getActiveMetric(statistic, status);
   const cfg    = METRIC_CONFIG[metric];
 
-  // 1. Filter by acreage + data-type availability
+  // 1. Filter by zip, acreage + data-type availability
   const filteredCounties = COUNTY_DATA.filter(c => {
+    if (zipInfo && c.fips !== zipInfo.fips)    return false;
     if (!ACREAGE_FILTER[acreage]?.(c))         return false;
     if (!(DATA_TYPE_FILTERS[dataType]?.(c)))   return false;
-    if (dataType === 'Land' && c.medianPpa > 500000) return false; // exclude extreme urban $/ac
+    if (dataType === 'Land' && c.medianPpa > 500000) return false;
     return true;
   });
 
@@ -1002,6 +1033,41 @@ function HeatMap() {
             options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
           <FilterDropdown label="Data" value={dataType} onChange={v => { setDataType(v); setSelected(null); }}
             options={['All','Land','House','Townhouse','Condo','MultiFamily','Mobile']} />
+
+          {/* ZIP code filter */}
+          <div className="relative flex items-center ml-1">
+            <div className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all
+              ${zipStatus === 'error'  ? 'border-red-300 bg-red-50'
+              : zipStatus === 'found'  ? 'border-green-400 bg-green-50'
+              : zipStatus === 'loading'? 'border-gray-300 bg-gray-50'
+              : 'border-gray-300 bg-white hover:border-gray-400'}`}>
+              <Search size={13} className="text-gray-400 shrink-0" />
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="ZIP code"
+                value={zipFilter}
+                onChange={e => setZipFilter(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                className="w-20 text-sm bg-transparent outline-none placeholder-gray-400"
+              />
+              {zipFilter && (
+                <button onClick={() => { setZipFilter(''); setZipInfo(null); setZipStatus(''); }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            {zipStatus === 'found' && zipInfo && (
+              <span className="absolute -bottom-5 left-0 text-xs text-green-600 whitespace-nowrap font-medium">
+                {zipInfo.label}
+              </span>
+            )}
+            {zipStatus === 'error' && (
+              <span className="absolute -bottom-5 left-0 text-xs text-red-500 whitespace-nowrap">
+                ZIP not in NC/SC
+              </span>
+            )}
+          </div>
 
           <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
             <span>{displayCounties.length} counties shown</span>
