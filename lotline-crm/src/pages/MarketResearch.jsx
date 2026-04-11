@@ -1764,7 +1764,7 @@ function HeatMap() {
           <FilterDropdown label="Acreage"    value={acreage}    onChange={setAcreage}
             options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
           <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
-            options={['Opportunity Score','Demand Score','Transactions','Median Price','Median Price/Acre','Days on Market','Sell Through Rate (STR)']} />
+            options={['Opportunity Score','Demand Score','Transactions','Days on Market','Sell Through Rate (STR)']} />
 
           {/* Info icon */}
           <div className="relative">
@@ -1960,15 +1960,11 @@ function HeatMap() {
               {/* Data grid */}
               <div className="space-y-0 rounded-xl border border-gray-200 overflow-hidden">
                 {[
-                  { label: 'Median Sale Price', value: fmtK(selected.medianSalePrice) },
                   { label: 'Days on Market',    value: selected.medianDOM + ' days' },
                   { label: 'Months of Supply',  value: selected.monthsSupply.toFixed(1) + ' mo' },
                   { label: 'Absorption Rate',   value: fmtPct(selected.absorptionRate) },
                   { label: 'Sell-Through',       value: fmtPct(selected.sellThrough) },
                   { label: 'Pop. Growth',        value: fmtPct(selected.popGrowth), highlight: selected.popGrowth >= 2 ? 'text-green-600' : selected.popGrowth < 0 ? 'text-red-500' : '' },
-                  { label: 'Median Income',      value: fmtK(selected.medianIncome) },
-                  { label: 'Unemployment',       value: fmtPct(selected.unemployment) },
-                  { label: '$ / Acre',           value: selected.medianPpa != null ? '$' + Math.round(selected.medianPpa).toLocaleString() : '–' },
                 ].map(({ label, value, highlight }, i) => (
                   <div key={label} className={`flex items-center justify-between px-3 py-2.5 text-xs ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}`}>
                     <span className="text-gray-500">{label}</span>
