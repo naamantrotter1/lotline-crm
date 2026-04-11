@@ -3,6 +3,14 @@
   "framework": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/homes/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    }
+  ],
   "routes": [
     { "src": "/api/proxy/(.*)", "dest": "/api/proxy/$1.js" },
     { "handle": "filesystem" },
