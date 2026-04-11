@@ -857,10 +857,10 @@ function HeatMap() {
   // ── Filter state ──────────────────────────────────────────────────────────
   const [groupBy,    setGroupBy]    = useState('County');
   const [status,     setStatus]     = useState('Sold');
-  const [timePeriod, setTimePeriod] = useState('1 year');
-  const [dataType,   setDataType]   = useState('Land');
+  const [timePeriod, setTimePeriod] = useState('90 days');
+  const [dataType,   setDataType]   = useState('Mobile');
   const [acreage,    setAcreage]    = useState('All');
-  const [statistic,  setStatistic]  = useState('Transactions');
+  const [statistic,  setStatistic]  = useState('Days on Market');
 
   // ── Zip code filter ───────────────────────────────────────────────────────
   const [zipFilter, setZipFilter] = useState('');
