@@ -175,10 +175,6 @@ function openModal(id) {
       <div class="modal-features">
         ${h.features.map(f => `<span class="feature-pill">✓ ${f}</span>`).join('')}
       </div>
-      <div class="modal-actions">
-        <a href="#contact" class="btn btn-red btn-lg" onclick="closeModal()">Request Info</a>
-        <a href="tel:+15551234567" class="btn btn-outline btn-lg">📞 Call Us</a>
-      </div>
     </div>
   `;
   document.getElementById('modalBackdrop').classList.add('open');
