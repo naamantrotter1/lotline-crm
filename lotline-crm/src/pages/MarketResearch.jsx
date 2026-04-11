@@ -814,10 +814,10 @@ function normalize(val, min, max) {
 
 function scoreToColor(norm, higherIsBetter) {
   const t    = higherIsBetter === false ? (1 - norm) : norm;
-  // LandPortal-style warm gradient: light cream → amber → dark orange-red
-  const hue  = Math.round(55 - t * 40);   // 55 (yellow) → 15 (red-orange)
-  const sat  = Math.round(88 + t * 7);    // 88% → 95%
-  const lght = Math.round(90 - t * 55);   // 90% (light) → 35% (dark)
+  // Red (low) → Yellow (mid) → Green (high)
+  const hue  = Math.round(t * 120);  // 0 (red) → 60 (yellow) → 120 (green)
+  const sat  = 85;
+  const lght = Math.round(38 + t * 12); // 38% (dark red) → 50% (bright green)
   return `hsl(${hue}, ${sat}%, ${lght}%)`;
 }
 
@@ -1244,8 +1244,8 @@ function HeatMap() {
             <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">{cfg.label}</p>
             <div className="relative h-3 rounded-full overflow-hidden mb-1.5" style={{
               background: cfg.higherIsBetter === false
-                ? 'linear-gradient(to right, hsl(55,88%,90%), hsl(35,93%,62%), hsl(15,95%,35%))'
-                : 'linear-gradient(to right, hsl(55,88%,90%), hsl(35,93%,62%), hsl(15,95%,35%))',
+                ? 'linear-gradient(to right, hsl(120,85%,44%), hsl(60,85%,44%), hsl(0,85%,38%))'
+                : 'linear-gradient(to right, hsl(0,85%,38%), hsl(60,85%,44%), hsl(120,85%,44%))',
             }} />
             <div className="flex justify-between text-xs text-gray-500">
               <span>{values.length ? cfg.fmt(cfg.higherIsBetter === false ? maxV : minV) : '–'}</span>
