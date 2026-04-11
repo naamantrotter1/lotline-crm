@@ -1,5 +1,11 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Search, X, Building2, Send, CheckCircle, ChevronRight, Users, TrendingUp, Phone, Globe, Mail, MapPin } from 'lucide-react';
+import {
+  ArrowLeft, Search, X, Building2, Send, CheckCircle, ChevronRight,
+  Users, TrendingUp, Phone, Globe, Mail, MapPin, Home, BarChart2, Info,
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 import Button from '../components/UI/Button';
 import { COUNTIES, totalPermits, topBuilder } from '../data/builderNetwork';
 
@@ -17,6 +23,14 @@ const SPECIALTY_STYLE = {
   'Multi-Family':  'bg-purple-50 text-purple-600',
   'Custom':        'bg-amber-50 text-amber-700',
   'Mixed':         'bg-gray-100 text-gray-600',
+};
+
+const TYPE_STYLE = {
+  'Dealer + Installer':     'bg-orange-50 text-orange-700',
+  'Full Turnkey Installer': 'bg-purple-50 text-purple-700',
+  'Dealer':                 'bg-blue-50 text-blue-600',
+  'Dealer + Builder':       'bg-teal-50 text-teal-700',
+  'Installer':              'bg-gray-100 text-gray-600',
 };
 
 // ── Sub-components ───────────────────────────────────────────────────────────
@@ -48,6 +62,55 @@ function SectionLabel({ children }) {
   );
 }
 
+function StatCard({ value, label }) {
+  return (
+    <div className="flex-1 bg-gray-50 rounded-xl border border-gray-100 px-4 py-4 text-center min-w-0">
+      <p className="text-2xl font-bold text-sidebar">{value}</p>
+      <p className="text-xs text-gray-500 mt-0.5 leading-snug">{label}</p>
+    </div>
+  );
+}
+
+function PermitTrendChart({ data }) {
+  return (
+    <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5">
+      <p className="text-sm font-semibold text-sidebar mb-4">Monthly Mobile Home Permits Issued (2024–2025)</p>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={data} margin={{ top: 4, right: 8, left: -24, bottom: 44 }}>
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 9.5, fill: '#9ca3af' }}
+            angle={-45}
+            textAnchor="end"
+            interval={0}
+          />
+          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+          <Tooltip
+            formatter={(v) => [`${v} permits`, 'Permits']}
+            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+            cursor={{ fill: 'rgba(249,115,22,0.06)' }}
+          />
+          <Bar dataKey="permits" radius={[3, 3, 0, 0]}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.year === 2025 ? '#f97316' : '#fed7aa'} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <div className="flex items-center gap-5 mt-1 justify-center">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-orange-200" />
+          <span className="text-xs text-gray-500">2024</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-accent" />
+          <span className="text-xs text-gray-500">2025</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Connect Drawer ────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   address: '', county: '', acreage: '', zoning: 'Residential',
@@ -61,7 +124,6 @@ function ConnectDrawer({ open, builder, county, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [confirmed, setConfirmed] = useState(null);
 
-  // Reset on open
   const handleOpen = () => {
     if (!open) return;
     try {
@@ -89,9 +151,7 @@ function ConnectDrawer({ open, builder, county, onClose }) {
     setForm(p => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const next = () => {
-    if (step < 3) setStep(s => s + 1);
-  };
+  const next = () => { if (step < 3) setStep(s => s + 1); };
 
   const submit = (e) => {
     e.preventDefault();
@@ -119,7 +179,6 @@ function ConnectDrawer({ open, builder, county, onClose }) {
         </div>
 
         {confirmed ? (
-          /* Confirmation screen */
           <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 text-center gap-4">
             <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
               <CheckCircle size={28} className="text-accent" />
@@ -313,6 +372,42 @@ function CountyCard({ county, onView }) {
     );
   }
 
+  // ── Manufactured home county card ──
+  if (county.permitType) {
+    return (
+      <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-bold text-sidebar">{county.county} County</h3>
+          <StateBadge state={county.state} />
+        </div>
+        <div className="mb-3">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{county.permitType}</span>
+        </div>
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Home size={12} className="text-accent flex-shrink-0" />
+            <span><strong className="text-sidebar">{county.permitCount}</strong> active mobile home permits</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <TrendingUp size={12} className="text-accent flex-shrink-0" />
+            <span><strong className="text-sidebar">{county.permits2025}</strong> permits issued in 2025</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Building2 size={12} className="text-accent flex-shrink-0" />
+            <span><strong className="text-sidebar">{county.builders.length}</strong> dealers &amp; installers tracked</span>
+          </div>
+        </div>
+        <div className="mb-4">
+          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-accent/10 text-accent">{county.marketStatus}</span>
+        </div>
+        <Button onClick={() => onView(county)} size="sm" className="w-full justify-center">
+          View Market <ChevronRight size={12} className="ml-1" />
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Standard builder county card ──
   return (
     <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
@@ -322,15 +417,17 @@ function CountyCard({ county, onView }) {
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Users size={12} className="text-accent" />
-          <span><strong className="text-sidebar">{county.builders.length}</strong> active builders tracked</span>
+          <span><strong className="text-sidebar">{county.buildersTracked || county.builders.length}</strong> active builders tracked</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <TrendingUp size={12} className="text-accent" />
           <span>Top builder: <strong className="text-sidebar">{top?.name}</strong> — {top?.permits} permits</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Building2 size={12} className="text-accent" />
-          <span><strong className="text-sidebar">{total}</strong> total permits tracked</span>
+          <BarChart2 size={12} className="text-accent" />
+          <span><strong className="text-sidebar">{total}</strong> total permits tracked
+            {county.dataNote && <span className="text-gray-400 ml-1">({county.dataNote})</span>}
+          </span>
         </div>
       </div>
       <Button onClick={() => onView(county)} size="sm" className="w-full justify-center">
@@ -342,6 +439,103 @@ function CountyCard({ county, onView }) {
 
 // ── County Detail View ────────────────────────────────────────────────────────
 function CountyDetail({ county, onBack, onConnect }) {
+  // ── Manufactured home market detail ──
+  if (county.permitType) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent transition-colors font-medium">
+            <ArrowLeft size={15} /> Back
+          </button>
+        </div>
+
+        {/* Header */}
+        <div className="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold text-sidebar">{county.county} County, {county.state}</h2>
+                <StateBadge state={county.state} />
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{county.permitType}</span>
+              </div>
+              <p className="text-sm text-gray-500">Top Dealers &amp; Installers — {county.builders.length} tracked</p>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-accent/10 text-accent">{county.marketStatus}</span>
+          </div>
+
+          {/* Stats bar */}
+          <div className="px-6 py-5 border-b border-gray-100">
+            <div className="flex gap-3 flex-wrap">
+              <StatCard value={county.permitCount} label="Active Mobile Home Permits" />
+              <StatCard value={county.permits2025} label="Permits Issued in 2025" />
+              <StatCard value={county.newInstalls} label="New Home Installs" />
+              <StatCard value={county.usedRelocated} label="Used / Relocated Homes" />
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly trend chart */}
+        {county.monthlyTrend && <PermitTrendChart data={county.monthlyTrend} />}
+
+        {/* Dealers & Installers table */}
+        <div className="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-sidebar">Top Dealers &amp; Installers</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Ranked by estimated market presence in Horry County</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {['#', 'Company', 'Type', 'Notes', 'Status', ''].map(h => (
+                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {county.builders.map(b => (
+                  <tr key={b.name} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3 px-4 text-sm font-bold text-gray-400 w-10">{b.rank}</td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-semibold text-sidebar">{b.name}</span>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${TYPE_STYLE[b.type] || 'bg-gray-100 text-gray-600'}`}>
+                        {b.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-gray-500 leading-snug">{b.notes}</span>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${STATUS_STYLE[b.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {b.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <Button size="sm" onClick={() => onConnect(b)}>
+                        Connect to Sell Land
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Data source note */}
+        {county.dataSource && (
+          <div className="flex items-start gap-2 px-1">
+            <Info size={13} className="text-gray-300 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-400 leading-relaxed">{county.dataSource}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Standard builder county detail ──
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -360,7 +554,7 @@ function CountyDetail({ county, onBack, onConnect }) {
             <p className="text-sm text-gray-500">Active Builder Rankings — {totalPermits(county)} total permits tracked</p>
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-500">
-            <span><strong className="text-sidebar">{county.builders.length}</strong> builders</span>
+            <span><strong className="text-sidebar">{county.buildersTracked || county.builders.length}</strong> builders</span>
           </div>
         </div>
 

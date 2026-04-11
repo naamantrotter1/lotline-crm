@@ -18,6 +18,8 @@ export const COUNTIES = [
     county: 'Guilford',
     state: 'NC',
     comingSoon: false,
+    buildersTracked: 15,
+    dataNote: '6 months of 2025 data',
     builders: [
       {
         rank: 1, name: 'DR Horton', permits: 28, specialty: 'Single Family', status: 'Dominant',
@@ -62,6 +64,52 @@ export const COUNTIES = [
     ],
   },
 
+  {
+    id: 'horry-sc',
+    county: 'Horry',
+    state: 'SC',
+    comingSoon: false,
+    permitType: 'Manufactured / Mobile Homes',
+    permitCount: 344,
+    permits2025: 273,
+    newInstalls: 177,
+    usedRelocated: 137,
+    marketStatus: 'Very Active Market',
+    monthlyTrend: [
+      { label: "Jan '24", permits: 1,  year: 2024 },
+      { label: "Feb '24", permits: 3,  year: 2024 },
+      { label: "Mar '24", permits: 0,  year: 2024 },
+      { label: "Apr '24", permits: 3,  year: 2024 },
+      { label: "May '24", permits: 2,  year: 2024 },
+      { label: "Jun '24", permits: 0,  year: 2024 },
+      { label: "Jul '24", permits: 0,  year: 2024 },
+      { label: "Aug '24", permits: 1,  year: 2024 },
+      { label: "Sep '24", permits: 5,  year: 2024 },
+      { label: "Oct '24", permits: 9,  year: 2024 },
+      { label: "Nov '24", permits: 4,  year: 2024 },
+      { label: "Dec '24", permits: 2,  year: 2024 },
+      { label: "Jan '25", permits: 24, year: 2025 },
+      { label: "Feb '25", permits: 24, year: 2025 },
+      { label: "Mar '25", permits: 26, year: 2025 },
+      { label: "Apr '25", permits: 49, year: 2025 },
+      { label: "May '25", permits: 29, year: 2025 },
+      { label: "Jun '25", permits: 27, year: 2025 },
+      { label: "Jul '25", permits: 33, year: 2025 },
+      { label: "Aug '25", permits: 33, year: 2025 },
+      { label: "Sep '25", permits: 28, year: 2025 },
+    ],
+    dataSource: 'Data sourced from Horry County GIS Active Permits database (horrycounty.org). Installer rankings based on market presence. For exact permit-by-installer data, contact Horry County Code Enforcement (843) 915-5090 or submit a public records request.',
+    builders: [
+      { rank: 1, name: 'Clayton Homes of Conway',  type: 'Dealer + Installer',      notes: 'National brand, high-volume dealer on US-501',                                        status: 'Dominant'    },
+      { rank: 2, name: "Herrington's LLC",          type: 'Full Turnkey Installer',  notes: 'Family-owned 30+ years, serves all of Horry County, full site prep + setup',         status: 'Very Active' },
+      { rank: 3, name: 'Regional Homes of Conway',  type: 'Dealer',                 notes: 'Major Southeast retailer, strong Horry County presence',                              status: 'Very Active' },
+      { rank: 4, name: 'H&H Builders',              type: 'Dealer + Builder',        notes: 'Family-owned since 1974, land & home packages, serves Conway/Horry',                 status: 'Active'      },
+      { rank: 5, name: "Rabon's Home Center",       type: 'Dealer',                 notes: 'Conway-based, carries Scotbilt, Cavco, Sunshine, Clayton Tempo',                     status: 'Active'      },
+      { rank: 6, name: 'Williamson Mobile Home',    type: 'Installer',              notes: 'Local Conway installer',                                                              status: 'Active'      },
+      { rank: 7, name: 'Stevens Mobile Homes Inc',  type: 'Dealer + Installer',      notes: 'Located at 1094 US-501, Conway',                                                     status: 'Active'      },
+    ],
+  },
+
   // ── NORTH CAROLINA — Coming Soon ─────────────────────────────────────────
   { id: 'wake-nc',        county: 'Wake',        state: 'NC', comingSoon: true },
   { id: 'mecklenburg-nc', county: 'Mecklenburg', state: 'NC', comingSoon: true },
@@ -89,7 +137,6 @@ export const COUNTIES = [
   { id: 'spartanburg-sc', county: 'Spartanburg', state: 'SC', comingSoon: true },
   { id: 'richland-sc',    county: 'Richland',    state: 'SC', comingSoon: true },
   { id: 'charleston-sc',  county: 'Charleston',  state: 'SC', comingSoon: true },
-  { id: 'horry-sc',       county: 'Horry',       state: 'SC', comingSoon: true },
   { id: 'lexington-sc',   county: 'Lexington',   state: 'SC', comingSoon: true },
   { id: 'york-sc',        county: 'York',        state: 'SC', comingSoon: true },
   { id: 'anderson-sc',    county: 'Anderson',    state: 'SC', comingSoon: true },
@@ -99,7 +146,8 @@ export const COUNTIES = [
 
 // Helpers
 export function totalPermits(county) {
-  return (county.builders || []).reduce((s, b) => s + b.permits, 0);
+  if (county.permitCount !== undefined) return county.permitCount;
+  return (county.builders || []).reduce((s, b) => s + (b.permits || 0), 0);
 }
 export function topBuilder(county) {
   return (county.builders || [])[0] || null;
