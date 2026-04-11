@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { DEAL_OVERVIEW_DEALS, LAND_DEALS } from '../data/deals.js';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const fmt    = (n) => n == null ? '–' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
@@ -862,6 +863,14 @@ function HeatMap() {
   const [acreage,    setAcreage]    = useState('All');
   const [statistic,  setStatistic]  = useState('Days on Market');
 
+  // ── Pipeline overlay state ────────────────────────────────────────────────
+  const [showDealOverview,  setShowDealOverview]  = useState(false);
+  const [showLandAcq,       setShowLandAcq]       = useState(false);
+  const [showSales,         setShowSales]         = useState(false);
+  const dealOverviewLayer = useRef(null);
+  const landAcqLayer      = useRef(null);
+  const salesLayer        = useRef(null);
+
   // ── Map state (declared early so searchQuery useEffect can reference geojson) ─
   const [geojson,     setGeojson]     = useState(null);
   const [zipGeojson,  setZipGeojson]  = useState(null);
@@ -1124,6 +1133,72 @@ function HeatMap() {
     zipLayer.current = layer;
   }, [zipGeojson, groupBy, metric, displayCounties, minV, maxV, cfg, statistic, timeFactor, timePeriod, dataType]);
 
+  // ── Pipeline deal markers ─────────────────────────────────────────────────
+  function makePipelineLayer(deals, color, labelFn) {
+    const group = L.layerGroup();
+    deals.forEach(deal => {
+      if (!deal.lat || !deal.lng) return;
+      const marker = L.circleMarker([deal.lat, deal.lng], {
+        radius: 8, fillColor: color, color: '#fff',
+        weight: 2, fillOpacity: 0.92,
+      });
+      marker.bindTooltip(labelFn(deal), { sticky: true, className: 'leaflet-tooltip-custom' });
+      marker.on('click', () => {
+        if (leafletMap.current) leafletMap.current.flyTo([deal.lat, deal.lng], 12, { duration: 0.8 });
+      });
+      group.addLayer(marker);
+    });
+    return group;
+  }
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+    const allDealOverview = [...DEAL_OVERVIEW_DEALS, ...customDeals.filter(d => d.pipeline === 'deal-overview')];
+    if (showDealOverview) {
+      if (!dealOverviewLayer.current) {
+        dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
+          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Deal Overview`);
+        dealOverviewLayer.current.addTo(map);
+      }
+    } else {
+      if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
+    }
+  }, [showDealOverview, leafletMap.current]);
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+    const allLandAcq = [...LAND_DEALS, ...customDeals.filter(d => d.pipeline === 'land-acquisition')];
+    if (showLandAcq) {
+      if (!landAcqLayer.current) {
+        landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',
+          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
+        landAcqLayer.current.addTo(map);
+      }
+    } else {
+      if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
+    }
+  }, [showLandAcq, leafletMap.current]);
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+    const salesDeals = customDeals.filter(d => d.pipeline === 'sales');
+    if (showSales) {
+      if (!salesLayer.current) {
+        salesLayer.current = makePipelineLayer(salesDeals, '#10b981',
+          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Sales`);
+        salesLayer.current.addTo(map);
+      }
+    } else {
+      if (salesLayer.current) { salesLayer.current.remove(); salesLayer.current = null; }
+    }
+  }, [showSales, leafletMap.current]);
+
   // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
   const statInfo = {
     Transactions:              'Estimated number of transactions in the selected time period based on absorption rate.',
@@ -1263,6 +1338,26 @@ function HeatMap() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Row 3 — Pipeline overlays */}
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-gray-100 flex-wrap">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Show on Map:</span>
+          {[
+            { label: 'Deal Overview', state: showDealOverview, set: setShowDealOverview, color: 'bg-blue-500 border-blue-500' },
+            { label: 'Land Acquisition', state: showLandAcq, set: setShowLandAcq, color: 'bg-amber-500 border-amber-500' },
+            { label: 'Sales', state: showSales, set: setShowSales, color: 'bg-emerald-500 border-emerald-500' },
+          ].map(({ label, state, set, color }) => (
+            <button key={label} onClick={() => set(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
+                ${state ? `${color} text-white` : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+              <span className={`w-2 h-2 rounded-full ${state ? 'bg-white' : color.replace('border-','bg-').split(' ')[0]}`} />
+              {label}
+            </button>
+          ))}
+          <span className="ml-2 text-xs text-gray-400">
+            {[showDealOverview && '● Deal Overview', showLandAcq && '● Land Acq.', showSales && '● Sales'].filter(Boolean).join('  ') || 'Pipelines hidden'}
+          </span>
         </div>
       </div>
 
