@@ -22,10 +22,31 @@ const DUMMY_PARTNERSHIPS = [
 ];
 
 // ── Empty forms ────────────────────────────────────────────────────────────
+const COST_FIELDS = [
+  { key: 'mobileHome',   label: 'Manufactured Home' },
+  { key: 'hudEngineer',  label: 'HUD Engineer' },
+  { key: 'percTest',     label: 'Perc Test / Permit' },
+  { key: 'survey',       label: 'Land Survey' },
+  { key: 'footers',      label: 'Footers' },
+  { key: 'setup',        label: 'Setup' },
+  { key: 'water',        label: 'Water' },
+  { key: 'septic',       label: 'Septic' },
+  { key: 'electric',     label: 'Electric / Power Pole' },
+  { key: 'hvac',         label: 'HVAC' },
+  { key: 'underpinning', label: 'Underpinning' },
+  { key: 'decks',        label: 'Decks Installed' },
+  { key: 'driveway',     label: 'Driveway' },
+  { key: 'landscaping',  label: 'Landscaping / Final Grading' },
+  { key: 'waterSewer',   label: 'Water / Sewer Hook Up' },
+  { key: 'mailbox',      label: 'Mailbox' },
+  { key: 'mobileTax',    label: 'Mobile Home Tax' },
+];
+const EMPTY_COSTS = Object.fromEntries(COST_FIELDS.map(f => [f.key, '']));
+
 const EMPTY_LOAN = {
-  address: '', purchasePrice: '', loanAmount: '', loanType: 'Fix & Flip',
-  propertyType: 'Single Family', arv: '', creditScore: '700+',
-  exitStrategy: 'Sell', notes: '',
+  address: '', purchasePrice: '', loanAmount: '', loanType: 'Land + Home Package',
+  propertyType: 'Manufactured Home', arv: '', creditScore: '700+',
+  exitStrategy: 'Sell', notes: '', costs: EMPTY_COSTS, costsOpen: false,
 };
 const EMPTY_PARTNER = {
   address: '', propertyType: 'Manufactured', dealType: 'Land + Home Package',
@@ -130,6 +151,10 @@ export default function Lending() {
     const { name, value } = e.target;
     setLoanForm(p => ({ ...p, [name]: value }));
   };
+  const handleCostChange = (key, value) => {
+    setLoanForm(p => ({ ...p, costs: { ...p.costs, [key]: value } }));
+  };
+  const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(loanForm.costs?.[f.key]) || 0), 0);
 
   const handleLoanSubmit = (e) => {
     e.preventDefault();
@@ -347,14 +372,46 @@ export default function Lending() {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Loan Type">
                   <select name="loanType" value={loanForm.loanType} onChange={handleLoanChange} className={inp}>
-                    <option>Fix &amp; Flip</option><option>DSCR</option><option>Bridge Loan</option><option>Construction</option><option>Land Loan</option>
+                    <option>Land + Home Package</option><option>Fix &amp; Flip</option><option>DSCR</option><option>Bridge Loan</option><option>Construction</option><option>Land Loan</option>
                   </select>
                 </Field>
                 <Field label="Property Type">
                   <select name="propertyType" value={loanForm.propertyType} onChange={handleLoanChange} className={inp}>
-                    <option>Single Family</option><option>Multi-Family</option><option>Mobile Home</option><option>Land</option><option>Commercial</option>
+                    <option>Manufactured Home</option><option>Single Family</option><option>Multi-Family</option><option>Land</option><option>Commercial</option>
                   </select>
                 </Field>
+              </div>
+
+              {/* Property Costs accordion */}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <button type="button"
+                  onClick={() => setLoanForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Property Costs
+                    {totalCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalCosts.toLocaleString()}</span>}
+                  </span>
+                  <ChevronRight size={14} className={`text-gray-400 transition-transform ${loanForm.costsOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {loanForm.costsOpen && (
+                  <div className="px-4 py-3 space-y-2 bg-white">
+                    {COST_FIELDS.map(f => (
+                      <div key={f.key} className="flex items-center justify-between gap-3">
+                        <label className="text-xs text-gray-500 flex-1">{f.label}</label>
+                        <div className="relative w-32">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                          <input type="number" min="0" value={loanForm.costs?.[f.key] || ''}
+                            onChange={e => handleCostChange(f.key, e.target.value)}
+                            className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                      <span className="text-xs font-bold text-gray-600">Total</span>
+                      <span className="text-xs font-bold text-sidebar">${totalCosts.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Estimated ARV ($)">
