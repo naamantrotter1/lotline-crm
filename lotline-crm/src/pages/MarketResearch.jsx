@@ -1291,27 +1291,10 @@ function HeatMap() {
         {/* Row 1 — primary filters */}
         <div className="flex items-center gap-2 px-4 py-2.5 flex-wrap">
 
-          {/* View toggle */}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-            {['County','State','Zip Code'].map(v => (
-              <button key={v} onClick={() => setGroupBy(v)}
-                className={`px-3 py-1.5 text-xs font-semibold transition-all
-                  ${groupBy === v ? 'bg-green-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-                {v}
-              </button>
-            ))}
-          </div>
-
-          {/* Status toggle */}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-            {['Sold','For Sale'].map(s => (
-              <button key={s} onClick={() => setStatus(s)}
-                className={`px-3 py-1.5 text-xs font-semibold transition-all
-                  ${status === s ? 'bg-green-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-                {s}
-              </button>
-            ))}
-          </div>
+          <FilterDropdown label="View"   value={groupBy} onChange={setGroupBy}
+            options={['County','State','Zip Code']} />
+          <FilterDropdown label="Status" value={status}  onChange={setStatus}
+            options={['Sold','For Sale']} />
 
           <FilterDropdown label="Time"       value={timePeriod} onChange={setTimePeriod}
             options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
