@@ -499,14 +499,16 @@ export default function Lending() {
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Purchase Price ($)">
-                  <input name="purchasePrice" type="number" min="0" value={partnerForm.purchasePrice} onChange={handlePartnerChange} className={inp} placeholder="0" />
-                </Field>
-                <Field label="Estimated Repair Costs ($)">
-                  <input name="repairCosts" type="number" min="0" value={partnerForm.repairCosts} onChange={handlePartnerChange} className={inp} placeholder="0" />
-                </Field>
-              </div>
+              {partnerForm.dealType !== 'Land + Home Package' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Purchase Price ($)">
+                    <input name="purchasePrice" type="number" min="0" value={partnerForm.purchasePrice} onChange={handlePartnerChange} className={inp} placeholder="0" />
+                  </Field>
+                  <Field label="Estimated Repair Costs ($)">
+                    <input name="repairCosts" type="number" min="0" value={partnerForm.repairCosts} onChange={handlePartnerChange} className={inp} placeholder="0" />
+                  </Field>
+                </div>
+              )}
               {/* Build Cost accordion — Land + Home Package only */}
               {partnerForm.dealType === 'Land + Home Package' && (
                 <div className="rounded-lg border border-gray-200 overflow-hidden">
@@ -545,7 +547,7 @@ export default function Lending() {
                 <Field label="After Repair Value ($)">
                   <input name="arv" type="number" min="0" value={partnerForm.arv} onChange={handlePartnerChange} className={inp} placeholder="0" />
                 </Field>
-                <Field label="Projected Profit ($)" hint="auto-calculated">
+                <Field label="Projected Profit ($)">
                   <input name="projectedProfit" type="number" min="0" value={partnerForm.projectedProfit} onChange={handlePartnerChange} className={inp + ' font-semibold text-accent'} placeholder="0" />
                 </Field>
               </div>
