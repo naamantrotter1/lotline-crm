@@ -588,6 +588,7 @@ export default function FloodMap() {
         transparent: true,
         version: '1.1.1',
         opacity: 0.65,
+        minZoom: 10,
         attribution: 'USDA NRCS SSURGO',
       }
     ).addTo(map);
@@ -825,6 +826,7 @@ export default function FloodMap() {
 
   const geojsonLayersActive = ['floodplain', 'wetlands', 'water'].some(k => layers[k]);
   const showZoomHint = geojsonLayersActive && zoom < MIN_GEOJSON_ZOOM;
+  const showSoilZoomHint = soil && zoom < 10;
   const showParcelZoomHint = false;
   const showContourZoomHint = false;
 
@@ -978,10 +980,12 @@ export default function FloodMap() {
         </div>
 
         {/* Zoom hint */}
-        {(showZoomHint || showParcelZoomHint || showContourZoomHint) && (
+        {(showZoomHint || showParcelZoomHint || showContourZoomHint || showSoilZoomHint) && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-gray-900/95 shadow-md border border-blue-500/40 rounded-lg px-3 py-2 flex items-center gap-2 text-xs text-blue-300">
             <ZoomIn size={13} />
-            {showParcelZoomHint && !showZoomHint && !showContourZoomHint
+            {showSoilZoomHint && !showZoomHint && !showParcelZoomHint && !showContourZoomHint
+              ? 'Zoom in to county level (zoom 10+) to see soil data'
+              : showParcelZoomHint && !showZoomHint && !showContourZoomHint
               ? 'Zoom in to see parcel boundaries'
               : showContourZoomHint && !showZoomHint && !showParcelZoomHint
               ? 'Zoom in to see contour lines'
