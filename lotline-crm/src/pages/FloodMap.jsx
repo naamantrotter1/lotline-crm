@@ -592,6 +592,7 @@ export default function FloodMap() {
         version: '1.1.1',
         opacity: 0.7,
         zIndex: 300,
+        minZoom: 12,
         maxZoom: 22,
         attribution: 'USDA NRCS SSURGO',
       }
