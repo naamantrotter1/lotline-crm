@@ -218,7 +218,9 @@ export default function FloodMap() {
 
   const [contours, setContours] = useState(false);
   const [soil,     setSoil]     = useState(false);
-  const soilLayerRef = useRef(null);
+  const soilGeoJSONRef      = useRef(null);
+  const soilFetchAbortRef   = useRef(null);
+  const soilEnabledRef      = useRef(false);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
 
   // ── Parcel search bar ──────────────────────────────────────────────────────
@@ -238,6 +240,7 @@ export default function FloodMap() {
   const SC_COUNTIES = ['Abbeville','Aiken','Allendale','Anderson','Bamberg','Barnwell','Beaufort','Berkeley','Calhoun','Charleston','Cherokee','Chester','Chesterfield','Clarendon','Colleton','Darlington','Dillon','Dorchester','Edgefield','Fairfield','Florence','Georgetown','Greenville','Greenwood','Hampton','Horry','Jasper','Kershaw','Lancaster','Laurens','Lee','Lexington','Marion','Marlboro','McCormick','Newberry','Oconee','Orangeburg','Pickens','Richland','Saluda','Spartanburg','Sumter','Union','Williamsburg','York'];
   const countyList = searchState === 'NC' ? NC_COUNTIES : searchState === 'SC' ? SC_COUNTIES : [];
 
+  soilEnabledRef.current = soil;
   layersRef.current = layers;
   parcelModeRef.current = parcelMode;
   parcelBoundariesRef.current = parcelBoundaries;
@@ -360,6 +363,59 @@ export default function FloodMap() {
       .catch(err => { if (err.name !== 'AbortError') console.error('[contours] fetch error:', err); });
   };
 
+  // ── Soil polygon color lookup ─────────────────────────────────────────────
+  const SOIL_PALETTE = [
+    '#e8d5b7','#c9ad7e','#d4b896','#b89a6e','#e8c880',
+    '#b8d4a0','#98c078','#c8e098','#90b878','#a8cc88',
+    '#b0cce0','#88b0d4','#d0b8d8','#c0a8d0','#e8b8d0',
+    '#f0c8a0','#e0a870','#f0d8b0','#d8c880','#c0d8a8',
+  ];
+  const soilColor = (musym) => {
+    if (!musym) return '#d4c5a9';
+    let h = 0;
+    for (let i = 0; i < musym.length; i++) { h = ((h << 5) - h) + musym.charCodeAt(i); h |= 0; }
+    return SOIL_PALETTE[Math.abs(h) % SOIL_PALETTE.length];
+  };
+
+  // ── Fetch + render colored soil polygons ──────────────────────────────────
+  const fetchSoil = (map) => {
+    if (soilFetchAbortRef.current) soilFetchAbortRef.current.abort();
+    if (map.getZoom() < 12) {
+      if (soilGeoJSONRef.current) { soilGeoJSONRef.current.remove(); soilGeoJSONRef.current = null; }
+      return;
+    }
+    const ctrl = new AbortController();
+    soilFetchAbortRef.current = ctrl;
+    const b = map.getBounds();
+    const bbox = `${b.getWest().toFixed(4)},${b.getSouth().toFixed(4)},${b.getEast().toFixed(4)},${b.getNorth().toFixed(4)}`;
+    fetch(`${PROXY}/api/proxy/soil-geojson?bbox=${bbox}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(data => {
+        if (!leafletMap.current || !soilEnabledRef.current) return;
+        const old = soilGeoJSONRef.current;
+        soilGeoJSONRef.current = data.features?.length
+          ? L.geoJSON(data, {
+              style: f => ({
+                fillColor: soilColor(f.properties?.musym),
+                fillOpacity: 0.55,
+                color: '#666',
+                weight: 0.5,
+                opacity: 0.8,
+              }),
+              onEachFeature: (f, layer) => {
+                const { musym, muname } = f.properties || {};
+                layer.bindTooltip(
+                  `<b>${musym || ''}</b>${muname ? '<br><span style="font-size:11px">' + muname + '</span>' : ''}`,
+                  { sticky: true, opacity: 0.9 }
+                );
+              },
+            }).addTo(leafletMap.current)
+          : null;
+        if (old) old.remove();
+      })
+      .catch(err => { if (err.name !== 'AbortError') console.error('[soil] fetch error:', err); });
+  };
+
   // ── Fetch + render buildability overlay for a parcel ──────────────────────
   const showBuildabilityOverlay = (parcelGeometry) => {
     if (!parcelGeometry || !leafletMap.current) return;
@@ -472,6 +528,11 @@ export default function FloodMap() {
     } else {
       fetchContours(map);
     }
+    if (!soilEnabledRef.current) {
+      if (soilGeoJSONRef.current) { soilGeoJSONRef.current.remove(); soilGeoJSONRef.current = null; }
+    } else {
+      fetchSoil(map);
+    }
   };
 
   // ── Init map ──────────────────────────────────────────────────────────────
@@ -513,8 +574,6 @@ export default function FloodMap() {
     if (!map) return;
     baseTiles.current.forEach(t => t.remove());
     baseTiles.current = TILE_LAYERS[mapStyle].map(t => L.tileLayer(t.url, t.opts).addTo(map));
-    // Re-raise soil layer above new basemap tiles
-    if (soilLayerRef.current) soilLayerRef.current.bringToFront?.();
   }, [mapStyle]);
 
   // ── County outlines ───────────────────────────────────────────────────────
@@ -574,29 +633,16 @@ export default function FloodMap() {
     }
   }, [contours]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Soil map units (USDA NRCS SSURGO WMS via proxy) ─────────────────────────
+  // ── Soil map units — colored GeoJSON polygons ─────────────────────────────
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
     if (!soil) {
-      if (soilLayerRef.current) { soilLayerRef.current.remove(); soilLayerRef.current = null; }
+      if (soilFetchAbortRef.current) soilFetchAbortRef.current.abort();
+      if (soilGeoJSONRef.current) { soilGeoJSONRef.current.remove(); soilGeoJSONRef.current = null; }
       return;
     }
-    const proxyBase = `${PROXY}/api/proxy/soil-tiles`;
-    soilLayerRef.current = L.tileLayer.wms(
-      proxyBase,
-      {
-        layers: 'mapunitpoly',
-        format: 'image/png',
-        transparent: true,
-        version: '1.1.1',
-        opacity: 0.7,
-        zIndex: 300,
-        minZoom: 12,
-        maxZoom: 22,
-        attribution: 'USDA NRCS SSURGO',
-      }
-    ).addTo(map);
+    fetchSoil(map);
   }, [soil]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pan to state — skip first mount so saved map view is preserved ─────────
