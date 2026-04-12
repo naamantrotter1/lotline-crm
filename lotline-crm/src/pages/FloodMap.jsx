@@ -513,6 +513,8 @@ export default function FloodMap() {
     if (!map) return;
     baseTiles.current.forEach(t => t.remove());
     baseTiles.current = TILE_LAYERS[mapStyle].map(t => L.tileLayer(t.url, t.opts).addTo(map));
+    // Re-raise soil layer above new basemap tiles
+    if (soilLayerRef.current) soilLayerRef.current.bringToFront?.();
   }, [mapStyle]);
 
   // ── County outlines ───────────────────────────────────────────────────────
@@ -588,7 +590,7 @@ export default function FloodMap() {
         transparent: true,
         version: '1.1.1',
         opacity: 0.7,
-        pane: 'overlayPane',
+        zIndex: 300,
         attribution: 'USDA NRCS SSURGO',
       }
     ).addTo(map);
