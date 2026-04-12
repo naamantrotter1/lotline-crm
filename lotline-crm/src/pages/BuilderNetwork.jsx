@@ -172,7 +172,7 @@ function ConnectDrawer({ open, builder, county, onClose }) {
       <div className={`fixed top-0 right-0 h-full w-[500px] max-w-full bg-white z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Connect to Sell Land</p>
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Contact</p>
             <h2 className="text-base font-bold text-sidebar">{builder?.name}</h2>
           </div>
           <button onClick={close} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"><X size={18} /></button>
@@ -508,7 +508,7 @@ function DualTabDetail({ county, onBack, onConnect }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <Button size="sm" onClick={() => onConnect(b)}>Connect to Sell Land</Button>
+                      <Button size="sm" onClick={() => onConnect(b)}>Contact</Button>
                     </td>
                   </tr>
                 ))}
@@ -562,7 +562,7 @@ function DualTabDetail({ county, onBack, onConnect }) {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <Button size="sm" onClick={() => onConnect(b)}>Connect to Sell Land</Button>
+                        <Button size="sm" onClick={() => onConnect(b)}>Contact</Button>
                       </td>
                     </tr>
                   ))}
@@ -666,7 +666,7 @@ function CountyDetail({ county, onBack, onConnect }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <Button size="sm" onClick={() => onConnect(b)}>Connect to Sell Land</Button>
+                      <Button size="sm" onClick={() => onConnect(b)}>Contact</Button>
                     </td>
                   </tr>
                 ))}
@@ -733,7 +733,7 @@ function CountyDetail({ county, onBack, onConnect }) {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">
-                    <Button size="sm" onClick={() => onConnect(b)}>Connect to Sell Land</Button>
+                    <Button size="sm" onClick={() => onConnect(b)}>Contact</Button>
                   </td>
                 </tr>
               ))}
