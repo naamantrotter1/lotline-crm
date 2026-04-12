@@ -58,7 +58,7 @@ export default function handler(req, res) {
   const body = JSON.stringify({ query, FORMAT: 'JSON+COLUMNNAME+METADATA' });
 
   const options = {
-    hostname: 'sdmdataaccess.nrcs.usda.gov',
+    hostname: 'sdmdataaccess.sc.egov.usda.gov',
     path: '/Tabular/SDMTabularService/post.rest',
     method: 'POST',
     headers: {
@@ -74,7 +74,12 @@ export default function handler(req, res) {
     upstream.on('data', c => chunks.push(c));
     upstream.on('end', () => {
       try {
-        const data = JSON.parse(Buffer.concat(chunks).toString());
+        const raw = Buffer.concat(chunks).toString();
+        // If not JSON, return first 400 chars so we can diagnose
+        if (raw.trimStart().startsWith('<') || raw.trimStart().startsWith('Error')) {
+          return res.status(502).json({ error: 'SDA API returned non-JSON', detail: raw.substring(0, 400) });
+        }
+        const data = JSON.parse(raw);
         const rows = data.Table || [];
         if (!rows.length) return res.json({ type: 'FeatureCollection', features: [] });
 
