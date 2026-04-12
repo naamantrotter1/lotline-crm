@@ -574,7 +574,7 @@ export default function FloodMap() {
     }
   }, [contours]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Soil map units (USDA NRCS SSURGO WMS) ───────────────────────────────────
+  // ── Soil map units (USDA NRCS SSURGO WMS via proxy) ─────────────────────────
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
@@ -582,8 +582,9 @@ export default function FloodMap() {
       if (soilLayerRef.current) { soilLayerRef.current.remove(); soilLayerRef.current = null; }
       return;
     }
+    const proxyBase = `${PROXY}/api/proxy/soil-tiles`;
     soilLayerRef.current = L.tileLayer.wms(
-      'https://SDMDataAccess.sc.egov.usda.gov/Spatial/SDM.wms',
+      proxyBase,
       {
         layers: 'mapunitpoly',
         format: 'image/png',
