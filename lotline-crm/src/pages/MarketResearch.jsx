@@ -8,6 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info, Building2,
 } from 'lucide-react';
 import BuilderNetworkPage from './BuilderNetwork';
+import CountyDatabasePage from './CountyDatabase';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DEAL_OVERVIEW_DEALS, LAND_DEALS } from '../data/deals.js';
@@ -2066,6 +2067,7 @@ const TABS = [
   { id: 'stats',    label: 'Market Stats',    icon: TrendingUp },
   { id: 'comps',    label: 'Comp Finder',     icon: Search     },
   { id: 'builders', label: 'Builder Network', icon: Building2  },
+  { id: 'counties', label: 'County Database', icon: Info       },
 ];
 
 export default function MarketResearch() {
@@ -2101,6 +2103,7 @@ export default function MarketResearch() {
       {activeTab === 'stats'    && <MarketStats />}
       {activeTab === 'comps'    && <CompFinder />}
       {activeTab === 'builders' && <BuilderNetworkPage />}
+      {activeTab === 'counties' && <CountyDatabasePage />}
     </div>
   );
 }
