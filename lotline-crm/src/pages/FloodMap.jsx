@@ -217,6 +217,8 @@ export default function FloodMap() {
   const contoursEnabledRef = useRef(false);   // mirrors contours state for use in callbacks
 
   const [contours, setContours] = useState(false);
+  const [soil,     setSoil]     = useState(false);
+  const soilLayerRef = useRef(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
 
   // ── Parcel search bar ──────────────────────────────────────────────────────
@@ -569,6 +571,27 @@ export default function FloodMap() {
       fetchContours(map);
     }
   }, [contours]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Soil map units (USDA NRCS SSURGO WMS) ───────────────────────────────────
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    if (!soil) {
+      if (soilLayerRef.current) { soilLayerRef.current.remove(); soilLayerRef.current = null; }
+      return;
+    }
+    soilLayerRef.current = L.tileLayer.wms(
+      'https://SDMDataAccess.sc.egov.usda.gov/Spatial/SDM.wms',
+      {
+        layers: 'mapunitpoly',
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        opacity: 0.65,
+        attribution: 'USDA NRCS SSURGO',
+      }
+    ).addTo(map);
+  }, [soil]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pan to state — skip first mount so saved map view is preserved ─────────
   const statePanInitialized = useRef(false);
@@ -1038,12 +1061,17 @@ export default function FloodMap() {
                     <span className="text-sm text-gray-200">Water Features</span>
                     <Toggle active={layers.water} onChange={() => toggleLayer('water')} />
                   </div>
+                  {/* Soil Report */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-200">Soil Report</span>
+                    <Toggle active={soil} onChange={() => setSoil(p => !p)} />
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="px-4 py-2 border-t border-gray-700 text-[10px] text-gray-600">
-              FEMA NFHL • USFWS NWI • USGS NHD • USGS 3DEP
+              FEMA NFHL • USFWS NWI • USGS NHD • USGS 3DEP • USDA NRCS SSURGO
             </div>
           </div>
         )}
