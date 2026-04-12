@@ -5,8 +5,9 @@ import {
 } from 'recharts';
 import {
   Calculator, TrendingUp, Search, ExternalLink, Map,
-  ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info,
+  ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info, Building2,
 } from 'lucide-react';
+import BuilderNetworkPage from './BuilderNetwork';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DEAL_OVERVIEW_DEALS, LAND_DEALS } from '../data/deals.js';
@@ -2060,10 +2061,11 @@ function HeatMap() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'heatmap',  label: 'Heat Map',      icon: Map        },
-  { id: 'analyzer', label: 'Deal Analyzer', icon: Calculator },
-  { id: 'stats',    label: 'Market Stats',  icon: TrendingUp },
-  { id: 'comps',    label: 'Comp Finder',   icon: Search     },
+  { id: 'heatmap',  label: 'Heat Map',        icon: Map        },
+  { id: 'analyzer', label: 'Deal Analyzer',   icon: Calculator },
+  { id: 'stats',    label: 'Market Stats',    icon: TrendingUp },
+  { id: 'comps',    label: 'Comp Finder',     icon: Search     },
+  { id: 'builders', label: 'Builder Network', icon: Building2  },
 ];
 
 export default function MarketResearch() {
@@ -2098,6 +2100,7 @@ export default function MarketResearch() {
       {activeTab === 'analyzer' && <DealAnalyzer />}
       {activeTab === 'stats'    && <MarketStats />}
       {activeTab === 'comps'    && <CompFinder />}
+      {activeTab === 'builders' && <BuilderNetworkPage />}
     </div>
   );
 }
