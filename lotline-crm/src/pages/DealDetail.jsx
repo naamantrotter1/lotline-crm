@@ -1291,6 +1291,7 @@ export default function DealDetail() {
           <FloodMap
             initialParcelId={deal?.parcelId || undefined}
             initialState={deal?.state || 'NC'}
+            initialCounty={deal?.county || undefined}
             onClose={() => setShowMapModal(false)}
           />
         </div>

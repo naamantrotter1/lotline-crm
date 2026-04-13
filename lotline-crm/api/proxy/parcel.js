@@ -54,7 +54,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { lat, lng, parno: qParno, state: qState } = req.query;
+  const { lat, lng, parno: qParno, state: qState, county: qCounty } = req.query;
   if (!qParno && (!lat || !lng)) return res.status(400).json({ error: 'lat/lng or parno required' });
 
   const latN = parseFloat(lat) || 0;
@@ -74,7 +74,9 @@ export default async function handler(req, res) {
     const SC_FIELDS = 'T_Map_Number,County,L_Value,M_Value,Ownership,Mailing_Add,Mailing_City,Mailing_Zip,Zoning,Land_Use,Acreage,Shape_Area,Mailing_St';
     let scParams;
     if (qParno) {
-      scParams = new URLSearchParams({ where: `T_Map_Number='${qParno.replace(/'/g, "''")}'`, outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', f: 'geojson' });
+      let scWhere = `T_Map_Number='${qParno.replace(/'/g, "''")}'`;
+      if (qCounty) scWhere += ` AND County LIKE '%${qCounty.replace(/'/g, "''")}%'`;
+      scParams = new URLSearchParams({ where: scWhere, outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', f: 'geojson' });
     } else {
       // Use point query first (exact parcel containing the point), fall back to small bbox
       const ptGeom = JSON.stringify({ x: lngN, y: latN, spatialReference: { wkid: 4326 } });
@@ -123,7 +125,9 @@ export default async function handler(req, res) {
 
   const getAttrUrl = async () => {
     if (qParno) {
-      const p = new URLSearchParams({ where: `parno='${qParno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
+      let where = `parno='${qParno.replace(/'/g,"''")}'`;
+      if (qCounty) where += ` AND cntyname LIKE '${qCounty.replace(/'/g,"''").replace(/\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())}%'`;
+      const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
       return `https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`;
     }
     // Use point query — returns only the parcel that contains the exact click point.

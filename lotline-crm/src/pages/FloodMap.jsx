@@ -176,7 +176,7 @@ const STATE_BOUNDS = {
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function FloodMap({ initialParcelId, initialState, onClose } = {}) {
+export default function FloodMap({ initialParcelId, initialState, initialCounty, onClose } = {}) {
   const mapRef       = useRef(null);
   const leafletMap   = useRef(null);
   const baseTiles    = useRef([]);
@@ -577,8 +577,9 @@ export default function FloodMap({ initialParcelId, initialState, onClose } = {}
     if (!mapReady) return;
     const parno = initialParcelId || searchParams.get('parcelId');
     const stateParam = initialState || searchParams.get('state') || '';
+    const countyParam = initialCounty || searchParams.get('county') || '';
     if (!parno) return;
-    handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam });
+    handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
@@ -847,6 +848,7 @@ export default function FloodMap({ initialParcelId, initialState, onClose } = {}
       ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}&lat=${lat ?? 0}&lng=${lng ?? 0}`
       : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
     if (result.state) parcelUrl += `&state=${result.state}`;
+    if (result.county) parcelUrl += `&county=${encodeURIComponent(result.county)}`;
 
     try {
       const r = await fetch(parcelUrl, { signal: parcelInfoCtrl.signal });
