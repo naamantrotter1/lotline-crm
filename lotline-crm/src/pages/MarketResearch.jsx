@@ -2069,9 +2069,7 @@ function HeatMap() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'heatmap',  label: 'Heat Map',        icon: Map        },
-  { id: 'analyzer', label: 'Deal Analyzer',   icon: Calculator },
   { id: 'stats',    label: 'Market Stats',    icon: TrendingUp },
-  { id: 'comps',    label: 'Comp Finder',     icon: Search     },
   { id: 'builders', label: 'Builder Network', icon: Building2  },
   { id: 'counties', label: 'County Database', icon: Info       },
 ];
