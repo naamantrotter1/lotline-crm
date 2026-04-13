@@ -37,7 +37,6 @@ const navSections = [
       { icon: Building2, label: 'Builder Network', to: '/builder-network' },
       { icon: Calculator, label: 'Deal Calculator', to: '/calculator' },
       { icon: Building, label: 'Home Models', to: '/home-models' },
-      { icon: Database, label: 'County Database', to: '/counties' },
       { icon: MapPin, label: 'ARV Database', to: '/arv' },
       { icon: HardHat, label: 'Contractor Database', to: '/contractors' },
       { icon: Archive, label: 'Archived Deals', to: '/archived' },
