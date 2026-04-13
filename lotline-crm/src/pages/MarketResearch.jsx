@@ -234,20 +234,52 @@ function DealAnalyzer() {
 // ── TAB 2: Market Stats ───────────────────────────────────────────────────────
 const SORT_COLS = [
   { key: 'name',            label: 'County' },
-  { key: 'oppScore',        label: 'Opp Score' },
-  { key: 'demandScore',     label: 'Demand' },
-  { key: 'monthsSupply',    label: 'Mo. Supply' },
-  { key: 'absorptionRate',  label: 'Abs. Rate' },
-  { key: 'medianSalePrice', label: 'Med. Sale' },
-  { key: 'medianDOM',       label: 'DOM' },
+  { key: 'medianPpa',       label: 'Avg ARV',     info: 'Average After-Repair Value — median price per acre. Lower values indicate larger, rural parcels.' },
+  { key: 'oppScore',        label: 'Opp Score',   info: 'Composite 0–100 score combining absorption rate, months of supply, and population growth. Higher = better market opportunity.' },
+  { key: 'demandScore',     label: 'Demand',      info: 'Composite 0–100 score combining sell-through rate, days on market, and absorption rate. Higher = stronger buyer demand.' },
+  { key: 'medianDOM',       label: 'DOM',         info: 'Days on Market — median days a parcel sits on the market before going under contract. Lower is better.' },
+  { key: 'absorptionRate',  label: 'Abs. Rate',   info: 'Absorption Rate — percentage of available inventory that sold in the period. Higher means faster-moving market.' },
+  { key: 'monthsSupply',    label: 'Mo. Supply',  info: 'Months of Supply — how long current inventory would last at the current sales pace. Under 6 months = seller\'s market.' },
+  { key: 'sellThrough',     label: 'Sell Thru',   info: 'Sell-Through Rate — percentage of listed properties that actually sold. Higher means stronger buyer demand.' },
+  { key: 'medianSalePrice', label: 'Med. Sale',   info: 'Median sale price of parcels closed in the selected period.' },
+  { key: 'medianIncome',    label: 'Med. Income', info: 'Median household income for the county. Higher income areas typically support stronger land values.' },
+  { key: 'unemployment',    label: 'Unemp.',      info: 'Unemployment rate for the county. Lower unemployment generally correlates with stronger housing demand.' },
+  { key: 'popGrowth',       label: 'Pop Growth',  info: 'Annual population growth rate (%). Positive growth drives land demand; negative signals a shrinking market.' },
   { key: 'listToSale',      label: 'L/S Ratio' },
-  { key: 'sellThrough',     label: 'Sell Thru' },
   { key: 'activeListing',   label: 'Active' },
   { key: 'soldCount',       label: 'Sold' },
-  { key: 'popGrowth',       label: 'Pop Growth' },
-  { key: 'medianIncome',    label: 'Med. Income' },
-  { key: 'unemployment',    label: 'Unemp.' },
 ];
+
+function ColHeader({ col, sort, onSort }) {
+  const [showTip, setShowTip] = useState(false);
+  return (
+    <th
+      onClick={() => onSort(col.key)}
+      className={`text-left py-3 px-3 font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-accent transition-colors ${sort.col === col.key ? 'text-accent' : 'text-gray-500'}`}
+    >
+      <div className="flex items-center gap-1">
+        <span>{col.label}</span>
+        {sort.col === col.key && <span>{sort.dir === 1 ? '↑' : '↓'}</span>}
+        {col.info && (
+          <div className="relative" onClick={e => e.stopPropagation()}>
+            <button
+              onMouseEnter={() => setShowTip(true)}
+              onMouseLeave={() => setShowTip(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
+            >
+              <Info size={11} />
+            </button>
+            {showTip && (
+              <div className="absolute left-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
+                {col.info}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </th>
+  );
+}
 
 function MarketStats() {
   const [timePeriod, setTimePeriod] = useState('90 days');
@@ -327,11 +359,8 @@ function MarketStats() {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
               <tr>
-                {SORT_COLS.map(({ key, label }) => (
-                  <th key={key} onClick={() => handleSort(key)}
-                    className={`text-left py-3 px-3 font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-accent transition-colors ${sort.col === key ? 'text-accent' : 'text-gray-500'}`}>
-                    {label} {sort.col === key ? (sort.dir === 1 ? '↑' : '↓') : ''}
-                  </th>
+                {SORT_COLS.map(col => (
+                  <ColHeader key={col.key} col={col} sort={sort} onSort={handleSort} />
                 ))}
                 <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">MH Zone</th>
                 <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Priority</th>
@@ -341,25 +370,26 @@ function MarketStats() {
               {filtered.map(r => (
                 <tr key={r.fips} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
                   <td className="py-3 px-3 font-semibold text-sidebar whitespace-nowrap">{r.name}, {r.state}</td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.medianPpa ? fmtK(r.medianPpa) : '–'}</td>
                   <td className="py-3 px-3"><ScoreBadge score={r.oppScore} /></td>
                   <td className="py-3 px-3"><ScoreBadge score={r.demandScore} /></td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.monthsSupply.toFixed(1)}</td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtPct(r.absorptionRate)}</td>
-                  <td className="py-3 px-3 tabular-nums font-semibold text-sidebar">{fmtK(r.medianSalePrice)}</td>
                   <td className="py-3 px-3 tabular-nums text-gray-600">{r.medianDOM}d</td>
-                  <td className="py-3 px-3 tabular-nums">
-                    <span className={r.listToSale >= 98 ? 'text-green-600' : 'text-gray-600'}>{fmtPct(r.listToSale)}</span>
-                  </td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtPct(r.absorptionRate)}</td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.monthsSupply.toFixed(1)}</td>
                   <td className="py-3 px-3 tabular-nums text-gray-600">{fmtPct(r.sellThrough)}</td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.activeListing}</td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.soldCount}</td>
+                  <td className="py-3 px-3 tabular-nums font-semibold text-sidebar">{fmtK(r.medianSalePrice)}</td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtK(r.medianIncome)}</td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtPct(r.unemployment)}</td>
                   <td className="py-3 px-3 tabular-nums">
                     <span className={r.popGrowth >= 0 ? 'text-green-600' : 'text-red-500'}>
                       <TrendIcon val={r.popGrowth} /> {fmtPct(r.popGrowth)}
                     </span>
                   </td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtK(r.medianIncome)}</td>
-                  <td className="py-3 px-3 tabular-nums text-gray-600">{fmtPct(r.unemployment)}</td>
+                  <td className="py-3 px-3 tabular-nums">
+                    <span className={r.listToSale >= 98 ? 'text-green-600' : 'text-gray-600'}>{fmtPct(r.listToSale)}</span>
+                  </td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.activeListing}</td>
+                  <td className="py-3 px-3 tabular-nums text-gray-600">{r.soldCount}</td>
                   <td className="py-3 px-3">
                     {r.mhFriendly
                       ? <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Yes</span>
