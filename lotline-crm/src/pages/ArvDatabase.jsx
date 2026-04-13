@@ -428,24 +428,34 @@ function pgColor(pg) {
   return pg >= 2 ? 'text-green-600' : pg >= 0 ? 'text-yellow-600' : 'text-red-500';
 }
 
-function FilterInfo({ tip }) {
-  const [show, setShow] = useState(false);
+function InfoTooltip({ tip, size = 12 }) {
+  const [pos, setPos] = useState(null);
   return (
-    <div className="relative">
+    <>
       <button
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
+        onMouseEnter={e => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setPos({ x: r.left, y: r.bottom + 6 });
+        }}
+        onMouseLeave={() => setPos(null)}
+        onClick={e => e.stopPropagation()}
         className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
       >
-        <Info size={12} />
+        <Info size={size} />
       </button>
-      {show && (
-        <div className="absolute left-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none">
+      {pos && (
+        <div
+          style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999 }}
+          className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none font-normal normal-case tracking-normal"
+        >
           {tip}
         </div>
       )}
-    </div>
+    </>
   );
+}
+function FilterInfo({ tip }) {
+  return <InfoTooltip tip={tip} size={12} />;
 }
 
 export default function ArvDatabase() {
@@ -513,36 +523,18 @@ export default function ArvDatabase() {
     </span>
   );
 
-  const Th = ({ col, label, right, info }) => {
-    const [showTip, setShowTip] = useState(false);
-    return (
-      <th
-        onClick={() => toggleSort(col)}
-        className={`py-3 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
-      >
-        <div className={`flex items-center gap-1 ${right ? 'justify-end' : ''}`}>
-          <span>{label}</span>
-          <SortArrow col={col} />
-          {info && (
-            <div className="relative" onClick={e => e.stopPropagation()}>
-              <button
-                onMouseEnter={() => setShowTip(true)}
-                onMouseLeave={() => setShowTip(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
-              >
-                <Info size={11} />
-              </button>
-              {showTip && (
-                <div className="absolute right-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
-                  {info}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </th>
-    );
-  };
+  const Th = ({ col, label, right, info }) => (
+    <th
+      onClick={() => toggleSort(col)}
+      className={`py-3 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
+    >
+      <div className={`flex items-center gap-1 ${right ? 'justify-end' : ''}`}>
+        <span>{label}</span>
+        <SortArrow col={col} />
+        {info && <InfoTooltip tip={info} size={11} />}
+      </div>
+    </th>
+  );
 
   return (
     <div className="space-y-5">

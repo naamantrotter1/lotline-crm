@@ -251,7 +251,7 @@ const SORT_COLS = [
 ];
 
 function ColHeader({ col, sort, onSort }) {
-  const [showTip, setShowTip] = useState(false);
+  const [tipPos, setTipPos] = useState(null);
   return (
     <th
       onClick={() => onSort(col.key)}
@@ -261,20 +261,22 @@ function ColHeader({ col, sort, onSort }) {
         <span>{col.label}</span>
         {sort.col === col.key && <span>{sort.dir === 1 ? '↑' : '↓'}</span>}
         {col.info && (
-          <div className="relative" onClick={e => e.stopPropagation()}>
+          <>
             <button
-              onMouseEnter={() => setShowTip(true)}
-              onMouseLeave={() => setShowTip(false)}
+              onClick={e => e.stopPropagation()}
+              onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); setTipPos({ x: r.left, y: r.bottom + 6 }); }}
+              onMouseLeave={() => setTipPos(null)}
               className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
             >
               <Info size={11} />
             </button>
-            {showTip && (
-              <div className="absolute left-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
+            {tipPos && (
+              <div style={{ position: 'fixed', left: tipPos.x, top: tipPos.y, zIndex: 9999 }}
+                className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
                 {col.info}
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </th>
@@ -682,7 +684,7 @@ function applyDataType(counties, dataType) {
 // ── LandPortal-style filter dropdown ─────────────────────────────────────────
 function FilterDropdown({ label, value, options, onChange, tooltip }) {
   const [open, setOpen] = useState(false);
-  const [showTip, setShowTip] = useState(false);
+  const [tipPos, setTipPos] = useState(null);
   const ref = useRef(null);
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -721,20 +723,21 @@ function FilterDropdown({ label, value, options, onChange, tooltip }) {
         )}
       </div>
       {tooltip && (
-        <div className="relative">
+        <>
           <button
-            onMouseEnter={() => setShowTip(true)}
-            onMouseLeave={() => setShowTip(false)}
+            onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); setTipPos({ x: r.left, y: r.bottom + 6 }); }}
+            onMouseLeave={() => setTipPos(null)}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <Info size={12} />
           </button>
-          {showTip && (
-            <div className="absolute left-0 top-6 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none">
+          {tipPos && (
+            <div style={{ position: 'fixed', left: tipPos.x, top: tipPos.y, zIndex: 9999 }}
+              className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none">
               {tooltip}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
