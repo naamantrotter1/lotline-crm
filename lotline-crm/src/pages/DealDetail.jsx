@@ -1107,7 +1107,7 @@ export default function DealDetail() {
             <ArrowLeft size={16} /> Back to Pipeline
           </button>
           <ChevronRight size={14} className="text-gray-300" />
-          <span className="text-sm text-gray-400">Deal Overview</span>
+          <span className="text-sm text-gray-400">{deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
           <ChevronRight size={14} className="text-gray-300" />
           <span className="text-sm text-gray-600 font-medium truncate max-w-xs">{deal.address}</span>
         </div>

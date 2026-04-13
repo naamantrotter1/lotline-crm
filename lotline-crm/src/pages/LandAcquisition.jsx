@@ -793,7 +793,7 @@ function loadCustomDeals() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
-  const [selectedDeal, setSelectedDeal] = useState(null);
+  const navigate = useNavigate();
   const [customDeals, setCustomDeals] = useState(loadCustomDeals);
 
   // Re-sync when storage changes (e.g. import from Deal Calculator in another tab)
@@ -831,7 +831,7 @@ export default function LandAcquisition() {
               {/* Cards */}
               <div>
                 {deals.map(deal => (
-                  <LandCard key={deal.id} deal={deal} onClick={() => setSelectedDeal(deal)} />
+                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`)} />
                 ))}
                 {deals.length === 0 && (
                   <div className="rounded-2xl p-6 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
@@ -844,9 +844,6 @@ export default function LandAcquisition() {
         })}
       </div>
 
-      {selectedDeal && (
-        <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
-      )}
     </div>
   );
 }
