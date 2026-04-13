@@ -1514,7 +1514,6 @@ function HeatMap() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'heatmap',  label: 'Heat Map',        icon: Map        },
-  { id: 'stats',    label: 'Market Stats',    icon: TrendingUp },
   { id: 'builders', label: 'Builder Network', icon: Building2  },
   { id: 'counties', label: 'County Database', icon: Info       },
   { id: 'arv',      label: 'ARV Database',    icon: MapPin     },
@@ -1550,7 +1549,6 @@ export default function MarketResearch() {
       {/* Tab content */}
       {activeTab === 'heatmap'  && <HeatMap />}
       {activeTab === 'analyzer' && <DealAnalyzer />}
-      {activeTab === 'stats'    && <MarketStats />}
       {activeTab === 'comps'    && <CompFinder />}
       {activeTab === 'builders' && <BuilderNetworkPage />}
       {activeTab === 'counties' && <CountyDatabasePage />}
