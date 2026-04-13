@@ -628,7 +628,7 @@ export default function ArvDatabase() {
                 <td className="py-2.5 px-3 text-sm font-medium text-sidebar whitespace-nowrap">{row.county}</td>
                 <td className="py-2.5 px-3 text-sm text-gray-600">{row.state}</td>
                 <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.minArv.toLocaleString()}</td>
-                <td className="py-2.5 px-3 text-sm text-right font-semibold text-accent">${row.avgArv.toLocaleString()}</td>
+                <td className={`py-2.5 px-3 text-sm text-right font-semibold ${row.avgArv >= 220000 ? 'text-green-600' : 'text-accent'}`}>${row.avgArv.toLocaleString()}</td>
                 <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.maxArv.toLocaleString()}</td>
                 <td className="py-2.5 px-3 text-sm text-right text-gray-600">{row.comps}</td>
                 <td className="py-2.5 px-3 text-right">{scoreBadge(row.oppScore)}</td>
