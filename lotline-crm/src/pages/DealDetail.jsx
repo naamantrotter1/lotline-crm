@@ -1289,6 +1289,7 @@ export default function DealDetail() {
       <div className="fixed inset-0 z-[3000] bg-black/60 flex items-center justify-center p-4">
         <div className="relative w-full h-full max-w-6xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl">
           <FloodMap
+            initialAddress={deal?.address || undefined}
             initialParcelId={deal?.parcelId || undefined}
             initialState={deal?.state || 'NC'}
             initialCounty={deal?.county || undefined}

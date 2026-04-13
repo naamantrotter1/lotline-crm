@@ -176,7 +176,7 @@ const STATE_BOUNDS = {
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function FloodMap({ initialParcelId, initialState, initialCounty, onClose } = {}) {
+export default function FloodMap({ initialParcelId, initialState, initialCounty, initialAddress, onClose } = {}) {
   const mapRef       = useRef(null);
   const leafletMap   = useRef(null);
   const baseTiles    = useRef([]);
@@ -575,16 +575,39 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   // ── Auto-load parcel from prop or URL params ────────────────────────────────
   useEffect(() => {
     if (!mapReady) return;
-    const parno = initialParcelId || searchParams.get('parcelId');
-    const stateParam = initialState || searchParams.get('state') || '';
-    const countyParam = initialCounty || searchParams.get('county') || '';
-    if (!parno) return;
-    // Set search UI to Parcel ID mode with correct state/county
-    setSearchType('parno');
-    if (stateParam) setSearchState(stateParam);
-    if (countyParam) setSearchCounty(countyParam);
-    setSearchQuery(parno);
-    handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
+    const parno       = initialParcelId || searchParams.get('parcelId');
+    const stateParam  = initialState    || searchParams.get('state')    || '';
+    const countyParam = initialCounty   || searchParams.get('county')   || '';
+    const address     = initialAddress  || searchParams.get('address')  || '';
+
+    if (!address && !parno) return;
+
+    if (address) {
+      // Geocode the address to get real coordinates, then look up parcel by lat/lng.
+      // This is more reliable than matching parcel ID formats across county GIS systems.
+      setSearchType('address');
+      setSearchQuery(address);
+      if (stateParam) setSearchState(stateParam);
+      if (countyParam) setSearchCounty(countyParam);
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, {
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'LotLine-CRM/1.0' },
+      })
+        .then(r => r.json())
+        .then(results => {
+          if (!results?.length) return;
+          const latF = parseFloat(results[0].lat);
+          const lngF = parseFloat(results[0].lon);
+          handleSearchSelect({ lat: latF, lng: lngF, state: stateParam, county: countyParam });
+        })
+        .catch(() => {});
+    } else {
+      // Fall back to parcel ID search when no address is available
+      setSearchType('parno');
+      if (stateParam) setSearchState(stateParam);
+      if (countyParam) setSearchCounty(countyParam);
+      setSearchQuery(parno);
+      handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
