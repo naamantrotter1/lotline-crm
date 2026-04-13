@@ -382,6 +382,9 @@ const MERGED_DATA = ARV_DATA.map(row => {
     demandScore: s.demandScore ?? null,
     popGrowth: s.popGrowth ?? null,
     mhFriendly: s.mhFriendly ?? null,
+    medianSalePrice: s.medianSalePrice ?? null,
+    medianIncome: s.medianIncome ?? null,
+    unemployment: s.unemployment ?? null,
   };
 });
 
@@ -623,6 +626,10 @@ export default function ArvDatabase() {
               <Th col="medianDOM" label="DOM" right />
               <Th col="absorptionRate" label="Abs %" right />
               <Th col="monthsSupply" label="Mo. Supply" right />
+              <Th col="sellThrough" label="Sell Thru" right />
+              <Th col="medianSalePrice" label="Med. Sale" right />
+              <Th col="medianIncome" label="Med. Income" right />
+              <Th col="unemployment" label="Unemp." right />
               <Th col="popGrowth" label="Pop Grwth" right />
               <Th col="mhFriendly" label="MH ✓" right />
               <Th col="lastUpdated" label="Updated" right />
@@ -631,7 +638,7 @@ export default function ArvDatabase() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={14} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
+                <td colSpan={18} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
               </tr>
             ) : filtered.map((row) => (
               <tr key={`${row.county}-${row.state}`} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
@@ -655,6 +662,18 @@ export default function ArvDatabase() {
                 </td>
                 <td className={`py-2.5 px-3 text-sm text-right font-medium ${msColor(row.monthsSupply)}`}>
                   {row.monthsSupply != null ? row.monthsSupply.toFixed(1) : '—'}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">
+                  {row.sellThrough != null ? `${row.sellThrough.toFixed(1)}%` : '—'}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">
+                  {row.medianSalePrice != null ? `$${row.medianSalePrice.toLocaleString()}` : '—'}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">
+                  {row.medianIncome != null ? `$${row.medianIncome.toLocaleString()}` : '—'}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">
+                  {row.unemployment != null ? `${row.unemployment}%` : '—'}
                 </td>
                 <td className={`py-2.5 px-3 text-sm text-right font-medium ${pgColor(row.popGrowth)}`}>
                   {row.popGrowth != null ? `${row.popGrowth > 0 ? '+' : ''}${row.popGrowth}%` : '—'}
