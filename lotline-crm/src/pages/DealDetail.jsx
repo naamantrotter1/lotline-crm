@@ -178,6 +178,7 @@ function OverviewTab({
   drawPct, setDrawPct,
   annualFeePct, setAnnualFeePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
+  navigate,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -245,14 +246,17 @@ function OverviewTab({
               >
                 <MapPin size={12} /> Open in Maps <ExternalLink size={10} />
               </a>
-              {parcelId && (
-                <button
-                  onClick={() => navigate(`/flood-map?parcelId=${encodeURIComponent(parcelId)}&state=${encodeURIComponent(dealState || 'NC')}`)}
-                  className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
-                >
-                  <MapPin size={12} /> Open in Map Search
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  const params = parcelId
+                    ? `parcelId=${encodeURIComponent(parcelId)}&state=${encodeURIComponent(dealState || 'NC')}`
+                    : `address=${encodeURIComponent(address)}&state=${encodeURIComponent(dealState || 'NC')}`;
+                  navigate(`/flood-map?${params}`);
+                }}
+                className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
+              >
+                <MapPin size={12} /> Open in Map Search
+              </button>
             </div>
           </div>
         </div>
@@ -1265,6 +1269,7 @@ export default function DealDetail() {
             drawPct={drawPct} setDrawPct={setDrawPct}
             annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
+            navigate={navigate}
           />
         )}
         {activeTab === 'dd' && (
