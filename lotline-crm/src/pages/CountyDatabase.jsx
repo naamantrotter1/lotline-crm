@@ -534,17 +534,6 @@ export default function CountyDatabase() {
           <option value="NC">North Carolina</option>
           <option value="SC">South Carolina</option>
         </select>
-        {/* County search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search county…"
-            className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 w-44"
-          />
-        </div>
         {/* County dropdown */}
         <select
           value={selectedCounty || ''}
@@ -556,6 +545,17 @@ export default function CountyDatabase() {
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
         </select>
+        {/* County search */}
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search county…"
+            className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 w-44"
+          />
+        </div>
       </div>
 
       {/* Main content */}
