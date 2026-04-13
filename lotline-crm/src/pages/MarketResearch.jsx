@@ -1514,9 +1514,9 @@ function HeatMap() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'heatmap',  label: 'Heat Map',        icon: Map        },
+  { id: 'arv',      label: 'Market Stats',    icon: MapPin     },
   { id: 'builders', label: 'Builder Network', icon: Building2  },
   { id: 'counties', label: 'County Database', icon: Info       },
-  { id: 'arv',      label: 'ARV Database',    icon: MapPin     },
 ];
 
 export default function MarketResearch() {

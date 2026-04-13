@@ -510,7 +510,7 @@ export default function ArvDatabase() {
           <MapPin size={20} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">ARV Database</h1>
+          <h1 className="text-2xl font-bold text-sidebar">Market Stats</h1>
         </div>
       </div>
 
