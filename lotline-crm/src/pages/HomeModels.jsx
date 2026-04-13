@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HOME_MODELS } from '../data/homeModels';
-import { Search, Plus, ExternalLink, ChevronUp, ChevronDown, Pencil, Trash2, X } from 'lucide-react';
+import { Search, Plus, ExternalLink, ChevronUp, ChevronDown, Pencil, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/UI/Button';
 
 const STORAGE_KEY = 'homeModels_data';
+const HIDDEN_KEY = 'hiddenOrderHomeIds';
 
 const EMPTY_MODEL = {
   model: '',
@@ -26,6 +27,14 @@ export default function HomeModels() {
     }
   });
 
+  const [hiddenHomes, setHiddenHomes] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'));
+    } catch {
+      return new Set();
+    }
+  });
+
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('price');
   const [sortDir, setSortDir] = useState('asc');
@@ -36,6 +45,24 @@ export default function HomeModels() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(models));
   }, [models]);
+
+  const hiddenMounted = useRef(false);
+  useEffect(() => {
+    if (!hiddenMounted.current) { hiddenMounted.current = true; return; }
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenHomes]));
+  }, [hiddenHomes]);
+
+  const getOrderHomeName = (modelName) => modelName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+  const toggleOrderHomeVisibility = (modelName) => {
+    const name = getOrderHomeName(modelName);
+    setHiddenHomes((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -160,6 +187,7 @@ export default function HomeModels() {
                 <TH col="sqft" label="Sq Ft" />
                 <TH col="price" label="Price" />
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Link</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase text-center" title="Show in Order Home tool">Order Home</th>
               </tr>
             </thead>
             <tbody>
@@ -208,6 +236,21 @@ export default function HomeModels() {
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {(() => {
+                      const name = getOrderHomeName(model.model);
+                      const isHidden = hiddenHomes.has(name);
+                      return (
+                        <button
+                          onClick={() => toggleOrderHomeVisibility(model.model)}
+                          title={isHidden ? 'Hidden from Order Home' : 'Visible in Order Home'}
+                          className={`transition-colors ${isHidden ? 'text-gray-300 hover:text-accent' : 'text-accent hover:text-gray-400'}`}
+                        >
+                          {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

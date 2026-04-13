@@ -34,7 +34,10 @@ function renderHomes() {
   const sort = document.getElementById('filterSort').value;
   const typeFilter = document.getElementById('filterType').value;
 
+  const hiddenOrderHomeIds = new Set(JSON.parse(localStorage.getItem('hiddenOrderHomeIds') || '[]'));
+
   let list = homes.filter(h => {
+    if (hiddenOrderHomeIds.has(h.name)) return false;
     if (typeFilter && h.type !== typeFilter) return false;
     if (activeBrand && h.brand !== activeBrand) return false;
     const brandFilter = document.getElementById('filterBrand').value;
