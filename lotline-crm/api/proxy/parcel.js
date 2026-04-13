@@ -142,22 +142,74 @@ export default async function handler(req, res) {
   // szip added for complete site address; stnum not available in MapServer/0
   const ATTR_FIELDS = 'parno,altparno,ownname,mailadd,mcity,mstate,mzip,siteadd,scity,szip,gisacres,landval,improvval,parval,parusedesc,saledate,saledatetx,cntyname,subdivisio';
 
+  const NC_MAPSERVER = 'https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query';
+  const NC_FEATSERVER = 'https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query';
+
   const getAttrUrl = async () => {
     if (qParno) {
       const where = `parno='${qParno.replace(/'/g,"''")}'`;
       const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-      return `https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`;
+      return `${NC_MAPSERVER}?${p}`;
     }
+
+    // ── Address-based lookup (deal opened from CRM) ──────────────────────────
+    if (qAddress) {
+      // Strategy 1: Search NC OneMap by siteadd road keyword + county.
+      // This works even when geocoding is imprecise (rural roads, no house number).
+      if (qCounty) {
+        const stopWords = new Set(['RD','ST','DR','AVE','LN','CT','BLVD','HWY','SE','NE','SW','NW','N','S','E','W','LOT','TBD','0']);
+        const streetPart = qAddress.split(',')[0].replace(/^\d+\w?\s+/, '').trim();
+        const keyword = streetPart.split(/\s+/)
+          .filter(w => !stopWords.has(w.toUpperCase()) && w.length > 3)
+          .sort((a, b) => b.length - a.length)[0] || '';
+        if (keyword) {
+          const county = qCounty.replace(/\w+/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase());
+          const where = `siteadd LIKE '%${keyword.replace(/'/g,"''")}%' AND cntyname LIKE '${county.replace(/'/g,"''")}%'`;
+          const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '5', f: 'json' });
+          const data = await fetchJson(`${NC_MAPSERVER}?${p}`).catch(() => ({}));
+          if (data.features?.length) {
+            const parno = data.features[0].attributes?.parno;
+            if (parno) {
+              const pp = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
+              return `${NC_MAPSERVER}?${pp}`;
+            }
+          }
+        }
+      }
+
+      // Strategy 2: Geocoded coords with large bbox — pick parcel centroid closest to geocoded pt
+      if (latN && lngN) {
+        const d = 0.005; // ~500m
+        const geoParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '20', f: 'geojson' });
+        const geoData = await fetchJson(`${NC_FEATSERVER}?${geoParams}`).catch(() => ({}));
+        const geoFeatures = geoData.features || [];
+        if (geoFeatures.length) {
+          let bestParno = null, bestDist = Infinity;
+          for (const f of geoFeatures) {
+            const [fLat, fLng] = centroidOf(f.geometry);
+            const dist = (fLat - latN) ** 2 + (fLng - lngN) ** 2;
+            if (dist < bestDist) { bestDist = dist; bestParno = f.properties?.parno; }
+          }
+          if (bestParno) {
+            const pp = new URLSearchParams({ where: `parno='${bestParno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
+            return `${NC_MAPSERVER}?${pp}`;
+          }
+        }
+      }
+      return null;
+    }
+
+    // ── Regular point/click lookup ───────────────────────────────────────────
     // Use point query — returns only the parcel that contains the exact click point.
     // Fall back to a tiny bbox if the point lands on a road/boundary with no parcel.
     const ptGeom = JSON.stringify({ x: lngN, y: latN, spatialReference: { wkid: 4326 } });
     let polyParams = new URLSearchParams({ geometry: ptGeom, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,Shape__Area', returnGeometry: 'false', resultRecordCount: '3', f: 'json' });
-    let polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${polyParams}`);
+    let polyData = await fetchJson(`${NC_FEATSERVER}?${polyParams}`);
     if (!polyData.features?.length) {
       // fallback: tiny bbox (~11m box)
       const d = 0.0001;
       polyParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,Shape__Area', returnGeometry: 'false', resultRecordCount: '3', f: 'json' });
-      polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${polyParams}`);
+      polyData = await fetchJson(`${NC_FEATSERVER}?${polyParams}`);
     }
     const features = polyData.features || [];
     if (!features.length) return null;
@@ -165,7 +217,7 @@ export default async function handler(req, res) {
     const parno = best.attributes?.parno;
     if (!parno) return null;
     const p = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-    return `https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`;
+    return `${NC_MAPSERVER}?${p}`;
   };
 
   try {
