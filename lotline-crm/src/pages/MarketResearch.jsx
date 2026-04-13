@@ -22,9 +22,10 @@ const num    = (s)  => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
 // ── County market data (all NC + SC counties) ────────────────────────────────
 function _score(c) {
   const opp = Math.round(Math.min(100, Math.max(0,
-    Math.min(1, c.absorptionRate / 80) * 40 +
-    Math.max(0, (24 - c.monthsSupply) / 24) * 35 +
-    Math.max(0, Math.min(1, (c.popGrowth + 3) / 10)) * 25
+    Math.min(1, c.absorptionRate / 80) * 30 +
+    Math.max(0, (24 - c.monthsSupply) / 24) * 25 +
+    Math.max(0, Math.min(1, (c.popGrowth + 3) / 10)) * 20 +
+    Math.max(0, Math.min(1, (250 - c.medianDOM) / 200)) * 25
   )));
   const dem = Math.round(Math.min(100, Math.max(0,
     Math.min(1, c.sellThrough / 300) * 40 +
