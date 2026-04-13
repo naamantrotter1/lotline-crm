@@ -1502,10 +1502,12 @@ function HeatMap() {
       style: {
         fillColor:   'transparent',
         fillOpacity: 0,
-        color:       '#1e293b',
-        weight:      2.5,
-        opacity:     0.75,
+        color:       '#0f172a',
+        weight:      3,
+        opacity:     1,
+        dashArray:   null,
       },
+      pane: 'stateBorderPane',
       interactive: false,
     }).addTo(map);
   }, [stateBorderGeojson, leafletMap.current]);
@@ -1547,6 +1549,10 @@ function HeatMap() {
       center: [35.5, -82.5], zoom: 6,
       zoomControl: true, attributionControl: false,
     });
+    // Custom pane for state borders — always above choropleth layers
+    map.createPane('stateBorderPane');
+    map.getPane('stateBorderPane').style.zIndex = 410;
+    map.getPane('stateBorderPane').style.pointerEvents = 'none';
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',   { maxZoom: 19 }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
     leafletMap.current = map;
