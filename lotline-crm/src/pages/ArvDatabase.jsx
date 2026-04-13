@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Search, Info } from 'lucide-react';
 import { MARKET_COUNTY_DATA as COUNTY_DATA } from '../data/counties.js';
 
 const ARV_DATA = [
@@ -428,6 +428,26 @@ function pgColor(pg) {
   return pg >= 2 ? 'text-green-600' : pg >= 0 ? 'text-yellow-600' : 'text-red-500';
 }
 
+function FilterInfo({ tip }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
+      >
+        <Info size={12} />
+      </button>
+      {show && (
+        <div className="absolute left-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none">
+          {tip}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
   const [arvRange, setArvRange] = useState('All');
@@ -493,14 +513,36 @@ export default function ArvDatabase() {
     </span>
   );
 
-  const Th = ({ col, label, right }) => (
-    <th
-      onClick={() => toggleSort(col)}
-      className={`py-3 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
-    >
-      {label}<SortArrow col={col} />
-    </th>
-  );
+  const Th = ({ col, label, right, info }) => {
+    const [showTip, setShowTip] = useState(false);
+    return (
+      <th
+        onClick={() => toggleSort(col)}
+        className={`py-3 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
+      >
+        <div className={`flex items-center gap-1 ${right ? 'justify-end' : ''}`}>
+          <span>{label}</span>
+          <SortArrow col={col} />
+          {info && (
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button
+                onMouseEnter={() => setShowTip(true)}
+                onMouseLeave={() => setShowTip(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors leading-none"
+              >
+                <Info size={11} />
+              </button>
+              {showTip && (
+                <div className="absolute right-0 top-5 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
+                  {info}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </th>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -542,6 +584,7 @@ export default function ArvDatabase() {
           {/* Avg ARV range */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Avg ARV</label>
+            <FilterInfo tip="Average After-Repair Value of MH homes sold in the county. Filter to target specific price tiers." />
             <select value={arvRange} onChange={e => setArvRange(e.target.value)}
               className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {AVG_ARV_RANGES.map(r => <option key={r.label}>{r.label}</option>)}
@@ -569,6 +612,7 @@ export default function ArvDatabase() {
           {/* Opp Score */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Opp Score</label>
+            <FilterInfo tip="Opportunity Score (0–100) — combines absorption rate, months of supply, and population growth. Filter to focus on high-opportunity markets." />
             <select value={oppScoreFilter} onChange={e => setOppScoreFilter(e.target.value)}
               className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {['All', 'Under 40', '40–59', '60–79', '80+'].map(v => <option key={v}>{v}</option>)}
@@ -578,6 +622,7 @@ export default function ArvDatabase() {
           {/* Days on Market */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Days on Market</label>
+            <FilterInfo tip="Median days a parcel sits on the market before going under contract. Lower = faster-moving market. Filter to find active markets." />
             <select value={domFilter} onChange={e => setDomFilter(e.target.value)}
               className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {['All', '<65d', '65–130d', '130d+'].map(v => <option key={v}>{v}</option>)}
@@ -603,19 +648,19 @@ export default function ArvDatabase() {
               <Th col="county" label="County" />
               <Th col="state" label="State" />
               <Th col="minArv" label="Min ARV" right />
-              <Th col="avgArv" label="Avg ARV" right />
+              <Th col="avgArv" label="Avg ARV" right info="Average After-Repair Value of manufactured homes sold in this county. Based on recent comp data." />
               <Th col="maxArv" label="Max ARV" right />
               <Th col="comps" label="Comps" right />
-              <Th col="oppScore" label="Opp" right />
-              <Th col="demandScore" label="Demand" right />
-              <Th col="medianDOM" label="DOM" right />
-              <Th col="absorptionRate" label="Abs %" right />
-              <Th col="monthsSupply" label="Mo. Supply" right />
-              <Th col="sellThrough" label="Sell Thru" right />
-              <Th col="medianSalePrice" label="Med. Sale" right />
-              <Th col="medianIncome" label="Med. Income" right />
-              <Th col="unemployment" label="Unemp." right />
-              <Th col="popGrowth" label="Pop Grwth" right />
+              <Th col="oppScore" label="Opp" right info="Opportunity Score (0–100) — combines absorption rate, months of supply, and population growth. Higher = better market opportunity." />
+              <Th col="demandScore" label="Demand" right info="Demand Score (0–100) — combines sell-through rate, days on market, and absorption rate. Higher = stronger buyer demand." />
+              <Th col="medianDOM" label="DOM" right info="Days on Market — median days a parcel sits on the market before going under contract. Lower is better." />
+              <Th col="absorptionRate" label="Abs %" right info="Absorption Rate — percentage of available inventory that sold in the period. Higher means a faster-moving market." />
+              <Th col="monthsSupply" label="Mo. Supply" right info="Months of Supply — how long current inventory would last at the current sales pace. Under 6 months = seller's market." />
+              <Th col="sellThrough" label="Sell Thru" right info="Sell-Through Rate — percentage of listed properties that actually sold. Higher means stronger buyer demand." />
+              <Th col="medianSalePrice" label="Med. Sale" right info="Median sale price of parcels closed in the selected period." />
+              <Th col="medianIncome" label="Med. Income" right info="Median household income for the county. Higher income areas typically support stronger land and home values." />
+              <Th col="unemployment" label="Unemp." right info="Unemployment rate for the county. Lower unemployment generally correlates with stronger housing demand." />
+              <Th col="popGrowth" label="Pop Grwth" right info="Annual population growth rate (%). Positive growth drives land demand; negative signals a shrinking market." />
             </tr>
           </thead>
           <tbody>
