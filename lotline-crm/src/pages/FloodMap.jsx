@@ -556,6 +556,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     // Custom pane for the selected-parcel highlight — sits above all GeoJSON overlay layers
     map.createPane('highlightPane');
     map.getPane('highlightPane').style.zIndex = 450;
+    map.getPane('highlightPane').style.pointerEvents = 'none';
 
     baseTiles.current = TILE_LAYERS.satellite.map(t => L.tileLayer(t.url, t.opts).addTo(map));
     leafletMap.current = map;
@@ -738,8 +739,8 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           // contain old-viewport data and could pick a neighbour.
           if (isFromSearch && data.geometry && leafletMap.current?._mapPane) {
             const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
-              style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-              pane: 'highlightPane', renderer: L.canvas(),
+              style: { color: '#00ff00', weight: 5, fillOpacity: 0.08, opacity: 1 },
+              pane: 'highlightPane',
             });
             hl.addTo(leafletMap.current);
             selectedHighlightRef.current = hl;
@@ -764,8 +765,8 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           // Fallback: draw green highlight from API geometry when boundary layer doesn't have it
           if (!selectedHighlightRef.current && data.geometry && leafletMap.current?._mapPane) {
             const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
-              style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-              pane: 'highlightPane', renderer: L.canvas(),
+              style: { color: '#00ff00', weight: 5, fillOpacity: 0.08, opacity: 1 },
+              pane: 'highlightPane',
             });
             hl.addTo(leafletMap.current);
             selectedHighlightRef.current = hl;
