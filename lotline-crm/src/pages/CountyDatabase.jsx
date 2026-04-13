@@ -650,35 +650,6 @@ export default function CountyDatabase() {
         </div>
       )}
 
-      {/* Right sections panel */}
-      {selectedCounty && (
-        <div className="w-52 shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-y-auto">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-bold text-gray-500 tracking-wider uppercase">Sections</p>
-          </div>
-          <div className="flex-1 px-3 py-2 space-y-1">
-            {SECTIONS.map(s => (
-              <button
-                key={s.key}
-                onClick={() => setActiveSection(s.key)}
-                className={`w-full text-left rounded-lg px-2 py-2 transition-colors ${activeSection === s.key ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs flex items-center gap-1.5 ${activeSection === s.key ? 'text-orange-700 font-medium' : 'text-gray-600'}`}>
-                    <span>{s.icon}</span>
-                    <span className="truncate">{s.label}</span>
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="p-3 border-t border-gray-100 bg-gray-50">
-            <p className="text-xs font-semibold text-gray-600">{activeState === 'NC' ? 'North Carolina' : 'South Carolina'}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{counties.length} counties started</p>
-            <p className="text-xs text-gray-500">{completeCount} complete</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
