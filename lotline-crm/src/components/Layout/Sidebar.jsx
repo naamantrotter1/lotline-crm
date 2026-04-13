@@ -57,16 +57,16 @@ export default function Sidebar({ collapsed, onToggle }) {
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-          <Home size={16} color="white" />
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <p className="text-white font-bold text-sm leading-tight">LotLine</p>
-            <p className="text-white/50 text-xs">Homes CRM</p>
-          </div>
-        )}
+      <div className="flex items-center justify-center px-4 py-4 border-b border-white/10">
+        <img
+          src="/lotline-logo.png"
+          alt="LotLine Homes"
+          style={{
+            height: collapsed ? '28px' : '42px',
+            width: 'auto',
+            filter: 'brightness(0) saturate(100%) invert(55%) sepia(60%) saturate(500%) hue-rotate(330deg) brightness(105%)',
+          }}
+        />
       </div>
 
       {/* Nav sections */}
