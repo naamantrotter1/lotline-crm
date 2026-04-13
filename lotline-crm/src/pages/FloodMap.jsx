@@ -176,7 +176,7 @@ const STATE_BOUNDS = {
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function FloodMap() {
+export default function FloodMap({ initialParcelId, initialState, onClose } = {}) {
   const mapRef       = useRef(null);
   const leafletMap   = useRef(null);
   const baseTiles    = useRef([]);
@@ -572,11 +572,11 @@ export default function FloodMap() {
     };
   }, []);
 
-  // ── Auto-load parcel from URL params (e.g. ?parcelId=XXX&state=NC) ──────────
+  // ── Auto-load parcel from prop or URL params ────────────────────────────────
   useEffect(() => {
     if (!mapReady) return;
-    const parno = searchParams.get('parcelId');
-    const stateParam = searchParams.get('state') || '';
+    const parno = initialParcelId || searchParams.get('parcelId');
+    const stateParam = initialState || searchParams.get('state') || '';
     if (!parno) return;
     handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -909,11 +909,19 @@ export default function FloodMap() {
   );
 
   return (
-    <div className="-m-6 flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className={onClose ? 'flex flex-col w-full h-full' : '-m-6 flex flex-col'} style={onClose ? {} : { height: 'calc(100vh - 56px)' }}>
 
       {/* ── Map ── */}
       <div className="relative flex-1 min-h-0">
         <div ref={mapRef} className="w-full h-full" />
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 z-[2000] bg-gray-900/80 hover:bg-gray-900 text-white rounded-full p-2 shadow-lg transition-colors"
+          >
+            <X size={18} />
+          </button>
+        )}
 
         {/* ── Parcel Search Bar ── */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-0 shadow-2xl rounded-xl overflow-visible" style={{ minWidth: 420 }}>

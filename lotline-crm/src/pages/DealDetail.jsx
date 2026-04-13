@@ -9,6 +9,7 @@ import { DEAL_OVERVIEW_DEALS, LAND_DEALS, calcNetProfit } from '../data/deals';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
+import FloodMap from './FloodMap';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_TASKS = [
@@ -179,6 +180,7 @@ function OverviewTab({
   annualFeePct, setAnnualFeePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
   navigate,
+  onOpenMapSearch,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -247,12 +249,7 @@ function OverviewTab({
                 <MapPin size={12} /> Open in Maps <ExternalLink size={10} />
               </a>
               <button
-                onClick={() => {
-                  const params = parcelId
-                    ? `parcelId=${encodeURIComponent(parcelId)}&state=${encodeURIComponent(dealState || 'NC')}`
-                    : `address=${encodeURIComponent(address)}&state=${encodeURIComponent(dealState || 'NC')}`;
-                  navigate(`/flood-map?${params}`);
-                }}
+                onClick={onOpenMapSearch}
                 className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
               >
                 <MapPin size={12} /> Open in Map Search
@@ -982,6 +979,7 @@ export default function DealDetail() {
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
   const [stage, setStage] = useState(deal?.stage || 'Contract Signed');
+  const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
   const [ownerType, setOwnerType] = useState(deal?.ownerType || '');
   const [utilityScenario, setUtilityScenario] = useState(deal?.utilityScenario || '');
@@ -1270,6 +1268,7 @@ export default function DealDetail() {
             annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             navigate={navigate}
+            onOpenMapSearch={() => setShowMapModal(true)}
           />
         )}
         {activeTab === 'dd' && (
@@ -1283,5 +1282,18 @@ export default function DealDetail() {
         )}
       </div>
     </div>
+
+    {/* Map Search Modal */}
+    {showMapModal && (
+      <div className="fixed inset-0 z-[3000] bg-black/60 flex items-center justify-center p-4">
+        <div className="relative w-full h-full max-w-6xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl">
+          <FloodMap
+            initialParcelId={parcelId || undefined}
+            initialState={dealState || 'NC'}
+            onClose={() => setShowMapModal(false)}
+          />
+        </div>
+      </div>
+    )}
   );
 }
