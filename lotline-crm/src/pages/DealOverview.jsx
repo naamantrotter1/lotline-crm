@@ -41,11 +41,18 @@ function isSubdividable(deal) {
   return (deal.tags || []).includes('Subdivide');
 }
 
+function isLandClearing(deal) {
+  const saved = localStorage.getItem(`lotline_land_clearing_${deal.id}`);
+  if (saved !== null) return saved === 'Yes';
+  return (deal.tags || []).includes('Land Clearing');
+}
+
 function DealCard({ deal, onClick }) {
   const [starred, setStarred] = useState(false);
-  const netProfit  = calcNetProfit(deal);
-  const closing    = closingCountdown(deal.closeDate);
-  const subdivide  = isSubdividable(deal);
+  const netProfit    = calcNetProfit(deal);
+  const closing      = closingCountdown(deal.closeDate);
+  const subdivide    = isSubdividable(deal);
+  const landClearing = isLandClearing(deal);
 
   return (
     <div
@@ -80,7 +87,7 @@ function DealCard({ deal, onClick }) {
       </div>
 
       {/* Investor + tags */}
-      {(deal.investor || (deal.tags || []).filter(t => t !== 'Subdivide').length > 0 || subdivide) && (
+      {(deal.investor || subdivide || landClearing) && (
         <div className="flex flex-wrap gap-1.5 mb-2 ml-4">
           {deal.investor && (
             <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
@@ -88,17 +95,16 @@ function DealCard({ deal, onClick }) {
               {deal.investor}
             </span>
           )}
-          {(deal.tags || []).filter(t => t !== 'Subdivide').map(tag => {
-            const s = TAG_STYLES[tag];
-            const Icon = s?.icon;
+          {landClearing && (() => {
+            const s = TAG_STYLES['Land Clearing'];
             return (
-              <span key={tag} style={{ backgroundColor: s?.bg || '#f3f4f6', color: s?.text || '#374151' }}
+              <span style={{ backgroundColor: s.bg, color: s.text }}
                 className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
-                {Icon && <Icon size={10} />}
-                {tag}
+                <TreePine size={10} />
+                Land Clearing
               </span>
             );
-          })}
+          })()}
           {subdivide && (() => {
             const s = TAG_STYLES['Subdivide'];
             return (

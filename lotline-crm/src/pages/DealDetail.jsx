@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
-  ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal
+  ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
 } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, LAND_DEALS, calcNetProfit } from '../data/deals';
 import { HOME_MODELS } from '../data/homeModels';
@@ -997,12 +997,21 @@ export default function DealDetail() {
     if (saved !== null) return saved;
     return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
   });
-  const [landClearing, setLandClearing] = useState((deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No');
+  const [landClearing, setLandClearing] = useState(() => {
+    const saved = localStorage.getItem(`lotline_land_clearing_${deal?.id}`);
+    if (saved !== null) return saved;
+    return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
+  });
 
   // Persist subdivide state so the kanban card reflects it
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
     if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
+  };
+
+  const handleSetLandClearing = (val) => {
+    setLandClearing(val);
+    if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
   };
 
   // Development Details
@@ -1096,7 +1105,18 @@ export default function DealDetail() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
-            {(deal.tags || []).filter(t => t !== 'Subdivide').map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            <button
+              onClick={() => handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                landClearing === 'Yes'
+                  ? 'bg-green-100 text-green-700 border-green-300'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600'
+              }`}
+            >
+              <TreePine size={11} />
+              Land Clearing
+            </button>
             <button
               onClick={() => handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
               className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
@@ -1208,7 +1228,7 @@ export default function DealDetail() {
             electricCompany={electricCompany} setElectricCompany={setElectricCompany}
             homeModel={homeModel} setHomeModel={setHomeModel}
             subdividable={subdividable} setSubdividable={handleSetSubdividable}
-            landClearing={landClearing} setLandClearing={setLandClearing}
+            landClearing={landClearing} setLandClearing={handleSetLandClearing}
             parcelId={parcelId} setParcelId={setParcelId}
             closingAttorney={closingAttorney} setClosingAttorney={setClosingAttorney}
             closingAttorneyPhone={closingAttorneyPhone} setClosingAttorneyPhone={setClosingAttorneyPhone}
