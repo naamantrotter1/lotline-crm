@@ -5,10 +5,11 @@ import {
 } from 'recharts';
 import {
   Calculator, TrendingUp, Search, ExternalLink, Map,
-  ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info, Building2,
+  ArrowUpRight, ArrowDownRight, Minus, X, ChevronDown, Info, Building2, MapPin,
 } from 'lucide-react';
 import BuilderNetworkPage from './BuilderNetwork';
 import CountyDatabasePage from './CountyDatabase';
+import ArvDatabasePage from './ArvDatabase';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DEAL_OVERVIEW_DEALS, LAND_DEALS } from '../data/deals.js';
@@ -2073,6 +2074,7 @@ const TABS = [
   { id: 'stats',    label: 'Market Stats',    icon: TrendingUp },
   { id: 'builders', label: 'Builder Network', icon: Building2  },
   { id: 'counties', label: 'County Database', icon: Info       },
+  { id: 'arv',      label: 'ARV Database',    icon: MapPin     },
 ];
 
 export default function MarketResearch() {
@@ -2109,6 +2111,7 @@ export default function MarketResearch() {
       {activeTab === 'comps'    && <CompFinder />}
       {activeTab === 'builders' && <BuilderNetworkPage />}
       {activeTab === 'counties' && <CountyDatabasePage />}
+      {activeTab === 'arv'      && <ArvDatabasePage />}
     </div>
   );
 }
