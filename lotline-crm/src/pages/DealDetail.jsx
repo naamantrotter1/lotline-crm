@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
-  ChevronDown, User, Calendar, Building, Phone, Mail
+  ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal
 } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, LAND_DEALS, calcNetProfit } from '../data/deals';
 import { HOME_MODELS } from '../data/homeModels';
@@ -1096,7 +1096,18 @@ export default function DealDetail() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
-            {(deal.tags || []).map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            {(deal.tags || []).filter(t => t !== 'Subdivide').map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            <button
+              onClick={() => handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                subdividable === 'Yes'
+                  ? 'bg-amber-100 text-amber-700 border-amber-300'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+              }`}
+            >
+              <SplitSquareHorizontal size={11} />
+              Subdivide
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <button
