@@ -616,14 +616,12 @@ export default function ArvDatabase() {
               <Th col="medianIncome" label="Med. Income" right />
               <Th col="unemployment" label="Unemp." right />
               <Th col="popGrowth" label="Pop Grwth" right />
-              <Th col="mhFriendly" label="MH ✓" right />
-              <Th col="lastUpdated" label="Updated" right />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={18} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
+                <td colSpan={16} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
               </tr>
             ) : filtered.map((row) => (
               <tr key={`${row.county}-${row.state}`} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
@@ -659,12 +657,6 @@ export default function ArvDatabase() {
                 <td className={`py-2.5 px-3 text-sm text-right font-medium ${pgColor(row.popGrowth)}`}>
                   {row.popGrowth != null ? `${row.popGrowth > 0 ? '+' : ''}${row.popGrowth}%` : '—'}
                 </td>
-                <td className="py-2.5 px-3 text-sm text-right">
-                  {row.mhFriendly === true ? <span className="text-green-600 font-bold">✓</span>
-                    : row.mhFriendly === false ? <span className="text-red-400">✗</span>
-                    : <span className="text-gray-300">—</span>}
-                </td>
-                <td className="py-2.5 px-3 text-sm text-right text-gray-400 whitespace-nowrap">{row.lastUpdated}</td>
               </tr>
             ))}
           </tbody>
