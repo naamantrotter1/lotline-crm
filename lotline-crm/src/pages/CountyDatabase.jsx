@@ -600,9 +600,6 @@ export default function CountyDatabase() {
       ) : (
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center max-w-sm">
-            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <span className="text-3xl">🗺️</span>
-            </div>
             <h2 className="text-lg font-semibold text-gray-700 mb-2">Select a County</h2>
             <p className="text-sm text-gray-400">Choose a state and county above to view its standard operating procedures, contacts, and resources.</p>
           </div>
