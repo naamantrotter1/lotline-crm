@@ -32,7 +32,7 @@ const navSections = [
     items: [
       { icon: Globe, label: 'Map Search', to: '/flood-map' },
       { icon: Map, label: 'Market Research', to: '/intelligence' },
-      { icon: Home, label: 'Homes', to: '/homes' },
+      { icon: Home, label: 'Order Home', to: '/homes' },
       { icon: Landmark, label: 'Capital & Partnerships', to: '/lending' },
       { icon: Building2, label: 'Builder Network', to: '/builder-network' },
       { icon: Calculator, label: 'Deal Calculator', to: '/calculator' },
