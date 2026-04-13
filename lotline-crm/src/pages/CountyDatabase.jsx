@@ -503,9 +503,7 @@ export default function CountyDatabase() {
   const [selectedCounty, setSelectedCounty] = useState('Alamance');
   const [activeSection, setActiveSection] = useState('keyContacts');
   const [countyData, setCountyData] = useState(COUNTY_DATA);
-  const [gisUrls, setGisUrls] = useState(
-    Object.fromEntries(Object.entries(COUNTY_DATA).map(([k, v]) => [k, v.gisPortalUrl || '']))
-  );
+
 
   const counties = activeState === 'NC' ? NC_COUNTIES : SC_COUNTIES;
   const currentData = countyData[selectedCounty] || {};
@@ -553,35 +551,9 @@ export default function CountyDatabase() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* County header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h1 className="text-xl font-bold text-sidebar">
-                  {selectedCounty} County, {activeState} — SOP
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">Standard Operating Procedures — Contract to Construction</p>
-              </div>
-            </div>
-            {/* GIS Portal URL */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-sm text-gray-500 shrink-0">
-                <span>📍</span> GIS Portal URL
-              </div>
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  value={gisUrls[selectedCounty] || ''}
-                  onChange={e => setGisUrls(prev => ({ ...prev, [selectedCounty]: e.target.value }))}
-                  placeholder="https://gis.example.com — Enter this county's GIS / parcel viewer URL"
-                  className="flex-1 text-sm border border-gray-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300"
-                />
-                {gisUrls[selectedCounty] && (
-                  <a href={gisUrls[selectedCounty]} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-4 py-1.5 bg-teal-600 text-white text-sm rounded hover:bg-teal-700">
-                    <ExternalLink size={14} /> Open
-                  </a>
-                )}
-              </div>
-            </div>
+            <h1 className="text-xl font-bold text-sidebar">
+              {selectedCounty} County, {activeState}
+            </h1>
           </div>
 
           {/* Section tabs */}
