@@ -6,13 +6,16 @@ import { GradeBadge } from '../components/UI/Badge';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
-function daysSince(dateStr) {
+function closingCountdown(dateStr) {
   if (!dateStr) return null;
-  const start = new Date(dateStr);
+  const close = new Date(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  start.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.floor((today - start) / 86400000));
+  close.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today - close) / 86400000);
+  if (diff < 0) return { label: `${Math.abs(diff)}d to close`, past: false };
+  if (diff === 0) return { label: 'Closes today', past: false };
+  return { label: `Day ${diff}`, past: true };
 }
 
 function formatCloseDate(dateStr) {
@@ -24,7 +27,7 @@ function formatCloseDate(dateStr) {
 function DealCard({ deal, onClick }) {
   const [starred, setStarred] = useState(false);
   const netProfit = calcNetProfit(deal);
-  const days = daysSince(deal.contractDate);
+  const closing = closingCountdown(deal.closeDate);
 
   return (
     <div
@@ -71,7 +74,7 @@ function DealCard({ deal, onClick }) {
         )}
       </div>
 
-      {/* Close date + day counter */}
+      {/* Close date + countdown/countup */}
       <div className="flex items-center justify-between mt-1">
         {deal.closeDate ? (
           <span className="flex items-center gap-1 text-xs text-gray-500">
@@ -79,9 +82,13 @@ function DealCard({ deal, onClick }) {
             Closing: {formatCloseDate(deal.closeDate)}
           </span>
         ) : <span />}
-        {days !== null && (
-          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
-            Day {days}
+        {closing && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            closing.past
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-600'
+          }`}>
+            {closing.label}
           </span>
         )}
       </div>
