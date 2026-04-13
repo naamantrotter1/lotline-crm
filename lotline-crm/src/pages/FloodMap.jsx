@@ -579,6 +579,11 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     const stateParam = initialState || searchParams.get('state') || '';
     const countyParam = initialCounty || searchParams.get('county') || '';
     if (!parno) return;
+    // Set search UI to Parcel ID mode with correct state/county
+    setSearchType('parno');
+    if (stateParam) setSearchState(stateParam);
+    if (countyParam) setSearchCounty(countyParam);
+    setSearchQuery(parno);
     handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
