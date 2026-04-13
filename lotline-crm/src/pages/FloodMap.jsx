@@ -846,7 +846,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     const map = leafletMap.current;
     if (!map) return;
     setShowSearchDrop(false);
-    setSearchQuery(result.address || result.parno || '');
+    setSearchQuery(result.address || result.parno || result.dealAddress || '');
 
     let lat = result.lat;
     let lng = result.lng;
