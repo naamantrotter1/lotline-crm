@@ -300,13 +300,17 @@ function MarketStats() {
       {/* Filter bar */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-3 py-2 flex items-center gap-1.5">
         <FilterDropdown label="Status"    value={status}     onChange={setStatus}
-          options={['Sold','For Sale']} />
+          options={['Sold','For Sale']}
+          tooltip="Filter by listing status — Sold shows closed transactions; For Sale shows active listings." />
         <FilterDropdown label="Time"      value={timePeriod} onChange={setTimePeriod}
-          options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
+          options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']}
+          tooltip="Lookback window for market data. Shorter windows show recent trends; longer windows smooth out seasonality." />
         <FilterDropdown label="Data"      value={dataType}   onChange={v => setDataType(v)}
-          options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
+          options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']}
+          tooltip="Property type to include in the stats. 'Land' filters to vacant parcels only — best for land acquisition analysis." />
         <FilterDropdown label="Acreage"   value={acreage}    onChange={setAcreage}
-          options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
+          options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']}
+          tooltip="Narrow results to parcels within a specific size range. Useful for targeting MH-ready lot sizes (1–10 acres)." />
         <div className="flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border border-gray-200 bg-white flex-1 min-w-0">
           <Search size={11} className="text-gray-400 shrink-0" />
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -646,8 +650,9 @@ function applyDataType(counties, dataType) {
 }
 
 // ── LandPortal-style filter dropdown ─────────────────────────────────────────
-function FilterDropdown({ label, value, options, onChange }) {
+function FilterDropdown({ label, value, options, onChange, tooltip }) {
   const [open, setOpen] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -655,32 +660,50 @@ function FilterDropdown({ label, value, options, onChange }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-lg border text-xs transition-all whitespace-nowrap select-none
-          ${open
-            ? 'border-gray-400 bg-white shadow-sm ring-1 ring-gray-200'
-            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60'
-          }`}
-      >
-        <span className="text-gray-400 font-normal">{label}:</span>
-        <span className="font-semibold text-gray-700 ml-0.5">{value}</span>
-        <ChevronDown size={11} className={`ml-0.5 text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[2000] min-w-[160px] py-1.5 overflow-hidden">
-          {options.map(opt => (
-            <button
-              key={opt}
-              onClick={() => { onChange(opt); setOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between gap-4
-                ${value === opt ? 'bg-green-50 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-            >
-              <span>{opt}</span>
-              {value === opt && <span className="text-green-500 font-bold text-base leading-none">✓</span>}
-            </button>
-          ))}
+    <div className="flex items-center gap-0.5">
+      <div className="relative" ref={ref}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className={`flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-lg border text-xs transition-all whitespace-nowrap select-none
+            ${open
+              ? 'border-gray-400 bg-white shadow-sm ring-1 ring-gray-200'
+              : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60'
+            }`}
+        >
+          <span className="text-gray-400 font-normal">{label}:</span>
+          <span className="font-semibold text-gray-700 ml-0.5">{value}</span>
+          <ChevronDown size={11} className={`ml-0.5 text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        </button>
+        {open && (
+          <div className="absolute top-full left-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[2000] min-w-[160px] py-1.5 overflow-hidden">
+            {options.map(opt => (
+              <button
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between gap-4
+                  ${value === opt ? 'bg-green-50 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <span>{opt}</span>
+                {value === opt && <span className="text-green-500 font-bold text-base leading-none">✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {tooltip && (
+        <div className="relative">
+          <button
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <Info size={12} />
+          </button>
+          {showTip && (
+            <div className="absolute left-0 top-6 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none">
+              {tooltip}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1237,7 +1260,6 @@ function HeatMap() {
     'Sell Through Rate (STR)': 'Percentage of listed properties that sold (sell-through rate).',
     'Days on Market':          'Median days a parcel sits on market before going under contract.',
   };
-  const [showStatInfo, setShowStatInfo] = useState(false);
 
   return (
     <div className="space-y-0 -mx-1">
@@ -1249,31 +1271,24 @@ function HeatMap() {
         <div className="flex items-center gap-1.5 px-3 py-2">
 
           <FilterDropdown label="View"   value={groupBy} onChange={setGroupBy}
-            options={['County','State','Zip Code']} />
+            options={['County','State','Zip Code']}
+            tooltip="Choose how to group the heat map — by County, State, or Zip Code." />
           <FilterDropdown label="Status" value={status}  onChange={setStatus}
-            options={['Sold','For Sale']} />
+            options={['Sold','For Sale']}
+            tooltip="Filter by listing status — Sold shows closed transactions; For Sale shows active listings." />
 
           <FilterDropdown label="Time"       value={timePeriod} onChange={setTimePeriod}
-            options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
+            options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']}
+            tooltip="Lookback window for market data. Shorter windows show recent trends; longer windows smooth out seasonality." />
           <FilterDropdown label="Data"       value={dataType}   onChange={v => { setDataType(v); setSelected(null); }}
-            options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
+            options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']}
+            tooltip="Property type to include in the stats. 'Land' filters to vacant parcels only — best for land acquisition analysis." />
           <FilterDropdown label="Acreage"    value={acreage}    onChange={setAcreage}
-            options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
+            options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']}
+            tooltip="Narrow results to parcels within a specific size range. Useful for targeting MH-ready lot sizes (1–10 acres)." />
           <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
-            options={['Opportunity Score','Demand Score','Transactions','Days on Market','Sell Through Rate (STR)']} />
-
-          {/* Info icon */}
-          <div className="relative">
-            <button onMouseEnter={() => setShowStatInfo(true)} onMouseLeave={() => setShowStatInfo(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors">
-              <Info size={14} />
-            </button>
-            {showStatInfo && (
-              <div className="absolute left-0 top-6 z-[3000] bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed">
-                {statInfo[statistic]}
-              </div>
-            )}
-          </div>
+            options={['Opportunity Score','Demand Score','Transactions','Days on Market','Sell Through Rate (STR)']}
+            tooltip={statInfo[statistic]} />
 
           {/* Pipeline dropdown */}
           {(() => {
