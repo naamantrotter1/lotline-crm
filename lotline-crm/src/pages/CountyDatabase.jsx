@@ -588,12 +588,6 @@ export default function CountyDatabase() {
                 </h1>
                 <p className="text-sm text-gray-500 mt-0.5">Standard Operating Procedures — Contract to Construction</p>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-orange-600">
-                  {counties.find(c => c.name === selectedCounty)?.completion || 0}%
-                </span>
-                <p className="text-xs text-gray-500">Researched</p>
-              </div>
             </div>
             {/* GIS Portal URL */}
             <div className="flex items-center gap-3">
@@ -673,15 +667,6 @@ export default function CountyDatabase() {
                   <span className={`text-xs flex items-center gap-1.5 ${activeSection === s.key ? 'text-orange-700 font-medium' : 'text-gray-600'}`}>
                     <span>{s.icon}</span>
                     <span className="truncate">{s.label}</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full"
-                      style={{ width: `${counties.find(c => c.name === selectedCounty)?.completion || 0}%` }} />
-                  </div>
-                  <span className="text-xs text-orange-600 font-medium shrink-0">
-                    {counties.find(c => c.name === selectedCounty)?.completion || 0}%
                   </span>
                 </div>
               </button>
