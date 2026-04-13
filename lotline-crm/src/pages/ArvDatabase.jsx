@@ -511,7 +511,6 @@ export default function ArvDatabase() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-sidebar">ARV Database</h1>
-          <p className="text-sm text-gray-500">NC, SC, GA, VA &amp; TN manufactured home sold comps — Zillow (built 2022–2026)</p>
         </div>
       </div>
 
