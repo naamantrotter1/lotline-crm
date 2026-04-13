@@ -500,7 +500,7 @@ const SECTION_COMPONENTS = {
 
 export default function CountyDatabase() {
   const [activeState, setActiveState] = useState('NC');
-  const [selectedCounty, setSelectedCounty] = useState('Alamance');
+  const [selectedCounty, setSelectedCounty] = useState(null);
   const [activeSection, setActiveSection] = useState('keyContacts');
   const [countyData, setCountyData] = useState(COUNTY_DATA);
   const [search, setSearch] = useState('');
@@ -598,10 +598,13 @@ export default function CountyDatabase() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
-          <div className="text-center">
-            <div className="text-4xl mb-3">🗺️</div>
-            <p className="text-sm">Select a county to view its SOP</p>
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <span className="text-3xl">🗺️</span>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">Select a County</h2>
+            <p className="text-sm text-gray-400">Choose a state and county above to view its standard operating procedures, contacts, and resources.</p>
           </div>
         </div>
       )}
