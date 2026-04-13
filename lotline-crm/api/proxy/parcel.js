@@ -74,8 +74,7 @@ export default async function handler(req, res) {
     const SC_FIELDS = 'T_Map_Number,County,L_Value,M_Value,Ownership,Mailing_Add,Mailing_City,Mailing_Zip,Zoning,Land_Use,Acreage,Shape_Area,Mailing_St';
     let scParams;
     if (qParno) {
-      let scWhere = `T_Map_Number='${qParno.replace(/'/g, "''")}'`;
-      if (qCounty) scWhere += ` AND County LIKE '%${qCounty.replace(/'/g, "''")}%'`;
+      const scWhere = `T_Map_Number='${qParno.replace(/'/g, "''")}'`;
       scParams = new URLSearchParams({ where: scWhere, outFields: SC_FIELDS, returnGeometry: 'true', outSR: '4326', f: 'geojson' });
     } else {
       // Use point query first (exact parcel containing the point), fall back to small bbox
@@ -125,8 +124,7 @@ export default async function handler(req, res) {
 
   const getAttrUrl = async () => {
     if (qParno) {
-      let where = `parno='${qParno.replace(/'/g,"''")}'`;
-      if (qCounty) where += ` AND cntyname LIKE '${qCounty.replace(/'/g,"''").replace(/\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())}%'`;
+      const where = `parno='${qParno.replace(/'/g,"''")}'`;
       const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
       return `https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0/query?${p}`;
     }
