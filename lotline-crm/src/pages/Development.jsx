@@ -68,7 +68,14 @@ const DEV_COLUMNS = [
 const COUNTED_COLUMNS = DEV_COLUMNS.filter(c => !c.tagOnly);
 const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.length, 0);
 
-const devDeals = DEAL_OVERVIEW_DEALS.filter(d => d.stage === 'Development');
+const devDeals = DEAL_OVERVIEW_DEALS;
+
+const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development'];
+const STAGE_COLORS = {
+  'Contract Signed': { color: '#16a34a', bg: '#dcfce7' },
+  'Due Diligence':   { color: '#d97706', bg: '#fef3c7' },
+  'Development':     { color: '#2563eb', bg: '#dbeafe' },
+};
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 const lsGet = (k)    => localStorage.getItem(k) || '';
@@ -250,7 +257,7 @@ export default function Development() {
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-2xl font-bold text-sidebar">Development</h1>
-            <p className="text-sm text-gray-500">{devDeals.length} deals</p>
+            <p className="text-sm text-gray-500">{devDeals.length} deals in pipeline</p>
           </div>
           <button className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
             All Deals <ChevronDown size={13} />
@@ -314,21 +321,46 @@ export default function Development() {
                 </span>
               </div>
 
-              {/* Cards */}
+              {/* Cards grouped by stage */}
               <div>
-                {colDeals.map(deal => (
-                  <DevTaskCard
-                    key={`${deal.id}-${col.key}-${tick}`}
-                    deal={deal}
-                    column={col}
-                    onUpdate={forceUpdate}
-                  />
-                ))}
-                {colDeals.length === 0 && (
-                  <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
-                    All tasks done ✓
-                  </div>
-                )}
+                {(() => {
+                  if (colDeals.length === 0) {
+                    return (
+                      <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
+                        All tasks done ✓
+                      </div>
+                    );
+                  }
+                  return STAGE_ORDER.map(stage => {
+                    const stageDeals = colDeals.filter(d => d.stage === stage);
+                    if (stageDeals.length === 0) return null;
+                    const sc = STAGE_COLORS[stage] || { color: '#6b7280', bg: '#f3f4f6' };
+                    return (
+                      <div key={stage}>
+                        <div
+                          className="flex items-center gap-1.5 mb-1.5 px-1"
+                        >
+                          <div className="h-px flex-1" style={{ backgroundColor: sc.color, opacity: 0.25 }} />
+                          <span
+                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                            style={{ color: sc.color, backgroundColor: sc.bg }}
+                          >
+                            {stage}
+                          </span>
+                          <div className="h-px flex-1" style={{ backgroundColor: sc.color, opacity: 0.25 }} />
+                        </div>
+                        {stageDeals.map(deal => (
+                          <DevTaskCard
+                            key={`${deal.id}-${col.key}-${tick}`}
+                            deal={deal}
+                            column={col}
+                            onUpdate={forceUpdate}
+                          />
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           );
