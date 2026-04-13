@@ -142,7 +142,7 @@ function pgColor(pg) {
 export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
   const [arvRange, setArvRange] = useState('All');
-  const [minComps, setMinComps] = useState('All');
+  const [minComps, setMinComps] = useState('5');
   const [countySearch, setCountySearch] = useState('');
   const [mhFilter, setMhFilter] = useState('All');
   const [oppScoreFilter, setOppScoreFilter] = useState('All');
