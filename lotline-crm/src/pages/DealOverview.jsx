@@ -35,10 +35,17 @@ const TAG_STYLES = {
   'Subdivide':     { bg: '#fef3c7', text: '#b45309', icon: SplitSquareHorizontal },
 };
 
+function isSubdividable(deal) {
+  const saved = localStorage.getItem(`lotline_subdivide_${deal.id}`);
+  if (saved !== null) return saved === 'Yes';
+  return (deal.tags || []).includes('Subdivide');
+}
+
 function DealCard({ deal, onClick }) {
   const [starred, setStarred] = useState(false);
-  const netProfit = calcNetProfit(deal);
-  const closing   = closingCountdown(deal.closeDate);
+  const netProfit  = calcNetProfit(deal);
+  const closing    = closingCountdown(deal.closeDate);
+  const subdivide  = isSubdividable(deal);
 
   return (
     <div
@@ -73,7 +80,7 @@ function DealCard({ deal, onClick }) {
       </div>
 
       {/* Investor + tags */}
-      {(deal.investor || (deal.tags && deal.tags.length > 0)) && (
+      {(deal.investor || (deal.tags || []).filter(t => t !== 'Subdivide').length > 0 || subdivide) && (
         <div className="flex flex-wrap gap-1.5 mb-2 ml-4">
           {deal.investor && (
             <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
@@ -81,7 +88,7 @@ function DealCard({ deal, onClick }) {
               {deal.investor}
             </span>
           )}
-          {(deal.tags || []).map(tag => {
+          {(deal.tags || []).filter(t => t !== 'Subdivide').map(tag => {
             const s = TAG_STYLES[tag];
             const Icon = s?.icon;
             return (
@@ -92,6 +99,16 @@ function DealCard({ deal, onClick }) {
               </span>
             );
           })}
+          {subdivide && (() => {
+            const s = TAG_STYLES['Subdivide'];
+            return (
+              <span style={{ backgroundColor: s.bg, color: s.text }}
+                className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
+                <SplitSquareHorizontal size={10} />
+                Subdivide
+              </span>
+            );
+          })()}
         </div>
       )}
 

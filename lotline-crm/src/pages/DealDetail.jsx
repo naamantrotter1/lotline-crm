@@ -992,8 +992,18 @@ export default function DealDetail() {
   const [sewerCompany, setSewerCompany] = useState(deal?.sewerCompany || '');
   const [electricCompany, setElectricCompany] = useState(deal?.electricCompany || '');
   const [homeModel, setHomeModel] = useState(deal?.homeModel || '');
-  const [subdividable, setSubdividable] = useState((deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No');
+  const [subdividable, setSubdividable] = useState(() => {
+    const saved = localStorage.getItem(`lotline_subdivide_${deal?.id}`);
+    if (saved !== null) return saved;
+    return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
+  });
   const [landClearing, setLandClearing] = useState((deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No');
+
+  // Persist subdivide state so the kanban card reflects it
+  const handleSetSubdividable = (val) => {
+    setSubdividable(val);
+    if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
+  };
 
   // Development Details
   const [parcelId, setParcelId] = useState(deal?.parcelId || '');
@@ -1186,7 +1196,7 @@ export default function DealDetail() {
             sewerCompany={sewerCompany} setSewerCompany={setSewerCompany}
             electricCompany={electricCompany} setElectricCompany={setElectricCompany}
             homeModel={homeModel} setHomeModel={setHomeModel}
-            subdividable={subdividable} setSubdividable={setSubdividable}
+            subdividable={subdividable} setSubdividable={handleSetSubdividable}
             landClearing={landClearing} setLandClearing={setLandClearing}
             parcelId={parcelId} setParcelId={setParcelId}
             closingAttorney={closingAttorney} setClosingAttorney={setClosingAttorney}
