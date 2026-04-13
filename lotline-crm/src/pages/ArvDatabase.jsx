@@ -80,6 +80,48 @@ const ARV_DATA = [
   { county: 'Wilson', state: 'NC', minArv: 738000, maxArv: 738000, avgArv: 738000, comps: 1, lastUpdated: 'Apr 2026' },
   { county: 'Yadkin', state: 'NC', minArv: 100000, maxArv: 156000, avgArv: 135750, comps: 4, lastUpdated: 'Apr 2026' },
   { county: 'Yancey', state: 'NC', minArv: 123043, maxArv: 240000, avgArv: 201395, comps: 8, lastUpdated: 'Apr 2026' },
+  // SC counties
+  { county: 'Abbeville', state: 'SC', minArv: 83000, maxArv: 88000, avgArv: 85500, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Aiken', state: 'SC', minArv: 129900, maxArv: 239500, avgArv: 179633, comps: 12, lastUpdated: 'Apr 2026' },
+  { county: 'Allendale', state: 'SC', minArv: 58000, maxArv: 58000, avgArv: 58000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Anderson', state: 'SC', minArv: 110000, maxArv: 229000, avgArv: 161325, comps: 12, lastUpdated: 'Apr 2026' },
+  { county: 'Barnwell', state: 'SC', minArv: 140000, maxArv: 140000, avgArv: 140000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Beaufort', state: 'SC', minArv: 140000, maxArv: 307500, avgArv: 227886, comps: 7, lastUpdated: 'Apr 2026' },
+  { county: 'Berkeley', state: 'SC', minArv: 250000, maxArv: 374500, avgArv: 291650, comps: 10, lastUpdated: 'Apr 2026' },
+  { county: 'Charleston', state: 'SC', minArv: 186000, maxArv: 350000, avgArv: 275857, comps: 7, lastUpdated: 'Apr 2026' },
+  { county: 'Cherokee', state: 'SC', minArv: 149900, maxArv: 270000, avgArv: 198156, comps: 9, lastUpdated: 'Apr 2026' },
+  { county: 'Chester', state: 'SC', minArv: 185000, maxArv: 330000, avgArv: 257389, comps: 9, lastUpdated: 'Apr 2026' },
+  { county: 'Chesterfield', state: 'SC', minArv: 45000, maxArv: 45000, avgArv: 45000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Colleton', state: 'SC', minArv: 148000, maxArv: 310000, avgArv: 245683, comps: 18, lastUpdated: 'Apr 2026' },
+  { county: 'Dillon', state: 'SC', minArv: 45000, maxArv: 48000, avgArv: 46500, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Dorchester', state: 'SC', minArv: 188500, maxArv: 330000, avgArv: 273278, comps: 18, lastUpdated: 'Apr 2026' },
+  { county: 'Edgefield', state: 'SC', minArv: 125000, maxArv: 125000, avgArv: 125000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Florence', state: 'SC', minArv: 90000, maxArv: 179000, avgArv: 122988, comps: 8, lastUpdated: 'Apr 2026' },
+  { county: 'Georgetown', state: 'SC', minArv: 130000, maxArv: 287000, avgArv: 192315, comps: 23, lastUpdated: 'Apr 2026' },
+  { county: 'Greenville', state: 'SC', minArv: 81500, maxArv: 170000, avgArv: 109722, comps: 9, lastUpdated: 'Apr 2026' },
+  { county: 'Greenwood', state: 'SC', minArv: 150000, maxArv: 200000, avgArv: 174960, comps: 5, lastUpdated: 'Apr 2026' },
+  { county: 'Hampton', state: 'SC', minArv: 105000, maxArv: 130000, avgArv: 117500, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Horry', state: 'SC', minArv: 115000, maxArv: 254000, avgArv: 189600, comps: 81, lastUpdated: 'Apr 2026' },
+  { county: 'Jasper', state: 'SC', minArv: 162000, maxArv: 185000, avgArv: 173500, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Kershaw', state: 'SC', minArv: 250000, maxArv: 250000, avgArv: 250000, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Lancaster', state: 'SC', minArv: 375000, maxArv: 375000, avgArv: 375000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Laurens', state: 'SC', minArv: 137000, maxArv: 213000, avgArv: 185067, comps: 6, lastUpdated: 'Apr 2026' },
+  { county: 'Lee', state: 'SC', minArv: 219900, maxArv: 280000, avgArv: 246560, comps: 5, lastUpdated: 'Apr 2026' },
+  { county: 'Lexington', state: 'SC', minArv: 89000, maxArv: 133000, avgArv: 110667, comps: 3, lastUpdated: 'Apr 2026' },
+  { county: 'Marion', state: 'SC', minArv: 92662, maxArv: 185000, avgArv: 142123, comps: 16, lastUpdated: 'Apr 2026' },
+  { county: 'Marlboro', state: 'SC', minArv: 119900, maxArv: 199900, avgArv: 155642, comps: 12, lastUpdated: 'Apr 2026' },
+  { county: 'McCormick', state: 'SC', minArv: 191000, maxArv: 191000, avgArv: 191000, comps: 1, lastUpdated: 'Apr 2026' },
+  { county: 'Newberry', state: 'SC', minArv: 185000, maxArv: 258500, avgArv: 229500, comps: 3, lastUpdated: 'Apr 2026' },
+  { county: 'Oconee', state: 'SC', minArv: 149900, maxArv: 304000, avgArv: 204200, comps: 16, lastUpdated: 'Apr 2026' },
+  { county: 'Orangeburg', state: 'SC', minArv: 95000, maxArv: 180000, avgArv: 129025, comps: 11, lastUpdated: 'Apr 2026' },
+  { county: 'Pickens', state: 'SC', minArv: 94500, maxArv: 200000, avgArv: 155072, comps: 36, lastUpdated: 'Apr 2026' },
+  { county: 'Richland', state: 'SC', minArv: 110764, maxArv: 240000, avgArv: 178924, comps: 21, lastUpdated: 'Apr 2026' },
+  { county: 'Saluda', state: 'SC', minArv: 100000, maxArv: 107000, avgArv: 103500, comps: 2, lastUpdated: 'Apr 2026' },
+  { county: 'Spartanburg', state: 'SC', minArv: 133900, maxArv: 225000, avgArv: 191135, comps: 13, lastUpdated: 'Apr 2026' },
+  { county: 'Sumter', state: 'SC', minArv: 115000, maxArv: 180500, avgArv: 148750, comps: 6, lastUpdated: 'Apr 2026' },
+  { county: 'Union', state: 'SC', minArv: 106000, maxArv: 232900, avgArv: 177099, comps: 24, lastUpdated: 'Apr 2026' },
+  { county: 'Williamsburg', state: 'SC', minArv: 120000, maxArv: 250000, avgArv: 182587, comps: 15, lastUpdated: 'Apr 2026' },
+  { county: 'York', state: 'SC', minArv: 147200, maxArv: 309000, avgArv: 228518, comps: 28, lastUpdated: 'Apr 2026' },
 ];
 
 // Join ARV data with heat map county stats
@@ -222,7 +264,7 @@ export default function ArvDatabase() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-sidebar">ARV Database</h1>
-          <p className="text-sm text-gray-500">NC manufactured home sold comps — Zillow (built 2022–2026)</p>
+          <p className="text-sm text-gray-500">NC &amp; SC manufactured home sold comps — Zillow (built 2022–2026)</p>
         </div>
       </div>
 
@@ -384,7 +426,7 @@ export default function ArvDatabase() {
           </tbody>
         </table>
         <div className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          ARV source: Zillow sold listings · NC manufactured homes built 2022–2026 · 984 listings · Updated April 2026 &nbsp;|&nbsp; Market stats: heat map county data
+          ARV source: Zillow sold listings · NC &amp; SC manufactured homes built 2022–2026 · Updated April 2026 &nbsp;|&nbsp; Market stats: heat map county data
         </div>
       </div>
     </div>
