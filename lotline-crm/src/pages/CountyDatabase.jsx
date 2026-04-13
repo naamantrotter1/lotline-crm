@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExternalLink, ChevronRight } from 'lucide-react';
+import { ExternalLink, ChevronRight, Search } from 'lucide-react';
 import { NC_COUNTIES, SC_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
 
 const DEPT_LABELS = [
@@ -503,9 +503,10 @@ export default function CountyDatabase() {
   const [selectedCounty, setSelectedCounty] = useState('Alamance');
   const [activeSection, setActiveSection] = useState('keyContacts');
   const [countyData, setCountyData] = useState(COUNTY_DATA);
-
+  const [search, setSearch] = useState('');
 
   const counties = activeState === 'NC' ? NC_COUNTIES : SC_COUNTIES;
+  const filteredCounties = counties.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
   const currentData = countyData[selectedCounty] || {};
 
   const updateSection = (sectionKey, val) => {
@@ -524,14 +525,25 @@ export default function CountyDatabase() {
     <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden -m-6">
       {/* Top controls bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 shrink-0 flex items-center gap-4">
-        {/* State toggle */}
-        <div className="flex rounded-lg overflow-hidden border border-gray-200">
-          {['NC', 'SC'].map(s => (
-            <button key={s} onClick={() => { setActiveState(s); setSelectedCounty(counties[0]?.name || null); }}
-              className={`px-4 py-1.5 text-sm font-semibold transition-colors ${activeState === s ? 'bg-orange-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
-              {s}
-            </button>
-          ))}
+        {/* State dropdown */}
+        <select
+          value={activeState}
+          onChange={e => { setActiveState(e.target.value); setSelectedCounty((e.target.value === 'NC' ? NC_COUNTIES : SC_COUNTIES)[0]?.name || null); setSearch(''); }}
+          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-700 bg-white font-semibold"
+        >
+          <option value="NC">North Carolina</option>
+          <option value="SC">South Carolina</option>
+        </select>
+        {/* County search */}
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search county…"
+            className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 w-44"
+          />
         </div>
         {/* County dropdown */}
         <select
@@ -540,7 +552,7 @@ export default function CountyDatabase() {
           className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-700 bg-white min-w-[180px]"
         >
           <option value="" disabled>Select a county…</option>
-          {counties.map(c => (
+          {filteredCounties.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
         </select>
