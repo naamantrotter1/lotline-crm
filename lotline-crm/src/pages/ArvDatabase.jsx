@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MapPin, Search } from 'lucide-react';
+import { MARKET_COUNTY_DATA as COUNTY_DATA } from '../data/counties.js';
 
 const ARV_DATA = [
   { county: 'Alamance', state: 'NC', minArv: 150000, maxArv: 220900, avgArv: 191700, comps: 4, lastUpdated: 'Apr 2026' },
@@ -81,6 +82,23 @@ const ARV_DATA = [
   { county: 'Yancey', state: 'NC', minArv: 123043, maxArv: 240000, avgArv: 201395, comps: 8, lastUpdated: 'Apr 2026' },
 ];
 
+// Join ARV data with heat map county stats
+const COUNTY_LOOKUP = Object.fromEntries(COUNTY_DATA.map(c => [`${c.name}|${c.state}`, c]));
+const MERGED_DATA = ARV_DATA.map(row => {
+  const s = COUNTY_LOOKUP[`${row.county}|${row.state}`] || {};
+  return {
+    ...row,
+    medianDOM: s.medianDOM ?? null,
+    absorptionRate: s.absorptionRate ?? null,
+    monthsSupply: s.monthsSupply ?? null,
+    sellThrough: s.sellThrough ?? null,
+    oppScore: s.oppScore ?? null,
+    demandScore: s.demandScore ?? null,
+    popGrowth: s.popGrowth ?? null,
+    mhFriendly: s.mhFriendly ?? null,
+  };
+});
+
 const AVG_ARV_RANGES = [
   { label: 'All', min: 0, max: Infinity },
   { label: 'Under $100k', min: 0, max: 100000 },
@@ -90,13 +108,45 @@ const AVG_ARV_RANGES = [
   { label: '$250k+', min: 250000, max: Infinity },
 ];
 
-const STATE_OPTIONS = ['All', ...Array.from(new Set(ARV_DATA.map(d => d.state))).sort()];
+const STATE_OPTIONS = ['All', ...Array.from(new Set(MERGED_DATA.map(d => d.state))).sort()];
+
+function scoreBadge(score) {
+  if (score == null) return <span className="text-gray-300">—</span>;
+  const cls = score >= 75 ? 'bg-green-100 text-green-700'
+    : score >= 60 ? 'bg-blue-100 text-blue-700'
+    : score >= 45 ? 'bg-yellow-100 text-yellow-700'
+    : 'bg-red-100 text-red-700';
+  return <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${cls}`}>{score}</span>;
+}
+
+function domColor(dom) {
+  if (dom == null) return 'text-gray-400';
+  return dom < 65 ? 'text-green-600' : dom < 130 ? 'text-yellow-600' : 'text-red-500';
+}
+
+function absColor(abs) {
+  if (abs == null) return 'text-gray-400';
+  return abs >= 65 ? 'text-green-600' : abs >= 50 ? 'text-yellow-600' : 'text-red-500';
+}
+
+function msColor(ms) {
+  if (ms == null) return 'text-gray-400';
+  return ms < 6 ? 'text-green-600' : ms < 12 ? 'text-yellow-600' : 'text-red-500';
+}
+
+function pgColor(pg) {
+  if (pg == null) return 'text-gray-400';
+  return pg >= 2 ? 'text-green-600' : pg >= 0 ? 'text-yellow-600' : 'text-red-500';
+}
 
 export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
   const [arvRange, setArvRange] = useState('All');
   const [minComps, setMinComps] = useState('All');
   const [countySearch, setCountySearch] = useState('');
+  const [mhFilter, setMhFilter] = useState('All');
+  const [oppScoreFilter, setOppScoreFilter] = useState('All');
+  const [domFilter, setDomFilter] = useState('All');
   const [sortKey, setSortKey] = useState('county');
   const [sortDir, setSortDir] = useState('asc');
 
@@ -104,25 +154,44 @@ export default function ArvDatabase() {
     const range = AVG_ARV_RANGES.find(r => r.label === arvRange) || AVG_ARV_RANGES[0];
     const minCompsNum = minComps === 'All' ? 0 : parseInt(minComps);
 
-    return [...ARV_DATA]
-      .filter(d =>
-        (stateFilter === 'All' || d.state === stateFilter) &&
-        d.avgArv >= range.min && d.avgArv < range.max &&
-        d.comps >= minCompsNum &&
-        d.county.toLowerCase().includes(countySearch.toLowerCase())
-      )
+    return [...MERGED_DATA]
+      .filter(d => {
+        if (stateFilter !== 'All' && d.state !== stateFilter) return false;
+        if (d.avgArv < range.min || d.avgArv >= range.max) return false;
+        if (d.comps < minCompsNum) return false;
+        if (!d.county.toLowerCase().includes(countySearch.toLowerCase())) return false;
+        if (mhFilter === 'Yes' && !d.mhFriendly) return false;
+        if (mhFilter === 'No' && d.mhFriendly !== false) return false;
+        if (oppScoreFilter !== 'All' && d.oppScore != null) {
+          if (oppScoreFilter === 'Under 40' && d.oppScore >= 40) return false;
+          if (oppScoreFilter === '40–59' && (d.oppScore < 40 || d.oppScore >= 60)) return false;
+          if (oppScoreFilter === '60–79' && (d.oppScore < 60 || d.oppScore >= 80)) return false;
+          if (oppScoreFilter === '80+' && d.oppScore < 80) return false;
+        }
+        if (domFilter !== 'All' && d.medianDOM != null) {
+          if (domFilter === '<65d' && d.medianDOM >= 65) return false;
+          if (domFilter === '65–130d' && (d.medianDOM < 65 || d.medianDOM >= 130)) return false;
+          if (domFilter === '130d+' && d.medianDOM < 130) return false;
+        }
+        return true;
+      })
       .sort((a, b) => {
         let av = a[sortKey], bv = b[sortKey];
+        if (av == null) return 1;
+        if (bv == null) return -1;
         if (typeof av === 'string') av = av.toLowerCase();
         if (typeof bv === 'string') bv = bv.toLowerCase();
         if (av < bv) return sortDir === 'asc' ? -1 : 1;
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [stateFilter, arvRange, minComps, countySearch, sortKey, sortDir]);
+  }, [stateFilter, arvRange, minComps, countySearch, mhFilter, oppScoreFilter, domFilter, sortKey, sortDir]);
 
   const totalComps = filtered.reduce((s, d) => s + d.comps, 0);
   const avgOfAvgs = filtered.length ? Math.round(filtered.reduce((s, d) => s + d.avgArv, 0) / filtered.length) : 0;
+
+  const anyFilter = stateFilter !== 'All' || arvRange !== 'All' || minComps !== 'All' || countySearch ||
+    mhFilter !== 'All' || oppScoreFilter !== 'All' || domFilter !== 'All';
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -130,9 +199,18 @@ export default function ArvDatabase() {
   };
 
   const SortArrow = ({ col }) => (
-    <span className="ml-1 opacity-50">
+    <span className="ml-0.5 opacity-40 text-[10px]">
       {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
     </span>
+  );
+
+  const Th = ({ col, label, right }) => (
+    <th
+      onClick={() => toggleSort(col)}
+      className={`py-3 px-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
+    >
+      {label}<SortArrow col={col} />
+    </th>
   );
 
   return (
@@ -174,18 +252,15 @@ export default function ArvDatabase() {
               placeholder="Search county..."
               value={countySearch}
               onChange={e => setCountySearch(e.target.value)}
-              className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-accent w-40"
+              className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-accent w-36"
             />
           </div>
 
           {/* State */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">State</label>
-            <select
-              value={stateFilter}
-              onChange={e => setStateFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            >
+            <select value={stateFilter} onChange={e => setStateFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {STATE_OPTIONS.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
@@ -193,11 +268,8 @@ export default function ArvDatabase() {
           {/* Avg ARV range */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Avg ARV</label>
-            <select
-              value={arvRange}
-              onChange={e => setArvRange(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            >
+            <select value={arvRange} onChange={e => setArvRange(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {AVG_ARV_RANGES.map(r => <option key={r.label}>{r.label}</option>)}
             </select>
           </div>
@@ -205,18 +277,42 @@ export default function ArvDatabase() {
           {/* Min comps */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Min Comps</label>
-            <select
-              value={minComps}
-              onChange={e => setMinComps(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            >
+            <select value={minComps} onChange={e => setMinComps(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {['All', '2', '3', '5', '10'].map(v => <option key={v}>{v}</option>)}
             </select>
           </div>
 
-          {(stateFilter !== 'All' || arvRange !== 'All' || minComps !== 'All' || countySearch) && (
+          {/* MH Friendly */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 font-medium">MH Friendly</label>
+            <select value={mhFilter} onChange={e => setMhFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
+              {['All', 'Yes', 'No'].map(v => <option key={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {/* Opp Score */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 font-medium">Opp Score</label>
+            <select value={oppScoreFilter} onChange={e => setOppScoreFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
+              {['All', 'Under 40', '40–59', '60–79', '80+'].map(v => <option key={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {/* Days on Market */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 font-medium">Days on Market</label>
+            <select value={domFilter} onChange={e => setDomFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
+              {['All', '<65d', '65–130d', '130d+'].map(v => <option key={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {anyFilter && (
             <button
-              onClick={() => { setStateFilter('All'); setArvRange('All'); setMinComps('All'); setCountySearch(''); }}
+              onClick={() => { setStateFilter('All'); setArvRange('All'); setMinComps('All'); setCountySearch(''); setMhFilter('All'); setOppScoreFilter('All'); setDomFilter('All'); }}
               className="text-xs text-accent hover:underline ml-auto"
             >
               Clear filters
@@ -226,54 +322,69 @@ export default function ArvDatabase() {
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
+      <div className="bg-card rounded-xl shadow-sm overflow-x-auto">
+        <table className="w-full min-w-[1100px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {[
-                { key: 'county', label: 'County' },
-                { key: 'state', label: 'State' },
-                { key: 'minArv', label: 'Min ARV' },
-                { key: 'avgArv', label: 'Avg ARV' },
-                { key: 'maxArv', label: 'Max ARV' },
-                { key: 'comps', label: 'Comps' },
-                { key: 'lastUpdated', label: 'Updated' },
-              ].map(col => (
-                <th
-                  key={col.key}
-                  onClick={() => toggleSort(col.key)}
-                  className={`py-3 px-4 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none
-                    ${col.key === 'county' || col.key === 'state' ? 'text-left' : 'text-right'}`}
-                >
-                  {col.label}<SortArrow col={col.key} />
-                </th>
-              ))}
+              <Th col="county" label="County" />
+              <Th col="state" label="State" />
+              <Th col="minArv" label="Min ARV" right />
+              <Th col="avgArv" label="Avg ARV" right />
+              <Th col="maxArv" label="Max ARV" right />
+              <Th col="comps" label="Comps" right />
+              <Th col="oppScore" label="Opp" right />
+              <Th col="demandScore" label="Demand" right />
+              <Th col="medianDOM" label="DOM" right />
+              <Th col="absorptionRate" label="Abs %" right />
+              <Th col="monthsSupply" label="Mo. Supply" right />
+              <Th col="popGrowth" label="Pop Grwth" right />
+              <Th col="mhFriendly" label="MH ✓" right />
+              <Th col="lastUpdated" label="Updated" right />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
+                <td colSpan={14} className="py-10 text-center text-sm text-gray-400">No counties match the current filters.</td>
               </tr>
             ) : filtered.map((row) => (
               <tr key={`${row.county}-${row.state}`} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
-                <td className="py-3 px-4 text-sm font-medium text-sidebar">{row.county}</td>
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-3 text-sm font-medium text-sidebar whitespace-nowrap">{row.county}</td>
+                <td className="py-2.5 px-3">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${row.state === 'NC' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                     {row.state}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-sm text-right text-gray-600">${row.minArv.toLocaleString()}</td>
-                <td className="py-3 px-4 text-sm text-right font-semibold text-accent">${row.avgArv.toLocaleString()}</td>
-                <td className="py-3 px-4 text-sm text-right text-gray-600">${row.maxArv.toLocaleString()}</td>
-                <td className="py-3 px-4 text-sm text-right text-gray-600">{row.comps}</td>
-                <td className="py-3 px-4 text-sm text-right text-gray-400">{row.lastUpdated}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.minArv.toLocaleString()}</td>
+                <td className="py-2.5 px-3 text-sm text-right font-semibold text-accent">${row.avgArv.toLocaleString()}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.maxArv.toLocaleString()}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">{row.comps}</td>
+                <td className="py-2.5 px-3 text-right">{scoreBadge(row.oppScore)}</td>
+                <td className="py-2.5 px-3 text-right">{scoreBadge(row.demandScore)}</td>
+                <td className={`py-2.5 px-3 text-sm text-right font-medium ${domColor(row.medianDOM)}`}>
+                  {row.medianDOM != null ? `${row.medianDOM}d` : '—'}
+                </td>
+                <td className={`py-2.5 px-3 text-sm text-right font-medium ${absColor(row.absorptionRate)}`}>
+                  {row.absorptionRate != null ? `${row.absorptionRate}%` : '—'}
+                </td>
+                <td className={`py-2.5 px-3 text-sm text-right font-medium ${msColor(row.monthsSupply)}`}>
+                  {row.monthsSupply != null ? row.monthsSupply.toFixed(1) : '—'}
+                </td>
+                <td className={`py-2.5 px-3 text-sm text-right font-medium ${pgColor(row.popGrowth)}`}>
+                  {row.popGrowth != null ? `${row.popGrowth > 0 ? '+' : ''}${row.popGrowth}%` : '—'}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right">
+                  {row.mhFriendly === true ? <span className="text-green-600 font-bold">✓</span>
+                    : row.mhFriendly === false ? <span className="text-red-400">✗</span>
+                    : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-400 whitespace-nowrap">{row.lastUpdated}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          Source: Zillow sold listings · NC manufactured homes built 2022–2026 · 984 listings collected · 851 mapped to counties · Outliers removed · Updated April 2026
+          ARV source: Zillow sold listings · NC manufactured homes built 2022–2026 · 984 listings · Updated April 2026 &nbsp;|&nbsp; Market stats: heat map county data
         </div>
       </div>
     </div>
