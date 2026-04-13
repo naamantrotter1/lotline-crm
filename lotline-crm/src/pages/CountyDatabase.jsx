@@ -565,7 +565,6 @@ export default function CountyDatabase() {
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-b border-gray-50 ${selectedCounty === c.name ? 'bg-orange-600 text-white' : 'text-gray-700 hover:bg-orange-50'}`}
             >
               <span className="font-medium truncate">{c.name}</span>
-              <span className={`text-xs font-semibold ml-2 shrink-0 ${selectedCounty === c.name ? 'text-orange-100' : 'text-orange-600'}`}>{c.completion}%</span>
             </button>
           ))}
         </div>
