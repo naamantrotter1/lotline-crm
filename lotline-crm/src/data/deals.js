@@ -85,7 +85,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-31', closeDate: '2026-03-31', daysInPipeline: 8,
     ddTasksCompleted: ['Perk Test'],
     notes: 'Subdivide. County guarantees 1000 ft water tap for pressure, may have to pay for more. Fee $1600 per tap. Sub divided into two 2 acre lots. Called Johnny J Williams land surveying, left vm. Will call back 3/20. Johnny J Williams is going to be doing the surveying on this property. Follow up 4/2',
-    lat: 34.9221, lng: -77.9518,
+    lat: 34.8966, lng: -78.0542,
   },
   {
     id: 'deal-005', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -101,7 +101,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.1014, lng: -80.4381,
+    lat: 33.0912, lng: -80.4659,
   },
   {
     id: 'deal-006', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -117,7 +117,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.1028, lng: -80.4362,
+    lat: 33.0918, lng: -80.4652,
   },
   {
     id: 'deal-007', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -133,7 +133,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.1043, lng: -80.4398,
+    lat: 33.0924, lng: -80.4645,
   },
   {
     id: 'deal-008', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -149,7 +149,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.1057, lng: -80.4377,
+    lat: 33.0930, lng: -80.4638,
   },
   {
     id: 'deal-009', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -165,7 +165,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.1069, lng: -80.4355,
+    lat: 33.0936, lng: -80.4631,
   },
   {
     id: 'deal-010', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -181,7 +181,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: 'Called county to see if they have any records on a septic system on file. Will hear back on 3/25. Inspector could not find septic system due to over grown brush. Once we close 3/31, schedule land clearing company to go out and clear the brush and overgrowth.',
-    lat: 36.1034, lng: -76.7037,
+    lat: 36.2152, lng: -76.6113,
   },
   {
     id: 'deal-011', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -197,7 +197,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-08', closeDate: '2026-04-08', daysInPipeline: 0,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 33.0998, lng: -80.4410,
+    lat: 33.0906, lng: -80.4666,
   },
   {
     id: 'deal-012', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -214,7 +214,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-15', closeDate: '2026-04-29', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: '',
-    lat: 35.3921, lng: -81.9618,
+    lat: 35.2985, lng: -81.6991,
   },
 
   // Creek Landing Lots 3-9 (Horry County SC)
@@ -231,7 +231,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2201, lng: -79.4871,
+    lat: 34.2338, lng: -79.1487,
   },
   {
     id: 'deal-014', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -246,7 +246,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2215, lng: -79.4888,
+    lat: 34.2344, lng: -79.1481,
   },
   {
     id: 'deal-015', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -261,7 +261,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2229, lng: -79.4905,
+    lat: 34.2350, lng: -79.1474,
   },
   {
     id: 'deal-016', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -276,7 +276,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2243, lng: -79.4922,
+    lat: 34.2356, lng: -79.1468,
   },
   {
     id: 'deal-017', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -291,7 +291,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2257, lng: -79.4939,
+    lat: 34.2362, lng: -79.1461,
   },
   {
     id: 'deal-018', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -306,7 +306,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2271, lng: -79.4956,
+    lat: 34.2368, lng: -79.1455,
   },
   {
     id: 'deal-019', pipeline: 'deal-overview', stage: 'Due Diligence',
@@ -321,7 +321,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-03-20', closeDate: '2026-05-12',
     ddTasksCompleted: [],
     notes: '',
-    lat: 34.2285, lng: -79.4973,
+    lat: 34.2374, lng: -79.1448,
   },
 
   // Development (2)
@@ -339,7 +339,7 @@ export const DEAL_OVERVIEW_DEALS = [
     closingAttorney: null, closingAttorneyPhone: null, closingAttorneyAddress: null,
     ddTasksCompleted: ['Perk Test'],
     notes: 'Called to get an update on permits and the county said it is going to take another 4-6 weeks, E911 address gets assigned once building permit is approved',
-    lat: 35.4712, lng: -81.2398,
+    lat: 35.4222, lng: -81.3139,
   },
   {
     id: 'deal-021', pipeline: 'deal-overview', stage: 'Development',
@@ -356,7 +356,7 @@ export const DEAL_OVERVIEW_DEALS = [
     closingAttorney: '24 Hour Closing', closingAttorneyPhone: '704-800-4131', closingAttorneyAddress: '803 N Main St Salisbury NC 28144',
     ddTasksCompleted: ['Perk Test'],
     notes: 'Grade A. Funder: Louis Isom. Hard Money (Land + Home). Day 12. Active development.',
-    lat: 35.6318, lng: -80.5241,
+    lat: 35.7690, lng: -80.5909,
   },
 ];
 
