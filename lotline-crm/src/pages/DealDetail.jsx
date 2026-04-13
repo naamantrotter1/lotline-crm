@@ -237,7 +237,7 @@ function OverviewTab({
             <InputRow label="State" value={dealState} onChange={setDealState} />
             <InputRow label="Zip Code" value={zip} onChange={setZip} />
             <InputRow label="Acreage" value={acreage} onChange={setAcreage} type="number" />
-            <div className="py-2">
+            <div className="py-2 flex items-center gap-4">
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
                 target="_blank" rel="noreferrer"
@@ -245,6 +245,14 @@ function OverviewTab({
               >
                 <MapPin size={12} /> Open in Maps <ExternalLink size={10} />
               </a>
+              {parcelId && (
+                <button
+                  onClick={() => navigate(`/flood-map?parcelId=${encodeURIComponent(parcelId)}&state=${encodeURIComponent(dealState || 'NC')}`)}
+                  className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
+                >
+                  <MapPin size={12} /> Open in Map Search
+                </button>
+              )}
             </div>
           </div>
         </div>

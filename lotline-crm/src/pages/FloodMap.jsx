@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
@@ -197,6 +198,8 @@ export default function FloodMap() {
   const fromSearchRef = useRef(false);       // true when click was triggered by search result (use data.geometry directly)
 
   const [state,    setState]    = useState('Both');
+  const [searchParams] = useSearchParams();
+  const [mapReady, setMapReady] = useState(false);
   const [mapStyle, setMapStyle] = useState('satellite');
   const [layers,   setLayers]   = useState({ floodplain: false, wetlands: false, water: false });
   const [counties, setCounties] = useState(false);
@@ -552,6 +555,7 @@ export default function FloodMap() {
 
     baseTiles.current = TILE_LAYERS.satellite.map(t => L.tileLayer(t.url, t.opts).addTo(map));
     leafletMap.current = map;
+    setMapReady(true);
 
     map.on('zoomend moveend', () => {
       const c = map.getCenter();
@@ -567,6 +571,16 @@ export default function FloodMap() {
       map.remove();
     };
   }, []);
+
+  // ── Auto-load parcel from URL params (e.g. ?parcelId=XXX&state=NC) ──────────
+  useEffect(() => {
+    if (!mapReady) return;
+    const parno = searchParams.get('parcelId');
+    const stateParam = searchParams.get('state') || '';
+    if (!parno) return;
+    handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady]);
 
   // ── Swap base tiles ────────────────────────────────────────────────────────
   useEffect(() => {
