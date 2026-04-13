@@ -553,6 +553,10 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       attributionControl: true,
     });
 
+    // Custom pane for the selected-parcel highlight — sits above all GeoJSON overlay layers
+    map.createPane('highlightPane');
+    map.getPane('highlightPane').style.zIndex = 450;
+
     baseTiles.current = TILE_LAYERS.satellite.map(t => L.tileLayer(t.url, t.opts).addTo(map));
     leafletMap.current = map;
     setMapReady(true);
@@ -735,7 +739,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           if (isFromSearch && data.geometry && leafletMap.current?._mapPane) {
             const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
               style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-              renderer: L.canvas(),
+              pane: 'highlightPane', renderer: L.canvas(),
             });
             hl.addTo(leafletMap.current);
             selectedHighlightRef.current = hl;
@@ -761,7 +765,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           if (!selectedHighlightRef.current && data.geometry && leafletMap.current?._mapPane) {
             const hl = L.geoJSON({ type: 'Feature', geometry: data.geometry }, {
               style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-              renderer: L.canvas(),
+              pane: 'highlightPane', renderer: L.canvas(),
             });
             hl.addTo(leafletMap.current);
             selectedHighlightRef.current = hl;
