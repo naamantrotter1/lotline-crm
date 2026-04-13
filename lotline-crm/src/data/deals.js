@@ -181,7 +181,7 @@ export const DEAL_OVERVIEW_DEALS = [
     contractDate: '2026-04-07', closeDate: '2026-04-07', daysInPipeline: 1,
     ddTasksCompleted: ['Perk Test'],
     notes: 'Called county to see if they have any records on a septic system on file. Will hear back on 3/25. Inspector could not find septic system due to over grown brush. Once we close 3/31, schedule land clearing company to go out and clear the brush and overgrowth.',
-    lat: 36.2254, lng: -76.9274,
+    lat: 36.1034, lng: -76.7037,
   },
   {
     id: 'deal-011', pipeline: 'deal-overview', stage: 'Due Diligence',
