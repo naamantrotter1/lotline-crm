@@ -583,25 +583,14 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     if (!address && !parno) return;
 
     if (address) {
-      // Geocode the address to get real coordinates, then look up parcel by lat/lng.
-      // This is more reliable than matching parcel ID formats across county GIS systems.
+      // Pass the address to the backend, which geocodes server-side and returns the parcel.
+      // More reliable than client-side geocoding for rural addresses without house numbers.
       setSearchType('address');
       setSearchQuery(address);
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, {
-        headers: { 'Accept-Language': 'en', 'User-Agent': 'LotLine-CRM/1.0' },
-      })
-        .then(r => r.json())
-        .then(results => {
-          if (!results?.length) return;
-          const latF = parseFloat(results[0].lat);
-          const lngF = parseFloat(results[0].lon);
-          handleSearchSelect({ lat: latF, lng: lngF, state: stateParam, county: countyParam });
-        })
-        .catch(() => {});
-    } else {
-      // Fall back to parcel ID search when no address is available
+      handleSearchSelect({ dealAddress: address, lat: 0, lng: 0, state: stateParam, county: countyParam });
+    } else if (parno) {
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
@@ -871,11 +860,13 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     const parcelInfoCtrl = new AbortController();
     parcelInfoAbortRef.current = parcelInfoCtrl;
 
-    // Build parcel API URL — use parno directly so we always get the right parcel
+    // Build parcel API URL
     let parcelUrl = result.parno
       ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}&lat=${lat ?? 0}&lng=${lng ?? 0}`
-      : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
-    if (result.state) parcelUrl += `&state=${result.state}`;
+      : result.dealAddress
+        ? `${PROXY}/api/proxy/parcel?address=${encodeURIComponent(result.dealAddress)}`
+        : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
+    if (result.state) parcelUrl += `&state=${encodeURIComponent(result.state)}`;
     if (result.county) parcelUrl += `&county=${encodeURIComponent(result.county)}`;
 
     try {

@@ -10,6 +10,20 @@ function fetchJson(u) {
   });
 }
 
+// Nominatim forward geocoding — used to resolve a deal address to lat/lng
+// so we can look up the parcel by coordinates when no lat/lng are provided.
+async function forwardGeocode(address) {
+  if (!address) return [0, 0];
+  try {
+    const p = new URLSearchParams({ q: address, format: 'json', limit: '1', countrycodes: 'us' });
+    const data = await fetchJson(`https://nominatim.openstreetmap.org/search?${p}`);
+    if (!Array.isArray(data) || !data.length) return [0, 0];
+    return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  } catch {
+    return [0, 0];
+  }
+}
+
 // Nominatim reverse geocoding — used as a fallback when the parcel database
 // lacks a site address (common for NC OneMap and all SC DOT parcels).
 async function reverseGeocode(lat, lng) {
@@ -54,11 +68,17 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { lat, lng, parno: qParno, state: qState, county: qCounty } = req.query;
-  if (!qParno && (!lat || !lng)) return res.status(400).json({ error: 'lat/lng or parno required' });
+  const { lat, lng, parno: qParno, state: qState, county: qCounty, address: qAddress } = req.query;
+  if (!qParno && !qAddress && (!lat || !lng)) return res.status(400).json({ error: 'lat/lng, parno, or address required' });
 
-  const latN = parseFloat(lat) || 0;
-  const lngN = parseFloat(lng) || 0;
+  let latN = parseFloat(lat) || 0;
+  let lngN = parseFloat(lng) || 0;
+
+  // If an address is provided but no coordinates, forward-geocode it server-side
+  if (qAddress && (!latN || !lngN)) {
+    [latN, lngN] = await forwardGeocode(qAddress);
+    if (!latN || !lngN) return res.status(404).json({ error: 'Could not locate address. Try clicking on the map instead.' });
+  }
 
   // If caller explicitly passes state (from boundary feature), trust it
   const forcedNC = qState === 'NC';
