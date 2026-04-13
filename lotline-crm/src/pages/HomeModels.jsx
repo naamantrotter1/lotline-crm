@@ -3,7 +3,7 @@ import { HOME_MODELS } from '../data/homeModels';
 import { Search, Plus, ExternalLink, ChevronUp, ChevronDown, Pencil, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/UI/Button';
 
-const STORAGE_KEY = 'homeModels_data';
+const STORAGE_KEY = 'homeModels_data_v2';
 const HIDDEN_KEY = 'hiddenOrderHomeIds';
 
 const EMPTY_MODEL = {
