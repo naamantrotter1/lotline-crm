@@ -1250,17 +1250,6 @@ function HeatMap() {
     }
   }, [showSales, leafletMap.current]);
 
-  // ── Info text per statistic (for "What is X?" tooltip) ──────────────────
-  const statInfo = {
-    'Opportunity Score':       'Composite 0–100 score combining absorption rate, months of supply, and population growth. Higher = better market opportunity.',
-    'Demand Score':            'Composite 0–100 score combining sell-through rate, days on market, and absorption rate. Higher = stronger buyer demand.',
-    Transactions:              'Estimated number of transactions in the selected time period based on absorption rate.',
-    'Median Price':            'Total median sale price of land parcels closed in the selected period.',
-    'Median Price/Acre':       'Median price per acre — lower values indicate larger, rural parcels.',
-    'Sell Through Rate (STR)': 'Percentage of listed properties that sold (sell-through rate).',
-    'Days on Market':          'Median days a parcel sits on market before going under contract.',
-  };
-
   return (
     <div className="space-y-0 -mx-1">
 
@@ -1271,24 +1260,18 @@ function HeatMap() {
         <div className="flex items-center gap-1.5 px-3 py-2">
 
           <FilterDropdown label="View"   value={groupBy} onChange={setGroupBy}
-            options={['County','State','Zip Code']}
-            tooltip="Choose how to group the heat map — by County, State, or Zip Code." />
+            options={['County','State','Zip Code']} />
           <FilterDropdown label="Status" value={status}  onChange={setStatus}
-            options={['Sold','For Sale']}
-            tooltip="Filter by listing status — Sold shows closed transactions; For Sale shows active listings." />
+            options={['Sold','For Sale']} />
 
           <FilterDropdown label="Time"       value={timePeriod} onChange={setTimePeriod}
-            options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']}
-            tooltip="Lookback window for market data. Shorter windows show recent trends; longer windows smooth out seasonality." />
+            options={['7 days','14 days','30 days','90 days','6 months','1 year','2 years','3 years','5 years']} />
           <FilterDropdown label="Data"       value={dataType}   onChange={v => { setDataType(v); setSelected(null); }}
-            options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']}
-            tooltip="Property type to include in the stats. 'Land' filters to vacant parcels only — best for land acquisition analysis." />
+            options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']} />
           <FilterDropdown label="Acreage"    value={acreage}    onChange={setAcreage}
-            options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']}
-            tooltip="Narrow results to parcels within a specific size range. Useful for targeting MH-ready lot sizes (1–10 acres)." />
+            options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']} />
           <FilterDropdown label="Statistics" value={statistic}  onChange={setStatistic}
-            options={['Opportunity Score','Demand Score','Transactions','Days on Market','Sell Through Rate (STR)']}
-            tooltip={statInfo[statistic]} />
+            options={['Opportunity Score','Demand Score','Transactions','Days on Market','Sell Through Rate (STR)']} />
 
           {/* Pipeline dropdown */}
           {(() => {
