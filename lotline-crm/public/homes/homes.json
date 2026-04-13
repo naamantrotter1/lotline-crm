@@ -1093,7 +1093,10 @@
     "brand": "Clayton Tempo",
     "desc": "Imagine (57TPO14401AH) is Clayton Tempo's entry-level single-wide — 1 bedroom, 1 bath, and 560 sq ft in a compact 14×40 ft footprint. Perfect for investors seeking the most affordable new manufactured home option for infill lots and rural parcels.",
     "features": ["1 bedroom", "1 bath", "560 sq ft", "14×40 ft", "Entry-level price", "HUD certified", "Clayton Tempo"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/42946a65-84ce-4a8e-a62d-35d5607899af.jpg",
+      "https://api.claytonhomes.com/images/mfg/flp/06f23db7-e67d-4eb3-b158-9b6f0362f50f.jpg"
+    ]
   },
   {
     "id": 42,
@@ -1111,7 +1114,10 @@
     "brand": "Clayton Tempo",
     "desc": "Satisfaction (57TPO14482AH) is a 2-bedroom, 1-bath single-wide with 672 sq ft in a 14×48 ft footprint. An affordable entry option for single-wide lot placements with a practical layout and Clayton Tempo quality.",
     "features": ["2 bedrooms", "1 bath", "672 sq ft", "14×48 ft", "Affordable", "HUD certified", "Clayton Tempo"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/b3cd1ed8-831b-4e30-9cbc-784e60da4d5d.jpg",
+      "https://api.claytonhomes.com/images/mfg/flp/02d2ce5f-3501-4796-ac01-78d6726b4860.jpg"
+    ]
   },
   {
     "id": 43,
@@ -1129,7 +1135,10 @@
     "brand": "Clayton Tempo",
     "desc": "Respect (57TPO14602AH) delivers 2 bedrooms and 2 full baths in 840 sq ft — a 14×60 ft single-wide offering great value for rural lots. Two full baths at this price point is a standout feature for tenant appeal.",
     "features": ["2 bedrooms", "2 full baths", "840 sq ft", "14×60 ft", "2 full baths", "HUD certified", "Clayton Tempo"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/52a7270d-46e0-4bcb-964a-b59f9f7565f7.jpg",
+      "https://api.claytonhomes.com/images/mfg/flp/bc2d863a-6a35-4f74-b949-a1a3420e7cce.jpg"
+    ]
   },
   {
     "id": 44,
@@ -1147,7 +1156,10 @@
     "brand": "Clayton Tempo",
     "desc": "Good Vibrations (57TPO14663AH) packs 3 bedrooms and 2 baths into 924 sq ft across a 14×66 ft single-wide. One of the best value 3-bed options in the lineup for tight infill lots.",
     "features": ["3 bedrooms", "2 full baths", "924 sq ft", "14×66 ft", "Best value 3-bed", "HUD certified", "Clayton Tempo"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/2b3c9a21-42b1-44f3-b9d1-a296b9c0a435.jpg",
+      "https://api.claytonhomes.com/images/mfg/flp/e1b7dd51-8b9a-4fe0-af01-eb82aa6da92b.jpg"
+    ]
   },
   {
     "id": 45,
@@ -1193,7 +1205,10 @@
     "brand": "Clayton Tempo",
     "desc": "Layla (57TPO16522AH) offers 2 bedrooms and 2 baths in 832 sq ft across a 16×52 ft single-wide footprint. A versatile single-wide with two full baths for great tenant appeal.",
     "features": ["2 bedrooms", "2 full baths", "832 sq ft", "16×52 ft", "HUD certified", "Clayton Tempo"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/43476d63-cbc4-46e1-b6e5-32b0c02606f7.png",
+      "https://api.claytonhomes.com/images/mfg/flp/741f7317-b17c-4e1f-967b-1047a2518087.jpg"
+    ]
   },
   {
     "id": 47,
@@ -1535,7 +1550,10 @@
     "brand": "Clayton Tempo",
     "desc": "Superfly (57TPO28764AH) is the flagship of the Tempo lineup — 4 bedrooms, 2 baths, and 2,128 sq ft in a massive 28×76 ft double-wide footprint. Maximum space at a competitive manufactured home price point.",
     "features": ["4 bedrooms", "2 full baths", "2,128 sq ft", "28×76 ft", "Flagship model", "Maximum space", "HUD certified"],
-    "photos": []
+    "photos": [
+      "https://api.claytonhomes.com/images/mfg/ext/258ec7b8-dce8-41a1-9e8f-dfee67743c2a.png",
+      "https://api.claytonhomes.com/images/mfg/flp/d676b017-62b1-4377-93d5-a2978929b959.jpg"
+    ]
   },
   {
     "id": 59,
