@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExternalLink, ChevronRight, Search } from 'lucide-react';
 import { NC_COUNTIES, SC_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
 
@@ -502,8 +502,19 @@ export default function CountyDatabase() {
   const [activeState, setActiveState] = useState('NC');
   const [selectedCounty, setSelectedCounty] = useState(null);
   const [activeSection, setActiveSection] = useState('keyContacts');
-  const [countyData, setCountyData] = useState(COUNTY_DATA);
+  const [countyData, setCountyData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('countyDatabase_data');
+      return saved ? { ...COUNTY_DATA, ...JSON.parse(saved) } : COUNTY_DATA;
+    } catch {
+      return COUNTY_DATA;
+    }
+  });
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('countyDatabase_data', JSON.stringify(countyData));
+  }, [countyData]);
 
   const counties = activeState === 'NC' ? NC_COUNTIES : SC_COUNTIES;
   const filteredCounties = counties.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
