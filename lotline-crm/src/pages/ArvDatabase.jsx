@@ -515,20 +515,6 @@ export default function ArvDatabase() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Counties Shown', value: filtered.length },
-          { label: 'Total Comps', value: totalComps.toLocaleString() },
-          { label: 'Avg ARV (Filtered)', value: `$${avgOfAvgs.toLocaleString()}` },
-          { label: 'States', value: Array.from(new Set(filtered.map(d => d.state))).join(', ') || '—' },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-card rounded-xl shadow-sm p-4 text-center">
-            <p className="text-2xl font-bold text-sidebar">{stat.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
-          </div>
-        ))}
-      </div>
 
       {/* Filters */}
       <div className="bg-card rounded-xl shadow-sm p-4">
