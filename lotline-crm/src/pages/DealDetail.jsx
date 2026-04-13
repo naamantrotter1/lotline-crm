@@ -1110,8 +1110,8 @@ export default function DealDetail() {
               onClick={() => handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
               className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
                 landClearing === 'Yes'
-                  ? 'bg-green-100 text-green-700 border-green-300'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600'
+                  ? 'bg-amber-100 text-amber-700 border-amber-300'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
               }`}
             >
               <TreePine size={11} />
