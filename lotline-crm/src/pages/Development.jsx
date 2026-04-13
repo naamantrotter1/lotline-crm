@@ -1,141 +1,338 @@
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, User, Calendar, CheckSquare, Square } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
-import { GradeBadge, Tag } from '../components/UI/Badge';
-import { CheckCircle, Clock, MapPin } from 'lucide-react';
 
-const devDeals = DEAL_OVERVIEW_DEALS.filter((d) => d.stage === 'Development');
-
-const DEV_STAGES = [
-  'Land Clearing',
-  'Permits',
-  'Footers & Foundation',
-  'Home Delivery',
-  'Setup & Tie-Down',
-  'Utilities',
-  'Finishing Work',
-  'Final Inspection',
+// ── Column definitions (matches Lovable CRM) ──────────────────────────────────
+const DEV_COLUMNS = [
+  {
+    key: 'land_clearing', label: 'Land Clearing', color: '#16a34a', bg: '#dcfce7',
+    subtasks: ['Land clearing scheduled', 'Land clearing complete'],
+    tagOnly: true, // only show deals tagged 'Land Clearing'
+  },
+  {
+    key: 'permits', label: 'Permits', color: '#d97706', bg: '#fef3c7',
+    subtasks: ['Permits submitted', 'Permits approved'],
+  },
+  {
+    key: 'mh_order', label: 'Mobile Home Order', color: '#7c3aed', bg: '#ede9fe',
+    subtasks: ['Order mobile home', 'MH ordered'],
+  },
+  {
+    key: 'setup_crew', label: 'Set-Up Crew', color: '#0891b2', bg: '#cffafe',
+    subtasks: ['Schedule set-up crew', 'Set-up crew scheduled', 'Set-up crew complete (home set)', 'De-title home (after set)'],
+  },
+  {
+    key: 'septic', label: 'Septic', color: '#ea580c', bg: '#ffedd5',
+    subtasks: ['Schedule septic', 'Septic scheduled', 'Septic complete'],
+  },
+  {
+    key: 'well', label: 'Well', color: '#2563eb', bg: '#dbeafe',
+    subtasks: ['Schedule well', 'Well scheduled', 'Well complete'],
+  },
+  {
+    key: 'electrical', label: 'Electrical', color: '#ca8a04', bg: '#fef9c3',
+    subtasks: ['Schedule electrical', 'Electrical scheduled', 'Electrical complete'],
+  },
+  {
+    key: 'plumbing', label: 'Plumbing', color: '#4f46e5', bg: '#e0e7ff',
+    subtasks: ['Schedule plumbing hook-up (well/septic)', 'Plumbing scheduled', 'Plumbing complete'],
+  },
+  {
+    key: 'hvac', label: 'HVAC', color: '#be185d', bg: '#fce7f3',
+    subtasks: ['Schedule HVAC', 'HVAC scheduled', 'HVAC complete'],
+  },
+  {
+    key: 'skirting', label: 'Skirting', color: '#059669', bg: '#d1fae5',
+    subtasks: ['Schedule skirting', 'Skirting scheduled', 'Skirting complete'],
+  },
+  {
+    key: 'steps', label: 'Steps / Entry', color: '#7c3aed', bg: '#f3e8ff',
+    subtasks: ['Order steps (front & back)', 'Steps ordered', 'Steps delivery date', 'Schedule steps install', 'Steps installed'],
+  },
+  {
+    key: 'final_grade', label: 'Final Grade', color: '#374151', bg: '#f3f4f6',
+    subtasks: ['Final grade scheduled', 'Final grade complete'],
+  },
+  {
+    key: 'inspection', label: 'Final Inspection & CO', color: '#dc2626', bg: '#fee2e2',
+    subtasks: ['Schedule final building inspection', 'Final building inspection scheduled', 'Final building inspection passed', 'Certificate of Occupancy (CO) received'],
+  },
+  {
+    key: 'list_home', label: 'List Home', color: '#0891b2', bg: '#e0f2fe',
+    subtasks: ['List home'],
+  },
 ];
 
-function DevCard({ deal }) {
-  const netProfit = calcNetProfit(deal);
-  const tasksComplete = deal.devTasksComplete || 0;
-  const totalTasks = 38;
-  const pct = Math.round((tasksComplete / totalTasks) * 100);
+// All subtasks that count toward the total (exclude land_clearing)
+const COUNTED_COLUMNS = DEV_COLUMNS.filter(c => !c.tagOnly);
+const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.length, 0);
+
+const devDeals = DEAL_OVERVIEW_DEALS.filter(d => d.stage === 'Development');
+
+// ── localStorage helpers ──────────────────────────────────────────────────────
+const lsGet = (k)    => localStorage.getItem(k) || '';
+const lsSet = (k, v) => localStorage.setItem(k, v);
+
+function subtaskKey(dealId, colKey, subtaskIdx) {
+  return `dev_${dealId}_${colKey}_${subtaskIdx}`;
+}
+function contractorKey(dealId, colKey) {
+  return `dev_${dealId}_${colKey}_cont`;
+}
+function isSubtaskDone(dealId, colKey, idx) {
+  return lsGet(subtaskKey(dealId, colKey, idx)) === '1';
+}
+function setSubtaskDone(dealId, colKey, idx, done) {
+  lsSet(subtaskKey(dealId, colKey, idx), done ? '1' : '');
+}
+function isColComplete(dealId, col) {
+  return col.subtasks.every((_, i) => isSubtaskDone(dealId, col.key, i));
+}
+function getTotalDone(dealId) {
+  return COUNTED_COLUMNS.reduce((sum, col) =>
+    sum + col.subtasks.filter((_, i) => isSubtaskDone(dealId, col.key, i)).length, 0);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getDayCount(contractDate) {
+  if (!contractDate) return null;
+  const start = new Date(contractDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today - start) / 86400000);
+  return diff >= 0 ? diff : null;
+}
+
+function formatClose(str) {
+  if (!str) return null;
+  const [y, m, d] = str.split('-');
+  return `${m}/${d}/${y}`;
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+function DevTaskCard({ deal, column, onUpdate }) {
+  const navigate = useNavigate();
+
+  const [checks, setChecks] = useState(() =>
+    column.subtasks.map((_, i) => isSubtaskDone(deal.id, column.key, i))
+  );
+  const [contractor, setContractor] = useState(() => lsGet(contractorKey(deal.id, column.key)));
+  const [editingCont, setEditingCont] = useState(false);
+
+  const allDone = checks.every(Boolean);
+  if (allDone) return null;
+
+  const totalDone = getTotalDone(deal.id);
+  const days = getDayCount(deal.contractDate);
+  const inProgress = checks.some(Boolean);
+
+  const toggle = (e, idx) => {
+    e.stopPropagation();
+    const next = [...checks];
+    next[idx] = !next[idx];
+    setSubtaskDone(deal.id, column.key, idx, next[idx]);
+    setChecks(next);
+    if (next.every(Boolean)) onUpdate(); // disappear from column
+    else onUpdate();
+  };
+
+  const saveCont = (val) => {
+    lsSet(contractorKey(deal.id, column.key), val);
+    setContractor(val);
+    setEditingCont(false);
+  };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm p-4">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1 pr-2">
-          <p className="text-sm font-semibold text-sidebar leading-tight">{deal.address}</p>
-          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-            <MapPin size={10} />{deal.county}, {deal.state}
-          </p>
-        </div>
-        <GradeBadge grade={deal.grade} />
+    <div
+      onClick={() => navigate(`/deal/${deal.id}`)}
+      className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 mb-2 cursor-pointer hover:shadow-md transition-all"
+    >
+      {/* Address */}
+      <p className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">{deal.address}</p>
+
+      {/* Day + total progress */}
+      <div className="flex items-center gap-2 mb-2">
+        {days !== null && (
+          <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">
+            Day {days}
+          </span>
+        )}
+        <span className={`text-[10px] font-medium ${inProgress ? 'text-orange-500' : 'text-gray-400'}`}>
+          {totalDone}/{TOTAL_SUBTASKS} total
+        </span>
+        {deal.closeDate && (
+          <span className="text-[10px] text-gray-400 ml-auto">
+            {formatClose(deal.closeDate)}
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-1 mb-3">
-        {deal.investor && deal.investor !== 'Cash' && (
-          <Tag type="investor">{deal.investor}</Tag>
-        )}
-        {(deal.tags || []).map((tag) => (
-          <Tag key={tag} type={tag}>{tag}</Tag>
+      {/* Subtask checkboxes */}
+      <div className="space-y-1 mb-2" onClick={e => e.stopPropagation()}>
+        {column.subtasks.map((task, i) => (
+          <button
+            key={i}
+            onClick={e => toggle(e, i)}
+            className="flex items-center gap-1.5 w-full text-left group"
+          >
+            {checks[i]
+              ? <CheckSquare size={12} className="text-green-500 flex-shrink-0" />
+              : <Square size={12} className="text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
+            }
+            <span className={`text-[10px] leading-snug ${checks[i] ? 'line-through text-gray-300' : 'text-gray-600'}`}>
+              {task}
+            </span>
+          </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-        <div>
-          <span className="text-gray-500">ARV</span>
-          <p className="font-semibold text-gray-800">${(deal.arv || 0).toLocaleString()}</p>
-        </div>
-        <div>
-          <span className="text-gray-500">Net Profit</span>
-          <p className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-            ${netProfit.toLocaleString()}
-          </p>
-        </div>
-        <div>
-          <span className="text-gray-500">Financing</span>
-          <p className="font-medium text-gray-700">{deal.financing}</p>
-        </div>
-        <div>
-          <span className="text-gray-500">Acreage</span>
-          <p className="font-medium text-gray-700">{deal.acreage} ac</p>
-        </div>
-      </div>
-
-      {deal.utilityScenario && (
-        <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg mb-3">
-          {deal.utilityScenario}
-        </div>
-      )}
-
-      {/* Task Progress */}
-      <div>
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>Dev Progress</span>
-          <span>{tasksComplete}/{totalTasks} tasks ({pct}%)</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-accent h-2 rounded-full transition-all"
-            style={{ width: `${pct}%` }}
+      {/* Contractor */}
+      <div onClick={e => e.stopPropagation()}>
+        {contractor ? (
+          <button
+            onClick={e => { e.stopPropagation(); setEditingCont(true); }}
+            className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 rounded-lg px-2 py-1 w-full text-left"
+          >
+            <User size={9} className="flex-shrink-0" />
+            <span className="truncate">{contractor}</span>
+          </button>
+        ) : editingCont ? (
+          <input
+            autoFocus
+            type="text"
+            placeholder="Contractor name..."
+            className="text-[10px] border border-gray-300 rounded-lg px-2 py-1 w-full outline-none focus:border-blue-400"
+            onBlur={e => saveCont(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveCont(e.target.value); if (e.key === 'Escape') setEditingCont(false); }}
+            onClick={e => e.stopPropagation()}
           />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 mt-3">
-        {deal.daysInPipeline !== undefined && (
-          <span className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-            <Clock size={10} />
-            Day {deal.daysInPipeline}
-          </span>
-        )}
-        {deal.leadSource && (
-          <span className="text-xs text-gray-400">{deal.leadSource}</span>
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); setEditingCont(true); }}
+            className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
+          >
+            <ChevronDown size={9} />
+            Add Contractor
+          </button>
         )}
       </div>
-
-      {deal.notes && (
-        <p className="mt-3 text-xs text-gray-500 bg-white rounded-lg p-2 leading-relaxed">
-          {deal.notes}
-        </p>
-      )}
     </div>
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function Development() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-sidebar">Development</h1>
-        <p className="text-sm text-gray-500 mt-1">{devDeals.length} active development projects</p>
-      </div>
+  const [tick, setTick]       = useState(0);
+  const [sortBy, setSortBy]   = useState('closing');
+  const [showSort, setShowSort] = useState(false);
 
-      {/* Stage Reference */}
-      <div className="bg-card rounded-xl shadow-sm p-4">
-        <h3 className="font-semibold text-sidebar text-sm mb-3">Development Stages</h3>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {DEV_STAGES.map((stage, i) => (
-            <div key={stage} className="flex items-center gap-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 bg-white rounded-lg px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-200">
-                <span className="w-5 h-5 rounded-full bg-sidebar text-white flex items-center justify-center text-xs font-bold">
-                  {i + 1}
-                </span>
-                {stage}
-              </div>
-              {i < DEV_STAGES.length - 1 && (
-                <div className="w-4 h-0.5 bg-gray-300 flex-shrink-0" />
-              )}
+  const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+
+  const sortedDeals = [...devDeals].sort((a, b) => {
+    if (sortBy === 'closing') {
+      if (!a.closeDate && !b.closeDate) return 0;
+      if (!a.closeDate) return 1;
+      if (!b.closeDate) return -1;
+      return new Date(a.closeDate) - new Date(b.closeDate);
+    }
+    if (sortBy === 'days') {
+      return (getDayCount(b.contractDate) ?? 0) - (getDayCount(a.contractDate) ?? 0);
+    }
+    return 0;
+  });
+
+  return (
+    <div className="space-y-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-sidebar">Development</h1>
+            <p className="text-sm text-gray-500">{devDeals.length} deals</p>
+          </div>
+          <button className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+            All Deals <ChevronDown size={13} />
+          </button>
+        </div>
+
+        {/* Sort */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSort(s => !s)}
+            className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+          >
+            <Calendar size={13} />
+            {sortBy === 'closing' ? 'Closing Date' : 'Days in Pipeline'}
+            <ChevronDown size={13} />
+          </button>
+          {showSort && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[170px] py-1">
+              {[['closing', 'Closing Date'], ['days', 'Days in Pipeline']].map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => { setSortBy(val); setShowSort(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${sortBy === val ? 'text-accent font-medium' : 'text-gray-700'}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {devDeals.map((deal) => (
-          <DevCard key={deal.id} deal={deal} />
-        ))}
+      {/* Kanban board */}
+      <div
+        key={tick}
+        className="flex gap-3 overflow-x-auto pb-4"
+        style={{ minHeight: 'calc(100vh - 220px)' }}
+      >
+        {DEV_COLUMNS.map(col => {
+          // Land Clearing: only show tagged deals; other columns: show all
+          const colDeals = sortedDeals.filter(d => {
+            if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !isColComplete(d.id, col);
+            return !isColComplete(d.id, col);
+          });
+
+          return (
+            <div key={col.key} className="flex-shrink-0 w-56">
+              {/* Column header */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                  <div className="px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: col.bg }}>
+                    <span className="text-[9px] font-bold" style={{ color: col.color }}>
+                      {col.label.split(' ')[0]}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-gray-700 text-[11px] leading-tight truncate">{col.label}</h3>
+                </div>
+                <span className="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center flex-shrink-0 ml-1">
+                  {colDeals.length}
+                </span>
+              </div>
+
+              {/* Cards */}
+              <div>
+                {colDeals.map(deal => (
+                  <DevTaskCard
+                    key={`${deal.id}-${col.key}-${tick}`}
+                    deal={deal}
+                    column={col}
+                    onUpdate={forceUpdate}
+                  />
+                ))}
+                {colDeals.length === 0 && (
+                  <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
+                    All tasks done ✓
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
