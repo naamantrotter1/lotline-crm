@@ -1095,6 +1095,7 @@ export default function DealDetail() {
   const nextStage = STAGE_ORDER[currentStageIdx + 1];
 
   return (
+    <>
     <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -1295,5 +1296,6 @@ export default function DealDetail() {
         </div>
       </div>
     )}
+    </>
   );
 }
