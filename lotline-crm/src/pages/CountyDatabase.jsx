@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { ExternalLink, Search, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, ChevronRight } from 'lucide-react';
 import { NC_COUNTIES, SC_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
 
 const DEPT_LABELS = [
@@ -500,7 +500,6 @@ const SECTION_COMPONENTS = {
 
 export default function CountyDatabase() {
   const [activeState, setActiveState] = useState('NC');
-  const [search, setSearch] = useState('');
   const [selectedCounty, setSelectedCounty] = useState('Alamance');
   const [activeSection, setActiveSection] = useState('keyContacts');
   const [countyData, setCountyData] = useState(COUNTY_DATA);
@@ -509,13 +508,6 @@ export default function CountyDatabase() {
   );
 
   const counties = activeState === 'NC' ? NC_COUNTIES : SC_COUNTIES;
-  const filtered = useMemo(() =>
-    counties.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
-    [counties, search]
-  );
-
-  const completeCount = counties.filter(c => c.completion === 100).length;
-
   const currentData = countyData[selectedCounty] || {};
 
   const updateSection = (sectionKey, val) => {
@@ -531,49 +523,29 @@ export default function CountyDatabase() {
   const SectionComp = SECTION_COMPONENTS[activeSection];
 
   return (
-    <div className="flex h-[calc(100vh-60px)] overflow-hidden -m-6">
-      {/* Left county list */}
-      <div className="w-52 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden -m-6">
+      {/* Top controls bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 shrink-0 flex items-center gap-4">
         {/* State toggle */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex rounded-lg overflow-hidden border border-gray-200">
           {['NC', 'SC'].map(s => (
-            <button key={s} onClick={() => { setActiveState(s); setSelectedCounty(null); }}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${activeState === s ? 'bg-orange-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+            <button key={s} onClick={() => { setActiveState(s); setSelectedCounty(counties[0]?.name || null); }}
+              className={`px-4 py-1.5 text-sm font-semibold transition-colors ${activeState === s ? 'bg-orange-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
               {s}
             </button>
           ))}
         </div>
-        {/* Search */}
-        <div className="p-2 border-b border-gray-100">
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-orange-300"
-            />
-          </div>
-        </div>
-        {/* County list */}
-        <div className="flex-1 overflow-y-auto">
-          {filtered.map(c => (
-            <button
-              key={c.name}
-              onClick={() => setSelectedCounty(c.name)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-b border-gray-50 ${selectedCounty === c.name ? 'bg-orange-600 text-white' : 'text-gray-700 hover:bg-orange-50'}`}
-            >
-              <span className="font-medium truncate">{c.name}</span>
-            </button>
+        {/* County dropdown */}
+        <select
+          value={selectedCounty || ''}
+          onChange={e => setSelectedCounty(e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-700 bg-white min-w-[180px]"
+        >
+          <option value="" disabled>Select a county…</option>
+          {counties.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
           ))}
-        </div>
-        {/* State summary */}
-        <div className="p-3 border-t border-gray-100 bg-gray-50">
-          <p className="text-xs font-semibold text-gray-600">{activeState === 'NC' ? 'North Carolina' : 'South Carolina'}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{counties.length} counties started</p>
-          <p className="text-xs text-gray-500">{completeCount} complete</p>
-        </div>
+        </select>
       </div>
 
       {/* Main content */}
@@ -649,6 +621,7 @@ export default function CountyDatabase() {
           </div>
         </div>
       )}
+
 
     </div>
   );
