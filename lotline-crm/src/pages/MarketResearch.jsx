@@ -1073,7 +1073,7 @@ function CompFinder() {
 const METRIC_CONFIG = {
   // breaks = [b0, b1, b2, b3] → 5 bands: <b0, b0-b1, b1-b2, b2-b3, ≥b3
   oppScore:        { label: 'Opportunity Score',  higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 62, 75]   },
-  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [30, 45, 62, 75]   },
+  demandScore:     { label: 'Demand Score',       higherIsBetter: true,  fmt: v => v.toFixed(0) + '/100', breaks: [40, 55, 65, 75]   },
   medianSalePrice: { label: 'Median Sale Price',  higherIsBetter: null,  fmt: v => '$' + Math.round(v/1000) + 'k' },
   medianDOM:       { label: 'Days on Market',     higherIsBetter: false, fmt: v => v.toFixed(0) + 'd',   breaks: [65, 80, 130, 160] },
   monthsSupply:    { label: 'Months of Supply',   higherIsBetter: false, fmt: v => v.toFixed(1) + ' mo', breaks: [4,  6,  11,  15]  },
@@ -1914,16 +1914,16 @@ function HeatMap() {
               segments = isInverse
                 ? [
                     { label: 'High',    color: 'hsl(0,85%,38%)',   val: f(b3) + '+' },
-                    { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: f(b2) + '–' + f(b3) },
+                    { label: 'Mid/high', color: 'hsl(30,85%,42%)',  val: f(b2) + '–' + f(b3) },
                     { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: f(b1) + '–' + f(b2) },
-                    { label: 'Midlow',  color: 'hsl(90,85%,40%)',  val: f(b0) + '–' + f(b1) },
+                    { label: 'Mid low',  color: 'hsl(90,85%,40%)',  val: f(b0) + '–' + f(b1) },
                     { label: 'Low',     color: 'hsl(120,85%,34%)', val: '<' + f(b0) },
                   ]
                 : [
                     { label: 'Low',     color: 'hsl(0,85%,38%)',   val: '<' + f(b0) },
-                    { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: f(b0) + '–' + f(b1) },
+                    { label: 'Mid low',  color: 'hsl(30,85%,42%)',  val: f(b0) + '–' + f(b1) },
                     { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: f(b1) + '–' + f(b2) },
-                    { label: 'Midhigh', color: 'hsl(90,85%,40%)',  val: f(b2) + '–' + f(b3) },
+                    { label: 'Mid/high', color: 'hsl(90,85%,40%)',  val: f(b2) + '–' + f(b3) },
                     { label: 'High',    color: 'hsl(120,85%,34%)', val: f(b3) + '+' },
                   ];
             } else {
@@ -1932,16 +1932,16 @@ function HeatMap() {
               segments = isInverse
                 ? [
                     { label: 'High',    color: 'hsl(0,85%,38%)',   val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
-                    { label: 'Midhigh', color: 'hsl(30,85%,42%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
+                    { label: 'Mid/high', color: 'hsl(30,85%,42%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
                     { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
-                    { label: 'Midlow',  color: 'hsl(90,85%,40%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
+                    { label: 'Mid low',  color: 'hsl(90,85%,40%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
                     { label: 'Low',     color: 'hsl(120,85%,34%)', val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
                   ]
                 : [
                     { label: 'Low',     color: 'hsl(0,85%,38%)',   val: pct(0)    != null ? cfg.fmt(pct(0))    : '–' },
-                    { label: 'Midlow',  color: 'hsl(30,85%,42%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
+                    { label: 'Mid low',  color: 'hsl(30,85%,42%)',  val: pct(0.25) != null ? cfg.fmt(pct(0.25)) : '–' },
                     { label: 'Medium',  color: 'hsl(60,85%,46%)',  val: pct(0.5)  != null ? cfg.fmt(pct(0.5))  : '–' },
-                    { label: 'Midhigh', color: 'hsl(90,85%,40%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
+                    { label: 'Mid/high', color: 'hsl(90,85%,40%)',  val: pct(0.75) != null ? cfg.fmt(pct(0.75)) : '–' },
                     { label: 'High',    color: 'hsl(120,85%,34%)', val: pct(1)    != null ? cfg.fmt(pct(1))    : '–' },
                   ];
             }
