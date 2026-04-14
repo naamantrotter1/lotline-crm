@@ -982,7 +982,9 @@ export default function DealDetail() {
   const [starred, setStarred] = useState(false);
   const isLandAcq = deal?.pipeline === 'land-acquisition';
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
-  const [stage, setStage] = useState(deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed'));
+  const [stage, setStage] = useState(
+    localStorage.getItem(`lotline_deal_stage_${id}`) || deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed')
+  );
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
   const [ownerType, setOwnerType] = useState(deal?.ownerType || '');
@@ -1030,12 +1032,17 @@ export default function DealDetail() {
 
   const handleSetStage = (val) => {
     setStage(val);
-    // Persist stage back to lotline_custom_deals for imported deals
     if (deal?.id) {
+      // Persist for ALL deals via per-deal key
+      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
+      // Also update the custom deals array if it's a custom deal
       try {
         const deals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-        const updated = deals.map(d => String(d.id) === String(deal.id) ? { ...d, stage: val } : d);
-        localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
+        if (deals.some(d => String(d.id) === String(deal.id))) {
+          localStorage.setItem('lotline_custom_deals', JSON.stringify(
+            deals.map(d => String(d.id) === String(deal.id) ? { ...d, stage: val } : d)
+          ));
+        }
       } catch {}
     }
   };

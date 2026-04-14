@@ -170,7 +170,10 @@ export default function DealOverview() {
     setCustomDeals(loadCustomDeals());
   }, [location.key]);
 
-  const allDeals = [...DEAL_OVERVIEW_DEALS, ...customDeals];
+  const allDeals = [...DEAL_OVERVIEW_DEALS, ...customDeals].map(d => ({
+    ...d,
+    stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage,
+  }));
 
   return (
     <div className="space-y-4">

@@ -803,7 +803,10 @@ export default function LandAcquisition() {
     setCustomDeals(loadCustomDeals());
   }, [location.key]);
 
-  const allDeals = [...LAND_DEALS, ...customDeals];
+  const allDeals = [...LAND_DEALS, ...customDeals].map(d => ({
+    ...d,
+    stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage,
+  }));
 
   return (
     <div className="space-y-4">
