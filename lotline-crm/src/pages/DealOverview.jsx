@@ -188,7 +188,14 @@ export default function DealOverview() {
         {STAGES.map(stage => {
           const meta  = STAGE_META[stage];
           const Icon  = meta.icon;
-          const deals = allDeals.filter(d => d.stage === stage);
+          const deals = allDeals
+            .filter(d => d.stage === stage)
+            .sort((a, b) => {
+              if (!a.closeDate && !b.closeDate) return 0;
+              if (!a.closeDate) return 1;
+              if (!b.closeDate) return -1;
+              return new Date(a.closeDate) - new Date(b.closeDate);
+            });
           return (
             <div key={stage} className="flex-shrink-0 w-80">
               {/* Column header */}
