@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { LAND_DEALS, calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -795,10 +795,13 @@ function loadCustomDeals() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [customDeals, setCustomDeals] = useState(loadCustomDeals);
 
-  // Re-sync when storage changes (e.g. import from Deal Calculator in another tab)
-  const refreshCustomDeals = () => setCustomDeals(loadCustomDeals());
+  // Re-sync whenever we navigate back to this page
+  useEffect(() => {
+    setCustomDeals(loadCustomDeals());
+  }, [location.key]);
 
   const allDeals = [...LAND_DEALS, ...customDeals];
 

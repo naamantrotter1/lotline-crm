@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
@@ -162,13 +162,13 @@ function loadCustomDeals() {
 
 export default function DealOverview() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [customDeals, setCustomDeals] = useState(loadCustomDeals);
 
+  // Re-sync whenever we navigate back to this page
   useEffect(() => {
-    const onStorage = () => setCustomDeals(loadCustomDeals());
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    setCustomDeals(loadCustomDeals());
+  }, [location.key]);
 
   const allDeals = [...DEAL_OVERVIEW_DEALS, ...customDeals];
 
