@@ -398,27 +398,6 @@ export default function DealCalculator() {
             </table>
           </div>
 
-          <div className="bg-card rounded-xl shadow-sm p-4">
-            <h3 className="font-semibold text-sidebar mb-3">ARV Breakdown</h3>
-            <div className="space-y-2">
-              {[
-                { label: 'ARV', value: vals.arv, pct: 100, color: 'bg-blue-400' },
-                { label: 'Build Cost', value: buildCost, pct: (buildCost / vals.arv) * 100, color: 'bg-orange-400' },
-                { label: 'Selling Costs', value: sellingCosts, pct: vals.sellingCostPct, color: 'bg-yellow-400' },
-                { label: 'Net Profit', value: projectedProfit, pct: (projectedProfit / vals.arv) * 100, color: 'bg-green-400' },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>{item.label}</span>
-                    <span className="font-medium">{fmt(item.value)} ({Math.round(item.pct)}%)</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className={`${item.color} h-2 rounded-full`} style={{ width: `${Math.min(100, Math.max(0, item.pct))}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
