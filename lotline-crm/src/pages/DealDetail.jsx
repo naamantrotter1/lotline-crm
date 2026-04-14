@@ -955,7 +955,8 @@ export default function DealDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const deal = [...DEAL_OVERVIEW_DEALS, ...LAND_DEALS].find(d => d.id === id);
+  const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  const deal = [...DEAL_OVERVIEW_DEALS, ...LAND_DEALS, ...customDeals].find(d => String(d.id) === String(id));
 
   // Initial costs from deal data
   const initCosts = {};
