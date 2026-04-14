@@ -68,10 +68,10 @@ const DEV_COLUMNS = [
 const COUNTED_COLUMNS = DEV_COLUMNS.filter(c => !c.tagOnly);
 const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.length, 0);
 
+const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
 function loadDevDeals() {
   const custom = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  const contractSigned = custom.filter(d => d.stage === 'Contract Signed' || d.stage === 'Due Diligence' || d.stage === 'Development');
-  return [...DEAL_OVERVIEW_DEALS, ...contractSigned];
+  return [...DEAL_OVERVIEW_DEALS, ...custom.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))];
 }
 const devDeals = loadDevDeals();
 
