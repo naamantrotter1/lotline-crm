@@ -14,6 +14,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
   const [zip,         setZip]         = useState('');
   const [acreage,     setAcreage]     = useState('');
   const [ownerName,   setOwnerName]   = useState('');
+  const [sellerName,  setSellerName]  = useState('');
   const [phone,       setPhone]       = useState('');
   const [leadSource,  setLeadSource]  = useState('');
   const [ownerType,   setOwnerType]   = useState('Owner');
@@ -37,6 +38,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
       zip: zip.trim(),
       acreage: parseFloat(acreage) || undefined,
       ownerName: ownerName.trim(),
+      sellerName: sellerName.trim(),
       phone: phone.trim(),
       leadSource,
       ownerType,
@@ -147,6 +149,8 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5 block">Seller Information</label>
             <div className="space-y-2">
               <input placeholder="Owner Name" value={ownerName} onChange={e => setOwnerName(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+              <input placeholder="Seller Name" value={sellerName} onChange={e => setSellerName(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
               <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
