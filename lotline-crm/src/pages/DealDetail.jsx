@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
@@ -1047,20 +1047,6 @@ export default function DealDetail() {
     }
   };
 
-  // Auto-save all editable fields for custom deals
-  useEffect(() => {
-    if (!deal?.id) return;
-    const allDeals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-    const isCustom = allDeals.some(d => String(d.id) === String(deal.id));
-    if (!isCustom) return;
-    const updated = allDeals.map(d =>
-      String(d.id) === String(deal.id)
-        ? { ...d, stage, address, county, state: dealState, zip, acreage, ownerName, sellerName, investor, financing, notes }
-        : d
-    );
-    localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
-  }, [stage, address, county, dealState, zip, acreage, ownerName, sellerName, investor, financing, notes]); // eslint-disable-line
-
   // Development Details
   const [parcelId, setParcelId] = useState(deal?.parcelId || '');
   const [closingAttorney, setClosingAttorney] = useState(deal?.closingAttorney || '');
@@ -1102,6 +1088,41 @@ export default function DealDetail() {
   function applyScenario(scenarioId) {
     setSelectedScenario(scenarioId);
   }
+
+  // ── Auto-save every editable field ───────────────────────────────────────────
+  const autoSaveMounted = useRef(false);
+  useEffect(() => {
+    if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
+    if (!deal?.id) return;
+    try {
+      const allDeals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
+      const updated = allDeals.map(d =>
+        String(d.id) === String(deal.id)
+          ? {
+              ...d,
+              stage, address, county, state: dealState, zip, acreage,
+              ownerName, sellerName, investor, financing, notes,
+              leadSource, ownerType, utilityScenario, homeModel,
+              waterCompany, sewerCompany, electricCompany,
+              parcelId, closingAttorney, closingAttorneyPhone,
+              closingAttorneyAddress, closeDate, contractDate,
+              manufacturer, deliveryDate,
+              holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
+              ...costs,
+            }
+          : d
+      );
+      localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
+    } catch {}
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    stage, address, county, dealState, zip, acreage,
+    ownerName, sellerName, investor, financing, notes,
+    leadSource, ownerType, utilityScenario, homeModel,
+    waterCompany, sewerCompany, electricCompany,
+    parcelId, closingAttorney, closingAttorneyPhone,
+    closingAttorneyAddress, closeDate, contractDate,
+    manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, costs,
+  ]);
 
   if (!deal) {
     return (
