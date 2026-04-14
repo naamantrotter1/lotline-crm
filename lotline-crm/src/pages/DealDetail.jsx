@@ -145,7 +145,8 @@ function InputRow({ label, value, onChange, type = 'text', mono }) {
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
-const STAGE_OPTIONS = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Line of Credit', 'Conventional'];
 
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
@@ -979,7 +980,9 @@ export default function DealDetail() {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
-  const [stage, setStage] = useState(deal?.stage || 'New Lead');
+  const isLandAcq = deal?.pipeline === 'land-acquisition';
+  const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
+  const [stage, setStage] = useState(deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed'));
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
   const [ownerType, setOwnerType] = useState(deal?.ownerType || '');
@@ -1103,7 +1106,7 @@ export default function DealDetail() {
     { key: 'realized', label: 'Realized Expenses' },
   ];
 
-  const STAGE_ORDER = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+  const STAGE_ORDER = STAGE_OPTIONS;
   const currentStageIdx = STAGE_ORDER.indexOf(stage);
   const nextStage = STAGE_ORDER[currentStageIdx + 1];
 
