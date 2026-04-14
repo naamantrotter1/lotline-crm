@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
 
@@ -156,15 +156,28 @@ function DealCard({ deal, onClick }) {
   );
 }
 
+function loadCustomDeals() {
+  try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; }
+}
+
 export default function DealOverview() {
   const navigate = useNavigate();
+  const [customDeals, setCustomDeals] = useState(loadCustomDeals);
+
+  useEffect(() => {
+    const onStorage = () => setCustomDeals(loadCustomDeals());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const allDeals = [...DEAL_OVERVIEW_DEALS, ...customDeals];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-sidebar">Deal Overview</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{DEAL_OVERVIEW_DEALS.length} active deals across all stages</p>
+          <p className="text-sm text-gray-500 mt-0.5">{allDeals.length} active deals across all stages</p>
         </div>
       </div>
 
@@ -172,7 +185,7 @@ export default function DealOverview() {
         {STAGES.map(stage => {
           const meta  = STAGE_META[stage];
           const Icon  = meta.icon;
-          const deals = DEAL_OVERVIEW_DEALS.filter(d => d.stage === stage);
+          const deals = allDeals.filter(d => d.stage === stage);
           return (
             <div key={stage} className="flex-shrink-0 w-80">
               {/* Column header */}

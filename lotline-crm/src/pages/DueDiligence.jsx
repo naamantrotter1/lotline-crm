@@ -27,7 +27,12 @@ const INIT_MAP = {
   'Final DD Review': 'attorney',
 };
 
-const ddDeals = DEAL_OVERVIEW_DEALS.filter(d => d.stage === 'Due Diligence');
+function loadDDDeals() {
+  const custom = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  const contractSigned = custom.filter(d => d.stage === 'Contract Signed' || d.stage === 'Due Diligence');
+  return [...DEAL_OVERVIEW_DEALS.filter(d => d.stage === 'Due Diligence'), ...contractSigned];
+}
+const ddDeals = loadDDDeals();
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 const lsGet  = (k)      => localStorage.getItem(k) || '';

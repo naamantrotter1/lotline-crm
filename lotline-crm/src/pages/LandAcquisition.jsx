@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal } from 'lucide-react';
+import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { LAND_DEALS, calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 
-const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 
 const STAGE_META = {
   'New Lead':              { icon: Zap,           color: '#c2410c', bg: '#fff7ed' },
   'Underwriting':          { icon: Calculator,    color: '#b45309', bg: '#fffbeb' },
   'Negotiating':           { icon: Handshake,     color: '#15803d', bg: '#f0fdf4' },
   'Waiting on Contract':   { icon: FileSignature, color: '#6366f1', bg: '#eef2ff' },
+  'Contract Signed':       { icon: FileCheck,     color: '#16a34a', bg: '#dcfce7' },
 };
 
 const TAG_STYLES = {

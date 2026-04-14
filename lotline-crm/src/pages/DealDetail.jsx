@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
@@ -145,7 +145,7 @@ function InputRow({ label, value, onChange, type = 'text', mono }) {
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
-const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
+const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Line of Credit', 'Conventional'];
 
@@ -1039,6 +1039,20 @@ export default function DealDetail() {
       } catch {}
     }
   };
+
+  // Auto-save all editable fields for custom deals
+  useEffect(() => {
+    if (!deal?.id) return;
+    const allDeals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
+    const isCustom = allDeals.some(d => String(d.id) === String(deal.id));
+    if (!isCustom) return;
+    const updated = allDeals.map(d =>
+      String(d.id) === String(deal.id)
+        ? { ...d, stage, address, county, state: dealState, zip, acreage, ownerName, sellerName, investor, financing, notes }
+        : d
+    );
+    localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
+  }, [stage, address, county, dealState, zip, acreage, ownerName, sellerName, investor, financing, notes]); // eslint-disable-line
 
   // Development Details
   const [parcelId, setParcelId] = useState(deal?.parcelId || '');
