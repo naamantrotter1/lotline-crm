@@ -32,7 +32,14 @@ function loadDDDeals() {
   const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
   return all
     .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
+    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))
+    .sort((a, b) => {
+      // Deals with a closing date sort before those without
+      if (!a.closeDate && !b.closeDate) return 0;
+      if (!a.closeDate) return 1;
+      if (!b.closeDate) return -1;
+      return new Date(a.closeDate) - new Date(b.closeDate);
+    });
 }
 const ddDeals = loadDDDeals();
 
