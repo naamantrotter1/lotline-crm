@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
 } from 'lucide-react';
-import { DEAL_OVERVIEW_DEALS, LAND_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -957,7 +957,7 @@ export default function DealDetail() {
   const navigate = useNavigate();
 
   const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  const deal = [...DEAL_OVERVIEW_DEALS, ...LAND_DEALS, ...customDeals].find(d => String(d.id) === String(id));
+  const deal = customDeals.find(d => String(d.id) === String(id));
 
   // Initial costs from deal data
   const initCosts = {};

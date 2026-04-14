@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { seedDeals } from './utils/seedDeals';
+seedDeals();
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import BigRocks from './pages/BigRocks';

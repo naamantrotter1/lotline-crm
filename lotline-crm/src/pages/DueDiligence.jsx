@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
-import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions ────────────────────────────────────────────────────────
 const DD_COLUMNS = [
@@ -27,10 +27,12 @@ const INIT_MAP = {
   'Final DD Review': 'attorney',
 };
 
+const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
 function loadDDDeals() {
-  const custom = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  const contractSigned = custom.filter(d => d.stage === 'Contract Signed' || d.stage === 'Due Diligence');
-  return [...DEAL_OVERVIEW_DEALS.filter(d => d.stage === 'Due Diligence'), ...contractSigned];
+  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  return all
+    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
+    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
 }
 const ddDeals = loadDDDeals();
 

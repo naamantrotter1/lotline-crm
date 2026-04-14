@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, User, Calendar, CheckSquare, Square } from 'lucide-react';
-import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions (matches Lovable CRM) ──────────────────────────────────
 const DEV_COLUMNS = [
@@ -70,8 +70,10 @@ const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.lengt
 
 const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
 function loadDevDeals() {
-  const custom = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  return [...DEAL_OVERVIEW_DEALS, ...custom.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))];
+  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  return all
+    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
+    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
 }
 const devDeals = loadDevDeals();
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal } from 'lucide-react';
-import { LAND_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
@@ -803,10 +803,9 @@ export default function LandAcquisition() {
     setCustomDeals(loadCustomDeals());
   }, [location.key]);
 
-  const allDeals = [...LAND_DEALS, ...customDeals].map(d => ({
-    ...d,
-    stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage,
-  }));
+  const allDeals = customDeals
+    .filter(d => d.pipeline === 'land-acquisition')
+    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }));
 
   return (
     <div className="space-y-4">

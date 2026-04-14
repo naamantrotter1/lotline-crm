@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
-import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
@@ -170,10 +170,10 @@ export default function DealOverview() {
     setCustomDeals(loadCustomDeals());
   }, [location.key]);
 
-  const allDeals = [...DEAL_OVERVIEW_DEALS, ...customDeals].map(d => ({
-    ...d,
-    stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage,
-  }));
+  const allDeals = customDeals
+    .filter(d => d.pipeline === 'deal-overview' || STAGES.includes(localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage))
+    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
+    .filter(d => STAGES.includes(d.stage));
 
   return (
     <div className="space-y-4">
