@@ -272,7 +272,7 @@ function ColHeader({ col, sort, onSort }) {
             </button>
             {tipPos && (
               <div style={{ position: 'fixed', left: tipPos.x, top: tipPos.y, zIndex: 9999 }}
-                className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal pointer-events-none">
+                className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed font-normal normal-case tracking-normal whitespace-normal pointer-events-none">
                 {col.info}
               </div>
             )}

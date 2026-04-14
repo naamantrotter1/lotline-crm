@@ -446,7 +446,7 @@ function InfoTooltip({ tip, size = 12 }) {
       {pos && (
         <div
           style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999 }}
-          className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none font-normal normal-case tracking-normal"
+          className="bg-gray-900 text-white text-xs rounded-xl px-3.5 py-2.5 w-60 shadow-2xl leading-relaxed pointer-events-none font-normal normal-case tracking-normal whitespace-normal"
         >
           {tip}
         </div>
