@@ -145,7 +145,7 @@ function InputRow({ label, value, onChange, type = 'text', mono }) {
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
-const STAGE_OPTIONS = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
+const STAGE_OPTIONS = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Line of Credit', 'Conventional'];
 
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
@@ -979,7 +979,7 @@ export default function DealDetail() {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
-  const [stage, setStage] = useState(deal?.stage || 'Contract Signed');
+  const [stage, setStage] = useState(deal?.stage || 'New Lead');
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
   const [ownerType, setOwnerType] = useState(deal?.ownerType || '');
@@ -1023,6 +1023,18 @@ export default function DealDetail() {
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
     if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
+  };
+
+  const handleSetStage = (val) => {
+    setStage(val);
+    // Persist stage back to lotline_custom_deals for imported deals
+    if (deal?.id) {
+      try {
+        const deals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
+        const updated = deals.map(d => String(d.id) === String(deal.id) ? { ...d, stage: val } : d);
+        localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
+      } catch {}
+    }
   };
 
   // Development Details
@@ -1091,7 +1103,7 @@ export default function DealDetail() {
     { key: 'realized', label: 'Realized Expenses' },
   ];
 
-  const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
+  const STAGE_ORDER = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
   const currentStageIdx = STAGE_ORDER.indexOf(stage);
   const nextStage = STAGE_ORDER[currentStageIdx + 1];
 
@@ -1182,7 +1194,7 @@ export default function DealDetail() {
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
             <select
               value={stage}
-              onChange={e => setStage(e.target.value)}
+              onChange={e => handleSetStage(e.target.value)}
               className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
             >
               {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1191,7 +1203,7 @@ export default function DealDetail() {
           {nextStage && (
             <div className="ml-auto">
               <button
-                onClick={() => setStage(nextStage)}
+                onClick={() => handleSetStage(nextStage)}
                 className="flex items-center gap-1.5 bg-accent text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-accent/90 transition-colors"
               >
                 → {nextStage}
