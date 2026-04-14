@@ -47,7 +47,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
       holdingPerMonth: vals.holdingPerMonth,
       netProfit: Math.round(projectedProfit),
       // Cost fields
-      land: 0,
+      land: vals.land,
       mobileHome:   vals.mobileHome,
       hudEngineer:  vals.hudEngineer,
       percTest:     vals.percTest,
@@ -184,6 +184,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
 }
 
 const defaultValues = {
+  land: 0,
   mobileHome: 75000,
   hudEngineer: 500,
   percTest: 2000,
@@ -210,6 +211,7 @@ const defaultValues = {
 };
 
 const costFields = [
+  { key: 'land', label: 'Land' },
   { key: 'mobileHome', label: 'Mobile Home' },
   { key: 'hudEngineer', label: 'HUD Engineer' },
   { key: 'percTest', label: 'Perc Test / Permit' },
