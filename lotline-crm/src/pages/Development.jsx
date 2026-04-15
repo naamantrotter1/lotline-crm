@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDeals } from '../lib/DealsContext';
 import { ChevronDown, User, Calendar, CheckSquare, Square } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
@@ -75,7 +76,7 @@ function loadDevDeals() {
     .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
     .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
 }
-const devDeals = loadDevDeals();
+// devDeals now computed inside component from context
 
 const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development'];
 const STAGE_COLORS = {
@@ -238,11 +239,16 @@ function DevTaskCard({ deal, column, onUpdate }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Development() {
+  const { deals } = useDeals();
   const [tick, setTick]       = useState(0);
   const [sortBy, setSortBy]   = useState('closing');
   const [showSort, setShowSort] = useState(false);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+
+  const devDeals = useMemo(() =>
+    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
+  , [deals]);
 
   const sortedDeals = [...devDeals].sort((a, b) => {
     if (sortBy === 'closing') {

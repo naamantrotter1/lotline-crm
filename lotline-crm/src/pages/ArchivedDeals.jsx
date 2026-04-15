@@ -1,21 +1,16 @@
 import { useState } from 'react';
-import { ARCHIVED_DEALS } from '../data/deals';
 import { Archive } from 'lucide-react';
-
-function loadArchivedDeals() {
-  try { return JSON.parse(localStorage.getItem('lotline_archived_deals') || '[]'); } catch { return []; }
-}
+import { useDeals } from '../lib/DealsContext';
 
 export default function ArchivedDeals() {
   const [tab, setTab] = useState('land');
-  const [localArchived] = useState(loadArchivedDeals);
+  const { archivedDeals, deals } = useDeals();
 
-  // Merge static + localStorage archived deals (localStorage wins on duplicate id)
-  const staticIds = new Set(ARCHIVED_DEALS.map(d => String(d.id)));
+  // Combine deals marked isArchived from main deals list + dedicated archived list
   const allArchivedDeals = [
-    ...ARCHIVED_DEALS,
-    ...localArchived.filter(d => !staticIds.has(String(d.id))),
-  ];
+    ...archivedDeals,
+    ...deals.filter(d => d.isArchived),
+  ].filter((d, i, arr) => arr.findIndex(x => String(x.id) === String(d.id)) === i);
 
   const landArchived = allArchivedDeals.filter(d =>
     d.pipeline === 'Land Acquisition' || d.pipeline === 'land-acquisition'

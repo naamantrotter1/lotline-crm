@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
+import { useDeals } from '../lib/DealsContext';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -966,8 +967,9 @@ export default function DealDetail() {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
 
-  const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  const deal = customDeals.find(d => String(d.id) === String(id));
+  const { deals: customDeals } = useDeals();
+  const deal = customDeals.find(d => String(d.id) === String(id))
+    || (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })().find(d => String(d.id) === String(id));
 
   // Initial costs from deal data
   const initCosts = {};

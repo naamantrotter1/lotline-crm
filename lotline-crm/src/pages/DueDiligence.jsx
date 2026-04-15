@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDeals } from '../lib/DealsContext';
 import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
@@ -41,8 +42,6 @@ function loadDDDeals() {
       return new Date(a.closeDate) - new Date(b.closeDate);
     });
 }
-const ddDeals = loadDDDeals();
-
 // ── localStorage helpers ──────────────────────────────────────────────────────
 const lsGet  = (k)      => localStorage.getItem(k) || '';
 const lsSet  = (k, v)   => localStorage.setItem(k, v);
@@ -240,11 +239,16 @@ function DDTaskCard({ deal, column, onUpdate }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
+  const { deals } = useDeals();
   const [tick, setTick]     = useState(0);
   const [sortBy, setSortBy] = useState('closing');
   const [showSort, setShowSort] = useState(false);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+
+  const ddDeals = useMemo(() =>
+    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
+  , [deals]);
 
   const sortedDeals = [...ddDeals].sort((a, b) => {
     if (sortBy === 'closing') {

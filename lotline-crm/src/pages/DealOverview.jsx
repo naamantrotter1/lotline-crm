@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { loadAllDeals, subscribeToDeals } from '../lib/dealsSync';
+import { useDeals } from '../lib/DealsContext';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
@@ -163,26 +163,7 @@ function loadCustomDeals() {
 
 export default function DealOverview() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [customDeals, setCustomDeals] = useState(loadCustomDeals);
-
-  // Re-sync from Supabase on every navigation to this page
-  useEffect(() => {
-    loadAllDeals().then(deals => setCustomDeals(deals));
-  }, [location.key]);
-
-  // Real-time subscription — update pipeline instantly when any user edits a deal
-  useEffect(() => {
-    const unsub = subscribeToDeals(
-      (updated) => setCustomDeals(prev => {
-        const idx = prev.findIndex(d => String(d.id) === String(updated.id));
-        if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-        return [...prev, updated];
-      }),
-      (deletedId) => setCustomDeals(prev => prev.filter(d => String(d.id) !== deletedId))
-    );
-    return unsub;
-  }, []);
+  const { deals: customDeals } = useDeals();
 
   const allDeals = customDeals
     .filter(d => STAGES.includes(d.stage) && !d.isArchived);

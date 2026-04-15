@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
+import { useDeals } from '../lib/DealsContext';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, ReferenceLine, Cell,
@@ -818,6 +819,7 @@ function pointInFeature([px, py], feature) {
 }
 
 function HeatMap() {
+  const { deals: contextDeals } = useDeals();
   const mapRef       = useRef(null);
   const leafletMap   = useRef(null);
   const choropleth   = useRef(null);
@@ -1240,50 +1242,38 @@ function HeatMap() {
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-    const allDealOverview = [...DEAL_OVERVIEW_DEALS, ...customDeals.filter(d => d.pipeline === 'deal-overview')];
+    const allDealOverview = [...DEAL_OVERVIEW_DEALS, ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
+    if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
     if (showDealOverview) {
-      if (!dealOverviewLayer.current) {
-        dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
-          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Deal Overview`);
-        dealOverviewLayer.current.addTo(map);
-      }
-    } else {
-      if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
+      dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
+        d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Deal Overview`);
+      dealOverviewLayer.current.addTo(map);
     }
-  }, [showDealOverview, leafletMap.current]);
+  }, [showDealOverview, contextDeals]);
 
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-    const allLandAcq = [...LAND_DEALS, ...customDeals.filter(d => d.pipeline === 'land-acquisition')];
+    const allLandAcq = [...LAND_DEALS, ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
+    if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
     if (showLandAcq) {
-      if (!landAcqLayer.current) {
-        landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',
-          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
-        landAcqLayer.current.addTo(map);
-      }
-    } else {
-      if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
+      landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',
+        d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
+      landAcqLayer.current.addTo(map);
     }
-  }, [showLandAcq, leafletMap.current]);
+  }, [showLandAcq, contextDeals]);
 
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-    const salesDeals = customDeals.filter(d => d.pipeline === 'sales');
+    const salesDeals = contextDeals.filter(d => d.pipeline === 'sales');
+    if (salesLayer.current) { salesLayer.current.remove(); salesLayer.current = null; }
     if (showSales) {
-      if (!salesLayer.current) {
-        salesLayer.current = makePipelineLayer(salesDeals, '#10b981',
-          d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Sales`);
-        salesLayer.current.addTo(map);
-      }
-    } else {
-      if (salesLayer.current) { salesLayer.current.remove(); salesLayer.current = null; }
+      salesLayer.current = makePipelineLayer(salesDeals, '#10b981',
+        d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Sales`);
+      salesLayer.current.addTo(map);
     }
-  }, [showSales, leafletMap.current]);
+  }, [showSales, contextDeals]);
 
   return (
     <div className="space-y-0 -mx-1">

@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
-import { loadAllDeals, deleteDeal as syncDeleteDeal, subscribeToDeals } from '../lib/dealsSync';
+import { deleteDeal as syncDeleteDeal } from '../lib/dealsSync';
+import { useDeals } from '../lib/DealsContext';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 
@@ -821,26 +822,7 @@ function loadCustomDeals() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [customDeals, setCustomDeals] = useState(loadCustomDeals);
-
-  // Re-sync from Supabase on every navigation to this page
-  useEffect(() => {
-    loadAllDeals().then(deals => setCustomDeals(deals));
-  }, [location.key]);
-
-  // Real-time subscription — update pipeline instantly when any user edits a deal
-  useEffect(() => {
-    const unsub = subscribeToDeals(
-      (updated) => setCustomDeals(prev => {
-        const idx = prev.findIndex(d => String(d.id) === String(updated.id));
-        if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-        return [...prev, updated];
-      }),
-      (deletedId) => setCustomDeals(prev => prev.filter(d => String(d.id) !== deletedId))
-    );
-    return unsub;
-  }, []);
+  const { deals: customDeals, setDeals: setCustomDeals } = useDeals();
 
   const allDeals = customDeals
     .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived);

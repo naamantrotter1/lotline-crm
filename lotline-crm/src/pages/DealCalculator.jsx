@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
+import { saveDeal } from '../lib/dealsSync';
 
-const LS_KEY = 'lotline_custom_deals';
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS  = ['Owner', 'Wholesaler', 'Realtor'];
@@ -24,7 +24,6 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
 
   const handleSave = () => {
     if (!address.trim()) return;
-    const existing = (() => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } })();
     const id = 'custom-' + Date.now();
 
     // Build costs mapped from calculator keys to deal keys
@@ -73,7 +72,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
       staging:      0,
     };
 
-    localStorage.setItem(LS_KEY, JSON.stringify([...existing, deal]));
+    saveDeal(deal);
     setSaved(true);
     setTimeout(onClose, 1200);
   };

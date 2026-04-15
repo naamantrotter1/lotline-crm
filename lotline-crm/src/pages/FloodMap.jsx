@@ -4,8 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
 import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink } from 'lucide-react';
-
-const LA_LS_KEY = 'lotline_custom_deals';
+import { saveDeal } from '../lib/dealsSync';
 
 function AddToPipelineModal({ parcelData, onClose }) {
   const [address,    setAddress]    = useState(parcelData.siteAddr || '');
@@ -19,7 +18,6 @@ function AddToPipelineModal({ parcelData, onClose }) {
 
   const handleSave = () => {
     if (!address.trim()) return;
-    const existing = (() => { try { return JSON.parse(localStorage.getItem(LA_LS_KEY) || '[]'); } catch { return []; } })();
     const deal = {
       id: 'map-' + Date.now(),
       pipeline: 'land-acquisition',
@@ -42,7 +40,7 @@ function AddToPipelineModal({ parcelData, onClose }) {
       underpinning: 6000, decks: 3500, driveway: 1200, landscaping: 0, waterSewer: 0,
       mailbox: 170, gutters: 0, photos: 0, mobileTax: 300, staging: 0,
     };
-    localStorage.setItem(LA_LS_KEY, JSON.stringify([...existing, deal]));
+    saveDeal(deal);
     setSaved(true);
     setTimeout(onClose, 1100);
   };

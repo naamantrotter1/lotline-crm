@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { seedDeals } from './utils/seedDeals';
+import { DealsProvider } from './lib/DealsContext';
 seedDeals();
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -29,6 +30,7 @@ import BuilderNetwork from './pages/BuilderNetwork';
 export default function App() {
   return (
     <BrowserRouter>
+      <DealsProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
@@ -56,6 +58,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
+      </DealsProvider>
     </BrowserRouter>
   );
 }

@@ -2,18 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
-import { DEAL_OVERVIEW_DEALS } from '../data/deals';
-
-function loadCustomDeals() {
-  try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; }
-}
-
-function findDealId(address) {
-  const norm = a => a.trim().toLowerCase();
-  const all = [...DEAL_OVERVIEW_DEALS, ...loadCustomDeals()];
-  const match = all.find(d => norm(d.address) === norm(address));
-  return match?.id ?? null;
-}
+import { useDeals } from '../lib/DealsContext';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -253,7 +242,14 @@ function DirectoryTab() {
 
 // ── Main Investor Portal ──────────────────────────────────────────────────────
 export default function InvestorPortal() {
+  const { deals: customDeals } = useDeals();
   const [activeTab, setActiveTab] = useState('by-investor');
+
+  const findDealId = (address) => {
+    const norm = a => a.trim().toLowerCase();
+    const match = customDeals.find(d => norm(d.address || '') === norm(address));
+    return match?.id ?? null;
+  };
 
   const totalCapital = INVESTORS.reduce((s, i) => s + i.capitalInvested, 0);
   const totalDeals = INVESTORS.reduce((s, i) => s + i.activeDeals, 0);
