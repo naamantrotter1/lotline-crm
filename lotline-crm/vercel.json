@@ -14,6 +14,7 @@
   "routes": [
     { "src": "/api/proxy/(.*)", "dest": "/api/proxy/$1.js" },
     { "src": "/api/createUser",  "dest": "/api/createUser.js" },
+    { "src": "/homes$", "dest": "/index.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
