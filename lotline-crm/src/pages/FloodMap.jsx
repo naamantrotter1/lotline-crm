@@ -1248,7 +1248,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                 {parcelData.parcelId && (
                   <div>
                     <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Parcel ID</p>
-                    <p className="text-gray-200 font-mono text-[10px]">{parcelData.parcelId}</p>
+                    <p className="text-gray-200 font-mono text-sm">{parcelData.parcelId}</p>
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-2 pt-2 mt-1 border-t border-gray-700/60">
