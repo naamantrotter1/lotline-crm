@@ -3,16 +3,41 @@ let activeType = "";
 let activeBrand = "";
 let savedHomes = new Set(JSON.parse(localStorage.getItem('savedHomes') || '[]'));
 
-function openLightbox(src) {
+let _lbPhotos = [];
+let _lbIdx = 0;
+
+function openLightbox(src, photos, idx) {
+  _lbPhotos = photos || [src];
+  _lbIdx = idx != null ? idx : _lbPhotos.indexOf(src);
+  if (_lbIdx < 0) _lbIdx = 0;
   const el = document.getElementById('lightboxOverlay');
-  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightboxImg').src = _lbPhotos[_lbIdx];
   el.style.display = 'flex';
+  const show = _lbPhotos.length > 1;
+  document.getElementById('lbPrev').style.display = show ? 'flex' : 'none';
+  document.getElementById('lbNext').style.display = show ? 'flex' : 'none';
+  document.getElementById('lbCounter').style.display = _lbPhotos.length > 1 ? 'block' : 'none';
+  updateLbCounter();
+}
+function lbNav(dir) {
+  _lbIdx = (_lbIdx + dir + _lbPhotos.length) % _lbPhotos.length;
+  document.getElementById('lightboxImg').src = _lbPhotos[_lbIdx];
+  updateLbCounter();
+}
+function updateLbCounter() {
+  document.getElementById('lbCounter').textContent = (_lbIdx + 1) + ' / ' + _lbPhotos.length;
 }
 function closeLightbox() {
   document.getElementById('lightboxOverlay').style.display = 'none';
   document.getElementById('lightboxImg').src = '';
+  _lbPhotos = []; _lbIdx = 0;
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightboxOverlay').style.display || document.getElementById('lightboxOverlay').style.display === 'none') return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft') lbNav(-1);
+});
 
 function toggleSave(id, btn) {
   event.stopPropagation();
@@ -142,7 +167,7 @@ function openModal(id) {
   const photoGallery = h.photos ? `
     <div class="modal-gallery">
       <div class="gallery-main">
-        <img id="galleryMain" src="${h.photos[0]}" alt="${h.name} photo 1" onclick="openLightbox(this.src)" style="cursor:zoom-in;">
+        <img id="galleryMain" src="${h.photos[0]}" alt="${h.name} photo 1" onclick="openLightbox(this.src,window._galleryPhotos,window._galleryIndex)" style="cursor:zoom-in;">
         ${h.photos.length > 1 ? `
           <button class="gallery-nav gallery-prev" onclick="galleryNav(-1)">&#8249;</button>
           <button class="gallery-nav gallery-next" onclick="galleryNav(1)">&#8250;</button>
@@ -354,7 +379,7 @@ function renderOrderStep() {
     label.textContent = 'Step 1 of 4 \u2014 Confirm Selection';
     const h = _orderHome;
     const thumb = h.photos && h.photos.length
-      ? `<img src="${h.photos[0]}" alt="${h.name}" onclick="event.stopPropagation();openLightbox('${h.photos[0]}')" style="cursor:zoom-in;">`
+      ? `<img src="${h.photos[0]}" alt="${h.name}" onclick="event.stopPropagation();openLightbox('${h.photos[0]}',${JSON.stringify(h.photos)},0)" style="cursor:zoom-in;">`
       : `<span>${h.emoji}</span>`;
     const typeLabel = h.type === 'single' ? 'Single-Wide' : h.type === 'double' ? 'Double-Wide' : 'Triple-Wide';
     body.innerHTML = `
