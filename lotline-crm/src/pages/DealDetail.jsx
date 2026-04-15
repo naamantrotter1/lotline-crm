@@ -1177,40 +1177,49 @@ export default function DealDetail() {
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
             {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
-            <button
-              onClick={() => handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
-                landClearing === 'Yes'
-                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
-              }`}
-            >
-              <TreePine size={11} />
-              Land Clearing
-            </button>
-            <button
-              onClick={() => handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
-                subdividable === 'Yes'
-                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
-              }`}
-            >
-              <SplitSquareHorizontal size={11} />
-              Subdivide
-            </button>
+            {!fromInvestorPortal && <>
+              <button
+                onClick={() => handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                  landClearing === 'Yes'
+                    ? 'bg-amber-100 text-amber-700 border-amber-300'
+                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                }`}
+              >
+                <TreePine size={11} />
+                Land Clearing
+              </button>
+              <button
+                onClick={() => handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                  subdividable === 'Yes'
+                    ? 'bg-amber-100 text-amber-700 border-amber-300'
+                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                }`}
+              >
+                <SplitSquareHorizontal size={11} />
+                Subdivide
+              </button>
+            </>}
+            {fromInvestorPortal && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-400 border border-gray-200">
+                View Only
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setStarred(s => !s)}
-              className={`p-2 rounded-lg transition-colors ${starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
-            >
-              <Star size={18} fill={starred ? 'currentColor' : 'none'} />
-            </button>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors">
-              <Archive size={14} /> Archive
-            </button>
-          </div>
+          {!fromInvestorPortal && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setStarred(s => !s)}
+                className={`p-2 rounded-lg transition-colors ${starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
+              >
+                <Star size={18} fill={starred ? 'currentColor' : 'none'} />
+              </button>
+              <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors">
+                <Archive size={14} /> Archive
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Summary bar */}
@@ -1239,15 +1248,18 @@ export default function DealDetail() {
           <div className="w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
-            <select
-              value={stage}
-              onChange={e => handleSetStage(e.target.value)}
-              className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-            >
-              {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            {fromInvestorPortal
+              ? <p className="text-sm font-semibold text-[#1a2332]">{stage}</p>
+              : <select
+                  value={stage}
+                  onChange={e => handleSetStage(e.target.value)}
+                  className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            }
           </div>
-          {nextStage && (
+          {nextStage && !fromInvestorPortal && (
             <div className="ml-auto">
               <button
                 onClick={() => handleSetStage(nextStage)}
@@ -1280,7 +1292,7 @@ export default function DealDetail() {
       </div>
 
       {/* Tab content */}
-      <div className="p-6">
+      <div className={`p-6 ${fromInvestorPortal ? 'pointer-events-none select-none' : ''}`}>
         {activeTab === 'overview' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
