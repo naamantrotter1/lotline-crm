@@ -273,3 +273,30 @@ export function saveCountyData(countyName, state, data) {
       .then(({ error }) => { if (error) console.warn('[dealsSync] saveCountyData error:', error.message); });
   }
 }
+
+// ── Real-time subscription ────────────────────────────────────────────────────
+
+/**
+ * Subscribe to live deal changes from Supabase.
+ * @param {function} onUpdate - called with the updated deal object on INSERT/UPDATE
+ * @param {function} onDelete - called with the deleted deal id on DELETE
+ * @returns {function} unsubscribe - call to stop listening
+ */
+export function subscribeToDeals(onUpdate, onDelete) {
+  if (!supabase) return () => {};
+
+  const channel = supabase
+    .channel('deals-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'deals' }, payload => {
+      onUpdate(rowToDeal(payload.new));
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deals' }, payload => {
+      onUpdate(rowToDeal(payload.new));
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'deals' }, payload => {
+      onDelete(String(payload.old.id));
+    })
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
+}
