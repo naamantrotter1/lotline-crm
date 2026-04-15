@@ -13,6 +13,7 @@
   ],
   "routes": [
     { "src": "/api/proxy/(.*)", "dest": "/api/proxy/$1.js" },
+    { "src": "/api/createUser",  "dest": "/api/createUser.js" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

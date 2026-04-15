@@ -1,16 +1,51 @@
 import { useState } from 'react';
-import { Settings as SettingsIcon, Upload } from 'lucide-react';
-import Button from '../components/UI/Button';
+import { Settings as SettingsIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
+import UserManagement from './UserManagement';
 
 export default function Settings() {
-  const [tab, setTab] = useState('branding');
-  const [companyName, setCompanyName] = useState('LotLine Homes');
-  const [primaryColor, setPrimaryColor] = useState('#c8613a');
-  const [sidebarColor, setSidebarColor] = useState('#1a2332');
-  const [bgColor, setBgColor] = useState('#f5f3ee');
+  const [tab, setTab] = useState('profile');
+  const { profile, updateProfile } = useAuth();
+
+  // Profile tab state
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
+  const [saving,    setSaving]    = useState(false);
+  const [toast,     setToast]     = useState(null);
+
+  // Populate fields from profile when available
+  useState(() => {
+    if (profile) {
+      setFirstName(profile.first_name || (profile.name?.split(' ')[0] ?? ''));
+      setLastName(profile.last_name  || (profile.name?.split(' ').slice(1).join(' ') ?? ''));
+    }
+  }, [profile]);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleSaveName = async (e) => {
+    e.preventDefault();
+    if (!firstName.trim()) return;
+    setSaving(true);
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const { error } = await updateProfile({
+      first_name: firstName.trim(),
+      last_name:  lastName.trim(),
+      name:       fullName,
+    });
+    if (error) {
+      showToast('Failed to save: ' + (error.message || error), 'error');
+    } else {
+      showToast('Name updated successfully.');
+    }
+    setSaving(false);
+  };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-gray-600 rounded-lg">
           <SettingsIcon size={20} className="text-white" />
@@ -22,7 +57,7 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['branding', 'team', 'notifications', 'integrations'].map((t) => (
+        {['profile', 'team', 'notifications'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -33,104 +68,81 @@ export default function Settings() {
         ))}
       </div>
 
-      {tab === 'branding' && (
-        <div className="space-y-4">
-          <div className="bg-card rounded-xl shadow-sm p-6">
-            <h3 className="font-semibold text-sidebar mb-4">Company Branding</h3>
+      {tab === 'profile' && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6 max-w-md">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-lg">
+              {firstName ? `${firstName[0]}${lastName?.[0] ?? ''}`.toUpperCase() : (profile?.name ?? '?')[0].toUpperCase()}
+            </div>
+            <div>
+              <p className="font-semibold text-[#1a2332]">{profile?.name || 'Your Name'}</p>
+              <p className="text-xs text-gray-400">{profile?.email}</p>
+            </div>
+          </div>
 
-            {/* Logo Upload */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-sidebar flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">LL</span>
-                </div>
-                <div>
-                  <Button variant="outline">
-                    <Upload size={14} className="mr-2" />
-                    Upload Logo
-                  </Button>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, SVG up to 2MB</p>
-                </div>
+          <form onSubmit={handleSaveName} className="space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">First Name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder="Jane"
+                  required
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  placeholder="Smith"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white"
+                />
               </div>
             </div>
 
-            {/* Company Name */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Email</label>
               <input
                 type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                value={profile?.email ?? ''}
+                disabled
+                className="w-full border border-gray-100 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-400 mt-1">Email cannot be changed here.</p>
             </div>
 
-            {/* Colors */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Primary Accent', value: primaryColor, set: setPrimaryColor },
-                { label: 'Sidebar Color', value: sidebarColor, set: setSidebarColor },
-                { label: 'Background Color', value: bgColor, set: setBgColor },
-              ].map((c) => (
-                <div key={c.label}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{c.label}</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={c.value}
-                      onChange={(e) => c.set(e.target.value)}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={c.value}
-                      onChange={(e) => c.set(e.target.value)}
-                      className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <Button>Save Branding</Button>
-            </div>
-          </div>
+            <button
+              type="submit"
+              disabled={saving || !firstName.trim()}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: saving || !firstName.trim() ? '#94a3b8' : '#c9703a' }}
+            >
+              {saving ? 'Saving…' : 'Save Name'}
+            </button>
+          </form>
         </div>
       )}
 
-      {tab === 'team' && (
-        <div className="bg-card rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-sidebar mb-4">Team Members</h3>
-          <div className="space-y-3">
-            {['Naaman Trotter', 'Benson', 'Zach', 'Alex'].map((member) => (
-              <div key={member} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold">
-                    {member[0]}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">{member}</span>
-                </div>
-                <span className="text-xs text-gray-400">Team Member</span>
-              </div>
-            ))}
-          </div>
-          <Button className="mt-4" variant="outline">Add Team Member</Button>
-        </div>
-      )}
+      {tab === 'team' && <UserManagement />}
 
       {tab === 'notifications' && (
-        <div className="bg-card rounded-xl shadow-sm p-6">
+        <div className="bg-card rounded-xl shadow-sm p-6 max-w-2xl">
           <h3 className="font-semibold text-sidebar mb-4">Notification Preferences</h3>
           <p className="text-sm text-gray-500">Notification settings coming soon.</p>
         </div>
       )}
 
-      {tab === 'integrations' && (
-        <div className="bg-card rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-sidebar mb-4">Integrations</h3>
-          <p className="text-sm text-gray-500">External integrations coming soon.</p>
+      {toast && (
+        <div className={`fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-50 ${
+          toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle size={15} /> : <CheckCircle size={15} />}
+          {toast.msg}
         </div>
       )}
     </div>

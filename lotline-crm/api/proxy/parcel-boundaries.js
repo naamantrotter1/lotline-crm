@@ -19,11 +19,12 @@ function fetchNCTile(tileBbox) {
   });
   return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${params}`)
     .then(data => {
-      if (data.error || !data.features) return [];
+      if (data.error) { console.error('[NC parcels] API error:', data.error); return []; }
+      if (!data.features) { console.warn('[NC parcels] No features in response'); return []; }
       data.features.forEach(f => { if (f.properties) f.properties.state = 'NC'; });
       return data.features;
     })
-    .catch(() => []);
+    .catch(err => { console.error('[NC parcels] fetch failed:', err.message); return []; });
 }
 
 // Fetch one tile from SC DOT
@@ -35,7 +36,8 @@ function fetchSCTile(tileBbox) {
   });
   return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${params}`)
     .then(data => {
-      if (data.error || !data.features) return [];
+      if (data.error) { console.error('[SC parcels] API error:', data.error); return []; }
+      if (!data.features) { console.warn('[SC parcels] No features in response'); return []; }
       data.features.forEach(f => {
         if (f.properties) {
           f.properties.parno = f.properties.T_Map_Number || '';
@@ -44,7 +46,7 @@ function fetchSCTile(tileBbox) {
       });
       return data.features;
     })
-    .catch(() => []);
+    .catch(err => { console.error('[SC parcels] fetch failed:', err.message); return []; });
 }
 
 export default async function handler(req, res) {
@@ -84,10 +86,12 @@ export default async function handler(req, res) {
     const allFeatures = results.flat();
 
     // Deduplicate by parno so tiled requests don't double-draw boundary polygons
+    // Features without a parno are included but not deduplicated (use geometry hash as fallback)
     const seen = new Set();
+    let fallbackIdx = 0;
     const unique = allFeatures.filter(f => {
-      const id = f.properties?.parno;
-      if (!id || seen.has(id)) return false;
+      const id = f.properties?.parno || `__noid_${fallbackIdx++}`;
+      if (seen.has(id)) return false;
       seen.add(id);
       return true;
     });

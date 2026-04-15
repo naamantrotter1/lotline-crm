@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
-import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink } from 'lucide-react';
+import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink, Home } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
 
 function AddToPipelineModal({ parcelData, onClose }) {
@@ -225,6 +225,16 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const soilEnabledRef      = useRef(false);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
 
+  // ── MH Comps ──────────────────────────────────────────────────────────────
+  const [showCompsPanel, setShowCompsPanel] = useState(false);
+  const [parcelTab, setParcelTab] = useState('summary');
+  const [mhForSale,      setMhForSale]      = useState(false);
+  const [mhSold,         setMhSold]         = useState(false);
+  const [compsLoading,   setCompsLoading]   = useState(false);
+  const [compsCount,     setCompsCount]     = useState({ forSale: 0, sold: 0 });
+  const mhForSaleLayerRef = useRef(null);
+  const mhSoldLayerRef    = useRef(null);
+
   // ── Parcel search bar ──────────────────────────────────────────────────────
   const [searchType, setSearchType]       = useState('address');
   const [searchQuery, setSearchQuery]     = useState('');
@@ -284,7 +294,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   // ── Refresh active GeoJSON layers on pan/zoom ─────────────────────────────
   const fetchParcelBoundaries = (map) => {
     // Don't fetch when zoomed out — bbox would be too large and the API would time out
-    if (map.getZoom() < 12) {
+    if (map.getZoom() < 11) {
       if (parcelFetchAbortRef.current) parcelFetchAbortRef.current.abort();
       if (parcelBoundaryLayerRef.current) { parcelBoundaryLayerRef.current.remove(); parcelBoundaryLayerRef.current = null; }
       return;
@@ -299,6 +309,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     fetch(`${PROXY}/api/proxy/parcel-boundaries?bbox=${bbox}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(data => {
+        console.log('[parcels] response:', data.features?.length ?? 0, 'features');
         const m = leafletMap.current;
         if (!m || !parcelBoundariesRef.current) return;
         // Replace old layer only after new data is ready (avoids blank flash)
@@ -569,6 +580,9 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       fetchTimer.current = setTimeout(() => refreshGeoJSONRef.current?.(map), 300);
     });
 
+    // Initial layer load (handles case where user has saved zoom ≥ 11)
+    setTimeout(() => refreshGeoJSONRef.current?.(map), 500);
+
     return () => {
       clearTimeout(fetchTimer.current);
       leafletMap.current = null;
@@ -819,6 +833,83 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       if (parcelBoundaryLayerRef.current) { parcelBoundaryLayerRef.current.remove(); parcelBoundaryLayerRef.current = null; }
     }
   }, [parcelBoundaries]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── MH Comps fetch + render ────────────────────────────────────────────────
+  const fetchMHComps = async (map, status) => {
+    const center = map.getCenter();
+    try {
+      const r = await fetch(`${PROXY}/api/proxy/mh-comps?lat=${center.lat.toFixed(5)}&lng=${center.lng.toFixed(5)}&status=${status}&radius=15`);
+      const data = await r.json();
+      if (!Array.isArray(data.results)) return [];
+      return data.results;
+    } catch { return []; }
+  };
+
+  const buildMHMarker = (comp, isSale) => {
+    const color   = isSale ? '#22c55e' : '#3b82f6';
+    const price   = comp.price ? `$${comp.price >= 1000 ? Math.round(comp.price / 1000) + 'k' : comp.price}` : '—';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="background:${color};color:#fff;font-size:10px;font-weight:700;padding:3px 6px;border-radius:6px;border:2px solid rgba(255,255,255,0.7);white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5)">${price}</div>`,
+      iconAnchor: [0, 0],
+    });
+    const marker = L.marker([comp.lat, comp.lng], { icon });
+    const soldInfo = comp.soldDate ? `<p style="color:#9ca3af;font-size:10px">Sold: ${comp.soldDate}</p>` : '';
+    const daysInfo = comp.daysOn != null ? `<p style="color:#9ca3af;font-size:10px">${comp.daysOn} days on market</p>` : '';
+    const link = comp.url ? `<a href="${comp.url}" target="_blank" rel="noopener noreferrer" style="color:#f97316;font-size:10px">View on Zillow ↗</a>` : '';
+    marker.bindPopup(`
+      <div style="min-width:180px;font-family:system-ui,sans-serif">
+        <p style="font-weight:700;font-size:13px;margin:0 0 4px">${price}</p>
+        <p style="font-size:11px;color:#374151;margin:0 0 2px">${comp.address || ''}</p>
+        <p style="font-size:11px;color:#6b7280;margin:0 0 4px">${[comp.beds ? comp.beds + ' bd' : '', comp.baths ? comp.baths + ' ba' : '', comp.sqft ? comp.sqft.toLocaleString() + ' sqft' : ''].filter(Boolean).join(' · ')}</p>
+        ${soldInfo}${daysInfo}${link}
+      </div>
+    `);
+    return marker;
+  };
+
+  const refreshMHComps = async (map) => {
+    if (!mhForSale && !mhSold) return;
+    setCompsLoading(true);
+    const [saleResults, soldResults] = await Promise.all([
+      mhForSale ? fetchMHComps(map, 'forsale') : Promise.resolve([]),
+      mhSold    ? fetchMHComps(map, 'sold')    : Promise.resolve([]),
+    ]);
+
+    // For Sale layer
+    if (mhForSaleLayerRef.current) { mhForSaleLayerRef.current.remove(); mhForSaleLayerRef.current = null; }
+    if (mhForSale && saleResults.length) {
+      const lg = L.layerGroup(saleResults.map(c => buildMHMarker(c, true)));
+      lg.addTo(map);
+      mhForSaleLayerRef.current = lg;
+    }
+
+    // Sold layer
+    if (mhSoldLayerRef.current) { mhSoldLayerRef.current.remove(); mhSoldLayerRef.current = null; }
+    if (mhSold && soldResults.length) {
+      const lg = L.layerGroup(soldResults.map(c => buildMHMarker(c, false)));
+      lg.addTo(map);
+      mhSoldLayerRef.current = lg;
+    }
+
+    setCompsCount({ forSale: saleResults.length, sold: soldResults.length });
+    setCompsLoading(false);
+  };
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    // Clear layers if both off
+    if (!mhForSale) {
+      if (mhForSaleLayerRef.current) { mhForSaleLayerRef.current.remove(); mhForSaleLayerRef.current = null; }
+      setCompsCount(p => ({ ...p, forSale: 0 }));
+    }
+    if (!mhSold) {
+      if (mhSoldLayerRef.current) { mhSoldLayerRef.current.remove(); mhSoldLayerRef.current = null; }
+      setCompsCount(p => ({ ...p, sold: 0 }));
+    }
+    if (mhForSale || mhSold) refreshMHComps(map);
+  }, [mhForSale, mhSold]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleLayer = key => setLayers(p => ({ ...p, [key]: !p[key] }));
 
@@ -1185,7 +1276,75 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           </div>
         )}
 
-        {/* ── Map Filters trigger button ── */}
+        {/* ── MH Comps panel ── */}
+        {showCompsPanel && (
+          <div className="absolute z-[1100] bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-64 overflow-hidden" style={{ bottom: '56px', right: '200px' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <p className="text-sm font-semibold text-white flex items-center gap-2">
+                <Home size={13} className="text-green-400" />
+                MH Comps
+              </p>
+              <button onClick={() => setShowCompsPanel(false)} className="text-gray-400 hover:text-white transition-colors">
+                <X size={15} />
+              </button>
+            </div>
+            <div className="px-4 py-3 space-y-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Manufactured Homes · 15 mi radius</p>
+
+              {/* For Sale */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-200">For Sale</span>
+                  {mhForSale && compsCount.forSale > 0 && (
+                    <span className="text-[10px] text-gray-400">({compsCount.forSale})</span>
+                  )}
+                </div>
+                <Toggle active={mhForSale} onChange={() => setMhForSale(p => !p)} />
+              </div>
+
+              {/* Sold */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-200">Sold</span>
+                  {mhSold && compsCount.sold > 0 && (
+                    <span className="text-[10px] text-gray-400">({compsCount.sold})</span>
+                  )}
+                </div>
+                <Toggle active={mhSold} onChange={() => setMhSold(p => !p)} />
+              </div>
+
+              {compsLoading && (
+                <p className="text-[11px] text-orange-400 flex items-center gap-1.5">
+                  <span className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin inline-block" />
+                  Loading comps…
+                </p>
+              )}
+              {(mhForSale || mhSold) && !compsLoading && compsCount.forSale === 0 && compsCount.sold === 0 && (
+                <p className="text-[11px] text-gray-500">No results in this area. Try panning the map.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── MH Comps button ── */}
+        <button
+          onClick={() => setShowCompsPanel(p => !p)}
+          className={`absolute bottom-4 z-[1100] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border transition-colors ${
+            showCompsPanel || mhForSale || mhSold
+              ? 'bg-green-600 border-green-600 text-white'
+              : 'bg-gray-900 border-gray-700 text-gray-200 hover:border-green-500/50 hover:text-white'
+          }`}
+          style={{ right: '200px' }}
+        >
+          <Home size={15} />
+          MH Comps
+          {(mhForSale || mhSold) && (
+            <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
+          )}
+        </button>
+
         {/* ── Map Filters trigger button — bottom right ── */}
         <button
           onClick={() => setShowFiltersPanel(p => !p)}
@@ -1201,204 +1360,308 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
         {/* Parcel info panel */}
         {parcelData && (
-          <div className="absolute left-3 z-[1000] rounded-xl shadow-2xl border border-gray-600 p-4 w-[300px]" style={{ bottom: '80px', backgroundColor: 'rgb(26, 35, 50)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-white flex items-center gap-1.5">
-                <MapPin size={13} className="text-amber-400" />
-                Parcel Info
-              </p>
-              <button
-                onClick={() => {
-                  setParcelData(null);
-                  setParcelLatLng(null);
-                  setShowBuildability(false);
-                  setBuildability(null);
-                  if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
-                  if (parcelLayerRef.current) { parcelLayerRef.current.remove(); parcelLayerRef.current = null; }
-                }}
-                className="text-gray-500 hover:text-white transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            {parcelData.error ? (
-              <p className="text-xs text-red-400">{parcelData.error}</p>
-            ) : (
-              <div className="space-y-2 text-xs">
-                {parcelData.owner && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Owner</p>
-                    <p className="text-white font-medium">{parcelData.owner}</p>
-                  </div>
-                )}
-                {parcelData.mailAddr && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Mailing Address</p>
-                    <p className="text-gray-200">{parcelData.mailAddr}</p>
-                  </div>
-                )}
-                {parcelData.siteAddr && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Site Address</p>
-                    <p className="text-gray-200">{parcelData.siteAddr}</p>
-                  </div>
-                )}
-                {parcelData.parcelId && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Parcel ID</p>
-                    <p className="text-gray-200 font-mono text-sm">{parcelData.parcelId}</p>
-                  </div>
-                )}
-                <div className="grid grid-cols-3 gap-2 pt-2 mt-1 border-t border-gray-700/60">
-                  <div>
-                    <p className="text-[10px] text-gray-500">Acres</p>
-                    <p className="text-white font-semibold">{parcelData.acres != null ? Number(parcelData.acres).toFixed(2) : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Land Value</p>
-                    <p className="text-white font-semibold">{parcelData.landVal != null ? `$${parcelData.landVal >= 1000 ? Math.round(parcelData.landVal / 1000) + 'k' : parcelData.landVal}` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Total Value</p>
-                    <p className="text-white font-semibold">{parcelData.totVal != null ? `$${parcelData.totVal >= 1000 ? Math.round(parcelData.totVal / 1000) + 'k' : parcelData.totVal}` : '—'}</p>
-                  </div>
-                </div>
-                {(parcelData.landUse || parcelData.saleYear || parcelData.county) && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="absolute left-3 z-[1000] rounded-xl shadow-2xl border border-gray-600 w-[420px] flex flex-col" style={{ bottom: '80px', top: '80px', backgroundColor: 'rgb(26, 35, 50)' }}>
+            {/* Header */}
+            <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-700/60">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-base font-bold text-white leading-tight truncate">
+                    {parcelData.owner || 'Unknown Owner'}
+                  </p>
+                  <p className="text-xs text-emerald-400 mt-0.5">
+                    {parcelData.acres != null ? `${Number(parcelData.acres).toFixed(2)} acres` : '—'}
+                    {parcelData.parcelId ? <span className="text-gray-400"> · APN: {parcelData.parcelId}</span> : null}
+                  </p>
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1 mt-2">
                     {parcelData.landUse && (
-                      <div>
-                        <p className="text-[10px] text-gray-500">Land Use</p>
-                        <p className="text-gray-200 capitalize">{parcelData.landUse.toLowerCase()}</p>
-                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/40 capitalize">
+                        {parcelData.landUse.toLowerCase()}
+                      </span>
                     )}
-                    {parcelData.saleYear && (
-                      <div>
-                        <p className="text-[10px] text-gray-500">Last Sale</p>
-                        <p className="text-gray-200">{parcelData.saleYear}</p>
-                      </div>
+                    {parcelData.state && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-900/60 text-blue-300 border border-blue-700/40">
+                        {parcelData.state}
+                      </span>
                     )}
                     {parcelData.county && (
-                      <div>
-                        <p className="text-[10px] text-gray-500">County</p>
-                        <p className="text-gray-200">{parcelData.county}</p>
-                      </div>
-                    )}
-                    {parcelData.subdivision && (
-                      <div>
-                        <p className="text-[10px] text-gray-500">Subdivision</p>
-                        <p className="text-gray-200 capitalize">{parcelData.subdivision.toLowerCase()}</p>
-                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/60 text-gray-300 border border-gray-600/40">
+                        {parcelData.county} Co.
+                      </span>
                     )}
                   </div>
-                )}
-                {/* Action buttons */}
-                <div className="pt-1 border-t border-gray-700/60 space-y-1.5">
+                </div>
+                <button
+                  onClick={() => {
+                    setParcelData(null);
+                    setParcelLatLng(null);
+                    setShowBuildability(false);
+                    setBuildability(null);
+                    if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
+                    if (parcelLayerRef.current) { parcelLayerRef.current.remove(); parcelLayerRef.current = null; }
+                  }}
+                  className="flex-shrink-0 text-gray-500 hover:text-white transition-colors mt-0.5"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* Tab bar */}
+            {!parcelData.error && (
+              <div className="flex-shrink-0 flex border-b border-gray-700/60 px-2 pt-1">
+                {['Summary','Parcel','Owner','Insights','Metrics'].map(t => (
                   <button
-                    onClick={() => setShowAddToPipeline(true)}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                    style={{ backgroundColor: '#1a1f3a', color: '#818cf8', border: '1px solid #4338ca' }}
-                  >
-                    <PlusCircle size={12} />
-                    Add to Pipeline
-                  </button>
-                  {parcelLatLng && (
-                    <a
-                      href={`https://maps.google.com/maps?q=&layer=c&cbll=${parcelLatLng.lat},${parcelLatLng.lng}&cbp=11,0,0,0,0&z=17`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      style={{ backgroundColor: '#1a2535', color: '#38bdf8', border: '1px solid #0284c7' }}
-                    >
-                      <ExternalLink size={12} />
-                      Google Street View
-                    </a>
-                  )}
+                    key={t}
+                    onClick={() => setParcelTab(t.toLowerCase())}
+                    className={`px-3 py-2 text-[11px] font-medium transition-colors border-b-2 -mb-px ${
+                      parcelTab === t.toLowerCase()
+                        ? 'border-emerald-400 text-emerald-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    }`}
+                  >{t}</button>
+                ))}
+              </div>
+            )}
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto text-xs">
+              {parcelData.error ? (
+                <p className="text-red-400 p-4">{parcelData.error}</p>
+              ) : (() => {
+                const impPct = parcelData.bldgVal != null && parcelData.totVal > 0
+                  ? ((parcelData.bldgVal / parcelData.totVal) * 100).toFixed(1) + '%'
+                  : '—';
+                const ownershipLen = parcelData.saleYear
+                  ? `${new Date().getFullYear() - parseInt(parcelData.saleYear)} years ago`
+                  : '—';
+                const fmt$ = v => v != null ? `$${Number(v).toLocaleString()}` : '—';
+                const Row = ({ label, val, right }) => (
+                  <div className="flex justify-between gap-3 py-1.5 border-b border-gray-700/30">
+                    <span className="text-gray-500 flex-shrink-0">{label}</span>
+                    <span className={`text-right ${right ? 'text-white font-semibold' : 'text-gray-200'}`}>{val ?? '—'}</span>
+                  </div>
+                );
+                const Section = ({ title, children }) => (
+                  <div className="px-4 pt-3 pb-1">
+                    {title && <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 mb-1">{title}</p>}
+                    {children}
+                  </div>
+                );
+
+                if (parcelTab === 'summary') return (
+                  <div className="space-y-0">
+                    <Section>
+                      <Row label="APN" val={parcelData.parcelId} />
+                      <Row label="Site Address" val={parcelData.siteAddr} />
+                      <Row label="County" val={parcelData.county} />
+                      <Row label="State" val={parcelData.state} />
+                      <Row label="GPS" val={parcelLatLng ? `${parcelLatLng.lat.toFixed(6)}, ${parcelLatLng.lng.toFixed(6)}` : null} />
+                      <Row label="Acres (GIS)" val={parcelData.acres != null ? Number(parcelData.acres).toFixed(2) : null} />
+                      <Row label="Land Use" val={parcelData.landUse} />
+                      <Row label="Last Sale Year" val={parcelData.saleYear} />
+                    </Section>
+                    <Section title="Valuation">
+                      <Row label="Assessed Land Value" val={fmt$(parcelData.landVal)} right />
+                      <Row label="Assessed Improvement" val={fmt$(parcelData.bldgVal)} right />
+                      <Row label="Total Value" val={fmt$(parcelData.totVal)} right />
+                      <Row label="Improvement %" val={impPct} />
+                    </Section>
+                    {parcelLatLng && (
+                      <Section title="Links">
+                        <div className="flex gap-2 pb-2">
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${parcelLatLng.lat},${parcelLatLng.lng}`} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
+                            style={{ backgroundColor: '#1a2535', color: '#38bdf8', border: '1px solid #0284c7' }}>
+                            <ExternalLink size={10} /> Maps
+                          </a>
+                          <a href={`https://earth.google.com/web/@${parcelLatLng.lat},${parcelLatLng.lng},100a,500d,35y,0h,0t,0r`} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
+                            style={{ backgroundColor: '#1a2535', color: '#86efac', border: '1px solid #16a34a' }}>
+                            <ExternalLink size={10} /> Earth
+                          </a>
+                          <a href={`https://maps.google.com/maps?q=&layer=c&cbll=${parcelLatLng.lat},${parcelLatLng.lng}&cbp=11,0,0,0,0&z=17`} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
+                            style={{ backgroundColor: '#1a2535', color: '#c4b5fd', border: '1px solid #7c3aed' }}>
+                            <ExternalLink size={10} /> Street
+                          </a>
+                        </div>
+                      </Section>
+                    )}
+                  </div>
+                );
+
+                if (parcelTab === 'parcel') return (
+                  <div>
+                    <Section>
+                      <Row label="County" val={parcelData.county} />
+                      <Row label="Acres" val={parcelData.acres != null ? Number(parcelData.acres).toFixed(2) : null} />
+                      <Row label="APN" val={parcelData.parcelId} />
+                      <Row label="Calculated Acres" val={null} />
+                      <Row label="GPS" val={parcelLatLng ? `${parcelLatLng.lat.toFixed(7)}, ${parcelLatLng.lng.toFixed(7)}` : null} />
+                      <Row label="Improvement %" val={impPct} />
+                      <Row label="Zoning" val={parcelData.zoning} />
+                      <Row label="Current Land Use" val={parcelData.landUse} />
+                      <Row label="Subdivision" val={parcelData.subdivision} />
+                      <Row label="Legal Description" val={null} />
+                    </Section>
+                    <Section title="Structures">
+                      <Row label="Structures" val={null} />
+                      <Row label="Structure Count" val={null} />
+                      <Row label="Structure Year Built" val={null} />
+                    </Section>
+                    <Section title="Mortgage">
+                      <Row label="Mortgage Amount" val={null} />
+                      <Row label="Mortgage Length" val={null} />
+                      <Row label="Mortgage Lender" val={null} />
+                      <Row label="Mortgage Matures In" val={null} />
+                      <Row label="Mortgage Type" val={null} />
+                      <Row label="Loan Type" val={null} />
+                      <Row label="Mortgage Interest" val={null} />
+                    </Section>
+                  </div>
+                );
+
+                if (parcelTab === 'owner') return (
+                  <div>
+                    <Section>
+                      <div className="py-2 border-b border-gray-700/30">
+                        <p className="text-white font-semibold">{parcelData.owner || '—'}</p>
+                        <p className="text-gray-400 mt-0.5">{parcelData.mailAddr || '—'}</p>
+                      </div>
+                      <Row label="Out of State" val={null} />
+                      <Row label="Out of County" val={null} />
+                      <Row label="Out of ZIP" val={null} />
+                      <Row label="Ownership Length" val={ownershipLen} />
+                      <Row label="Prior Owner Name" val={null} />
+                    </Section>
+                    <Section title="Chain of Ownership">
+                      <p className="text-gray-600 text-[11px] py-2">Available with data subscription</p>
+                    </Section>
+                  </div>
+                );
+
+                if (parcelTab === 'insights') return (
+                  <div>
+                    <Section>
+                      <Row label="Land Locked" val={null} />
+                      <Row label="Road Frontage" val={null} />
+                      <Row label="Wetlands" val={buildability && !buildability.error ? `${buildability.wetlandPct}%` : null} />
+                      <Row label="Flood Zone" val={buildability && !buildability.error ? `${buildability.floodPct}%` : null} />
+                    </Section>
+                    <Section title="Elevation">
+                      <Row label="Min Elevation" val={null} />
+                      <Row label="Max Elevation" val={null} />
+                      <Row label="Avg Elevation" val={null} />
+                    </Section>
+                    <Section title="Slope">
+                      <Row label="Min Slope" val={buildability?.slope ? '0%' : null} />
+                      <Row label="Max Slope" val={buildability?.slope ? `${buildability.slope.avg > 0 ? buildability.slope.avg : '—'}%` : null} />
+                      <Row label="Avg Slope" val={buildability?.slope ? `${buildability.slope.avg}%` : null} />
+                    </Section>
+                    {!buildability && (
+                      <div className="px-4 pb-3">
+                        <button
+                          onClick={() => { setShowBuildability(true); showBuildabilityOverlay(parcelData.geometry); }}
+                          disabled={buildabilityLoading}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold mt-2"
+                          style={{ backgroundColor: '#1e3a2f', color: '#4ade80', border: '1px solid #16a34a' }}
+                        >
+                          <TreePine size={12} />
+                          {buildabilityLoading ? 'Analyzing...' : 'Run Buildability Analysis'}
+                        </button>
+                        {buildabilityLoading && <p className="text-[10px] text-gray-500 text-center mt-1">Fetching flood, wetland & slope data...</p>}
+                      </div>
+                    )}
+                    {buildability && !buildability.error && (
+                      <Section title="Buildability">
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <p className="text-gray-400">Buildable area</p>
+                            <p className="text-gray-500 text-[10px]">{buildability.buildableAcres} ac</p>
+                          </div>
+                          <p className="text-3xl font-bold" style={{ color: buildability.pct >= 70 ? '#4ade80' : buildability.pct >= 40 ? '#facc15' : '#f87171' }}>
+                            {buildability.pct}%
+                          </p>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-gray-700 overflow-hidden mb-2">
+                          <div className="h-full rounded-full" style={{ width: `${buildability.pct}%`, backgroundColor: buildability.pct >= 70 ? '#4ade80' : buildability.pct >= 40 ? '#facc15' : '#f87171' }} />
+                        </div>
+                        {buildability.slope && (
+                          <>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 mt-3 mb-1">Slope Breakdown</p>
+                            {[
+                              { label: 'Flat (0–0.5%)', val: buildability.slope.flat },
+                              { label: 'Minimal (0.5–5%)', val: buildability.slope.minimal },
+                              { label: 'Moderate (5–10%)', val: buildability.slope.moderate },
+                              { label: 'Heavy (10–15%)', val: buildability.slope.heavy },
+                              { label: 'Extreme (15%+)', val: buildability.slope.extreme },
+                            ].map(({ label, val }) => (
+                              <div key={label} className="flex justify-between py-1 border-b border-gray-700/30">
+                                <span className="text-gray-500">{label}</span>
+                                <span className="text-gray-300">{val ?? 0}%</span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </Section>
+                    )}
+                  </div>
+                );
+
+                if (parcelTab === 'metrics') return (
+                  <div>
+                    <Section>
+                      <div className="py-2 text-gray-400 border-b border-gray-700/30">
+                        {parcelData.acres != null ? `${Math.floor(parcelData.acres)} to ${Math.ceil(parcelData.acres) + 1} Acres` : 'Acreage unknown'}
+                      </div>
+                    </Section>
+                    <Section title="Market Activity">
+                      <Row label="Active" val={null} />
+                      <Row label="Pending" val={null} />
+                      <Row label="1yr STR" val={null} />
+                      <Row label="Median Sold PPA" val={null} />
+                    </Section>
+                    <Section title="Sold">
+                      <Row label="Sold 1mo" val={null} />
+                      <Row label="Sold 3mo" val={null} />
+                      <Row label="Sold 6mo" val={null} />
+                      <Row label="Sold 1yr" val={null} />
+                    </Section>
+                    <div className="px-4 pb-3">
+                      <p className="text-[10px] text-gray-600 mt-2">Market metrics available with data subscription</p>
+                    </div>
+                  </div>
+                );
+
+                return null;
+              })()}
+            </div>
+
+            {/* Fixed footer — action buttons */}
+            {!parcelData.error && (
+              <div className="flex-shrink-0 border-t border-gray-700/60 p-3 space-y-2">
+                <button
+                  onClick={() => setShowAddToPipeline(true)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
+                  style={{ backgroundColor: '#1a1f3a', color: '#818cf8', border: '1px solid #4338ca' }}
+                >
+                  <PlusCircle size={12} /> Add to Pipeline
+                </button>
+                {parcelTab !== 'insights' && (
                   <button
                     onClick={() => {
-                      if (showBuildability) {
-                        setShowBuildability(false);
-                        setBuildability(null);
-                        if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
-                      } else {
-                        setShowBuildability(true);
-                        showBuildabilityOverlay(parcelData.geometry);
-                      }
+                      setParcelTab('insights');
+                      if (!showBuildability) { setShowBuildability(true); showBuildabilityOverlay(parcelData.geometry); }
                     }}
                     disabled={buildabilityLoading}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
                     style={{ backgroundColor: showBuildability ? '#16a34a' : '#1e3a2f', color: showBuildability ? '#fff' : '#4ade80', border: '1px solid #16a34a' }}
                   >
                     <TreePine size={12} />
-                    {buildabilityLoading ? 'Analyzing...' : showBuildability ? 'Hide Buildability' : 'Buildability'}
+                    {buildabilityLoading ? 'Analyzing...' : 'Buildability'}
                   </button>
-                  {buildabilityLoading && (
-                    <p className="text-[10px] text-gray-500 text-center mt-1.5">Fetching flood, wetland & slope data...</p>
-                  )}
-                  {buildability && !buildabilityLoading && (
-                    <div className="mt-2 rounded-lg p-2.5 space-y-2" style={{ backgroundColor: '#0f1f17', border: '1px solid #166534' }}>
-                      {buildability.error ? (
-                        <p className="text-[10px] text-red-400">{buildability.error}</p>
-                      ) : (
-                        <>
-                          {/* Header */}
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Buildability</p>
-                              <p className="text-[10px] text-gray-500">{buildability.buildableAcres} ac buildable</p>
-                            </div>
-                            <p className="text-2xl font-bold" style={{ color: buildability.pct >= 70 ? '#4ade80' : buildability.pct >= 40 ? '#facc15' : '#f87171' }}>
-                              {buildability.pct}%
-                            </p>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="w-full h-2 rounded-full bg-gray-700 overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${buildability.pct}%`, backgroundColor: buildability.pct >= 70 ? '#4ade80' : buildability.pct >= 40 ? '#facc15' : '#f87171' }} />
-                          </div>
-                          {/* Constraints */}
-                          <div className="space-y-1 pt-0.5">
-                            <div className="flex justify-between text-[10px]">
-                              <span className="flex items-center gap-1 text-gray-400"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: '#3b82f6', display: 'inline-block' }} />FEMA Flood</span>
-                              <span className="text-gray-300">{buildability.floodPct}%</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="flex items-center gap-1 text-gray-400"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: '#06b6d4', display: 'inline-block' }} />Wetlands</span>
-                              <span className="text-gray-300">{buildability.wetlandPct}%</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="flex items-center gap-1 text-gray-400"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: '#f59e0b', display: 'inline-block' }} />Steep Slope (&gt;5%)</span>
-                              <span className="text-gray-300">{buildability.slopePctNonBuildable}%</span>
-                            </div>
-                          </div>
-                          {/* Slope breakdown */}
-                          {buildability.slope && (
-                            <div className="pt-1.5 border-t border-gray-700/60 space-y-0.5">
-                              <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Slope Analysis</p>
-                              {[
-                                { label: 'Flat (0–0.5%)', val: buildability.slope.flat },
-                                { label: 'Minimal (0.5–5%)', val: buildability.slope.minimal },
-                                { label: 'Moderate (5–10%)', val: buildability.slope.moderate },
-                                { label: 'Heavy (10–15%)', val: buildability.slope.heavy },
-                                { label: 'Extreme (15%+)', val: buildability.slope.extreme },
-                              ].map(({ label, val }) => (
-                                <div key={label} className="flex justify-between text-[10px]">
-                                  <span className="text-gray-500">{label}</span>
-                                  <span className="text-gray-300">{val ?? 0}%</span>
-                                </div>
-                              ))}
-                              <p className="text-[10px] text-gray-600 pt-0.5">Avg slope: {buildability.slope.avg}%</p>
-                            </div>
-                          )}
-                          {/* Legend */}
-                          <div className="flex gap-2 text-[10px] pt-0.5 flex-wrap">
-                            <span className="flex items-center gap-1 text-gray-500"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#22c55e' }} />Buildable</span>
-                            {buildability.hasFlood && <span className="flex items-center gap-1 text-gray-500"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#3b82f6' }} />Flood</span>}
-                            {buildability.hasWetlands && <span className="flex items-center gap-1 text-gray-500"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#06b6d4' }} />Wetland</span>}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             )}
           </div>

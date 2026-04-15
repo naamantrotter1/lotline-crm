@@ -10,6 +10,7 @@ export function DealsProvider({ children }) {
     try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; }
   });
   const [archivedDeals, setArchivedDeals] = useState([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
 
   const { session } = useAuth();
 
@@ -18,11 +19,13 @@ export function DealsProvider({ children }) {
     if (!session) {
       setDeals([]);
       setArchivedDeals([]);
+      setDealsLoading(false);
       return;
     }
 
+    setDealsLoading(true);
     // Load active deals from Supabase
-    loadAllDeals().then(setDeals);
+    loadAllDeals().then(d => { setDeals(d); setDealsLoading(false); });
     // Load archived deals
     loadArchivedDeals().then(setArchivedDeals);
 
@@ -55,7 +58,7 @@ export function DealsProvider({ children }) {
   }, [session]);
 
   return (
-    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, saveDeal: syncSaveDeal, deleteDeal: syncDeleteDeal }}>
+    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, saveDeal: syncSaveDeal, deleteDeal: syncDeleteDeal }}>
       {children}
     </DealsContext.Provider>
   );

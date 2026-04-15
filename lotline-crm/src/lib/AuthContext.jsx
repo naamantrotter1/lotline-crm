@@ -59,6 +59,24 @@ export function AuthProvider({ children }) {
 
   const signOut = () => supabase.auth.signOut();
 
+  const updateProfile = async (updates) => {
+    if (!session?.user?.id) return { error: 'Not logged in' };
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', session.user.id);
+    if (!error) {
+      setProfile(prev => ({ ...prev, ...updates }));
+      localStorage.setItem('crm_user', JSON.stringify({
+        name: updates.name ?? profile?.name,
+        email: profile?.email,
+      }));
+    }
+    return { error };
+  };
+
+  const refreshProfile = (userId) => fetchProfile(userId);
+
   return (
     <AuthContext.Provider value={{
       session,
@@ -67,6 +85,8 @@ export function AuthProvider({ children }) {
       loading,
       signIn,
       signOut,
+      updateProfile,
+      refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

@@ -224,11 +224,11 @@ function OverviewTab({
           <SectionHeader>General Notes</SectionHeader>
           <textarea
             value={notes}
-            onChange={e => canEdit && setNotes(e.target.value)}
-            readOnly={!canEdit}
+            onChange={e => !readOnly && setNotes(e.target.value)}
+            readOnly={readOnly}
             rows={3}
-            placeholder={canEdit ? "Add notes about this deal..." : ""}
-            className={`w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white ${!canEdit ? 'cursor-default' : ''}`}
+            placeholder={!readOnly ? "Add notes about this deal..." : ""}
+            className={`w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white ${readOnly ? 'cursor-default' : ''}`}
           />
         </div>
 
@@ -245,7 +245,7 @@ function OverviewTab({
               <MapPin size={11} /> GIS Map
             </a>
           </div>
-          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <InputRow label="Parcel ID" value={parcelId} onChange={setParcelId} mono />
             <InputRow label="Address" value={address} onChange={setAddress} />
             <InputRow label="County" value={county} onChange={setCounty} />
@@ -273,7 +273,7 @@ function OverviewTab({
         {/* Seller Information */}
         <div>
           <SectionHeader>Seller Information</SectionHeader>
-          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
             <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
             <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
@@ -284,7 +284,7 @@ function OverviewTab({
         {/* Deal Evaluation */}
         <div>
           <SectionHeader>Deal Evaluation</SectionHeader>
-          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <SelectRow label="Utility Scenario" value={utilityScenario} onChange={setUtilityScenario} options={UTILITY_SCENARIO_OPTIONS} />
             <InputRow label="Water" value={waterCompany} onChange={setWaterCompany} />
             <InputRow label="Sewer" value={sewerCompany} onChange={setSewerCompany} />
@@ -317,7 +317,7 @@ function OverviewTab({
         <div>
           <SectionHeader>Cost Breakdown</SectionHeader>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <fieldset disabled={!canEdit} className="divide-y divide-gray-50">
+            <fieldset disabled={readOnly} className="divide-y divide-gray-50">
               {COST_FIELDS.map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between px-4 py-2">
                   <span className="text-xs text-gray-500 w-40">{label}</span>
@@ -962,17 +962,13 @@ function getDefaultRate(investor) {
   return 12;
 }
 
-// ── Main DealDetail ───────────────────────────────────────────────────────────
-export default function DealDetail() {
-  const { id } = useParams();
+// ── Main DealDetail (inner) ───────────────────────────────────────────────────
+// Receives deal as a guaranteed non-null prop so useState initializers are correct
+function DealDetailContent({ deal }) {
   const navigate = useNavigate();
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
-
-  const { deals: customDeals } = useDeals();
   const { canEdit } = usePermissions();
-  const deal = customDeals.find(d => String(d.id) === String(id))
-    || (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })().find(d => String(d.id) === String(id));
 
   // Initial costs from deal data
   const initCosts = {};
@@ -998,7 +994,7 @@ export default function DealDetail() {
   const isLandAcq = deal?.pipeline === 'land-acquisition';
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
   const [stage, setStage] = useState(
-    localStorage.getItem(`lotline_deal_stage_${id}`) || deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed')
+    localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed')
   );
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
@@ -1123,15 +1119,6 @@ export default function DealDetail() {
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, costs,
   ]);
-
-  if (!deal) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-gray-500 text-lg">Deal not found.</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-accent underline text-sm">Go Back</button>
-      </div>
-    );
-  }
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const sellingCosts = (deal.arv || 0) * 0.045 + 4000;
@@ -1398,4 +1385,34 @@ export default function DealDetail() {
     )}
     </>
   );
+}
+
+// ── Outer wrapper — handles loading + deal lookup ─────────────────────────────
+export default function DealDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { deals: customDeals, dealsLoading } = useDeals();
+
+  const deal = customDeals.find(d => String(d.id) === String(id))
+    || (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })().find(d => String(d.id) === String(id));
+
+  if (dealsLoading && !deal) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!deal) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500 text-lg">Deal not found.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-accent underline text-sm">Go Back</button>
+      </div>
+    );
+  }
+
+  // key={deal.id} ensures DealDetailContent remounts fresh with correct state
+  return <DealDetailContent key={deal.id} deal={deal} />;
 }

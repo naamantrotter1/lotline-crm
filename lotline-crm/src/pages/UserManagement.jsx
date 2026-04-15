@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle, UserPlus, X } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
+
+// Isolated client used only for signing up new users — never touches the admin's session
+const tempClient = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'lotline-admin-signup-tmp' } }
+);
 
 const ROLE_CONFIG = {
   admin:  { label: 'Admin',  color: 'bg-red-100 text-red-700',    icon: Shield,  desc: 'Full access + user management' },
@@ -20,13 +28,174 @@ function RoleBadge({ role }) {
   );
 }
 
+function CreateUserModal({ onClose, onCreated }) {
+  const [firstName,  setFirstName]  = useState('');
+  const [lastName,   setLastName]   = useState('');
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [role,       setRole]       = useState('viewer');
+  const [showPw,     setShowPw]     = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setError('');
+    setLoading(true);
+
+    const fullName = `${firstName.trim()} ${(lastName || '').trim()}`.trim();
+
+    // Sign up via the isolated client — does NOT affect the admin's session
+    const { data, error: signUpError } = await tempClient.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    const userId = data.user?.id;
+    if (!userId) {
+      setError('User created but no ID returned. Try again.');
+      setLoading(false);
+      return;
+    }
+
+    // Wait for DB trigger to create the profile row
+    await new Promise(r => setTimeout(r, 800));
+
+    // Update profile using the main admin client (admin RLS policy allows updating any profile)
+    const { error: profileError } = await supabase.from('profiles').update({
+      first_name: firstName.trim(),
+      last_name:  (lastName || '').trim(),
+      name:       fullName,
+      role:       role || 'viewer',
+    }).eq('id', userId);
+
+    if (profileError) {
+      setError('User created but profile update failed: ' + profileError.message);
+      setLoading(false);
+      return;
+    }
+
+    onCreated({
+      id:         userId,
+      email:      email.trim(),
+      name:       fullName,
+      first_name: firstName.trim(),
+      last_name:  (lastName || '').trim(),
+      role:       role || 'viewer',
+      created_at: new Date().toISOString(),
+    });
+    onClose();
+    setLoading(false);
+  };
+
+  const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-bold text-[#1a2332]">Create New User</h2>
+            <p className="text-xs text-gray-400 mt-0.5">They can log in immediately with these credentials</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Name row */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">First Name</label>
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" required className={inputClass} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Last Name</label>
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" className={inputClass} />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Email Address</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" required className={inputClass} />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Temporary Password</label>
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+                required
+                className={`${inputClass} pr-11`}
+              />
+              <button type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label={showPw ? 'Hide' : 'Show'}>
+                {showPw ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Share this with the new user so they can sign in.</p>
+          </div>
+
+          {/* Role */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
+              <option value="viewer">Viewer — Read-only access</option>
+              <option value="editor">Editor — View + edit deals</option>
+              <option value="admin">Admin — Full access + user management</option>
+            </select>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !firstName || !email || !password}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: loading || !firstName || !email || !password ? '#94a3b8' : '#c9703a' }}
+          >
+            {loading ? 'Creating…' : 'Create User'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function UserManagement() {
   const { canAdmin } = usePermissions();
   const { profile: myProfile } = useAuth();
-  const [users,   setUsers]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(null); // userId being saved
-  const [toast,   setToast]   = useState(null);
+  const [users,      setUsers]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(null); // userId being saved
+  const [toast,      setToast]      = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     if (!canAdmin) return;
@@ -60,6 +229,11 @@ export default function UserManagement() {
     setSaving(null);
   };
 
+  const handleUserCreated = (newUser) => {
+    setUsers(prev => [...prev, newUser]);
+    showToast(`${newUser.name} has been added.`);
+  };
+
   if (!canAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -74,15 +248,32 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {showCreate && (
+        <CreateUserModal
+          onClose={() => setShowCreate(false)}
+          onCreated={handleUserCreated}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg" style={{ backgroundColor: '#1a2332' }}>
-          <Users size={20} className="text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: '#1a2332' }}>
+            <Users size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[#1a2332]">User Management</h1>
+            <p className="text-sm text-gray-400">Manage team access and permissions</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[#1a2332]">User Management</h1>
-          <p className="text-sm text-gray-400">Manage team access and permissions</p>
-        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
+          style={{ backgroundColor: '#c9703a' }}
+        >
+          <UserPlus size={15} />
+          Create User
+        </button>
       </div>
 
       {/* Role legend */}
@@ -102,11 +293,10 @@ export default function UserManagement() {
 
       {/* Users table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-800">
             {loading ? 'Loading…' : `${users.length} user${users.length !== 1 ? 's' : ''}`}
           </h2>
-          <p className="text-xs text-gray-400">New users can be invited via the Supabase dashboard</p>
         </div>
 
         {loading ? (

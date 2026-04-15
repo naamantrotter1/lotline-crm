@@ -2,8 +2,8 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
-  Calculator, Building, Database, MapPin, HardHat, Archive, Settings,
-  Droplets, Globe, Landmark, Building2, UserCog, LogOut,
+  Calculator, Building, HardHat, Archive, Settings,
+  Globe, Landmark, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -56,21 +56,7 @@ export default function Sidebar({ collapsed, onToggle }) {
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  // Inject User Management for admins into the Tools section
-  const navSections = BASE_NAV_SECTIONS.map(section => {
-    if (section.label === 'Tools' && canAdmin) {
-      const items = [...section.items];
-      // Insert before Settings
-      const settingsIdx = items.findIndex(i => i.to === '/settings');
-      items.splice(settingsIdx, 0, {
-        icon: UserCog,
-        label: 'User Management',
-        to: '/admin/users',
-      });
-      return { ...section, items };
-    }
-    return section;
-  });
+  const navSections = BASE_NAV_SECTIONS;
 
   return (
     <aside
