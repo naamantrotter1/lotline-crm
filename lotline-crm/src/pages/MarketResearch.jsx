@@ -468,7 +468,7 @@ function CompFinder() {
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">State</label>
             <select value={state} onChange={e => setState(e.target.value)} className={inp}>
-              <option>NC</option><option>SC</option>
+              <option>NC</option><option>SC</option><option>FL</option>
             </select>
           </div>
           <div>
@@ -880,7 +880,7 @@ function HeatMap() {
           ).then(r => r.json());
           const fips       = fcc.County?.FIPS?.substring(0, 5);
           const countyName = fcc.County?.name;
-          const inRegion   = fips?.startsWith('37') || fips?.startsWith('45');
+          const inRegion   = fips?.startsWith('37') || fips?.startsWith('45') || fips?.startsWith('12');
           if (!inRegion) { setSearchStatus('error'); setSearchInfo(null); return; }
           setSearchInfo({ type: 'zip', zip: q, lat, lon, fips, label: `ZIP ${q} — ${countyName} Co., ${stateAbbr}` });
           setSearchStatus('found');
@@ -977,7 +977,8 @@ function HeatMap() {
           features: gj.features.filter(f => {
             const id = String(f.id);
             return id.startsWith('37') || id.startsWith('45') ||
-                   id.startsWith('13') || id.startsWith('47') || id.startsWith('51');
+                   id.startsWith('13') || id.startsWith('47') || id.startsWith('51') ||
+                   id.startsWith('12');
           }),
         });
         // State outlines — filtered to the same 5 states
@@ -986,7 +987,7 @@ function HeatMap() {
           ...stateGj,
           features: stateGj.features.filter(f => {
             const id = String(f.id);
-            return ['37','45','13','47','51'].includes(id);
+            return ['37','45','13','47','51','12'].includes(id);
           }),
         });
         setLoading(false);
@@ -1023,8 +1024,9 @@ function HeatMap() {
       fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ga_georgia_zip_codes_geo.min.json').then(r => r.json()),
       fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tn_tennessee_zip_codes_geo.min.json').then(r => r.json()),
       fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/va_virginia_zip_codes_geo.min.json').then(r => r.json()),
-    ]).then(([nc, sc, ga, tn, va]) => {
-      setZipGeojson({ type: 'FeatureCollection', features: [...nc.features, ...sc.features, ...ga.features, ...tn.features, ...va.features] });
+      fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/fl_florida_zip_codes_geo.min.json').then(r => r.json()),
+    ]).then(([nc, sc, ga, tn, va, fl]) => {
+      setZipGeojson({ type: 'FeatureCollection', features: [...nc.features, ...sc.features, ...ga.features, ...tn.features, ...va.features, ...fl.features] });
       setZipLoading(false);
     }).catch(() => setZipLoading(false));
   }, [groupBy, zipGeojson]);
@@ -1047,7 +1049,7 @@ function HeatMap() {
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
     const map = L.map(mapRef.current, {
-      center: [35.5, -82.5], zoom: 6,
+      center: [33.0, -82.5], zoom: 5,
       zoomControl: true, attributionControl: false,
     });
     // Custom pane for state borders — always above choropleth layers
