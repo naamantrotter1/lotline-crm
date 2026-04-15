@@ -980,7 +980,7 @@ function HeatMap() {
             const id = String(f.id);
             return id.startsWith('37') || id.startsWith('45') ||
                    id.startsWith('13') || id.startsWith('47') || id.startsWith('51') ||
-                   id.startsWith('12');
+                   id.startsWith('12') || id.startsWith('01') || id.startsWith('21');
           }),
         });
         // State outlines — filtered to the same 5 states
@@ -989,7 +989,7 @@ function HeatMap() {
           ...stateGj,
           features: stateGj.features.filter(f => {
             const id = String(f.id);
-            return ['37','45','13','47','51','12'].includes(id);
+            return ['37','45','13','47','51','12','1','01','21'].includes(id);
           }),
         });
         setLoading(false);
@@ -1179,8 +1179,8 @@ function HeatMap() {
 
     // Aggregate metrics per state
     const stateData = {};
-    const STATE_FIPS = { NC: '37', SC: '45', GA: '13', TN: '47', VA: '51' };
-    ['NC', 'SC', 'GA', 'TN', 'VA'].forEach(st => {
+    const STATE_FIPS = { NC: '37', SC: '45', GA: '13', TN: '47', VA: '51', FL: '12', AL: '1', KY: '21' };
+    ['NC', 'SC', 'GA', 'TN', 'VA', 'FL', 'AL', 'KY'].forEach(st => {
       const counties = displayCounties.filter(c => c.state === st && c[metric] != null);
       if (!counties.length) return;
       const avg = counties.reduce((s, c) => s + c[metric], 0) / counties.length;
