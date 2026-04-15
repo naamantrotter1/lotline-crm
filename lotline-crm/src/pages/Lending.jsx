@@ -36,7 +36,7 @@ const COST_FIELDS = [
   { key: 'septic',       label: 'Septic' },
   { key: 'electric',     label: 'Electric / Power Pole' },
   { key: 'hvac',         label: 'HVAC' },
-  { key: 'underpinning', label: 'Underpinning' },
+  { key: 'underpinning', label: 'Skirting' },
   { key: 'decks',        label: 'Decks Installed' },
   { key: 'driveway',     label: 'Driveway' },
   { key: 'landscaping',  label: 'Landscaping / Final Grading' },
