@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
+import { loadAllDeals, deleteDeal as syncDeleteDeal } from '../lib/dealsSync';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 
@@ -823,19 +824,17 @@ export default function LandAcquisition() {
   const location = useLocation();
   const [customDeals, setCustomDeals] = useState(loadCustomDeals);
 
-  // Re-sync whenever we navigate back to this page
+  // Re-sync from Supabase (or localStorage fallback) on every navigation to this page
   useEffect(() => {
-    setCustomDeals(loadCustomDeals());
+    loadAllDeals().then(deals => setCustomDeals(deals));
   }, [location.key]);
 
   const allDeals = customDeals
-    .filter(d => d.pipeline === 'land-acquisition')
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }));
+    .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived);
 
   const handleDelete = (id) => {
-    const updated = customDeals.filter(d => d.id !== id);
-    localStorage.setItem(LS_KEY, JSON.stringify(updated));
-    setCustomDeals(updated);
+    syncDeleteDeal(id);
+    setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
   };
 
   return (

@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
+import { loadAllDeals } from '../lib/dealsSync';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
@@ -165,15 +166,13 @@ export default function DealOverview() {
   const location = useLocation();
   const [customDeals, setCustomDeals] = useState(loadCustomDeals);
 
-  // Re-sync whenever we navigate back to this page
+  // Re-sync from Supabase (or localStorage fallback) on every navigation to this page
   useEffect(() => {
-    setCustomDeals(loadCustomDeals());
+    loadAllDeals().then(deals => setCustomDeals(deals));
   }, [location.key]);
 
   const allDeals = customDeals
-    .filter(d => d.pipeline === 'deal-overview' || STAGES.includes(localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage))
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => STAGES.includes(d.stage));
+    .filter(d => STAGES.includes(d.stage) && !d.isArchived);
 
   return (
     <div className="space-y-4">

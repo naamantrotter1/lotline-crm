@@ -6,6 +6,7 @@ import {
   ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
+import { saveDeal } from '../lib/dealsSync';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -1042,17 +1043,7 @@ export default function DealDetail() {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
-      // Persist for ALL deals via per-deal key
-      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
-      // Also update the custom deals array if it's a custom deal
-      try {
-        const deals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-        if (deals.some(d => String(d.id) === String(deal.id))) {
-          localStorage.setItem('lotline_custom_deals', JSON.stringify(
-            deals.map(d => String(d.id) === String(deal.id) ? { ...d, stage: val } : d)
-          ));
-        }
-      } catch {}
+      saveDeal({ ...deal, stage: val });
     }
   };
 
@@ -1103,26 +1094,20 @@ export default function DealDetail() {
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
-    try {
-      const allDeals = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-      const updated = allDeals.map(d =>
-        String(d.id) === String(deal.id)
-          ? {
-              ...d,
-              stage, address, county, state: dealState, zip, acreage,
-              ownerName, sellerName, investor, financing, notes,
-              leadSource, ownerType, utilityScenario, homeModel,
-              waterCompany, sewerCompany, electricCompany,
-              parcelId, closingAttorney, closingAttorneyPhone,
-              closingAttorneyAddress, closeDate, contractDate,
-              manufacturer, deliveryDate,
-              holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
-              ...costs,
-            }
-          : d
-      );
-      localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
-    } catch {}
+    const updatedDeal = {
+      ...deal,
+      stage, address, county, state: dealState, zip, acreage,
+      ownerName, sellerName, investor, financing, notes,
+      leadSource, ownerType, utilityScenario, homeModel,
+      waterCompany, sewerCompany, electricCompany,
+      parcelId, closingAttorney, closingAttorneyPhone,
+      closingAttorneyAddress, closeDate, contractDate,
+      manufacturer, deliveryDate,
+      holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
+      ...costs,
+    };
+    // saveDeal writes localStorage immediately AND fires async Supabase upsert
+    saveDeal(updatedDeal);
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
     ownerName, sellerName, investor, financing, notes,
@@ -1224,26 +1209,15 @@ export default function DealDetail() {
               </button>
               <button
                 onClick={() => {
-                  // Remove from active deals
-                  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-                  const updated = all.filter(d => String(d.id) !== String(deal.id));
-                  localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
-                  // Add to archived deals
-                  const archived = (() => { try { return JSON.parse(localStorage.getItem('lotline_archived_deals') || '[]'); } catch { return []; } })();
-                  const today = new Date();
-                  const archivedEntry = {
-                    id: deal.id,
-                    address: deal.address,
-                    pipeline: deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview',
-                    lastStage: stage,
-                    archivedDate: `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`,
-                    arv: deal.arv || 0,
-                    netProfit: Math.round(netProfit),
-                  };
-                  localStorage.setItem('lotline_archived_deals', JSON.stringify([...archived, archivedEntry]));
+                  saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage });
+                  // Remove from active localStorage list
+                  try {
+                    const all = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
+                    localStorage.setItem('lotline_custom_deals', JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
+                  } catch {}
                   // Navigate back
                   if (fromInvestorPortal) navigate('/investor-portal');
-                  else if (deal.pipeline === 'land-acquisition') navigate('/land-acquisition');
+                  else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
                   else navigate('/deal-overview');
                 }}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
