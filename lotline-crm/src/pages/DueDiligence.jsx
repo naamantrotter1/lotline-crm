@@ -57,9 +57,9 @@ function getCompletedCount(dealId) {
   return DD_COLUMNS.filter(c => getTaskStatus(dealId, c.key) === 'complete').length;
 }
 
-// Seed from deal.ddTasksCompleted (run once)
-function seedInitialState() {
-  for (const deal of ddDeals) {
+// Seed from deal.ddTasksCompleted (called inside the component after deals load)
+function seedInitialState(deals) {
+  for (const deal of deals) {
     for (const name of (deal.ddTasksCompleted || [])) {
       const k = INIT_MAP[name];
       if (k) {
@@ -69,7 +69,6 @@ function seedInitialState() {
     }
   }
 }
-seedInitialState();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatCloseDate(str) {
@@ -246,9 +245,11 @@ export default function DueDiligence() {
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
-  const ddDeals = useMemo(() =>
-    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
-  , [deals]);
+  const ddDeals = useMemo(() => {
+    const filtered = deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived);
+    seedInitialState(filtered);
+    return filtered;
+  }, [deals]);
 
   const sortedDeals = [...ddDeals].sort((a, b) => {
     if (sortBy === 'closing') {
