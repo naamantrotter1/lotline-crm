@@ -1196,7 +1196,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
               <p className="text-sm font-semibold text-white flex items-center gap-2">
                 <Layers size={14} className="text-orange-400" />
-                Map Filters &amp; Basemaps
+                Data Layers &amp; View
               </p>
               <button onClick={() => setShowFiltersPanel(false)} className="text-gray-400 hover:text-white transition-colors">
                 <X size={16} />
@@ -1355,7 +1355,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           }`}
         >
           <SlidersHorizontal size={15} />
-          Map Filters &amp; View
+          Data Layers &amp; View
         </button>
 
         {/* Parcel info panel */}
