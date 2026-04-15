@@ -1258,16 +1258,16 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
         {/* ── Filter & Export Parcels panel ── */}
         {showParcelFilterPanel && (
           <div
-            className="absolute left-0 z-[1100] bg-gray-900 border-r border-gray-700 shadow-2xl flex flex-col"
+            className="absolute left-0 z-[1100] bg-white border-r border-gray-200 shadow-2xl flex flex-col"
             style={{ top: '56px', bottom: 0, width: '300px' }}
           >
             {/* Header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <p className="text-sm font-semibold text-white flex items-center gap-2">
-                <Filter size={14} className="text-orange-400" />
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Filter size={14} className="text-orange-500" />
                 Filter Parcels
               </p>
-              <button onClick={() => setShowParcelFilterPanel(false)} className="text-gray-400 hover:text-white transition-colors">
+              <button onClick={() => setShowParcelFilterPanel(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <X size={16} />
               </button>
             </div>
@@ -1277,66 +1277,66 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
               {/* ── Parcel section ── */}
               <button onClick={() => setPfSec(p => ({ ...p, parcel: !p.parcel }))}
-                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50">
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest border-b border-gray-200">
                 Parcel <ChevronDown size={11} className={pfSec.parcel ? 'rotate-180' : ''} />
               </button>
               {pfSec.parcel && (
                 <div className="space-y-3 pt-2 pb-1">
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Counties</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Counties</label>
                     <input value={pf.county} onChange={e => setPf(p => ({ ...p, county: e.target.value }))}
                       placeholder="Enter county name..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Subdivision</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Subdivision</label>
                     <input value={pf.subdivision} onChange={e => setPf(p => ({ ...p, subdivision: e.target.value }))}
                       placeholder="Enter subdivision name..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Include ZIPs</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Include ZIPs</label>
                     <input value={pf.zips} onChange={e => setPf(p => ({ ...p, zips: e.target.value }))}
                       placeholder="Search ZIP..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Acres Range</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Acres Range</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.acresMin} onChange={e => setPf(p => ({ ...p, acresMin: e.target.value }))}
                         placeholder="From"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.acresMax} onChange={e => setPf(p => ({ ...p, acresMax: e.target.value }))}
                         placeholder="To"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Max Improvement %</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Max Improvement %</label>
                     <input type="number" value={pf.maxImprovPct} onChange={e => setPf(p => ({ ...p, maxImprovPct: e.target.value }))}
                       placeholder="%"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">City Limits</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">City Limits</label>
                     <select value={pf.cityLimits} onChange={e => setPf(p => ({ ...p, cityLimits: e.target.value }))}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500/70">
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-orange-400">
                       <option value="">Include Everything</option>
                       <option value="inside">Inside City Limits</option>
                       <option value="outside">Outside City Limits</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Zoning Type</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Zoning Type</label>
                     <input value={pf.zoningType} onChange={e => setPf(p => ({ ...p, zoningType: e.target.value }))}
                       placeholder="Enter zoning type..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Land Use</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Land Use</label>
                     <input value={pf.landUse} onChange={e => setPf(p => ({ ...p, landUse: e.target.value }))}
                       placeholder="Enter land use code..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                 </div>
               )}
@@ -1357,33 +1357,33 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                   ].map(({ key, label, desc }) => (
                     <div key={key}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-200">{label}</span>
+                        <span className="text-xs text-gray-700">{label}</span>
                         <Toggle active={pf[key]} onChange={() => setPf(p => ({ ...p, [key]: !p[key] }))} />
                       </div>
                       <p className="text-[10px] text-gray-500 mt-0.5">{desc}</p>
                     </div>
                   ))}
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Max Wetland Coverage (%)</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Max Wetland Coverage (%)</label>
                     <input type="number" value={pf.maxWetland} onChange={e => setPf(p => ({ ...p, maxWetland: e.target.value }))}
                       placeholder="%"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Max Flood Coverage (%)</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Max Flood Coverage (%)</label>
                     <input type="number" value={pf.maxFlood} onChange={e => setPf(p => ({ ...p, maxFlood: e.target.value }))}
                       placeholder="%"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Road Frontage (Feet)</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Road Frontage (Feet)</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.roadFrontageMin} onChange={e => setPf(p => ({ ...p, roadFrontageMin: e.target.value }))}
                         placeholder="Min Feet"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.roadFrontageMax} onChange={e => setPf(p => ({ ...p, roadFrontageMax: e.target.value }))}
                         placeholder="Max Feet"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                 </div>
@@ -1406,32 +1406,32 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                     { key: 'taxDelinquent',   label: 'Owner Is Tax Delinquent' },
                   ].map(({ key, label }) => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="text-xs text-gray-200">{label}</span>
+                      <span className="text-xs text-gray-700">{label}</span>
                       <Toggle active={pf[key]} onChange={() => setPf(p => ({ ...p, [key]: !p[key] }))} />
                     </div>
                   ))}
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Ownership Length (Months)</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Ownership Length (Months)</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.ownershipMin} onChange={e => setPf(p => ({ ...p, ownershipMin: e.target.value }))}
                         placeholder="Min"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.ownershipMax} onChange={e => setPf(p => ({ ...p, ownershipMax: e.target.value }))}
                         placeholder="Max"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Only Include Keywords</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Only Include Keywords</label>
                     <input value={pf.includeKeywords} onChange={e => setPf(p => ({ ...p, includeKeywords: e.target.value }))}
                       placeholder="Include keywords..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Exclude Keywords</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Exclude Keywords</label>
                     <input value={pf.excludeKeywords} onChange={e => setPf(p => ({ ...p, excludeKeywords: e.target.value }))}
                       placeholder="Exclude keywords..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                 </div>
               )}
@@ -1452,22 +1452,22 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                     { label: 'Market Improvement Value', kMin: 'marketImproveMin', kMax: 'marketImproveMax' },
                   ].map(({ label, kMin, kMax }) => (
                     <div key={kMin}>
-                      <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+                      <label className="text-[10px] text-gray-500 block mb-1">{label}</label>
                       <div className="flex gap-2">
                         <input type="number" value={pf[kMin]} onChange={e => setPf(p => ({ ...p, [kMin]: e.target.value }))}
                           placeholder="From"
-                          className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                          className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                         <input type="number" value={pf[kMax]} onChange={e => setPf(p => ({ ...p, [kMax]: e.target.value }))}
                           placeholder="To"
-                          className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                          className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       </div>
                     </div>
                   ))}
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Owner Hasn't Paid Taxes For At Least X Years</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Owner Hasn't Paid Taxes For At Least X Years</label>
                     <input type="number" value={pf.taxDelinquentYears} onChange={e => setPf(p => ({ ...p, taxDelinquentYears: e.target.value }))}
                       placeholder="5 years"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                 </div>
               )}
@@ -1480,44 +1480,44 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               {pfSec.sale && (
                 <div className="space-y-3 pt-2 pb-1">
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Sale Price</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Sale Price</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.salePriceMin} onChange={e => setPf(p => ({ ...p, salePriceMin: e.target.value }))}
                         placeholder="From"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.salePriceMax} onChange={e => setPf(p => ({ ...p, salePriceMax: e.target.value }))}
                         placeholder="To"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Sale Price Type</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Sale Price Type</label>
                     <input value={pf.salePriceType} onChange={e => setPf(p => ({ ...p, salePriceType: e.target.value }))}
                       placeholder="Enter sale price type..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Last Sale Date</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Last Sale Date</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.lastSaleFrom} onChange={e => setPf(p => ({ ...p, lastSaleFrom: e.target.value }))}
                         placeholder="From Year"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.lastSaleTo} onChange={e => setPf(p => ({ ...p, lastSaleTo: e.target.value }))}
                         placeholder="To Year"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Seller Name</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Seller Name</label>
                     <input value={pf.sellerName} onChange={e => setPf(p => ({ ...p, sellerName: e.target.value }))}
                       placeholder="Enter name..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Transaction Deed Type</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Transaction Deed Type</label>
                     <input value={pf.deedType} onChange={e => setPf(p => ({ ...p, deedType: e.target.value }))}
                       placeholder="Enter document type..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                 </div>
               )}
@@ -1530,48 +1530,48 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               {pfSec.lien && (
                 <div className="space-y-3 pt-2 pb-1">
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Amount</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Mortgage Amount</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.mortgageMin} onChange={e => setPf(p => ({ ...p, mortgageMin: e.target.value }))}
                         placeholder="From"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.mortgageMax} onChange={e => setPf(p => ({ ...p, mortgageMax: e.target.value }))}
                         placeholder="To"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Recording Date</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Mortgage Recording Date</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.mortgageFromYear} onChange={e => setPf(p => ({ ...p, mortgageFromYear: e.target.value }))}
                         placeholder="From Year"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.mortgageToYear} onChange={e => setPf(p => ({ ...p, mortgageToYear: e.target.value }))}
                         placeholder="To Year"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Financing Type</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Financing Type</label>
                     <input value={pf.financingType} onChange={e => setPf(p => ({ ...p, financingType: e.target.value }))}
                       placeholder="Enter financing type..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Type</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Mortgage Type</label>
                     <input value={pf.mortgageType} onChange={e => setPf(p => ({ ...p, mortgageType: e.target.value }))}
                       placeholder="Enter loan type..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Interest Rate</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Interest Rate</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.interestMin} onChange={e => setPf(p => ({ ...p, interestMin: e.target.value }))}
                         placeholder="From"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.interestMax} onChange={e => setPf(p => ({ ...p, interestMax: e.target.value }))}
                         placeholder="To"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                 </div>
@@ -1585,25 +1585,25 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               {pfSec.structure && (
                 <div className="space-y-3 pt-2 pb-3">
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Total Structure Square Feet</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Total Structure Square Feet</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.structureSqftMin} onChange={e => setPf(p => ({ ...p, structureSqftMin: e.target.value }))}
                         placeholder="Min"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.structureSqftMax} onChange={e => setPf(p => ({ ...p, structureSqftMax: e.target.value }))}
                         placeholder="Max"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 block mb-1">Total Structure Count</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">Total Structure Count</label>
                     <div className="flex gap-2">
                       <input type="number" value={pf.structureCountMin} onChange={e => setPf(p => ({ ...p, structureCountMin: e.target.value }))}
                         placeholder="Min"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                       <input type="number" value={pf.structureCountMax} onChange={e => setPf(p => ({ ...p, structureCountMax: e.target.value }))}
                         placeholder="Max"
-                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        className="w-1/2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400" />
                     </div>
                   </div>
                 </div>
@@ -1612,16 +1612,16 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 border-t border-gray-700 p-3 flex gap-2">
+            <div className="flex-shrink-0 border-t border-gray-200 p-3 flex gap-2">
               <button
                 onClick={() => { setPf(DEFAULT_PF); parcelFilterRef.current = {}; }}
-                className="px-3 py-2 text-xs text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+                className="px-3 py-2 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
                 Clear
               </button>
               <button
                 onClick={exportParcelsCsv}
-                className="px-3 py-2 text-xs text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+                className="px-3 py-2 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
                 Export CSV
               </button>
@@ -1637,14 +1637,14 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
         {/* ── Map Filters panel ── */}
         {showFiltersPanel && (
-          <div className="absolute bottom-16 right-3 z-[1100] bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-72 overflow-hidden">
+          <div className="absolute bottom-16 right-3 z-[1100] bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <p className="text-sm font-semibold text-white flex items-center gap-2">
-                <Layers size={14} className="text-orange-400" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Layers size={14} className="text-orange-500" />
                 Data Layers &amp; View
               </p>
-              <button onClick={() => setShowFiltersPanel(false)} className="text-gray-400 hover:text-white transition-colors">
+              <button onClick={() => setShowFiltersPanel(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <X size={16} />
               </button>
             </div>
@@ -1652,7 +1652,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
             <div className="px-4 py-3 space-y-5 max-h-[70vh] overflow-y-auto">
               {/* Basemaps */}
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Basemaps</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Basemaps</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'light', label: 'Map' },
@@ -1664,7 +1664,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                       className={`py-2 rounded-xl text-sm font-medium transition-colors border ${
                         mapStyle === id
                           ? 'bg-orange-500 border-orange-500 text-white'
-                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+                          : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900'
                       }`}
                     >
                       {label}
@@ -1675,48 +1675,48 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
               {/* Layers */}
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Layers</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Layers</p>
                 <div className="space-y-3">
                   {/* Parcel Boundaries */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">Parcel Boundaries</span>
+                    <span className="text-sm text-gray-700">Parcel Boundaries</span>
                     <Toggle active={parcelBoundaries} onChange={() => { setParcelBoundaries(p => !p); setParcelMode(p => !p); }} />
                   </div>
                   {/* County Boundaries */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">County Boundaries</span>
+                    <span className="text-sm text-gray-700">County Boundaries</span>
                     <Toggle active={counties} onChange={() => setCounties(p => !p)} />
                   </div>
                   {/* Contour Lines */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">Contour Lines</span>
+                    <span className="text-sm text-gray-700">Contour Lines</span>
                     <Toggle active={contours} onChange={() => setContours(p => !p)} />
                   </div>
                   {/* FEMA Floodplain */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">FEMA Floodplain</span>
+                    <span className="text-sm text-gray-700">FEMA Floodplain</span>
                     <Toggle active={layers.floodplain} onChange={() => toggleLayer('floodplain')} />
                   </div>
                   {/* Wetlands */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">Wetlands</span>
+                    <span className="text-sm text-gray-700">Wetlands</span>
                     <Toggle active={layers.wetlands} onChange={() => toggleLayer('wetlands')} />
                   </div>
                   {/* Water Features */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">Water Features</span>
+                    <span className="text-sm text-gray-700">Water Features</span>
                     <Toggle active={layers.water} onChange={() => toggleLayer('water')} />
                   </div>
                   {/* Soil Report */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-200">Soil Report</span>
+                    <span className="text-sm text-gray-700">Soil Report</span>
                     <Toggle active={soil} onChange={() => setSoil(p => !p)} />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-4 py-2 border-t border-gray-700 text-[10px] text-gray-600">
+            <div className="px-4 py-2 border-t border-gray-200 text-[10px] text-gray-400">
               FEMA NFHL • USFWS NWI • USGS NHD • USGS 3DEP • USDA NRCS SSURGO
             </div>
           </div>
@@ -1724,13 +1724,13 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
         {/* ── MH Comps panel ── */}
         {showCompsPanel && (
-          <div className="absolute z-[1100] bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-64 overflow-hidden" style={{ bottom: '56px', right: '200px' }}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <p className="text-sm font-semibold text-white flex items-center gap-2">
-                <Home size={13} className="text-green-400" />
+          <div className="absolute z-[1100] bg-white rounded-2xl shadow-2xl border border-gray-200 w-64 overflow-hidden" style={{ bottom: '56px', right: '308px' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Home size={13} className="text-green-500" />
                 MH Comps
               </p>
-              <button onClick={() => setShowCompsPanel(false)} className="text-gray-400 hover:text-white transition-colors">
+              <button onClick={() => setShowCompsPanel(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <X size={15} />
               </button>
             </div>
@@ -1741,7 +1741,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-200">For Sale</span>
+                  <span className="text-sm text-gray-700">For Sale</span>
                   {mhForSale && compsCount.forSale > 0 && (
                     <span className="text-[10px] text-gray-400">({compsCount.forSale})</span>
                   )}
@@ -1753,7 +1753,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-200">Sold</span>
+                  <span className="text-sm text-gray-700">Sold</span>
                   {mhSold && compsCount.sold > 0 && (
                     <span className="text-[10px] text-gray-400">({compsCount.sold})</span>
                   )}
