@@ -47,24 +47,38 @@ const BASE_NAV_SECTIONS = [
 
 const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer' };
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
   const { profile, signOut } = useAuth();
   const { canAdmin } = usePermissions();
 
-  // Derive initials from name
   const initials = profile?.name
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
   const navSections = BASE_NAV_SECTIONS;
 
+  const handleNavClick = () => {
+    if (isMobile) onMobileClose?.();
+  };
+
   return (
     <aside
       className="flex-shrink-0 h-screen overflow-y-auto flex flex-col transition-all duration-300"
       style={{
-        width: collapsed ? '64px' : '250px',
+        width: isMobile ? '250px' : (collapsed ? '64px' : '250px'),
         backgroundColor: '#1a2332',
         color: 'white',
+        // Mobile: fixed overlay drawer; Desktop: inline in flex row
+        ...(isMobile ? {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: 50,
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease',
+        } : {
+          transition: 'width 0.3s ease',
+        }),
       }}
     >
       {/* Logo */}
@@ -94,6 +108,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
+                onClick={handleNavClick}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors relative group ${
                     isActive
@@ -138,7 +153,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       )}
 
       {/* Collapsed sign-out */}
-      {collapsed && (
+      {collapsed && !isMobile && (
         <div className="border-t border-white/10 p-3 flex justify-center">
           <button
             onClick={signOut}

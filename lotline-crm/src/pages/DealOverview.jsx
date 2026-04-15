@@ -190,7 +190,7 @@ export default function DealOverview() {
               return new Date(a.closeDate) - new Date(b.closeDate);
             });
           return (
-            <div key={stage} className="flex-shrink-0 w-80">
+            <div key={stage} className="flex-shrink-0 w-[82vw] sm:w-80">
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">

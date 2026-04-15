@@ -86,9 +86,9 @@ function DealAnalyzer() {
   ];
 
   return (
-    <div className="flex gap-5 h-full">
+    <div className="flex flex-col lg:flex-row gap-5 h-full">
       {/* Left — inputs */}
-      <div className="w-72 flex-shrink-0 space-y-4">
+      <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
         <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
           <p className="text-xs font-bold text-accent uppercase tracking-widest">Target County</p>
           <div>
@@ -1448,7 +1448,7 @@ function HeatMap() {
         </div>
 
         {/* Right panel — county detail (appears on click) */}
-        <div className={`flex-shrink-0 border-l border-gray-200 overflow-y-auto transition-all duration-300 bg-white ${selected ? 'w-72' : 'w-0'}`}>
+        <div className={`flex-shrink-0 border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto transition-all duration-300 bg-white ${selected ? 'w-full lg:w-72' : 'w-0 overflow-hidden'}`}>
           {selected && (
             <div className="p-5 space-y-4 min-w-[288px]">
               {/* Header */}

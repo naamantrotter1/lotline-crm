@@ -1116,7 +1116,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
         )}
 
         {/* ── Parcel Search Bar ── */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-0 shadow-2xl rounded-xl overflow-visible" style={{ minWidth: 420 }}>
+        <div className="absolute top-3 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1100] flex items-center gap-0 shadow-2xl rounded-xl overflow-visible" style={{ minWidth: 'min(420px, 100%)' }}>
           {/* Type selector */}
           <div className="relative flex-shrink-0">
             <button
@@ -1819,7 +1819,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
         {/* Parcel info panel */}
         {parcelData && (
-          <div className="absolute left-3 z-[1000] rounded-xl shadow-2xl border border-gray-600 w-[420px] flex flex-col" style={{ bottom: '80px', top: '80px', backgroundColor: 'rgb(26, 35, 50)' }}>
+          <div className="absolute left-3 right-3 sm:right-auto sm:w-[420px] z-[1000] rounded-xl shadow-2xl border border-gray-600 flex flex-col" style={{ bottom: '80px', top: '80px', backgroundColor: 'rgb(26, 35, 50)' }}>
             {/* Header */}
             <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-700/60">
               <div className="flex items-start justify-between gap-2">

@@ -845,7 +845,7 @@ export default function LandAcquisition() {
           const Icon  = meta.icon;
           const deals = allDeals.filter(d => d.stage === stage);
           return (
-            <div key={stage} className="flex-shrink-0 w-80">
+            <div key={stage} className="flex-shrink-0 w-[82vw] sm:w-80">
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">

@@ -774,7 +774,7 @@ function OverviewTab({
       </div>
 
       {/* Right sidebar — documents */}
-      <div className="w-64 flex-shrink-0 space-y-4">
+      <div className="hidden lg:block w-64 flex-shrink-0 space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="text-sm font-semibold text-[#1a2332] mb-3">Project Files</h3>
           <button className="w-full flex items-center justify-center gap-2 bg-accent text-white text-xs font-medium py-2 px-3 rounded-lg hover:bg-accent/90 transition-colors mb-3">
@@ -1143,22 +1143,22 @@ function DealDetailContent({ deal }) {
     <>
     <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-4">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+        <div className="flex items-center gap-2 md:gap-4 overflow-x-auto">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors flex-shrink-0"
           >
-            <ArrowLeft size={16} /> {fromInvestorPortal ? 'Back to Investor Portal' : 'Back to Pipeline'}
+            <ArrowLeft size={16} /> <span className="hidden sm:inline">{fromInvestorPortal ? 'Back to Investor Portal' : 'Back to Pipeline'}</span>
           </button>
-          <ChevronRight size={14} className="text-gray-300" />
-          <span className="text-sm text-gray-400">{fromInvestorPortal ? 'Investor Portal' : deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
-          <ChevronRight size={14} className="text-gray-300" />
-          <span className="text-sm text-gray-600 font-medium truncate max-w-xs">{deal.address}</span>
+          <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
+          <span className="text-sm text-gray-400 hidden sm:block">{fromInvestorPortal ? 'Investor Portal' : deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
+          <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
+          <span className="text-sm text-gray-600 font-medium truncate max-w-[200px] md:max-w-xs">{deal.address}</span>
         </div>
 
         <div className="flex items-start justify-between mt-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
             {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
@@ -1235,29 +1235,29 @@ function DealDetailContent({ deal }) {
         </div>
 
         {/* Summary bar */}
-        <div className="flex items-center gap-6 mt-3 pt-3 border-t border-gray-100">
+        <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-100">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">ARV</p>
             <p className="text-sm font-bold text-[#1a2332]">${(deal.arv || 0).toLocaleString()}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Net Profit</p>
             <p className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               ${Math.round(netProfit).toLocaleString()}
             </p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Financing</p>
             <p className="text-sm font-bold text-[#1a2332]">{deal.financing}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Investor</p>
             <p className="text-sm font-bold text-[#1a2332]">{deal.investor || 'TBD'}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
             {(fromInvestorPortal || !canEdit)
@@ -1285,8 +1285,8 @@ function DealDetailContent({ deal }) {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-0">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-6 overflow-x-auto">
+        <div className="flex gap-0 min-w-max">
           {TABS.map(tab => (
             <button
               key={tab.key}
@@ -1304,7 +1304,7 @@ function DealDetailContent({ deal }) {
       </div>
 
       {/* Tab content */}
-      <div className={`p-6 ${fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}`}>
+      <div className={`p-4 md:p-6 ${fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}`}>
         {activeTab === 'overview' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
