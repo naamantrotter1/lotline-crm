@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal } from 'lucide-react';
+import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 
@@ -692,8 +692,9 @@ function DealModal({ deal, onClose }) {
 }
 
 // ── Deal Card ─────────────────────────────────────────────────────────────────
-function LandCard({ deal, onClick }) {
+function LandCard({ deal, onClick, onDelete }) {
   const [starred, setStarred] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const netProfit    = calcNetProfit(deal);
   const subdivide    = isSubdividable(deal);
   const landClearing = isLandClearing(deal);
@@ -703,7 +704,7 @@ function LandCard({ deal, onClick }) {
       onClick={onClick}
       className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 cursor-pointer hover:shadow-md transition-all group"
     >
-      {/* Drag handle + address + star + grade */}
+      {/* Drag handle + address + star + grade + delete */}
       <div className="flex items-start gap-2 mb-2">
         <div className="flex flex-col gap-0.5 mt-1 opacity-30 group-hover:opacity-60 transition-opacity flex-shrink-0">
           {[0,1,2].map(r => (
@@ -726,6 +727,30 @@ function LandCard({ deal, onClick }) {
               deal.grade === 'B' ? 'bg-blue-100 text-blue-700' :
               'bg-gray-100 text-gray-600'
             }`}>{deal.grade}</span>
+          )}
+          {!confirmDelete ? (
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmDelete(true); }}
+              className="text-gray-300 hover:text-red-400 transition-colors"
+              title="Delete deal"
+            >
+              <Trash2 size={13} />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setConfirmDelete(false); }}
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -807,6 +832,12 @@ export default function LandAcquisition() {
     .filter(d => d.pipeline === 'land-acquisition')
     .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }));
 
+  const handleDelete = (id) => {
+    const updated = customDeals.filter(d => d.id !== id);
+    localStorage.setItem(LS_KEY, JSON.stringify(updated));
+    setCustomDeals(updated);
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -837,7 +868,7 @@ export default function LandAcquisition() {
               {/* Cards */}
               <div>
                 {deals.map(deal => (
-                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`)} />
+                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`)} onDelete={handleDelete} />
                 ))}
                 {deals.length === 0 && (
                   <div className="rounded-2xl p-6 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
