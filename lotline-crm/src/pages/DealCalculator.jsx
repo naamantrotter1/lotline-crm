@@ -307,30 +307,20 @@ export default function DealCalculator() {
           <div className="bg-card rounded-xl shadow-sm p-4">
             <h3 className="font-semibold text-sidebar mb-3">Cost Inputs</h3>
             <div className="space-y-2">
-              {costFields.map((f) => {
-                const isLand = f.key === 'land';
-                const inputColor = isLand
-                  ? landOverMax
-                    ? 'border-red-400 bg-red-50 text-red-700 focus:ring-red-400/30'
-                    : landUnderMax
-                    ? 'border-green-400 bg-green-50 text-green-700 focus:ring-green-400/30'
-                    : 'border-gray-200'
-                  : 'border-gray-200';
-                return (
-                  <div key={f.key} className="flex items-center justify-between gap-3">
-                    <label className={`text-sm flex-1 ${isLand && landOverMax ? 'text-red-600 font-medium' : isLand && landUnderMax ? 'text-green-600 font-medium' : 'text-gray-600'}`}>{f.label}</label>
-                    <div className="relative w-32">
-                      <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-sm ${isLand && landOverMax ? 'text-red-400' : isLand && landUnderMax ? 'text-green-400' : 'text-gray-400'}`}>$</span>
-                      <input
-                        type="number"
-                        value={vals[f.key]}
-                        onChange={(e) => set(f.key, e.target.value)}
-                        className={`w-full pl-5 pr-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 text-right ${inputColor}`}
-                      />
-                    </div>
+              {costFields.map((f) => (
+                <div key={f.key} className="flex items-center justify-between gap-3">
+                  <label className="text-sm text-gray-600 flex-1">{f.label}</label>
+                  <div className="relative w-32">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                    <input
+                      type="number"
+                      value={vals[f.key]}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      className="w-full pl-5 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
+                    />
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -372,7 +362,7 @@ export default function DealCalculator() {
                 { label: 'Selling Costs', value: fmt(sellingCosts) },
                 { label: 'Holding Costs', value: fmt(holdingCosts) },
                 { label: 'Total All-In Cost', value: fmt(totalAllIn), highlight: true },
-                { label: 'Max Offer for Land', value: fmt(maxOffer), highlight: true, accent: true },
+                { label: 'Max Offer for Land', value: fmt(maxOffer), highlight: true, maxOffer: true },
                 { label: 'Projected Profit', value: fmt(projectedProfit), profit: true },
                 { label: 'Projected ROI', value: `${projectedROI}%`, profit: true },
               ].map((item) => (
@@ -381,7 +371,11 @@ export default function DealCalculator() {
                   className={`flex justify-between items-center ${item.highlight ? 'pt-2 border-t border-white/20 font-semibold' : ''}`}
                 >
                   <span className="text-white/70 text-sm">{item.label}</span>
-                  <span className={`text-base font-bold ${item.profit ? 'text-green-400' : item.accent ? 'text-accent' : 'text-white'}`}>
+                  <span className={`text-base font-bold ${
+                    item.profit ? 'text-green-400' :
+                    item.maxOffer ? (landOverMax ? 'text-red-400' : landUnderMax ? 'text-green-400' : 'text-accent') :
+                    'text-white'
+                  }`}>
                     {item.value}
                   </span>
                 </div>
