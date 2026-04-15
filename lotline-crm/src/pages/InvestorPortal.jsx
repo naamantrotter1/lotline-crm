@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { useDeals } from '../lib/DealsContext';
 
@@ -165,11 +166,161 @@ function InvestorCard({ investor, onDealClick }) {
   );
 }
 
+// ── Assign Funder Modal ───────────────────────────────────────────────────────
+function AssignFunderModal({ deal, investors, onAssign, onClose }) {
+  const [mode, setMode] = useState('existing');
+  const [selected, setSelected] = useState('');
+  const [terms, setTerms] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newTerms, setNewTerms] = useState('');
+
+  const existingInv = investors.find(i => i.name === selected);
+
+  const handleSubmit = () => {
+    if (mode === 'existing' && selected) {
+      onAssign({ funderName: selected, terms: terms || existingInv?.standardTerms || '' });
+    } else if (mode === 'new' && newName.trim()) {
+      onAssign({ funderName: newName.trim(), terms: newTerms, isNew: true, newInvestor: { name: newName.trim(), standardTerms: newTerms } });
+    }
+  };
+
+  const canSubmit = mode === 'existing' ? !!selected : !!newName.trim();
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+          <div>
+            <p className="text-xs text-gray-400 mb-0.5">Assign Funder</p>
+            <p className="text-sm font-semibold text-gray-800 leading-snug">{deal.address}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Capital needed: <span className="font-semibold text-gray-700">${deal.totalCapital.toLocaleString()}</span></p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="px-5 pt-4 flex gap-2">
+          {['existing', 'new'].map(m => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                mode === m ? 'bg-accent text-white border-accent' : 'text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {m === 'existing' ? 'Existing Investor' : 'Add New Investor'}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          {mode === 'existing' ? (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Select Investor</label>
+                <select
+                  value={selected}
+                  onChange={e => { setSelected(e.target.value); setTerms(''); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="">— Choose investor —</option>
+                  {investors.map(inv => (
+                    <option key={inv.name} value={inv.name}>{inv.name}</option>
+                  ))}
+                </select>
+              </div>
+              {existingInv?.standardTerms && (
+                <p className="text-xs text-gray-400">Standard terms: <span className="font-medium text-gray-600">{existingInv.standardTerms}</span></p>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Terms <span className="text-gray-400 font-normal">(override, optional)</span></label>
+                <input
+                  type="text"
+                  value={terms}
+                  onChange={e => setTerms(e.target.value)}
+                  placeholder={existingInv?.standardTerms || 'e.g. 3 and 13, 10% interest'}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Investor Name</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. John Smith Capital"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Terms</label>
+                <input
+                  type="text"
+                  value={newTerms}
+                  onChange={e => setNewTerms(e.target.value)}
+                  placeholder="e.g. 3 and 13, 10% interest, 12 months"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+          <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <UserPlus size={12} /> Assign Funder
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick }) {
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
-  const deals = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
+  const allUnfunded = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
+
+  // Persist assignments & new investors across sessions
+  const [assignments, setAssignments] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nf_assignments') || '{}'); } catch { return {}; }
+  });
+  const [extraInvestors, setExtraInvestors] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nf_extra_investors') || '[]'); } catch { return []; }
+  });
+  const [modalDeal, setModalDeal] = useState(null);
+
+  // Once assigned, deal leaves the list
+  const deals = allUnfunded.filter(d => !assignments[d.address]);
   const totalNeeded = deals.reduce((s, d) => s + d.totalCapital, 0);
+
+  const allInvestors = [
+    ...INVESTORS.filter(i => i.name !== 'Cash' && i.name !== 'None'),
+    ...extraInvestors,
+  ];
+
+  const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
+    if (isNew && newInvestor) {
+      const updated = [...extraInvestors, newInvestor];
+      setExtraInvestors(updated);
+      localStorage.setItem('nf_extra_investors', JSON.stringify(updated));
+    }
+    const updated = { ...assignments, [modalDeal.address]: { funder: funderName, terms } };
+    setAssignments(updated);
+    localStorage.setItem('nf_assignments', JSON.stringify(updated));
+    setModalDeal(null);
+  };
 
   return (
     <div>
@@ -192,42 +343,53 @@ function NeedsFundingTab({ onDealClick }) {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Address</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Pipeline</th>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Stage</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Funding Type</th>
-                <th className="text-right px-4 py-3 text-gray-500 font-medium">Land Cost</th>
-                <th className="text-right px-4 py-3 text-gray-500 font-medium">Construction</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
                 <th className="text-right px-4 py-3 text-gray-500 font-medium">Total Capital</th>
                 <th className="text-right px-4 py-3 text-gray-500 font-medium">ARV</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {deals.map((deal, i) => {
-                const isCash = deal.lender === 'Cash';
-                return (
-                  <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => onDealClick(deal)}>
-                    <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px]">{deal.address}</td>
-                    <td className="px-4 py-2.5 text-gray-600">{deal.pipeline}</td>
-                    <td className="px-4 py-2.5">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {isCash ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Cash</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">No Funder</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.landCost.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.construction.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-gray-800">${deal.totalCapital.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.arv.toLocaleString()}</td>
-                  </tr>
-                );
-              })}
+              {deals.map((deal, i) => (
+                <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => onDealClick(deal)}>
+                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[200px]">
+                    <div>{deal.address}</div>
+                    <div className="text-gray-400 font-normal mt-0.5">{deal.pipeline}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {deal.lender === 'Cash'
+                      ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Cash</span>
+                      : <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">No Funder</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-800">${deal.totalCapital.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">${deal.arv.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={e => { e.stopPropagation(); setModalDeal(deal); }}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors whitespace-nowrap"
+                    >
+                      <UserPlus size={11} /> Assign Funder
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {modalDeal && (
+        <AssignFunderModal
+          deal={modalDeal}
+          investors={allInvestors}
+          onAssign={handleAssign}
+          onClose={() => setModalDeal(null)}
+        />
       )}
     </div>
   );
