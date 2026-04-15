@@ -213,7 +213,7 @@ const ARV_DATA = [
   { county: 'Mobile', state: 'AL', minArv: 139000, maxArv: 184900, avgArv: 164180, comps: 5, lastUpdated: 'Apr 2026' },
   { county: 'Morgan', state: 'AL', minArv: 225000, maxArv: 255000, avgArv: 236667, comps: 3, lastUpdated: 'Apr 2026' },
   { county: 'Shelby', state: 'AL', minArv: 153000, maxArv: 220000, avgArv: 184192, comps: 12, lastUpdated: 'Apr 2026' },
-  { county: 'St Clair', state: 'AL', minArv: 199000, maxArv: 245000, avgArv: 219878, comps: 9, lastUpdated: 'Apr 2026' },
+  { county: 'St. Clair', state: 'AL', minArv: 199000, maxArv: 245000, avgArv: 219878, comps: 9, lastUpdated: 'Apr 2026' },
   { county: 'Talladega', state: 'AL', minArv: 181000, maxArv: 200000, avgArv: 192333, comps: 3, lastUpdated: 'Apr 2026' },
   { county: 'Tallapoosa', state: 'AL', minArv: 80000, maxArv: 375000, avgArv: 195829, comps: 7, lastUpdated: 'Apr 2026' },
   { county: 'Tuscaloosa', state: 'AL', minArv: 127500, maxArv: 232500, avgArv: 158154, comps: 4, lastUpdated: 'Apr 2026' },
