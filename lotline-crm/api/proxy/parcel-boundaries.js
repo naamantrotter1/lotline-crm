@@ -31,7 +31,7 @@ function fetchNCTile(tileBbox, filters = {}) {
   const where = buildNCWhere(filters);
   const params = new URLSearchParams({
     geometry: tileBbox, geometryType: 'esriGeometryEnvelope', inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,gis_acres,owner,situsadd,city,zipcode,landval,improvval,totalval,landuse',
+    spatialRel: 'esriSpatialRelIntersects', outFields: 'parno',
     where, returnGeometry: 'true', outSR: '4326', resultRecordCount: '1000', f: 'geojson',
   });
   return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${params}`)
@@ -39,10 +39,7 @@ function fetchNCTile(tileBbox, filters = {}) {
       if (data.error) { console.error('[NC parcels] API error:', data.error); return []; }
       if (!data.features) { console.warn('[NC parcels] No features in response'); return []; }
       data.features.forEach(f => {
-        if (f.properties) {
-          f.properties.state = 'NC';
-          f.properties.acres = f.properties.gis_acres;
-        }
+        if (f.properties) f.properties.state = 'NC';
       });
       return data.features;
     })
@@ -54,7 +51,7 @@ function fetchSCTile(tileBbox, filters = {}) {
   const where = buildSCWhere(filters);
   const params = new URLSearchParams({
     geometry: tileBbox, geometryType: 'esriGeometryEnvelope', inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects', outFields: 'T_Map_Number,County,Acres,Owner_Name,Situs_Address,Zip_Code,Land_Value,Total_Value',
+    spatialRel: 'esriSpatialRelIntersects', outFields: 'T_Map_Number,County',
     where, returnGeometry: 'true', outSR: '4326', resultRecordCount: '1000', f: 'geojson',
   });
   return fetchJson(`https://smpesri.scdot.org/arcgis/rest/services/GISMapping/SC_Parcels/MapServer/0/query?${params}`)
@@ -65,12 +62,6 @@ function fetchSCTile(tileBbox, filters = {}) {
         if (f.properties) {
           f.properties.parno = f.properties.T_Map_Number || '';
           f.properties.state = 'SC';
-          f.properties.county = f.properties.County || '';
-          f.properties.acres = f.properties.Acres || '';
-          f.properties.owner = f.properties.Owner_Name || '';
-          f.properties.situsadd = f.properties.Situs_Address || '';
-          f.properties.landval = f.properties.Land_Value || '';
-          f.properties.totalval = f.properties.Total_Value || '';
         }
       });
       return data.features;

@@ -231,12 +231,15 @@ export default async function handler(req, res) {
     const a = best.attributes;
 
     let geometry = null;
+    let shapeAreaAcres = null;
     const lookupParno = qParno || a.parno;
     if (lookupParno) {
       try {
-        const gp = new URLSearchParams({ where: `parno='${lookupParno.replace(/'/g,"''")}'`, outFields: 'parno', returnGeometry: 'true', f: 'geojson' });
+        const gp = new URLSearchParams({ where: `parno='${lookupParno.replace(/'/g,"''")}'`, outFields: 'parno,Shape__Area', returnGeometry: 'true', f: 'geojson' });
         const polyData = await fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${gp}`);
         geometry = polyData.features?.[0]?.geometry || null;
+        const sa = polyData.features?.[0]?.properties?.Shape__Area;
+        if (sa > 0) shapeAreaAcres = sa / 43560; // NC State Plane sq ft → acres
       } catch(e) {}
     }
 
@@ -273,7 +276,7 @@ export default async function handler(req, res) {
       owner: a.ownname?.trim()||null,
       mailAddr: [a.mailadd, a.mcity, a.mstate, a.mzip].filter(Boolean).join(', ')||null,
       siteAddr,
-      acres: a.gisacres??null,
+      acres: (a.gisacres > 0 ? a.gisacres : null) ?? shapeAreaAcres,
       landVal: a.landval??null,
       bldgVal: a.improvval??null,
       totVal: a.parval??null,
