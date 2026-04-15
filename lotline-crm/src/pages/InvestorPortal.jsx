@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, MapPin, Calendar, Building2, Landmark } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 
 const INVESTOR_COLORS = {
@@ -20,10 +20,91 @@ function LenderBadge({ name }) {
   );
 }
 
+// ── Deal Info Modal ──────────────────────────────────────────────────────────
+function DealModal({ deal, onClose }) {
+  if (!deal) return null;
+  const profit = deal.arv - deal.totalCapital;
+  const roiPct = ((profit / deal.totalCapital) * 100).toFixed(1);
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-[#1a2332] px-5 py-4 flex items-start justify-between">
+          <div className="flex-1 min-w-0 pr-3">
+            <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+              <MapPin size={11} className="text-accent" /> {deal.pipeline}
+            </p>
+            <h2 className="text-sm font-bold text-white leading-snug">{deal.address}</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors mt-0.5 flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Stage + Lender */}
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{deal.stage}</span>
+          <LenderBadge name={deal.lender} />
+          {deal.closeDate && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-gray-500">
+              <Calendar size={11} /> Close: {deal.closeDate}
+            </span>
+          )}
+        </div>
+
+        {/* Financials */}
+        <div className="px-5 py-4 space-y-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Deal Financials</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[11px] text-gray-400 mb-0.5 flex items-center gap-1"><Landmark size={11}/> Land Cost</p>
+              <p className="text-sm font-bold text-gray-800">${deal.landCost.toLocaleString()}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[11px] text-gray-400 mb-0.5 flex items-center gap-1"><Building2 size={11}/> Construction</p>
+              <p className="text-sm font-bold text-gray-800">${deal.construction.toLocaleString()}</p>
+            </div>
+            <div className="bg-[#1a2332] rounded-xl p-3">
+              <p className="text-[11px] text-gray-400 mb-0.5">Total Capital</p>
+              <p className="text-sm font-bold text-white">${deal.totalCapital.toLocaleString()}</p>
+            </div>
+            <div className="bg-[#1a2332] rounded-xl p-3">
+              <p className="text-[11px] text-gray-400 mb-0.5">ARV</p>
+              <p className="text-sm font-bold text-white">${deal.arv.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Profit / ROI */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <p className="text-[11px] text-gray-400 mb-0.5">Est. Profit</p>
+              <p className={`text-sm font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {profit >= 0 ? '+' : ''}${profit.toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <p className="text-[11px] text-gray-400 mb-0.5">Est. ROI</p>
+              <p className={`text-sm font-bold ${Number(roiPct) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                {Number(roiPct) >= 0 ? '+' : ''}{roiPct}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
 function AllDealsTab() {
+  const [selected, setSelected] = useState(null);
   return (
     <div>
+      <DealModal deal={selected} onClose={() => setSelected(null)} />
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -41,7 +122,7 @@ function AllDealsTab() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {ALL_DEALS_TABLE.map((deal, i) => (
-              <tr key={i} className="hover:bg-gray-50">
+              <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(deal)}>
                 <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px]">{deal.address}</td>
                 <td className="px-4 py-2.5 text-gray-600">{deal.pipeline}</td>
                 <td className="px-4 py-2.5">
@@ -67,6 +148,7 @@ function AllDealsTab() {
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
 function InvestorCard({ investor }) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState(null);
   const isCash = investor.name === 'Cash';
 
   return (
@@ -125,11 +207,18 @@ function InvestorCard({ investor }) {
         </button>
       </div>
 
+      {/* Deal modal */}
+      <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
+
       {/* Expanded deals */}
       {expanded && (
         <div className="border-t border-gray-100 divide-y divide-gray-50">
           {ALL_DEALS_TABLE.filter(d => d.lender === investor.name).map((deal, i) => (
-            <div key={i} className="px-5 py-3">
+            <div
+              key={i}
+              className="px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setSelectedDeal(deal)}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0 mr-3">
                   <p className="text-xs font-semibold text-gray-800 leading-snug">{deal.address}</p>
