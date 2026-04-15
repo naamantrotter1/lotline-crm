@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, MapPin, Building, Calendar, ExternalLink } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { useDeals } from '../lib/DealsContext';
 
@@ -20,67 +19,6 @@ function LenderBadge({ name }) {
     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
       {name}
     </span>
-  );
-}
-
-// ── Deal Popup Modal ─────────────────────────────────────────────────────────
-function DealPopup({ deal, onClose, onNavigate }) {
-  if (!deal) return null;
-  const profit = deal.arv - deal.totalCapital;
-  const roi = deal.totalCapital > 0 ? ((profit / deal.totalCapital) * 100).toFixed(1) : null;
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex-1 min-w-0 pr-3">
-            <div className="flex items-center gap-2 mb-1">
-              <MapPin size={13} className="text-accent flex-shrink-0" />
-              <h2 className="text-sm font-bold text-sidebar leading-tight truncate">{deal.address}</h2>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
-              <span className="text-[10px] text-gray-400">{deal.pipeline}</span>
-              <LenderBadge name={deal.lender} />
-            </div>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={16} /></button>
-        </div>
-
-        {/* Financials grid */}
-        <div className="px-5 py-4 grid grid-cols-2 gap-3">
-          {[
-            { label: 'Land Cost',       value: `$${deal.landCost.toLocaleString()}` },
-            { label: 'Construction',    value: `$${deal.construction.toLocaleString()}` },
-            { label: 'Total Capital',   value: `$${deal.totalCapital.toLocaleString()}`, bold: true },
-            { label: 'ARV',             value: `$${deal.arv.toLocaleString()}`, bold: true },
-            { label: 'Projected Profit',value: profit >= 0 ? `$${profit.toLocaleString()}` : `-$${Math.abs(profit).toLocaleString()}`, color: profit >= 0 ? 'text-green-600' : 'text-red-500' },
-            { label: 'ROI',             value: roi != null ? `${roi}%` : '—', color: profit >= 0 ? 'text-green-600' : 'text-red-500' },
-          ].map(({ label, value, bold, color }) => (
-            <div key={label} className="bg-gray-50 rounded-xl p-3">
-              <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
-              <p className={`text-sm font-${bold ? 'bold' : 'semibold'} ${color || 'text-sidebar'}`}>{value}</p>
-            </div>
-          ))}
-        </div>
-
-        {deal.closeDate && (
-          <div className="px-5 pb-3 flex items-center gap-1.5 text-xs text-gray-500">
-            <Calendar size={11} />
-            Close date: <span className="font-medium text-gray-700">{deal.closeDate}</span>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
-          <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Close</button>
-          <button onClick={onNavigate} className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent/80 transition-colors">
-            Open Full Deal <ExternalLink size={11} />
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
   );
 }
 
@@ -365,20 +303,14 @@ export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('by-investor');
-  const [selectedDeal, setSelectedDeal] = useState(null);
-
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
     return match?.id ?? null;
   };
 
-  const handleDealClick = (deal) => setSelectedDeal(deal);
-  const handlePopupClose = () => setSelectedDeal(null);
-  const handleOpenFull = () => {
-    if (!selectedDeal) return;
-    const id = findDealId(selectedDeal.address);
-    setSelectedDeal(null);
+  const handleDealClick = (deal) => {
+    const id = findDealId(deal.address);
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
@@ -448,7 +380,6 @@ export default function InvestorPortal() {
         {activeTab === 'directory' && <DirectoryTab />}
       </div>
 
-      <DealPopup deal={selectedDeal} onClose={handlePopupClose} onNavigate={handleOpenFull} />
     </div>
   );
 }
