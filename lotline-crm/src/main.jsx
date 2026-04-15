@@ -8,9 +8,7 @@ if (localStorage.getItem('darkMode') === 'true') {
   document.documentElement.classList.add('dark');
 }
 
-// Expose CRM user for Homes iframe pre-fill
-localStorage.setItem('crm_user', JSON.stringify({ name: 'Naaman Trotter', email: '' }));
-
+// crm_user is now set by AuthContext after login (based on the user's profile)
 // Run one-time migration to Supabase (no-op if already done or Supabase not configured)
 migrateToSupabase();
 

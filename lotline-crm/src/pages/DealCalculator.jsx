@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
+import { usePermissions } from '../hooks/usePermissions';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
@@ -242,6 +243,7 @@ function fmt(n) {
 export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
+  const { canEdit } = usePermissions();
 
   const set = (key, val) => setVals((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }));
 
@@ -414,13 +416,15 @@ export default function DealCalculator() {
         </div>
       </div>
 
-      <button
-        onClick={() => setShowImport(true)}
-        className="fixed bottom-6 right-6 flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-xl text-sm font-semibold shadow-lg hover:bg-accent/90 transition-colors z-40"
-      >
-        <PlusCircle size={16} />
-        Import to Pipeline
-      </button>
+      {canEdit && (
+        <button
+          onClick={() => setShowImport(true)}
+          className="fixed bottom-6 right-6 flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-xl text-sm font-semibold shadow-lg hover:bg-accent/90 transition-colors z-40"
+        >
+          <PlusCircle size={16} />
+          Import to Pipeline
+        </button>
+      )}
 
       {showImport && (
         <ImportModal

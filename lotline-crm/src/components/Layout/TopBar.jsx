@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Menu, Bell, Moon, Sun, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
+import { useAuth } from '../../lib/AuthContext';
 
 function GlobalSearch() {
   const [query, setQuery]     = useState('');
@@ -104,6 +105,11 @@ function GlobalSearch() {
 }
 
 export default function TopBar({ onToggleSidebar }) {
+  const { profile } = useAuth();
+  const initials = profile?.name
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : (profile?.email ? profile.email.slice(0, 2).toUpperCase() : '?');
+
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
@@ -138,7 +144,7 @@ export default function TopBar({ onToggleSidebar }) {
           <Bell size={16} />
           <span className="absolute top-1 right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">1</span>
         </button>
-        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold ml-1">NT</div>
+        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold ml-1">{initials}</div>
       </div>
     </header>
   );

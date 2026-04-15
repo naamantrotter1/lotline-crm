@@ -3,47 +3,75 @@ import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, Database, MapPin, HardHat, Archive, Settings,
-  Droplets, ChevronRight, Globe, Landmark, Building2,
+  Droplets, Globe, Landmark, Building2, UserCog, LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../lib/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 
-const navSections = [
+const BASE_NAV_SECTIONS = [
   {
     label: 'Overview',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
-      { icon: Target, label: 'Big Rocks', to: '/big-rocks' },
-      { icon: TrendingUp, label: 'P&L Dashboard', to: '/pnl' },
-      { icon: BarChart2, label: 'Analytics', to: '/analytics' },
-      { icon: Users, label: 'Investor Portal', to: '/investors' },
+      { icon: LayoutDashboard, label: 'Dashboard',       to: '/'           },
+      { icon: Target,          label: 'Big Rocks',       to: '/big-rocks'  },
+      { icon: TrendingUp,      label: 'P&L Dashboard',   to: '/pnl'        },
+      { icon: BarChart2,       label: 'Analytics',       to: '/analytics'  },
+      { icon: Users,           label: 'Investor Portal', to: '/investors'  },
     ],
   },
   {
     label: 'Pipelines',
     items: [
-      { icon: Home, label: 'Deal Overview', to: '/pipelines/deal-overview' },
-      { icon: Leaf, label: 'Land Acquisition', to: '/pipelines/land' },
-      { icon: Search, label: 'Due Diligence', to: '/pipelines/due-diligence' },
-      { icon: Wrench, label: 'Development', to: '/pipelines/development' },
-      { icon: DollarSign, label: 'Sales', to: '/pipelines/sales' },
+      { icon: Home,      label: 'Deal Overview',   to: '/pipelines/deal-overview'  },
+      { icon: Leaf,      label: 'Land Acquisition',to: '/pipelines/land'           },
+      { icon: Search,    label: 'Due Diligence',   to: '/pipelines/due-diligence'  },
+      { icon: Wrench,    label: 'Development',     to: '/pipelines/development'    },
+      { icon: DollarSign,label: 'Sales',           to: '/pipelines/sales'          },
     ],
   },
   {
     label: 'Tools',
     items: [
-      { icon: Globe, label: 'Map Search', to: '/flood-map' },
-      { icon: Map, label: 'Market Research', to: '/intelligence' },
-      { icon: Home, label: 'Order Home', to: '/homes' },
-      { icon: Landmark, label: 'Capital & Partnerships', to: '/lending' },
-      { icon: Calculator, label: 'Deal Calculator', to: '/calculator' },
-      { icon: Building, label: 'Home Models', to: '/home-models' },
-      { icon: HardHat, label: 'Contractor Database', to: '/contractors' },
-      { icon: Archive, label: 'Archived Deals', to: '/archived' },
-      { icon: Settings, label: 'Settings', to: '/settings' },
+      { icon: Globe,       label: 'Map Search',             to: '/flood-map'       },
+      { icon: Map,         label: 'Market Research',        to: '/intelligence'    },
+      { icon: Home,        label: 'Order Home',             to: '/homes'           },
+      { icon: Landmark,    label: 'Capital & Partnerships', to: '/lending'         },
+      { icon: Calculator,  label: 'Deal Calculator',        to: '/calculator'      },
+      { icon: Building,    label: 'Home Models',            to: '/home-models'     },
+      { icon: HardHat,     label: 'Contractor Database',    to: '/contractors'     },
+      { icon: Archive,     label: 'Archived Deals',         to: '/archived'        },
+      { icon: Settings,    label: 'Settings',               to: '/settings'        },
     ],
   },
 ];
 
+const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer' };
+
 export default function Sidebar({ collapsed, onToggle }) {
+  const { profile, signOut } = useAuth();
+  const { canAdmin } = usePermissions();
+
+  // Derive initials from name
+  const initials = profile?.name
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  // Inject User Management for admins into the Tools section
+  const navSections = BASE_NAV_SECTIONS.map(section => {
+    if (section.label === 'Tools' && canAdmin) {
+      const items = [...section.items];
+      // Insert before Settings
+      const settingsIdx = items.findIndex(i => i.to === '/settings');
+      items.splice(settingsIdx, 0, {
+        icon: UserCog,
+        label: 'User Management',
+        to: '/admin/users',
+      });
+      return { ...section, items };
+    }
+    return section;
+  });
+
   return (
     <aside
       className="flex-shrink-0 h-screen overflow-y-auto flex flex-col transition-all duration-300"
@@ -102,13 +130,37 @@ export default function Sidebar({ collapsed, onToggle }) {
         <div className="border-t border-white/10 p-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              NT
+              {initials}
             </div>
-            <div className="overflow-hidden">
-              <p className="text-white text-xs font-medium truncate">Naaman Trotter</p>
-              <p className="text-white/40 text-xs truncate">Admin</p>
+            <div className="overflow-hidden flex-1 min-w-0">
+              <p className="text-white text-xs font-medium truncate">
+                {profile?.name || profile?.email || 'Loading…'}
+              </p>
+              <p className="text-white/40 text-xs truncate capitalize">
+                {ROLE_LABEL[profile?.role] || '—'}
+              </p>
             </div>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
+            >
+              <LogOut size={14} />
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Collapsed sign-out */}
+      {collapsed && (
+        <div className="border-t border-white/10 p-3 flex justify-center">
+          <button
+            onClick={signOut}
+            title="Sign out"
+            className="text-white/40 hover:text-white/80 transition-colors"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       )}
     </aside>

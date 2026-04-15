@@ -1,16 +1,26 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, subscribeToDeals } from './dealsSync';
+import { useAuth } from './AuthContext';
 
 const DealsContext = createContext(null);
 
 export function DealsProvider({ children }) {
-  // Instantly populate from localStorage cache, then refresh from Supabase
+  // Instantly populate from localStorage cache (will refresh from Supabase once authed)
   const [deals, setDeals] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; }
   });
   const [archivedDeals, setArchivedDeals] = useState([]);
 
+  const { session } = useAuth();
+
   useEffect(() => {
+    // Only load from Supabase (and subscribe) when authenticated
+    if (!session) {
+      setDeals([]);
+      setArchivedDeals([]);
+      return;
+    }
+
     // Load active deals from Supabase
     loadAllDeals().then(setDeals);
     // Load archived deals
@@ -42,7 +52,7 @@ export function DealsProvider({ children }) {
     );
 
     return unsub;
-  }, []);
+  }, [session]);
 
   return (
     <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, saveDeal: syncSaveDeal, deleteDeal: syncDeleteDeal }}>

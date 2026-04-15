@@ -8,6 +8,7 @@ import {
 import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -223,10 +224,11 @@ function OverviewTab({
           <SectionHeader>General Notes</SectionHeader>
           <textarea
             value={notes}
-            onChange={e => setNotes(e.target.value)}
+            onChange={e => canEdit && setNotes(e.target.value)}
+            readOnly={!canEdit}
             rows={3}
-            placeholder="Add notes about this deal..."
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white"
+            placeholder={canEdit ? "Add notes about this deal..." : ""}
+            className={`w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white ${!canEdit ? 'cursor-default' : ''}`}
           />
         </div>
 
@@ -243,7 +245,7 @@ function OverviewTab({
               <MapPin size={11} /> GIS Map
             </a>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <InputRow label="Parcel ID" value={parcelId} onChange={setParcelId} mono />
             <InputRow label="Address" value={address} onChange={setAddress} />
             <InputRow label="County" value={county} onChange={setCounty} />
@@ -265,24 +267,24 @@ function OverviewTab({
                 <MapPin size={12} /> Open in Map Search
               </button>
             </div>
-          </div>
+          </fieldset>
         </div>
 
         {/* Seller Information */}
         <div>
           <SectionHeader>Seller Information</SectionHeader>
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
             <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
             <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
             <SelectRow label="Seller Type" value={ownerType} onChange={setOwnerType} options={OWNER_TYPE_OPTIONS} />
-          </div>
+          </fieldset>
         </div>
 
         {/* Deal Evaluation */}
         <div>
           <SectionHeader>Deal Evaluation</SectionHeader>
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={!canEdit} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
             <SelectRow label="Utility Scenario" value={utilityScenario} onChange={setUtilityScenario} options={UTILITY_SCENARIO_OPTIONS} />
             <InputRow label="Water" value={waterCompany} onChange={setWaterCompany} />
             <InputRow label="Sewer" value={sewerCompany} onChange={setSewerCompany} />
@@ -296,7 +298,7 @@ function OverviewTab({
                   setHomeModel(e.target.value);
                   if (selected) setCosts(prev => ({ ...prev, mobileHome: selected.price }));
                 }}
-                className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[220px]"
+                className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[220px] disabled:opacity-60 disabled:cursor-default"
               >
                 <option value="">— Select Model —</option>
                 {HOME_MODELS.map(m => (
@@ -308,14 +310,14 @@ function OverviewTab({
             </div>
             <SelectRow label="Subdividable" value={subdividable} onChange={setSubdividable} options={['Yes', 'No']} />
             <SelectRow label="Land Clearing" value={landClearing} onChange={setLandClearing} options={['Yes', 'No']} />
-          </div>
+          </fieldset>
         </div>
 
         {/* Cost Breakdown */}
         <div>
           <SectionHeader>Cost Breakdown</SectionHeader>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="divide-y divide-gray-50">
+            <fieldset disabled={!canEdit} className="divide-y divide-gray-50">
               {COST_FIELDS.map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between px-4 py-2">
                   <span className="text-xs text-gray-500 w-40">{label}</span>
@@ -326,12 +328,12 @@ function OverviewTab({
                       value={costs[key] || ''}
                       onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
                       placeholder="0"
-                      className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-70 disabled:cursor-default"
                     />
                   </div>
                 </div>
               ))}
-            </div>
+            </fieldset>
             <div className="bg-[#1a2332] text-white px-4 py-2.5 flex justify-between">
               <span className="text-sm font-semibold">Total Build Cost</span>
               <span className="text-sm font-bold">${allIn.toLocaleString()}</span>
@@ -968,6 +970,7 @@ export default function DealDetail() {
   const fromInvestorPortal = location.state?.from === 'investor-portal';
 
   const { deals: customDeals } = useDeals();
+  const { canEdit } = usePermissions();
   const deal = customDeals.find(d => String(d.id) === String(id))
     || (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })().find(d => String(d.id) === String(id));
 
@@ -1096,6 +1099,7 @@ export default function DealDetail() {
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
+    if (!canEdit) return; // viewers cannot write
     const updatedDeal = {
       ...deal,
       stage, address, county, state: dealState, zip, acreage,
@@ -1173,22 +1177,28 @@ export default function DealDetail() {
             {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
             {!fromInvestorPortal && <>
               <button
-                onClick={() => handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                onClick={() => canEdit && handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
+                disabled={!canEdit}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors disabled:cursor-default ${
                   landClearing === 'Yes'
                     ? 'bg-amber-100 text-amber-700 border-amber-300'
-                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                    : canEdit
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                      : 'bg-gray-100 text-gray-400 border-gray-200'
                 }`}
               >
                 <TreePine size={11} />
                 Land Clearing
               </button>
               <button
-                onClick={() => handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                onClick={() => canEdit && handleSetSubdividable(subdividable === 'Yes' ? 'No' : 'Yes')}
+                disabled={!canEdit}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-colors disabled:cursor-default ${
                   subdividable === 'Yes'
                     ? 'bg-amber-100 text-amber-700 border-amber-300'
-                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                    : canEdit
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                      : 'bg-gray-100 text-gray-400 border-gray-200'
                 }`}
               >
                 <SplitSquareHorizontal size={11} />
@@ -1203,29 +1213,36 @@ export default function DealDetail() {
           </div>
           {!fromInvestorPortal && (
             <div className="flex items-center gap-2">
+              {!canEdit && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
+                  View Only
+                </span>
+              )}
               <button
                 onClick={() => setStarred(s => !s)}
                 className={`p-2 rounded-lg transition-colors ${starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
               >
                 <Star size={18} fill={starred ? 'currentColor' : 'none'} />
               </button>
-              <button
-                onClick={() => {
-                  saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage });
-                  // Remove from active localStorage list
-                  try {
-                    const all = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-                    localStorage.setItem('lotline_custom_deals', JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
-                  } catch {}
-                  // Navigate back
-                  if (fromInvestorPortal) navigate('/investor-portal');
-                  else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
-                  else navigate('/deal-overview');
-                }}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
-              >
-                <Archive size={14} /> Archive
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => {
+                    saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage });
+                    // Remove from active localStorage list
+                    try {
+                      const all = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
+                      localStorage.setItem('lotline_custom_deals', JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
+                    } catch {}
+                    // Navigate back
+                    if (fromInvestorPortal) navigate('/investor-portal');
+                    else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
+                    else navigate('/deal-overview');
+                  }}
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <Archive size={14} /> Archive
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1256,7 +1273,7 @@ export default function DealDetail() {
           <div className="w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
-            {fromInvestorPortal
+            {(fromInvestorPortal || !canEdit)
               ? <p className="text-sm font-semibold text-[#1a2332]">{stage}</p>
               : <select
                   value={stage}
@@ -1267,7 +1284,7 @@ export default function DealDetail() {
                 </select>
             }
           </div>
-          {nextStage && !fromInvestorPortal && (
+          {nextStage && !fromInvestorPortal && canEdit && (
             <div className="ml-auto">
               <button
                 onClick={() => handleSetStage(nextStage)}
@@ -1350,17 +1367,17 @@ export default function DealDetail() {
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
-            readOnly={fromInvestorPortal}
+            readOnly={fromInvestorPortal || !canEdit}
           />
         )}
         {activeTab === 'dd' && (
-          <DDTab deal={deal} ddTasks={ddTasks} setDdTasks={setDdTasks} readOnly={fromInvestorPortal} />
+          <DDTab deal={deal} ddTasks={ddTasks} setDdTasks={setDdTasks} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'dev' && (
-          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal} />
+          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'realized' && (
-          <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal} />
+          <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
       </div>
     </div>
