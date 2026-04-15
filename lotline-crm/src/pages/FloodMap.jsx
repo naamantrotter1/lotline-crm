@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
-import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink, Home } from 'lucide-react';
+import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink, Home, Filter } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
 
 function AddToPipelineModal({ parcelData, onClose }) {
@@ -248,6 +248,34 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const [showCountyMenu, setShowCountyMenu] = useState(false);
   const searchDebounce = useRef(null);
 
+  // ── Filter & Export Parcels ────────────────────────────────────────────────
+  const parcelFilterRef = useRef({});
+  const [showParcelFilterPanel, setShowParcelFilterPanel] = useState(false);
+  const [pfSec, setPfSec] = useState({
+    parcel: true, aiScrubbing: true, advanced: false, owner: false,
+    assessor: false, sale: false, lien: false, structure: false,
+  });
+  const DEFAULT_PF = {
+    county: '', subdivision: '', zips: '', acresMin: '', acresMax: '',
+    maxImprovPct: '', cityLimits: '', zoningType: '', landUse: '',
+    vacantOnly: true, removeBadSlope: true, removeLandLocked: true,
+    onlyLandLocked: false, removeHOA: false, maxWetland: '', maxFlood: '',
+    roadFrontageMin: '', roadFrontageMax: '',
+    dedupeOwners: false, outOfState: false, outOfCounty: false, outOfZip: false,
+    excludeCorporate: false, onlyInterFamily: false, taxDelinquent: false,
+    ownershipMin: '', ownershipMax: '', includeKeywords: '', excludeKeywords: '',
+    totalValueMin: '', totalValueMax: '', landValueMin: '', landValueMax: '',
+    improveValueMin: '', improveValueMax: '', marketTotalMin: '', marketTotalMax: '',
+    marketLandMin: '', marketLandMax: '', marketImproveMin: '', marketImproveMax: '',
+    taxDelinquentYears: '',
+    salePriceMin: '', salePriceMax: '', salePriceType: '', lastSaleFrom: '', lastSaleTo: '',
+    sellerName: '', deedType: '',
+    mortgageMin: '', mortgageMax: '', mortgageFromYear: '', mortgageToYear: '',
+    financingType: '', mortgageType: '', interestMin: '', interestMax: '',
+    structureSqftMin: '', structureSqftMax: '', structureCountMin: '', structureCountMax: '',
+  };
+  const [pf, setPf] = useState(DEFAULT_PF);
+
   const NC_COUNTIES = ['Alamance','Alexander','Alleghany','Anson','Ashe','Avery','Beaufort','Bertie','Bladen','Brunswick','Buncombe','Burke','Cabarrus','Caldwell','Camden','Carteret','Caswell','Catawba','Chatham','Cherokee','Chowan','Clay','Cleveland','Columbus','Craven','Cumberland','Currituck','Dare','Davidson','Davie','Duplin','Durham','Edgecombe','Forsyth','Franklin','Gaston','Gates','Graham','Granville','Greene','Guilford','Halifax','Harnett','Haywood','Henderson','Hertford','Hoke','Hyde','Iredell','Jackson','Johnston','Jones','Lee','Lenoir','Lincoln','Macon','Madison','Martin','McDowell','Mecklenburg','Mitchell','Montgomery','Moore','Nash','New Hanover','Northampton','Onslow','Orange','Pamlico','Pasquotank','Pender','Perquimans','Person','Pitt','Polk','Randolph','Richmond','Robeson','Rockingham','Rowan','Rutherford','Sampson','Scotland','Stanly','Stokes','Surry','Swain','Transylvania','Tyrrell','Union','Vance','Wake','Warren','Washington','Watauga','Wayne','Wilkes','Wilson','Yadkin','Yancey'];
   const SC_COUNTIES = ['Abbeville','Aiken','Allendale','Anderson','Bamberg','Barnwell','Beaufort','Berkeley','Calhoun','Charleston','Cherokee','Chester','Chesterfield','Clarendon','Colleton','Darlington','Dillon','Dorchester','Edgefield','Fairfield','Florence','Georgetown','Greenville','Greenwood','Hampton','Horry','Jasper','Kershaw','Lancaster','Laurens','Lee','Lexington','Marion','Marlboro','McCormick','Newberry','Oconee','Orangeburg','Pickens','Richland','Saluda','Spartanburg','Sumter','Union','Williamsburg','York'];
   const countyList = searchState === 'NC' ? NC_COUNTIES : searchState === 'SC' ? SC_COUNTIES : [];
@@ -306,7 +334,12 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
     const b = map.getBounds();
     const bbox = `${b.getWest().toFixed(5)},${b.getSouth().toFixed(5)},${b.getEast().toFixed(5)},${b.getNorth().toFixed(5)}`;
-    fetch(`${PROXY}/api/proxy/parcel-boundaries?bbox=${bbox}`, { signal: ctrl.signal })
+    const _pf = parcelFilterRef.current;
+    let _parcelUrl = `${PROXY}/api/proxy/parcel-boundaries?bbox=${bbox}`;
+    if (_pf.acresMin) _parcelUrl += `&acresMin=${encodeURIComponent(_pf.acresMin)}`;
+    if (_pf.acresMax) _parcelUrl += `&acresMax=${encodeURIComponent(_pf.acresMax)}`;
+    if (_pf.county)   _parcelUrl += `&county=${encodeURIComponent(_pf.county)}`;
+    fetch(_parcelUrl, { signal: ctrl.signal })
       .then(r => r.json())
       .then(data => {
         console.log('[parcels] response:', data.features?.length ?? 0, 'features');
@@ -1020,6 +1053,39 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const showParcelZoomHint = false;
   const showContourZoomHint = false;
 
+  // ── Filter & Export helpers ────────────────────────────────────────────────
+  const exportParcelsCsv = () => {
+    const layer = parcelBoundaryLayerRef.current;
+    if (!layer) { alert('No parcels visible. Zoom into a parcel area first.'); return; }
+    const rows = [];
+    layer.eachLayer(l => {
+      const p = l.feature?.properties || {};
+      const center = l.getBounds?.()?.getCenter?.();
+      rows.push({
+        parno: p.parno || '', state: p.state || '', county: p.county || '',
+        acres: p.gis_acres || p.acres || '', owner: p.owner || '',
+        address: p.situsadd || p.siteAddr || '', landValue: p.landval || '',
+        lat: center?.lat?.toFixed(6) || '', lng: center?.lng?.toFixed(6) || '',
+      });
+    });
+    if (!rows.length) { alert('No parcels to export.'); return; }
+    const keys = Object.keys(rows[0]);
+    const csv = [
+      keys.join(','),
+      ...rows.map(r => keys.map(k => `"${String(r[k]).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'parcels-export.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const applyParcelFilters = () => {
+    parcelFilterRef.current = { ...pf };
+    const map = leafletMap.current;
+    if (map && parcelBoundariesRef.current) fetchParcelBoundaries(map);
+  };
+
   // Toggle switch component
   const Toggle = ({ active, onChange }) => (
     <button
@@ -1189,6 +1255,386 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           </div>
         )}
 
+        {/* ── Filter & Export Parcels panel ── */}
+        {showParcelFilterPanel && (
+          <div
+            className="absolute left-0 z-[1100] bg-gray-900 border-r border-gray-700 shadow-2xl flex flex-col"
+            style={{ top: '56px', bottom: 0, width: '300px' }}
+          >
+            {/* Header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <p className="text-sm font-semibold text-white flex items-center gap-2">
+                <Filter size={14} className="text-orange-400" />
+                Filter Parcels
+              </p>
+              <button onClick={() => setShowParcelFilterPanel(false)} className="text-gray-400 hover:text-white transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+
+              {/* ── Parcel section ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, parcel: !p.parcel }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50">
+                Parcel <ChevronDown size={11} className={pfSec.parcel ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.parcel && (
+                <div className="space-y-3 pt-2 pb-1">
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Counties</label>
+                    <input value={pf.county} onChange={e => setPf(p => ({ ...p, county: e.target.value }))}
+                      placeholder="Enter county name..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Subdivision</label>
+                    <input value={pf.subdivision} onChange={e => setPf(p => ({ ...p, subdivision: e.target.value }))}
+                      placeholder="Enter subdivision name..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Include ZIPs</label>
+                    <input value={pf.zips} onChange={e => setPf(p => ({ ...p, zips: e.target.value }))}
+                      placeholder="Search ZIP..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Acres Range</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.acresMin} onChange={e => setPf(p => ({ ...p, acresMin: e.target.value }))}
+                        placeholder="From"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.acresMax} onChange={e => setPf(p => ({ ...p, acresMax: e.target.value }))}
+                        placeholder="To"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Max Improvement %</label>
+                    <input type="number" value={pf.maxImprovPct} onChange={e => setPf(p => ({ ...p, maxImprovPct: e.target.value }))}
+                      placeholder="%"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">City Limits</label>
+                    <select value={pf.cityLimits} onChange={e => setPf(p => ({ ...p, cityLimits: e.target.value }))}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500/70">
+                      <option value="">Include Everything</option>
+                      <option value="inside">Inside City Limits</option>
+                      <option value="outside">Outside City Limits</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Zoning Type</label>
+                    <input value={pf.zoningType} onChange={e => setPf(p => ({ ...p, zoningType: e.target.value }))}
+                      placeholder="Enter zoning type..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Land Use</label>
+                    <input value={pf.landUse} onChange={e => setPf(p => ({ ...p, landUse: e.target.value }))}
+                      placeholder="Enter land use code..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── AI Scrubbing ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, aiScrubbing: !p.aiScrubbing }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                AI Scrubbing <ChevronDown size={11} className={pfSec.aiScrubbing ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.aiScrubbing && (
+                <div className="space-y-3 pt-2 pb-1">
+                  {[
+                    { key: 'vacantOnly',        label: 'Keep Only Vacant Land',     desc: 'Remove parcels with AI-detected buildings' },
+                    { key: 'removeBadSlope',    label: 'Remove Bad Slope Land',     desc: 'Remove parcels with too much slope' },
+                    { key: 'removeLandLocked',  label: 'Remove Land Locked Land',   desc: 'Remove parcels without road access' },
+                    { key: 'onlyLandLocked',    label: 'Only Land Locked Land',     desc: 'Only include parcels without road access' },
+                    { key: 'removeHOA',         label: 'Remove HOA Parcels',        desc: 'Remove parcels with HOA deed restrictions' },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-200">{label}</span>
+                        <Toggle active={pf[key]} onChange={() => setPf(p => ({ ...p, [key]: !p[key] }))} />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{desc}</p>
+                    </div>
+                  ))}
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Max Wetland Coverage (%)</label>
+                    <input type="number" value={pf.maxWetland} onChange={e => setPf(p => ({ ...p, maxWetland: e.target.value }))}
+                      placeholder="%"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Max Flood Coverage (%)</label>
+                    <input type="number" value={pf.maxFlood} onChange={e => setPf(p => ({ ...p, maxFlood: e.target.value }))}
+                      placeholder="%"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Road Frontage (Feet)</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.roadFrontageMin} onChange={e => setPf(p => ({ ...p, roadFrontageMin: e.target.value }))}
+                        placeholder="Min Feet"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.roadFrontageMax} onChange={e => setPf(p => ({ ...p, roadFrontageMax: e.target.value }))}
+                        placeholder="Max Feet"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Owner ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, owner: !p.owner }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                Owner <ChevronDown size={11} className={pfSec.owner ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.owner && (
+                <div className="space-y-3 pt-2 pb-1">
+                  {[
+                    { key: 'dedupeOwners',    label: 'Deduplicate Owners' },
+                    { key: 'outOfState',      label: 'Out of State Owner' },
+                    { key: 'outOfCounty',     label: 'Out of County Owner' },
+                    { key: 'outOfZip',        label: 'Out of ZIP Owner' },
+                    { key: 'excludeCorporate',label: 'Exclude Corporate Owners' },
+                    { key: 'onlyInterFamily', label: 'Only Inter-Family Transfers' },
+                    { key: 'taxDelinquent',   label: 'Owner Is Tax Delinquent' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-xs text-gray-200">{label}</span>
+                      <Toggle active={pf[key]} onChange={() => setPf(p => ({ ...p, [key]: !p[key] }))} />
+                    </div>
+                  ))}
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Ownership Length (Months)</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.ownershipMin} onChange={e => setPf(p => ({ ...p, ownershipMin: e.target.value }))}
+                        placeholder="Min"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.ownershipMax} onChange={e => setPf(p => ({ ...p, ownershipMax: e.target.value }))}
+                        placeholder="Max"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Only Include Keywords</label>
+                    <input value={pf.includeKeywords} onChange={e => setPf(p => ({ ...p, includeKeywords: e.target.value }))}
+                      placeholder="Include keywords..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Exclude Keywords</label>
+                    <input value={pf.excludeKeywords} onChange={e => setPf(p => ({ ...p, excludeKeywords: e.target.value }))}
+                      placeholder="Exclude keywords..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── County Assessor ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, assessor: !p.assessor }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                County Assessor <ChevronDown size={11} className={pfSec.assessor ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.assessor && (
+                <div className="space-y-3 pt-2 pb-1">
+                  {[
+                    { label: 'Total Value', kMin: 'totalValueMin', kMax: 'totalValueMax' },
+                    { label: 'Land Value', kMin: 'landValueMin', kMax: 'landValueMax' },
+                    { label: 'Improvement Value', kMin: 'improveValueMin', kMax: 'improveValueMax' },
+                    { label: 'Market Total Value', kMin: 'marketTotalMin', kMax: 'marketTotalMax' },
+                    { label: 'Market Land Value', kMin: 'marketLandMin', kMax: 'marketLandMax' },
+                    { label: 'Market Improvement Value', kMin: 'marketImproveMin', kMax: 'marketImproveMax' },
+                  ].map(({ label, kMin, kMax }) => (
+                    <div key={kMin}>
+                      <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+                      <div className="flex gap-2">
+                        <input type="number" value={pf[kMin]} onChange={e => setPf(p => ({ ...p, [kMin]: e.target.value }))}
+                          placeholder="From"
+                          className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                        <input type="number" value={pf[kMax]} onChange={e => setPf(p => ({ ...p, [kMax]: e.target.value }))}
+                          placeholder="To"
+                          className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Owner Hasn't Paid Taxes For At Least X Years</label>
+                    <input type="number" value={pf.taxDelinquentYears} onChange={e => setPf(p => ({ ...p, taxDelinquentYears: e.target.value }))}
+                      placeholder="5 years"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Sale Info ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, sale: !p.sale }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                Sale Info <ChevronDown size={11} className={pfSec.sale ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.sale && (
+                <div className="space-y-3 pt-2 pb-1">
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Sale Price</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.salePriceMin} onChange={e => setPf(p => ({ ...p, salePriceMin: e.target.value }))}
+                        placeholder="From"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.salePriceMax} onChange={e => setPf(p => ({ ...p, salePriceMax: e.target.value }))}
+                        placeholder="To"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Sale Price Type</label>
+                    <input value={pf.salePriceType} onChange={e => setPf(p => ({ ...p, salePriceType: e.target.value }))}
+                      placeholder="Enter sale price type..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Last Sale Date</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.lastSaleFrom} onChange={e => setPf(p => ({ ...p, lastSaleFrom: e.target.value }))}
+                        placeholder="From Year"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.lastSaleTo} onChange={e => setPf(p => ({ ...p, lastSaleTo: e.target.value }))}
+                        placeholder="To Year"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Seller Name</label>
+                    <input value={pf.sellerName} onChange={e => setPf(p => ({ ...p, sellerName: e.target.value }))}
+                      placeholder="Enter name..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Transaction Deed Type</label>
+                    <input value={pf.deedType} onChange={e => setPf(p => ({ ...p, deedType: e.target.value }))}
+                      placeholder="Enter document type..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Open Lien ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, lien: !p.lien }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                Open Lien <ChevronDown size={11} className={pfSec.lien ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.lien && (
+                <div className="space-y-3 pt-2 pb-1">
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Amount</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.mortgageMin} onChange={e => setPf(p => ({ ...p, mortgageMin: e.target.value }))}
+                        placeholder="From"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.mortgageMax} onChange={e => setPf(p => ({ ...p, mortgageMax: e.target.value }))}
+                        placeholder="To"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Recording Date</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.mortgageFromYear} onChange={e => setPf(p => ({ ...p, mortgageFromYear: e.target.value }))}
+                        placeholder="From Year"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.mortgageToYear} onChange={e => setPf(p => ({ ...p, mortgageToYear: e.target.value }))}
+                        placeholder="To Year"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Financing Type</label>
+                    <input value={pf.financingType} onChange={e => setPf(p => ({ ...p, financingType: e.target.value }))}
+                      placeholder="Enter financing type..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Mortgage Type</label>
+                    <input value={pf.mortgageType} onChange={e => setPf(p => ({ ...p, mortgageType: e.target.value }))}
+                      placeholder="Enter loan type..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Interest Rate</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.interestMin} onChange={e => setPf(p => ({ ...p, interestMin: e.target.value }))}
+                        placeholder="From"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.interestMax} onChange={e => setPf(p => ({ ...p, interestMax: e.target.value }))}
+                        placeholder="To"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Structure ── */}
+              <button onClick={() => setPfSec(p => ({ ...p, structure: !p.structure }))}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700/50 mt-2">
+                Structure <ChevronDown size={11} className={pfSec.structure ? 'rotate-180' : ''} />
+              </button>
+              {pfSec.structure && (
+                <div className="space-y-3 pt-2 pb-3">
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Total Structure Square Feet</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.structureSqftMin} onChange={e => setPf(p => ({ ...p, structureSqftMin: e.target.value }))}
+                        placeholder="Min"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.structureSqftMax} onChange={e => setPf(p => ({ ...p, structureSqftMax: e.target.value }))}
+                        placeholder="Max"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 block mb-1">Total Structure Count</label>
+                    <div className="flex gap-2">
+                      <input type="number" value={pf.structureCountMin} onChange={e => setPf(p => ({ ...p, structureCountMin: e.target.value }))}
+                        placeholder="Min"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                      <input type="number" value={pf.structureCountMax} onChange={e => setPf(p => ({ ...p, structureCountMax: e.target.value }))}
+                        placeholder="Max"
+                        className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/70" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 border-t border-gray-700 p-3 flex gap-2">
+              <button
+                onClick={() => { setPf(DEFAULT_PF); parcelFilterRef.current = {}; }}
+                className="px-3 py-2 text-xs text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+              >
+                Clear
+              </button>
+              <button
+                onClick={exportParcelsCsv}
+                className="px-3 py-2 text-xs text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={applyParcelFilters}
+                className="flex-1 py-2 text-xs font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition-colors"
+              >
+                Filter Parcels
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Map Filters panel ── */}
         {showFiltersPanel && (
           <div className="absolute bottom-16 right-3 z-[1100] bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-72 overflow-hidden">
@@ -1343,6 +1789,19 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           {(mhForSale || mhSold) && (
             <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
           )}
+        </button>
+
+        {/* ── Filter & Export Parcels button — top left ── */}
+        <button
+          onClick={() => setShowParcelFilterPanel(p => !p)}
+          className={`absolute top-3 left-3 z-[1100] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border transition-colors ${
+            showParcelFilterPanel
+              ? 'bg-orange-500 border-orange-500 text-white'
+              : 'bg-gray-900 border-gray-700 text-gray-200 hover:border-orange-500/50 hover:text-white'
+          }`}
+        >
+          <Filter size={15} />
+          Filter &amp; Export Parcels
         </button>
 
         {/* ── Map Filters trigger button — bottom right ── */}
