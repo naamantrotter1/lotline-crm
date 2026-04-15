@@ -1222,7 +1222,32 @@ export default function DealDetail() {
               >
                 <Star size={18} fill={starred ? 'currentColor' : 'none'} />
               </button>
-              <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors">
+              <button
+                onClick={() => {
+                  // Remove from active deals
+                  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+                  const updated = all.filter(d => String(d.id) !== String(deal.id));
+                  localStorage.setItem('lotline_custom_deals', JSON.stringify(updated));
+                  // Add to archived deals
+                  const archived = (() => { try { return JSON.parse(localStorage.getItem('lotline_archived_deals') || '[]'); } catch { return []; } })();
+                  const today = new Date();
+                  const archivedEntry = {
+                    id: deal.id,
+                    address: deal.address,
+                    pipeline: deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview',
+                    lastStage: stage,
+                    archivedDate: `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`,
+                    arv: deal.arv || 0,
+                    netProfit: Math.round(netProfit),
+                  };
+                  localStorage.setItem('lotline_archived_deals', JSON.stringify([...archived, archivedEntry]));
+                  // Navigate back
+                  if (fromInvestorPortal) navigate('/investor-portal');
+                  else if (deal.pipeline === 'land-acquisition') navigate('/land-acquisition');
+                  else navigate('/deal-overview');
+                }}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+              >
                 <Archive size={14} /> Archive
               </button>
             </div>

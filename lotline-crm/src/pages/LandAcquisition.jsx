@@ -731,7 +731,7 @@ function LandCard({ deal, onClick, onDelete }) {
           {!confirmDelete ? (
             <button
               onClick={e => { e.stopPropagation(); setConfirmDelete(true); }}
-              className="text-gray-300 hover:text-red-400 transition-colors"
+              className="text-gray-400 hover:text-red-500 transition-colors"
               title="Delete deal"
             >
               <Trash2 size={13} />
