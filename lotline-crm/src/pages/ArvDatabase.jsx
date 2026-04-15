@@ -370,23 +370,47 @@ const ARV_DATA = [
 
 // Join ARV data with heat map county stats
 const COUNTY_LOOKUP = Object.fromEntries(COUNTY_DATA.map(c => [`${c.name}|${c.state}`, c]));
-const MERGED_DATA = ARV_DATA.map(row => {
-  const s = COUNTY_LOOKUP[`${row.county}|${row.state}`] || {};
-  return {
-    ...row,
-    medianDOM: s.medianDOM ?? null,
-    absorptionRate: s.absorptionRate ?? null,
-    monthsSupply: s.monthsSupply ?? null,
-    sellThrough: s.sellThrough ?? null,
-    oppScore: s.oppScore ?? null,
-    demandScore: s.demandScore ?? null,
-    popGrowth: s.popGrowth ?? null,
-    mhFriendly: s.mhFriendly ?? null,
-    medianSalePrice: s.medianSalePrice ?? null,
-    medianIncome: s.medianIncome ?? null,
-    unemployment: s.unemployment ?? null,
-  };
-});
+const MERGED_DATA = [
+  // NC/SC rows with manually-entered ARV comps merged with heat map stats
+  ...ARV_DATA.map(row => {
+    const s = COUNTY_LOOKUP[`${row.county}|${row.state}`] || {};
+    return {
+      ...row,
+      medianDOM: s.medianDOM ?? null,
+      absorptionRate: s.absorptionRate ?? null,
+      monthsSupply: s.monthsSupply ?? null,
+      sellThrough: s.sellThrough ?? null,
+      oppScore: s.oppScore ?? null,
+      demandScore: s.demandScore ?? null,
+      popGrowth: s.popGrowth ?? null,
+      mhFriendly: s.mhFriendly ?? null,
+      medianSalePrice: s.medianSalePrice ?? null,
+      medianIncome: s.medianIncome ?? null,
+      unemployment: s.unemployment ?? null,
+    };
+  }),
+  // FL rows — heat map stats only, no ARV comps yet
+  ...COUNTY_DATA.filter(c => c.state === 'FL').map(c => ({
+    county: c.name,
+    state: c.state,
+    minArv: null,
+    maxArv: null,
+    avgArv: null,
+    comps: 0,
+    lastUpdated: 'Apr 2026',
+    medianDOM: c.medianDOM,
+    absorptionRate: c.absorptionRate,
+    monthsSupply: c.monthsSupply,
+    sellThrough: c.sellThrough,
+    oppScore: c.oppScore,
+    demandScore: c.demandScore,
+    popGrowth: c.popGrowth,
+    mhFriendly: c.mhFriendly,
+    medianSalePrice: c.medianSalePrice,
+    medianIncome: c.medianIncome,
+    unemployment: c.unemployment,
+  })),
+];
 
 const AVG_ARV_RANGES = [
   { label: 'All', min: 0, max: Infinity },
@@ -461,7 +485,7 @@ function FilterInfo({ tip }) {
 export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
   const [arvRange, setArvRange] = useState('All');
-  const [minComps, setMinComps] = useState('5');
+  const [minComps, setMinComps] = useState('All');
   const [countySearch, setCountySearch] = useState('');
   const [mhFilter, setMhFilter] = useState('All');
   const [oppScoreFilter, setOppScoreFilter] = useState('All');
@@ -476,7 +500,7 @@ export default function ArvDatabase() {
     return [...MERGED_DATA]
       .filter(d => {
         if (stateFilter !== 'All' && d.state !== stateFilter) return false;
-        if (d.avgArv < range.min || d.avgArv >= range.max) return false;
+        if (d.avgArv != null && (d.avgArv < range.min || d.avgArv >= range.max)) return false;
         if (d.comps < minCompsNum) return false;
         if (!d.county.toLowerCase().includes(countySearch.toLowerCase())) return false;
         if (mhFilter === 'Yes' && !d.mhFriendly) return false;
@@ -507,7 +531,8 @@ export default function ArvDatabase() {
   }, [stateFilter, arvRange, minComps, countySearch, mhFilter, oppScoreFilter, domFilter, sortKey, sortDir]);
 
   const totalComps = filtered.reduce((s, d) => s + d.comps, 0);
-  const avgOfAvgs = filtered.length ? Math.round(filtered.reduce((s, d) => s + d.avgArv, 0) / filtered.length) : 0;
+  const rowsWithArv = filtered.filter(d => d.avgArv != null);
+  const avgOfAvgs = rowsWithArv.length ? Math.round(rowsWithArv.reduce((s, d) => s + d.avgArv, 0) / rowsWithArv.length) : 0;
 
   const anyFilter = stateFilter !== 'All' || arvRange !== 'All' || minComps !== 'All' || countySearch ||
     mhFilter !== 'All' || oppScoreFilter !== 'All' || domFilter !== 'All';
@@ -664,10 +689,10 @@ export default function ArvDatabase() {
               <tr key={`${row.county}-${row.state}`} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
                 <td className="py-2.5 px-3 text-sm font-medium text-sidebar whitespace-nowrap">{row.county}</td>
                 <td className="py-2.5 px-3 text-sm text-gray-600">{row.state}</td>
-                <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.minArv.toLocaleString()}</td>
-                <td className={`py-2.5 px-3 text-sm text-right font-semibold ${row.avgArv >= 220000 ? 'text-green-600' : 'text-accent'}`}>${row.avgArv.toLocaleString()}</td>
-                <td className="py-2.5 px-3 text-sm text-right text-gray-500">${row.maxArv.toLocaleString()}</td>
-                <td className="py-2.5 px-3 text-sm text-right text-gray-600">{row.comps}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-500">{row.minArv != null ? `$${row.minArv.toLocaleString()}` : '—'}</td>
+                <td className={`py-2.5 px-3 text-sm text-right font-semibold ${row.avgArv == null ? 'text-gray-300' : row.avgArv >= 220000 ? 'text-green-600' : 'text-accent'}`}>{row.avgArv != null ? `$${row.avgArv.toLocaleString()}` : '—'}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-500">{row.maxArv != null ? `$${row.maxArv.toLocaleString()}` : '—'}</td>
+                <td className="py-2.5 px-3 text-sm text-right text-gray-600">{row.comps > 0 ? row.comps : '—'}</td>
                 <td className="py-2.5 px-3 text-right">{scoreBadge(row.oppScore)}</td>
                 <td className="py-2.5 px-3 text-right">{scoreBadge(row.demandScore)}</td>
                 <td className={`py-2.5 px-3 text-sm text-right font-medium ${domColor(row.medianDOM)}`}>
@@ -699,7 +724,7 @@ export default function ArvDatabase() {
           </tbody>
         </table>
         <div className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          ARV source: Zillow sold listings · NC, SC, GA, VA &amp; TN manufactured homes built 2022–2026 · Updated April 2026 &nbsp;|&nbsp; Market stats: heat map county data
+          ARV source: Zillow sold listings · NC &amp; SC manufactured homes built 2022–2026 · Updated April 2026 &nbsp;|&nbsp; FL market stats: FL DOR / Census ACS / BLS 2024 (ARV comps pending) &nbsp;|&nbsp; Market stats: heat map county data
         </div>
       </div>
     </div>
