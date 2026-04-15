@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
-import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle } from 'lucide-react';
+import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink } from 'lucide-react';
 
 const LA_LS_KEY = 'lotline_custom_deals';
 
@@ -213,6 +213,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const [buildabilityLoading, setBuildabilityLoading] = useState(false);
   const [showBuildability, setShowBuildability] = useState(false);
   const [showAddToPipeline, setShowAddToPipeline] = useState(false);
+  const [parcelLatLng, setParcelLatLng] = useState(null);
   const parcelLayerRef = useRef(null);
   const buildabilityLayerRef = useRef(null);
   const contoursLayerRef = useRef(null);      // vector GeoJSON contour layer
@@ -722,6 +723,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
         .then(data => {
           if (data.error) { setParcelData({ error: data.error }); return; }
           setParcelData(data);
+          setParcelLatLng({ lat, lng });
           setShowBuildability(false);
           setBuildability(null);
           if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
@@ -879,6 +881,15 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       const data = await r.json();
       if (data.error) { setParcelData({ error: data.error }); return; }
       setParcelData(data);
+      // Compute centroid from geometry for Street View; fall back to search result coords
+      try {
+        if (data.geometry) {
+          const c = turf.centroid({ type: 'Feature', geometry: data.geometry });
+          setParcelLatLng({ lat: c.geometry.coordinates[1], lng: c.geometry.coordinates[0] });
+        } else if (lat != null && lng != null) {
+          setParcelLatLng({ lat, lng });
+        }
+      } catch { if (lat != null && lng != null) setParcelLatLng({ lat, lng }); }
       setShowBuildability(false);
       setBuildability(null);
       if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
@@ -1201,6 +1212,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
               <button
                 onClick={() => {
                   setParcelData(null);
+                  setParcelLatLng(null);
                   setShowBuildability(false);
                   setBuildability(null);
                   if (buildabilityLayerRef.current) { buildabilityLayerRef.current.remove(); buildabilityLayerRef.current = null; }
@@ -1291,6 +1303,18 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                     <PlusCircle size={12} />
                     Add to Pipeline
                   </button>
+                  {parcelLatLng && (
+                    <a
+                      href={`https://maps.google.com/maps?q=&layer=c&cbll=${parcelLatLng.lat},${parcelLatLng.lng}&cbp=11,0,0,0,0&z=17`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      style={{ backgroundColor: '#1a2535', color: '#38bdf8', border: '1px solid #0284c7' }}
+                    >
+                      <ExternalLink size={12} />
+                      Google Street View
+                    </a>
+                  )}
                   <button
                     onClick={() => {
                       if (showBuildability) {
