@@ -1780,7 +1780,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           className={`absolute bottom-4 z-[1100] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border transition-colors ${
             showCompsPanel || mhForSale || mhSold
               ? 'bg-green-600 border-green-600 text-white'
-              : 'bg-gray-900 border-gray-700 text-gray-200 hover:border-green-500/50 hover:text-white'
+              : 'bg-white/90 border-gray-200 text-gray-700 hover:border-green-500/60 hover:text-gray-900'
           }`}
           style={{ right: '200px' }}
         >
@@ -1797,7 +1797,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           className={`absolute top-3 left-3 z-[1100] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border transition-colors ${
             showParcelFilterPanel
               ? 'bg-orange-500 border-orange-500 text-white'
-              : 'bg-gray-900 border-gray-700 text-gray-200 hover:border-orange-500/50 hover:text-white'
+              : 'bg-white/90 border-gray-200 text-gray-700 hover:border-orange-500/60 hover:text-gray-900'
           }`}
         >
           <Filter size={15} />
@@ -1810,7 +1810,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           className={`absolute bottom-4 right-3 z-[1100] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border transition-colors ${
             showFiltersPanel
               ? 'bg-orange-500 border-orange-500 text-white'
-              : 'bg-gray-900 border-gray-700 text-gray-200 hover:border-orange-500/50 hover:text-white'
+              : 'bg-white/90 border-gray-200 text-gray-700 hover:border-orange-500/60 hover:text-gray-900'
           }`}
         >
           <SlidersHorizontal size={15} />
