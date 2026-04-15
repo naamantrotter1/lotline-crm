@@ -110,34 +110,40 @@ function InfoRow({ label, value, mono }) {
   );
 }
 
-function SelectRow({ label, value, onChange, options }) {
+function SelectRow({ label, value, onChange, options, readOnly }) {
   return (
     <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
       <span className="text-xs text-gray-500">{label}</span>
-      <select
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[180px]"
-      >
-        <option value="">— Select —</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
+      {readOnly
+        ? <span className="text-xs font-medium text-gray-800">{value || '—'}</span>
+        : <select
+            value={value || ''}
+            onChange={e => onChange(e.target.value)}
+            className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[180px]"
+          >
+            <option value="">— Select —</option>
+            {options.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+      }
     </div>
   );
 }
 
-function InputRow({ label, value, onChange, type = 'text', mono }) {
+function InputRow({ label, value, onChange, type = 'text', mono, readOnly }) {
   return (
     <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
       <span className="text-xs text-gray-500 flex-shrink-0 mr-3">{label}</span>
-      <input
-        type={type}
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        className={`text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[200px] w-full text-right ${mono ? 'font-mono' : ''}`}
-      />
+      {readOnly
+        ? <span className={`text-xs font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
+        : <input
+            type={type}
+            value={value || ''}
+            onChange={e => onChange(e.target.value)}
+            className={`text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[200px] w-full text-right ${mono ? 'font-mono' : ''}`}
+          />
+      }
     </div>
   );
 }
@@ -182,6 +188,7 @@ function OverviewTab({
   investorProfitSplitPct, setInvestorProfitSplitPct,
   navigate,
   onOpenMapSearch,
+  readOnly,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -799,7 +806,7 @@ function OverviewTab({
 }
 
 // ── Tab: Due Diligence ────────────────────────────────────────────────────────
-function DDTab({ deal, ddTasks, setDdTasks }) {
+function DDTab({ deal, ddTasks, setDdTasks, readOnly }) {
   const complete = ddTasks.filter(Boolean).length;
   return (
     <div className="max-w-2xl">
@@ -811,8 +818,8 @@ function DDTab({ deal, ddTasks, setDdTasks }) {
         {DD_TASKS.map((task, i) => (
           <div
             key={task}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
-            onClick={() => setDdTasks(prev => { const n = [...prev]; n[i] = !n[i]; return n; })}
+            className={`flex items-center gap-3 px-4 py-3 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
+            onClick={readOnly ? undefined : () => setDdTasks(prev => { const n = [...prev]; n[i] = !n[i]; return n; })}
           >
             {ddTasks[i]
               ? <CheckSquare size={18} className="text-green-500 flex-shrink-0" />
@@ -840,7 +847,7 @@ function DDTab({ deal, ddTasks, setDdTasks }) {
 }
 
 // ── Tab: Development ──────────────────────────────────────────────────────────
-function DevTab({ devTasks, setDevTasks }) {
+function DevTab({ devTasks, setDevTasks, readOnly }) {
   const allTasks = DEV_GROUPS.flatMap(g => g.tasks);
   const complete = devTasks.filter(Boolean).length;
   let taskIndex = 0;
@@ -868,8 +875,8 @@ function DevTab({ devTasks, setDevTasks }) {
                   return (
                     <div
                       key={task}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; })}
+                      className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
+                      onClick={readOnly ? undefined : () => setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; })}
                     >
                       {devTasks[idx]
                         ? <CheckSquare size={16} className="text-green-500 flex-shrink-0" />
@@ -901,7 +908,7 @@ function DevTab({ devTasks, setDevTasks }) {
 }
 
 // ── Tab: Realized Expenses ────────────────────────────────────────────────────
-function RealizedTab({ realized, setRealized }) {
+function RealizedTab({ realized, setRealized, readOnly }) {
   const total = COST_FIELDS.reduce((s, f) => s + (realized[f.key] || 0), 0);
   return (
     <div className="max-w-lg">
@@ -1292,7 +1299,7 @@ export default function DealDetail() {
       </div>
 
       {/* Tab content */}
-      <div className={`p-6 ${fromInvestorPortal ? 'pointer-events-none select-none' : ''}`}>
+      <div className={`p-6 ${fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}`}>
         {activeTab === 'overview' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
@@ -1342,16 +1349,17 @@ export default function DealDetail() {
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
+            readOnly={fromInvestorPortal}
           />
         )}
         {activeTab === 'dd' && (
-          <DDTab deal={deal} ddTasks={ddTasks} setDdTasks={setDdTasks} />
+          <DDTab deal={deal} ddTasks={ddTasks} setDdTasks={setDdTasks} readOnly={fromInvestorPortal} />
         )}
         {activeTab === 'dev' && (
-          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} />
+          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal} />
         )}
         {activeTab === 'realized' && (
-          <RealizedTab realized={realized} setRealized={setRealized} />
+          <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal} />
         )}
       </div>
     </div>
