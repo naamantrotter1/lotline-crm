@@ -166,31 +166,77 @@ function InvestorCard({ investor, onDealClick }) {
   );
 }
 
-// ── Assign Investor Modal ───────────────────────────────────────────────────────
+const FINANCING_SCENARIOS_LIST = [
+  { id: 'cash',                 label: 'Cash' },
+  { id: 'hard-money-loan',      label: 'Hard Money Loan' },
+  { id: 'hard-money-land-home', label: 'Hard Money (Land + Home)' },
+  { id: 'loc',                  label: 'Line of Credit' },
+  { id: 'profit-split',         label: 'Profit Split' },
+];
+
+// ── Assign Investor Modal ─────────────────────────────────────────────────────
 function AssignFunderModal({ deal, investors, onAssign, onClose }) {
   const [mode, setMode] = useState('existing');
   const [selected, setSelected] = useState('');
-  const [terms, setTerms] = useState('');
   const [newName, setNewName] = useState('');
-  const [newTerms, setNewTerms] = useState('');
+
+  // Financing scenario
+  const [scenario, setScenario] = useState('');
+  const [interestRate, setInterestRate] = useState(13);
+  const [originationFeeType, setOriginationFeeType] = useState('percentage');
+  const [originationFeePct, setOriginationFeePct] = useState(3);
+  const [originationFeeFlat, setOriginationFeeFlat] = useState(0);
+  const [servicingFeeType, setServicingFeeType] = useState('flat');
+  const [servicingFeeFlat, setServicingFeeFlat] = useState(750);
+  const [servicingFeePct, setServicingFeePct] = useState(0);
+  const [balloonTerm, setBalloonTerm] = useState(12);
+  const [holdPeriod, setHoldPeriod] = useState(6);
+  const [monthlyHoldCost, setMonthlyHoldCost] = useState(250);
+  const [profitSharePct, setProfitSharePct] = useState(0);
+  const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
+  const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
+  const [ltcPct, setLtcPct] = useState(80);
+  const [originationPoints, setOriginationPoints] = useState(0);
+  const [creditLimit, setCreditLimit] = useState(0);
+  const [drawPct, setDrawPct] = useState(100);
+  const [annualFeePct, setAnnualFeePct] = useState(0);
+  const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(50);
 
   const existingInv = investors.find(i => i.name === selected);
 
-  const handleSubmit = () => {
-    if (mode === 'existing' && selected) {
-      onAssign({ funderName: selected, terms: terms || existingInv?.standardTerms || '' });
-    } else if (mode === 'new' && newName.trim()) {
-      onAssign({ funderName: newName.trim(), terms: newTerms, isNew: true, newInvestor: { name: newName.trim(), standardTerms: newTerms } });
+  // Auto-set scenario when selecting an existing investor
+  const handleSelectInvestor = (name) => {
+    setSelected(name);
+    const inv = investors.find(i => i.name === name);
+    if (inv?.preferredFinancing) {
+      const match = FINANCING_SCENARIOS_LIST.find(s => s.label === inv.preferredFinancing);
+      if (match) setScenario(match.id);
     }
   };
 
-  const canSubmit = mode === 'existing' ? !!selected : !!newName.trim();
+  const funderName = mode === 'existing' ? selected : newName.trim();
+  const canSubmit = !!funderName;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    const terms = { scenario, interestRate, originationFeeType, originationFeePct, originationFeeFlat, servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm, holdPeriod, monthlyHoldCost, profitSharePct, capitalDeployedDate, capitalReturnedDate, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct, investorProfitSplitPct };
+    onAssign({ funderName, terms, isNew: mode === 'new', newInvestor: mode === 'new' ? { name: funderName, standardTerms: '' } : null });
+  };
+
+  // Shared styles matching DealDetail
+  const ni = 'w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30';
+  const wi = 'w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30';
+  const row = 'flex justify-between items-center py-1.5 border-b border-gray-50 text-xs last:border-0';
+  const sec = 'bg-white rounded-xl border border-gray-100 px-4 py-3';
+  const secTitle = 'text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2';
+  const toggleBtn = (active) => `px-2.5 py-1 text-xs transition-colors ${active ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Assign Investor</p>
             <p className="text-sm font-semibold text-gray-800 leading-snug">{deal.address}</p>
@@ -199,85 +245,133 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
         </div>
 
-        {/* Mode toggle */}
-        <div className="px-5 pt-4 flex gap-2">
-          {['existing', 'new'].map(m => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                mode === m ? 'bg-accent text-white border-accent' : 'text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {m === 'existing' ? 'Existing Investor' : 'Add New Investor'}
-            </button>
-          ))}
-        </div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
-        <div className="px-5 py-4 space-y-3">
+          {/* Mode toggle */}
+          <div className="flex gap-2">
+            {['existing', 'new'].map(m => (
+              <button key={m} onClick={() => setMode(m)}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${mode === m ? 'bg-accent text-white border-accent' : 'text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                {m === 'existing' ? 'Existing Investor' : 'Add New Investor'}
+              </button>
+            ))}
+          </div>
+
+          {/* Investor selection */}
           {mode === 'existing' ? (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Select Investor</label>
-                <select
-                  value={selected}
-                  onChange={e => { setSelected(e.target.value); setTerms(''); }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  <option value="">— Choose investor —</option>
-                  {investors.map(inv => (
-                    <option key={inv.name} value={inv.name}>{inv.name}</option>
-                  ))}
-                </select>
-              </div>
-              {existingInv?.standardTerms && (
-                <p className="text-xs text-gray-400">Standard terms: <span className="font-medium text-gray-600">{existingInv.standardTerms}</span></p>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Terms <span className="text-gray-400 font-normal">(override, optional)</span></label>
-                <input
-                  type="text"
-                  value={terms}
-                  onChange={e => setTerms(e.target.value)}
-                  placeholder={existingInv?.standardTerms || 'e.g. 3 and 13, 10% interest'}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
-              </div>
-            </>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Select Investor</label>
+              <select value={selected} onChange={e => handleSelectInvestor(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30">
+                <option value="">— Choose investor —</option>
+                {investors.map(inv => <option key={inv.name} value={inv.name}>{inv.name}</option>)}
+              </select>
+            </div>
           ) : (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Investor Name</label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  placeholder="e.g. John Smith Capital"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Investor Name</label>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="e.g. John Smith Capital"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            </div>
+          )}
+
+          {/* Financing Scenario selector */}
+          <div className={sec}>
+            <p className={secTitle}>Financing Scenario</p>
+            <select value={scenario} onChange={e => setScenario(e.target.value)}
+              className="w-full text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30">
+              <option value="">— Choose a scenario —</option>
+              {FINANCING_SCENARIOS_LIST.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </div>
+
+          {/* ── Hard Money Loan ── */}
+          {scenario === 'hard-money-loan' && (
+            <div className={sec}>
+              <p className={secTitle}>Loan Terms</p>
+              <div className={row}><span className="text-gray-500">LTC % (Loan-to-Cost)</span><input type="number" value={ltcPct} onChange={e => setLtcPct(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Annual Interest Rate (%)</span><input type="number" value={interestRate} onChange={e => setInterestRate(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Origination Points (%)</span><input type="number" value={originationPoints} onChange={e => setOriginationPoints(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Loan Term (months)</span><input type="number" value={balloonTerm} onChange={e => setBalloonTerm(+e.target.value||0)} className={ni} /></div>
+            </div>
+          )}
+
+          {/* ── Hard Money (Land + Home) ── */}
+          {scenario === 'hard-money-land-home' && (<>
+            <div className={sec}>
+              <p className={secTitle}>Interest</p>
+              <div className={row}><span className="text-gray-500">Annual Interest Rate (%)</span><input type="number" value={interestRate} onChange={e => setInterestRate(+e.target.value||0)} className={ni} /></div>
+            </div>
+            <div className={sec}>
+              <div className="flex items-center justify-between mb-2">
+                <p className={secTitle + ' mb-0'}>Origination Fee</p>
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                  <button onClick={() => setOriginationFeeType('percentage')} className={toggleBtn(originationFeeType==='percentage')}>% of Total</button>
+                  <button onClick={() => setOriginationFeeType('flat')} className={toggleBtn(originationFeeType==='flat')}>Flat $</button>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Terms</label>
-                <input
-                  type="text"
-                  value={newTerms}
-                  onChange={e => setNewTerms(e.target.value)}
-                  placeholder="e.g. 3 and 13, 10% interest, 12 months"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
+              {originationFeeType === 'percentage'
+                ? <div className={row}><span className="text-gray-500">Fee Percentage (%)</span><input type="number" value={originationFeePct} onChange={e => setOriginationFeePct(+e.target.value||0)} className={ni} /></div>
+                : <div className={row}><span className="text-gray-500">Flat Amount ($)</span><input type="number" value={originationFeeFlat} onChange={e => setOriginationFeeFlat(+e.target.value||0)} className={wi} /></div>
+              }
+            </div>
+            <div className={sec}>
+              <div className="flex items-center justify-between mb-2">
+                <p className={secTitle + ' mb-0'}>Servicing Fee</p>
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                  <button onClick={() => setServicingFeeType('percentage')} className={toggleBtn(servicingFeeType==='percentage')}>% of Total</button>
+                  <button onClick={() => setServicingFeeType('flat')} className={toggleBtn(servicingFeeType==='flat')}>Flat $</button>
+                </div>
               </div>
-            </>
+              {servicingFeeType === 'percentage'
+                ? <div className={row}><span className="text-gray-500">Fee Percentage (%)</span><input type="number" value={servicingFeePct} onChange={e => setServicingFeePct(+e.target.value||0)} className={ni} /></div>
+                : <div className={row}><span className="text-gray-500">Flat Amount ($)</span><input type="number" value={servicingFeeFlat} onChange={e => setServicingFeeFlat(+e.target.value||0)} className={wi} /></div>
+              }
+            </div>
+            <div className={sec}>
+              <p className={secTitle}>Profit Share</p>
+              <div className={row}><span className="text-gray-500">Profit Share (%)</span><input type="number" value={profitSharePct} onChange={e => setProfitSharePct(+e.target.value||0)} className={ni} /></div>
+            </div>
+            <div className={sec}>
+              <p className={secTitle}>Terms & Hold Period</p>
+              <div className={row}><span className="text-gray-500">Balloon Payment Term (months)</span><input type="number" value={balloonTerm} onChange={e => setBalloonTerm(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Hold Period (months)</span><input type="number" value={holdPeriod} onChange={e => setHoldPeriod(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Monthly Holding Costs ($)</span><input type="number" value={monthlyHoldCost} onChange={e => setMonthlyHoldCost(+e.target.value||0)} className={wi} /></div>
+            </div>
+            <div className={sec}>
+              <p className={secTitle}>Capital Tracking</p>
+              <div className={row}><span className="text-gray-500">Capital Deployed Date</span><input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className="text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" /></div>
+              <div className={row}><span className="text-gray-500">Capital Returned Date</span><input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className="text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" /></div>
+            </div>
+          </>)}
+
+          {/* ── Line of Credit ── */}
+          {scenario === 'loc' && (
+            <div className={sec}>
+              <p className={secTitle}>Line of Credit Terms</p>
+              <div className={row}><span className="text-gray-500">Credit Limit ($)</span><input type="number" value={creditLimit} onChange={e => setCreditLimit(+e.target.value||0)} className={wi} /></div>
+              <div className={row}><span className="text-gray-500">Draw % (of Limit)</span><input type="number" value={drawPct} onChange={e => setDrawPct(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Annual Interest Rate (%)</span><input type="number" value={interestRate} onChange={e => setInterestRate(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Annual Fee (%)</span><input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(+e.target.value||0)} className={ni} /></div>
+            </div>
+          )}
+
+          {/* ── Profit Split ── */}
+          {scenario === 'profit-split' && (
+            <div className={sec}>
+              <p className={secTitle}>Profit Split</p>
+              <div className={row}><span className="text-gray-500">Investor Profit Split (%)</span><input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(+e.target.value||0)} className={ni} /></div>
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center flex-shrink-0">
           <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
+          <button onClick={handleSubmit} disabled={!canSubmit}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             <UserPlus size={12} /> Assign Investor
           </button>
         </div>
