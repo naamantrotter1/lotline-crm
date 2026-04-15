@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
@@ -955,6 +955,8 @@ function getDefaultRate(investor) {
 export default function DealDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromInvestorPortal = location.state?.from === 'investor-portal';
 
   const customDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
   const deal = customDeals.find(d => String(d.id) === String(id));
@@ -1162,10 +1164,10 @@ export default function DealDetail() {
             onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
-            <ArrowLeft size={16} /> Back to Pipeline
+            <ArrowLeft size={16} /> {fromInvestorPortal ? 'Back to Investor Portal' : 'Back to Pipeline'}
           </button>
           <ChevronRight size={14} className="text-gray-300" />
-          <span className="text-sm text-gray-400">{deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
+          <span className="text-sm text-gray-400">{fromInvestorPortal ? 'Investor Portal' : deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
           <ChevronRight size={14} className="text-gray-300" />
           <span className="text-sm text-gray-600 font-medium truncate max-w-xs">{deal.address}</span>
         </div>

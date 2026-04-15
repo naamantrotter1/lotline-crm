@@ -38,7 +38,7 @@ function AllDealsTab() {
   const navigate = useNavigate();
   const handleDealClick = (deal) => {
     const id = findDealId(deal.address);
-    if (id) navigate(`/deal/${id}`);
+    if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
   return (
     <div>
@@ -89,7 +89,7 @@ function InvestorCard({ investor }) {
   const isCash = investor.name === 'Cash';
   const handleDealClick = (deal) => {
     const id = findDealId(deal.address);
-    if (id) navigate(`/deal/${id}`);
+    if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
   return (
