@@ -314,8 +314,9 @@ export default function DealCalculator() {
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
                     <input
                       type="number"
-                      value={vals[f.key]}
+                      value={vals[f.key] === 0 ? '' : vals[f.key]}
                       onChange={(e) => set(f.key, e.target.value)}
+                      placeholder="0"
                       className="w-full pl-5 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
                     />
                   </div>
@@ -340,8 +341,9 @@ export default function DealCalculator() {
                     {f.prefix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.prefix}</span>}
                     <input
                       type="number"
-                      value={vals[f.key]}
+                      value={vals[f.key] === 0 ? '' : vals[f.key]}
                       onChange={(e) => set(f.key, e.target.value)}
+                      placeholder="0"
                       className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
                     />
                     {f.suffix && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.suffix}</span>}
