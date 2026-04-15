@@ -3,6 +3,17 @@ let activeType = "";
 let activeBrand = "";
 let savedHomes = new Set(JSON.parse(localStorage.getItem('savedHomes') || '[]'));
 
+function openLightbox(src) {
+  const el = document.getElementById('lightboxOverlay');
+  document.getElementById('lightboxImg').src = src;
+  el.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightboxOverlay').style.display = 'none';
+  document.getElementById('lightboxImg').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
 function toggleSave(id, btn) {
   event.stopPropagation();
   if (savedHomes.has(id)) {
@@ -131,7 +142,7 @@ function openModal(id) {
   const photoGallery = h.photos ? `
     <div class="modal-gallery">
       <div class="gallery-main">
-        <img id="galleryMain" src="${h.photos[0]}" alt="${h.name} photo 1">
+        <img id="galleryMain" src="${h.photos[0]}" alt="${h.name} photo 1" onclick="openLightbox(this.src)" style="cursor:zoom-in;">
         ${h.photos.length > 1 ? `
           <button class="gallery-nav gallery-prev" onclick="galleryNav(-1)">&#8249;</button>
           <button class="gallery-nav gallery-next" onclick="galleryNav(1)">&#8250;</button>
@@ -331,7 +342,7 @@ function renderOrderStep() {
     label.textContent = 'Step 1 of 4 \u2014 Confirm Selection';
     const h = _orderHome;
     const thumb = h.photos && h.photos.length
-      ? `<img src="${h.photos[0]}" alt="${h.name}">`
+      ? `<img src="${h.photos[0]}" alt="${h.name}" onclick="event.stopPropagation();openLightbox('${h.photos[0]}')" style="cursor:zoom-in;">`
       : `<span>${h.emoji}</span>`;
     const typeLabel = h.type === 'single' ? 'Single-Wide' : h.type === 'double' ? 'Double-Wide' : 'Triple-Wide';
     body.innerHTML = `

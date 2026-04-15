@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LotLine Homes – Available Homes</title>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
   <style>
     body { margin: 0; padding: 0; background: #f3f4f6; }
     .homes-page { padding: 20px; }
@@ -85,6 +85,12 @@
     <div class="drawer-footer" id="drawerFooter"></div>
   </div>
 
-  <script src="app.js?v=7"></script>
+  <!-- LIGHTBOX -->
+  <div id="lightboxOverlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out;">
+    <img id="lightboxImg" src="" alt="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,0.6);">
+    <button onclick="closeLightbox()" style="position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&times;</button>
+  </div>
+
+  <script src="app.js?v=8"></script>
 </body>
 </html>
