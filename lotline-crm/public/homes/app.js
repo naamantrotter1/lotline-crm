@@ -185,7 +185,9 @@ function openModal(id) {
       </div>
     </div>
   `;
-  document.getElementById('modalBackdrop').classList.add('open');
+  const bd = document.getElementById('modalBackdrop');
+  bd.style.display = 'flex';
+  bd.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
@@ -213,7 +215,9 @@ function gallerySet(i) {
 function galleryNav(dir) { gallerySet(window._galleryIndex + dir); }
 
 function closeModal() {
-  document.getElementById('modalBackdrop').classList.remove('open');
+  const bd = document.getElementById('modalBackdrop');
+  bd.classList.remove('open');
+  bd.style.display = 'none';
   document.body.style.overflow = '';
 }
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -310,15 +314,23 @@ function openOrderDrawer(id) {
     if (u.name) _orderData.name = u.name;
     if (u.email) _orderData.email = u.email;
   } catch {}
-  document.getElementById('orderOverlay').classList.add('open');
-  document.getElementById('orderDrawer').classList.add('open');
+  const ov = document.getElementById('orderOverlay');
+  const dr = document.getElementById('orderDrawer');
+  ov.style.display = 'block';
+  ov.classList.add('open');
+  dr.style.transform = 'translateX(0)';
+  dr.classList.add('open');
   document.body.style.overflow = 'hidden';
   renderOrderStep();
 }
 
 function closeOrderDrawer() {
-  document.getElementById('orderOverlay').classList.remove('open');
-  document.getElementById('orderDrawer').classList.remove('open');
+  const ov = document.getElementById('orderOverlay');
+  const dr = document.getElementById('orderDrawer');
+  ov.classList.remove('open');
+  ov.style.display = 'none';
+  dr.classList.remove('open');
+  dr.style.transform = 'translateX(110%)';
   document.body.style.overflow = '';
 }
 

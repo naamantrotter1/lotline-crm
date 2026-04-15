@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LotLine Homes – Available Homes</title>
+  <!-- Absolute paths prevent broken CSS/JS when served at /homes vs /homes/index.html -->
+  <base href="/homes/" />
   <link rel="stylesheet" href="styles.css?v=6" />
   <style>
     body { margin: 0; padding: 0; background: #f3f4f6; }
@@ -57,17 +59,17 @@
     <div class="homes-grid" id="homesGrid"></div>
   </div>
 
-  <!-- MODAL -->
-  <div class="modal-backdrop" id="modalBackdrop">
+  <!-- MODAL — hidden by default via inline style as CSS fallback -->
+  <div class="modal-backdrop" id="modalBackdrop" style="display:none">
     <div class="modal" id="modal">
       <button class="modal-close" id="modalClose">&times;</button>
       <div id="modalContent"></div>
     </div>
   </div>
 
-  <!-- ORDER DRAWER -->
-  <div class="order-overlay" id="orderOverlay"></div>
-  <div class="order-drawer" id="orderDrawer">
+  <!-- ORDER DRAWER — hidden by default via inline style as CSS fallback -->
+  <div class="order-overlay" id="orderOverlay" style="display:none"></div>
+  <div class="order-drawer" id="orderDrawer" style="transform:translateX(110%)">
     <div class="drawer-header">
       <span class="drawer-title">Order a Home</span>
       <button class="drawer-close" id="drawerClose">&times;</button>
@@ -86,7 +88,7 @@
   </div>
 
   <!-- LIGHTBOX -->
-  <div id="lightboxOverlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out;">
+  <div id="lightboxOverlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
     <img id="lightboxImg" src="" alt="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,0.6);">
     <button onclick="closeLightbox()" style="position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&times;</button>
   </div>
