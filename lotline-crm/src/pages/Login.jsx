@@ -1,17 +1,34 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const { signIn } = useAuth();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
+  const [success,  setSuccess]  = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [mode,     setMode]     = useState('signin'); // 'signin' | 'signup'
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
+
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess('Account created! Check your email to confirm, then sign in. If confirmation is disabled, just sign in now.');
+        setMode('signin');
+      }
+      setLoading(false);
+      return;
+    }
+
     const { error } = await signIn(email.trim(), password);
     if (error) {
       setError(error.message === 'Invalid login credentials'
@@ -76,8 +93,12 @@ export default function Login() {
             />
           </div>
 
-          <h1 className="text-2xl font-bold text-[#1a2332] mb-1">Welcome back</h1>
-          <p className="text-sm text-gray-400 mb-8">Sign in to your LotLine account</p>
+          <h1 className="text-2xl font-bold text-[#1a2332] mb-1">
+            {mode === 'signup' ? 'Create account' : 'Welcome back'}
+          </h1>
+          <p className="text-sm text-gray-400 mb-8">
+            {mode === 'signup' ? 'Set up your LotLine login' : 'Sign in to your LotLine account'}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -114,18 +135,38 @@ export default function Login() {
               </div>
             )}
 
+            {success && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">
+                {success}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading || !email || !password}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: loading || !email || !password ? '#94a3b8' : '#c9703a' }}
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? (mode === 'signup' ? 'Creating…' : 'Signing in…') : (mode === 'signup' ? 'Create Account' : 'Sign in')}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-8">
-            Don't have an account? Contact your admin to get access.
+          <p className="text-center text-xs text-gray-400 mt-6">
+            {mode === 'signin' ? (
+              <>No account yet?{' '}
+                <button onClick={() => { setMode('signup'); setError(''); setSuccess(''); }}
+                  className="text-accent hover:underline font-medium">
+                  Create one
+                </button>
+              </>
+            ) : (
+              <>Already have an account?{' '}
+                <button onClick={() => { setMode('signin'); setError(''); setSuccess(''); }}
+                  className="text-accent hover:underline font-medium">
+                  Sign in
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>
