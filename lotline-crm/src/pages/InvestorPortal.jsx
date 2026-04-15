@@ -166,7 +166,7 @@ function InvestorCard({ investor, onDealClick }) {
   );
 }
 
-// ── Assign Funder Modal ───────────────────────────────────────────────────────
+// ── Assign Investor Modal ───────────────────────────────────────────────────────
 function AssignFunderModal({ deal, investors, onAssign, onClose }) {
   const [mode, setMode] = useState('existing');
   const [selected, setSelected] = useState('');
@@ -192,7 +192,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">Assign Funder</p>
+            <p className="text-xs text-gray-400 mb-0.5">Assign Investor</p>
             <p className="text-sm font-semibold text-gray-800 leading-snug">{deal.address}</p>
             <p className="text-xs text-gray-500 mt-0.5">Capital needed: <span className="font-semibold text-gray-700">${deal.totalCapital.toLocaleString()}</span></p>
           </div>
@@ -278,7 +278,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
             disabled={!canSubmit}
             className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <UserPlus size={12} /> Assign Funder
+            <UserPlus size={12} /> Assign Investor
           </button>
         </div>
       </div>
@@ -373,7 +373,7 @@ function NeedsFundingTab({ onDealClick }) {
                       onClick={e => { e.stopPropagation(); setModalDeal(deal); }}
                       className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors whitespace-nowrap"
                     >
-                      <UserPlus size={11} /> Assign Funder
+                      <UserPlus size={11} /> Assign Investor
                     </button>
                   </td>
                 </tr>
