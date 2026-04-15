@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, MapPin, Building, Calendar, ExternalLink } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { useDeals } from '../lib/DealsContext';
 
@@ -22,13 +23,69 @@ function LenderBadge({ name }) {
   );
 }
 
+// ── Deal Popup Modal ─────────────────────────────────────────────────────────
+function DealPopup({ deal, onClose, onNavigate }) {
+  if (!deal) return null;
+  const profit = deal.arv - deal.totalCapital;
+  const roi = deal.totalCapital > 0 ? ((profit / deal.totalCapital) * 100).toFixed(1) : null;
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex-1 min-w-0 pr-3">
+            <div className="flex items-center gap-2 mb-1">
+              <MapPin size={13} className="text-accent flex-shrink-0" />
+              <h2 className="text-sm font-bold text-sidebar leading-tight truncate">{deal.address}</h2>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
+              <span className="text-[10px] text-gray-400">{deal.pipeline}</span>
+              <LenderBadge name={deal.lender} />
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={16} /></button>
+        </div>
+
+        {/* Financials grid */}
+        <div className="px-5 py-4 grid grid-cols-2 gap-3">
+          {[
+            { label: 'Land Cost',       value: `$${deal.landCost.toLocaleString()}` },
+            { label: 'Construction',    value: `$${deal.construction.toLocaleString()}` },
+            { label: 'Total Capital',   value: `$${deal.totalCapital.toLocaleString()}`, bold: true },
+            { label: 'ARV',             value: `$${deal.arv.toLocaleString()}`, bold: true },
+            { label: 'Projected Profit',value: profit >= 0 ? `$${profit.toLocaleString()}` : `-$${Math.abs(profit).toLocaleString()}`, color: profit >= 0 ? 'text-green-600' : 'text-red-500' },
+            { label: 'ROI',             value: roi != null ? `${roi}%` : '—', color: profit >= 0 ? 'text-green-600' : 'text-red-500' },
+          ].map(({ label, value, bold, color }) => (
+            <div key={label} className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+              <p className={`text-sm font-${bold ? 'bold' : 'semibold'} ${color || 'text-sidebar'}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {deal.closeDate && (
+          <div className="px-5 pb-3 flex items-center gap-1.5 text-xs text-gray-500">
+            <Calendar size={11} />
+            Close date: <span className="font-medium text-gray-700">{deal.closeDate}</span>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+          <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Close</button>
+          <button onClick={onNavigate} className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent/80 transition-colors">
+            Open Full Deal <ExternalLink size={11} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
-function AllDealsTab() {
-  const navigate = useNavigate();
-  const handleDealClick = (deal) => {
-    const id = findDealId(deal.address);
-    if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
-  };
+function AllDealsTab({ onDealClick }) {
   return (
     <div>
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -48,7 +105,7 @@ function AllDealsTab() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {ALL_DEALS_TABLE.map((deal, i) => (
-              <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleDealClick(deal)}>
+              <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => onDealClick(deal)}>
                 <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px]">{deal.address}</td>
                 <td className="px-4 py-2.5 text-gray-600">{deal.pipeline}</td>
                 <td className="px-4 py-2.5">
@@ -72,14 +129,9 @@ function AllDealsTab() {
 }
 
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
-function InvestorCard({ investor }) {
+function InvestorCard({ investor, onDealClick }) {
   const [expanded, setExpanded] = useState(false);
-  const navigate = useNavigate();
   const isCash = investor.name === 'Cash';
-  const handleDealClick = (deal) => {
-    const id = findDealId(deal.address);
-    if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
-  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -144,7 +196,7 @@ function InvestorCard({ investor }) {
             <div
               key={i}
               className="px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => handleDealClick(deal)}
+              onClick={() => onDealClick(deal)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0 mr-3">
@@ -175,12 +227,80 @@ function InvestorCard({ investor }) {
   );
 }
 
+// ── Tab: Needs Funding ───────────────────────────────────────────────────────
+function NeedsFundingTab({ onDealClick }) {
+  const UNFUNDED = ['Cash', 'None', '', null, undefined];
+  const deals = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
+  const totalNeeded = deals.reduce((s, d) => s + d.totalCapital, 0);
+
+  return (
+    <div>
+      {/* Summary banner */}
+      <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <DollarSign size={16} className="text-amber-500 flex-shrink-0" />
+        <p className="text-sm text-amber-800">
+          <span className="font-bold">{deals.length} deal{deals.length !== 1 ? 's' : ''}</span> need{deals.length === 1 ? 's' : ''} funding —{' '}
+          <span className="font-bold">${totalNeeded.toLocaleString()}</span> total capital required
+        </p>
+      </div>
+
+      {deals.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
+          All deals have a funder assigned.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Address</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Pipeline</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Stage</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Funding Type</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Land Cost</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Construction</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Total Capital</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">ARV</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {deals.map((deal, i) => {
+                const isCash = deal.lender === 'Cash';
+                return (
+                  <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => onDealClick(deal)}>
+                    <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px]">{deal.address}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{deal.pipeline}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {isCash ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Cash</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">No Funder</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.landCost.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.construction.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-gray-800">${deal.totalCapital.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-600">${deal.arv.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
-function ByInvestorTab() {
+function ByInvestorTab({ onDealClick }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {INVESTORS.map(inv => (
-        <InvestorCard key={inv.id} investor={inv} />
+        <InvestorCard key={inv.id} investor={inv} onDealClick={onDealClick} />
       ))}
     </div>
   );
@@ -243,12 +363,23 @@ function DirectoryTab() {
 // ── Main Investor Portal ──────────────────────────────────────────────────────
 export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('by-investor');
+  const [selectedDeal, setSelectedDeal] = useState(null);
 
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
     return match?.id ?? null;
+  };
+
+  const handleDealClick = (deal) => setSelectedDeal(deal);
+  const handlePopupClose = () => setSelectedDeal(null);
+  const handleOpenFull = () => {
+    if (!selectedDeal) return;
+    const id = findDealId(selectedDeal.address);
+    setSelectedDeal(null);
+    if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
   const totalCapital = INVESTORS.reduce((s, i) => s + i.capitalInvested, 0);
@@ -257,6 +388,7 @@ export default function InvestorPortal() {
 
   const TABS = [
     { key: 'all-deals', label: 'All Deals' },
+    { key: 'needs-funding', label: 'Needs Funding' },
     { key: 'by-investor', label: 'By Investor' },
     { key: 'directory', label: 'Directory' },
   ];
@@ -310,10 +442,13 @@ export default function InvestorPortal() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 'all-deals' && <AllDealsTab />}
-        {activeTab === 'by-investor' && <ByInvestorTab />}
+        {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
+        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
+        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} />}
         {activeTab === 'directory' && <DirectoryTab />}
       </div>
+
+      <DealPopup deal={selectedDeal} onClose={handlePopupClose} onNavigate={handleOpenFull} />
     </div>
   );
 }
