@@ -32,7 +32,7 @@ const BASE_NAV_SECTIONS = [
   {
     label: 'Tools',
     items: [
-      { icon: Globe,       label: 'Map Search',             to: '/flood-map'       },
+      { icon: Globe,       label: 'Map',                    to: '/flood-map'       },
       { icon: Map,         label: 'Market Research',        to: '/intelligence'    },
       { icon: Home,        label: 'Order Home',             to: '/homes'           },
       { icon: Landmark,    label: 'Capital & Partnerships', to: '/lending'         },
