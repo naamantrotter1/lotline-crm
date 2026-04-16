@@ -206,7 +206,9 @@ export async function loadArchivedDeals() {
   }
 }
 
-/** Save (upsert) a single deal — updates localStorage immediately, Supabase async */
+/** Save a single deal — updates localStorage immediately, Supabase async.
+ *  Tries UPDATE first (works for all roles incl. agent); falls back to
+ *  INSERT for brand-new deals that don't yet exist in the DB. */
 export function saveDeal(deal) {
   // Update localStorage immediately
   const all = lsGet();
@@ -214,11 +216,25 @@ export function saveDeal(deal) {
   if (idx >= 0) all[idx] = deal; else all.push(deal);
   lsSet(all);
 
-  // Async Supabase upsert (fire and forget)
-  if (supabase) {
-    supabase.from('deals').upsert(dealToRow(deal), { onConflict: 'id' })
-      .then(({ error }) => { if (error) console.warn('[dealsSync] saveDeal error:', error.message); });
-  }
+  if (!supabase) return;
+
+  const row = dealToRow(deal);
+
+  // Try UPDATE first — only requires the update policy (agents included)
+  supabase.from('deals').update(row).eq('id', row.id)
+    .then(({ error, data }) => {
+      if (error) {
+        console.error('[dealsSync] saveDeal update error:', error.message);
+        return;
+      }
+      // If no rows matched (new deal not yet in DB), fall back to INSERT
+      if (data !== null && Array.isArray(data) && data.length === 0) {
+        supabase.from('deals').insert(row)
+          .then(({ error: insertError }) => {
+            if (insertError) console.error('[dealsSync] saveDeal insert error:', insertError.message);
+          });
+      }
+    });
 }
 
 /** Delete a deal from both localStorage and Supabase */
