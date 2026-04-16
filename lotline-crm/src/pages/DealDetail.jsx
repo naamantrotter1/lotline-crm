@@ -115,14 +115,14 @@ function InfoRow({ label, value, mono }) {
 
 function SelectRow({ label, value, onChange, options, readOnly }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-      <span className="text-xs text-gray-500">{label}</span>
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{label}</p>
       {readOnly
-        ? <span className="text-xs font-medium text-gray-800">{value || '—'}</span>
+        ? <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
         : <select
             value={value || ''}
             onChange={e => onChange(e.target.value)}
-            className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[180px]"
+            className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full max-w-xs"
           >
             <option value="">— Select —</option>
             {options.map(opt => (
@@ -136,15 +136,15 @@ function SelectRow({ label, value, onChange, options, readOnly }) {
 
 function InputRow({ label, value, onChange, type = 'text', mono, readOnly }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-      <span className="text-xs text-gray-500 flex-shrink-0 mr-3">{label}</span>
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{label}</p>
       {readOnly
-        ? <span className={`text-xs font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
+        ? <span className={`text-sm font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
         : <input
             type={type}
             value={value || ''}
             onChange={e => onChange(e.target.value)}
-            className={`text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[200px] w-full text-right ${mono ? 'font-mono' : ''}`}
+            className={`text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full max-w-xs ${mono ? 'font-mono' : ''}`}
           />
       }
     </div>
