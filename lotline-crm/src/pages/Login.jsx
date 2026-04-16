@@ -107,7 +107,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <img src="/lotline-logo.png" alt="LotLine Homes" style={{ height: '36px', width: 'auto', filter: 'brightness(0) saturate(100%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(100%)' }} />
+            <img src="/lotline-logo.png" alt="LotLine Homes" style={{ height: '64px', width: 'auto', filter: 'brightness(0) saturate(100%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(100%)' }} />
           </div>
 
           {/* ── SIGN IN ── */}
