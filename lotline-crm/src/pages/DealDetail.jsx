@@ -167,7 +167,7 @@ function OverviewTab({
   arv, setArv,
   listingUrl, setListingUrl,
   address, setAddress, county, setCounty, dealState, setDealState, zip, setZip, acreage, setAcreage,
-  sellerName, setSellerName, ownerName, setOwnerName, investor, setInvestor, financing, setFinancing,
+  sellerName, setSellerName, ownerName, setOwnerName, phone, setPhone, email, setEmail, investor, setInvestor, financing, setFinancing,
   leadSource, setLeadSource, ownerType, setOwnerType, utilityScenario, setUtilityScenario,
   waterCompany, setWaterCompany, sewerCompany, setSewerCompany, electricCompany, setElectricCompany, homeModel, setHomeModel,
   subdividable, setSubdividable, landClearing, setLandClearing,
@@ -312,6 +312,8 @@ function OverviewTab({
               <div className="grid grid-cols-2 gap-x-6">
               <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
               <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
+              <InputRow label="Phone" value={phone} onChange={setPhone} />
+              <InputRow label="Email" value={email} onChange={setEmail} />
               <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
               <SelectRow label="Seller Type" value={ownerType} onChange={setOwnerType} options={OWNER_TYPE_OPTIONS} />
               </div>
@@ -1062,6 +1064,8 @@ function DealDetailContent({ deal }) {
   // Seller Information
   const [sellerName, setSellerName] = useState(deal?.sellerName || '');
   const [ownerName, setOwnerName] = useState(deal?.ownerName || '');
+  const [phone, setPhone] = useState(deal?.phone || '');
+  const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
   const [financing, setFinancing] = useState(deal?.financing || '');
 
@@ -1143,7 +1147,7 @@ function DealDetailContent({ deal }) {
 
   // Keep stateRef in sync with latest state values every render (used by saveNow)
   stateRef.current = {
-    stage, address, county, dealState, zip, acreage, ownerName, sellerName, investor, financing,
+    stage, address, county, dealState, zip, acreage, ownerName, sellerName, phone, email, investor, financing,
     notes, leadSource, ownerType, utilityScenario, homeModel, waterCompany, sewerCompany,
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
@@ -1173,7 +1177,7 @@ function DealDetailContent({ deal }) {
     const updatedDeal = {
       ...deal,
       stage, address, county, state: dealState, zip, acreage,
-      ownerName, sellerName, investor, financing, notes,
+      ownerName, sellerName, phone, email, investor, financing, notes,
       leadSource, ownerType, utilityScenario, homeModel,
       waterCompany, sewerCompany, electricCompany,
       parcelId, closingAttorney, closingAttorneyPhone,
@@ -1206,7 +1210,7 @@ function DealDetailContent({ deal }) {
     return () => clearTimeout(saveTimer.current);
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
-    ownerName, sellerName, investor, financing, notes,
+    ownerName, sellerName, phone, email, investor, financing, notes,
     leadSource, ownerType, utilityScenario, homeModel,
     waterCompany, sewerCompany, electricCompany,
     parcelId, closingAttorney, closingAttorneyPhone,
@@ -1427,6 +1431,8 @@ function DealDetailContent({ deal }) {
             acreage={acreage} setAcreage={setAcreage}
             sellerName={sellerName} setSellerName={setSellerName}
             ownerName={ownerName} setOwnerName={setOwnerName}
+            phone={phone} setPhone={setPhone}
+            email={email} setEmail={setEmail}
             investor={investor} setInvestor={setInvestor}
             financing={financing} setFinancing={setFinancing}
             leadSource={leadSource} setLeadSource={setLeadSource}

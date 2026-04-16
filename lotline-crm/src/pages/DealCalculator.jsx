@@ -17,6 +17,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
   const [ownerName,   setOwnerName]   = useState('');
   const [sellerName,  setSellerName]  = useState('');
   const [phone,       setPhone]       = useState('');
+  const [email,       setEmail]       = useState('');
   const [leadSource,  setLeadSource]  = useState('');
   const [ownerType,   setOwnerType]   = useState('Owner');
   const [utility,     setUtility]     = useState('All Utilities Available');
@@ -41,6 +42,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
       ownerName: ownerName.trim(),
       sellerName: sellerName.trim(),
       phone: phone.trim(),
+      email: email.trim() || undefined,
       leadSource,
       ownerType,
       utilityScenario: utility,
@@ -157,6 +159,8 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
               <input placeholder="Seller Name" value={sellerName} onChange={e => setSellerName(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
               <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+              <input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
               <div className="grid grid-cols-2 gap-2">
                 <select value={leadSource} onChange={e => setLeadSource(e.target.value)}
