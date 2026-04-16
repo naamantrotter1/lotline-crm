@@ -1104,26 +1104,38 @@ function DealDetailContent({ deal }) {
     setSelectedScenario(scenarioId);
   }
 
-  // ── Auto-save every editable field ───────────────────────────────────────────
-  const autoSaveMounted = useRef(false);
+  // ── Auto-save every editable field (debounced 1.5 s) ────────────────────────
+  const autoSaveMounted  = useRef(false);
+  const saveTimer        = useRef(null);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
+
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
-    if (!canEdit && !isAgent) return; // viewers cannot write
-    const updatedDeal = {
-      ...deal,
-      stage, address, county, state: dealState, zip, acreage,
-      ownerName, sellerName, investor, financing, notes,
-      leadSource, ownerType, utilityScenario, homeModel,
-      waterCompany, sewerCompany, electricCompany,
-      parcelId, closingAttorney, closingAttorneyPhone,
-      closingAttorneyAddress, closeDate, contractDate,
-      manufacturer, deliveryDate,
-      holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
-      ...costs,
-    };
-    // saveDeal writes localStorage immediately AND fires async Supabase upsert
-    saveDeal(updatedDeal);
+    if (!canEdit) return; // only editors/admins auto-save
+
+    setSaveStatus('saving');
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const updatedDeal = {
+        ...deal,
+        stage, address, county, state: dealState, zip, acreage,
+        ownerName, sellerName, investor, financing, notes,
+        leadSource, ownerType, utilityScenario, homeModel,
+        waterCompany, sewerCompany, electricCompany,
+        parcelId, closingAttorney, closingAttorneyPhone,
+        closingAttorneyAddress, closeDate, contractDate,
+        manufacturer, deliveryDate,
+        holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
+        ...costs,
+      };
+      // writes localStorage immediately + async Supabase upsert (real-time broadcasts to all users)
+      saveDeal(updatedDeal);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }, 1500);
+
+    return () => clearTimeout(saveTimer.current);
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
     ownerName, sellerName, investor, financing, notes,
@@ -1216,6 +1228,17 @@ function DealDetailContent({ deal }) {
           </div>
           {!fromInvestorPortal && (
             <div className="flex items-center gap-2">
+              {/* Auto-save indicator */}
+              {canEdit && saveStatus === 'saving' && (
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /> Saving…
+                </span>
+              )}
+              {canEdit && saveStatus === 'saved' && (
+                <span className="text-xs text-green-600 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Saved
+                </span>
+              )}
               {isAgent && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200">
                   Agent View
