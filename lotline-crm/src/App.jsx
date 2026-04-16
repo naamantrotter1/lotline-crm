@@ -54,6 +54,32 @@ function AdminRoute({ children }) {
   return children;
 }
 
+/** Agent landing: redirect to deal overview if agent, otherwise show Dashboard */
+function AgentIndexRoute() {
+  const { isAgent } = usePermissions();
+  const { loading } = useAuth();
+  if (loading) return null;
+  if (isAgent) return <Navigate to="/pipelines/deal-overview" replace />;
+  return <Dashboard />;
+}
+
+// Routes agents are permitted to access (deal/:id is allowed but guarded in the component)
+const AGENT_PERMITTED = new Set([
+  '/pipelines/deal-overview',
+  '/pipelines/sales',
+]);
+
+/** Redirects agents away from pages they have no access to */
+function AgentRoute({ children, path }) {
+  const { isAgent } = usePermissions();
+  const { loading } = useAuth();
+  if (loading) return null;
+  if (isAgent && path && !AGENT_PERMITTED.has('/' + path)) {
+    return <Navigate to="/pipelines/deal-overview" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -72,29 +98,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
-              <Route path="big-rocks" element={<BigRocks />} />
-              <Route path="pnl" element={<PnlDashboard />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="intelligence" element={<MarketResearch />} />
-              <Route path="investors" element={<InvestorPortal />} />
+              {/* Agents hitting / are redirected to their landing page */}
+              <Route index element={<AgentIndexRoute />} />
+              <Route path="big-rocks"   element={<AgentRoute path="big-rocks"><BigRocks /></AgentRoute>} />
+              <Route path="pnl"         element={<AgentRoute path="pnl"><PnlDashboard /></AgentRoute>} />
+              <Route path="analytics"   element={<AgentRoute path="analytics"><Analytics /></AgentRoute>} />
+              <Route path="intelligence" element={<AgentRoute path="intelligence"><MarketResearch /></AgentRoute>} />
+              <Route path="investors"   element={<AgentRoute path="investors"><InvestorPortal /></AgentRoute>} />
               <Route path="pipelines/deal-overview" element={<DealOverview />} />
-              <Route path="pipelines/land" element={<LandAcquisition />} />
-              <Route path="pipelines/due-diligence" element={<DueDiligence />} />
-              <Route path="pipelines/development" element={<Development />} />
-              <Route path="pipelines/sales" element={<Sales />} />
-              <Route path="deal/:id" element={<DealDetail />} />
-              <Route path="calculator" element={<DealCalculator />} />
-              <Route path="home-models" element={<HomeModels />} />
-              <Route path="counties" element={<CountyDatabase />} />
-              <Route path="arv" element={<ArvDatabase />} />
-              <Route path="contractors" element={<ContractorDatabase />} />
-              <Route path="archived" element={<ArchivedDeals />} />
-              <Route path="flood-map" element={<FloodMap />} />
-              <Route path="homes" element={<Homes />} />
-              <Route path="lending" element={<Lending />} />
-              <Route path="builder-network" element={<BuilderNetwork />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="pipelines/land"          element={<AgentRoute path="pipelines/land"><LandAcquisition /></AgentRoute>} />
+              <Route path="pipelines/due-diligence" element={<AgentRoute path="pipelines/due-diligence"><DueDiligence /></AgentRoute>} />
+              <Route path="pipelines/development"   element={<AgentRoute path="pipelines/development"><Development /></AgentRoute>} />
+              <Route path="pipelines/sales"         element={<Sales />} />
+              <Route path="deal/:id"    element={<DealDetail />} />
+              <Route path="calculator"  element={<AgentRoute path="calculator"><DealCalculator /></AgentRoute>} />
+              <Route path="home-models" element={<AgentRoute path="home-models"><HomeModels /></AgentRoute>} />
+              <Route path="counties"    element={<AgentRoute path="counties"><CountyDatabase /></AgentRoute>} />
+              <Route path="arv"         element={<AgentRoute path="arv"><ArvDatabase /></AgentRoute>} />
+              <Route path="contractors" element={<AgentRoute path="contractors"><ContractorDatabase /></AgentRoute>} />
+              <Route path="archived"    element={<AgentRoute path="archived"><ArchivedDeals /></AgentRoute>} />
+              <Route path="flood-map"   element={<AgentRoute path="flood-map"><FloodMap /></AgentRoute>} />
+              <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
+              <Route path="lending"     element={<AgentRoute path="lending"><Lending /></AgentRoute>} />
+              <Route path="builder-network" element={<AgentRoute path="builder-network"><BuilderNetwork /></AgentRoute>} />
+              <Route path="settings"    element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               {/* Admin-only route */}
               <Route
                 path="admin/users"

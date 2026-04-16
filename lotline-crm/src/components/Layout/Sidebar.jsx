@@ -45,17 +45,28 @@ const BASE_NAV_SECTIONS = [
   },
 ];
 
-const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer' };
+// Routes agents are allowed to see
+const AGENT_ALLOWED = new Set(['/pipelines/deal-overview', '/pipelines/sales']);
+
+const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer', agent: 'Agent' };
 
 export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
   const { profile, signOut } = useAuth();
-  const { canAdmin } = usePermissions();
+  const { canAdmin, isAgent } = usePermissions();
 
   const initials = profile?.name
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  const navSections = BASE_NAV_SECTIONS;
+  // Agents only see Deal Overview + Sales
+  const navSections = isAgent
+    ? BASE_NAV_SECTIONS
+        .map(section => ({
+          ...section,
+          items: section.items.filter(item => AGENT_ALLOWED.has(item.to)),
+        }))
+        .filter(section => section.items.length > 0)
+    : BASE_NAV_SECTIONS;
 
   const handleNavClick = () => {
     if (isMobile) onMobileClose?.();

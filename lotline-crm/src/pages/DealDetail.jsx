@@ -192,6 +192,7 @@ function OverviewTab({
   navigate,
   onOpenMapSearch,
   readOnly,
+  isAgent,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -271,15 +272,17 @@ function OverviewTab({
         </div>
 
         {/* Seller Information */}
-        <div>
-          <SectionHeader>Seller Information</SectionHeader>
-          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-            <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
-            <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
-            <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
-            <SelectRow label="Seller Type" value={ownerType} onChange={setOwnerType} options={OWNER_TYPE_OPTIONS} />
-          </fieldset>
-        </div>
+        {!isAgent && (
+          <div>
+            <SectionHeader>Seller Information</SectionHeader>
+            <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+              <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
+              <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
+              <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
+              <SelectRow label="Seller Type" value={ownerType} onChange={setOwnerType} options={OWNER_TYPE_OPTIONS} />
+            </fieldset>
+          </div>
+        )}
 
         {/* Deal Evaluation */}
         <div>
@@ -313,35 +316,40 @@ function OverviewTab({
           </fieldset>
         </div>
 
-        {/* Cost Breakdown */}
-        <div>
-          <SectionHeader>Cost Breakdown</SectionHeader>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <fieldset disabled={readOnly} className="divide-y divide-gray-50">
-              {COST_FIELDS.map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500 w-40">{label}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400">$</span>
-                    <input
-                      type="number"
-                      value={costs[key] || ''}
-                      onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
-                      placeholder="0"
-                      className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-70 disabled:cursor-default"
-                    />
+        {/* Cost Breakdown — hidden for agents */}
+        {!isAgent && (
+          <div>
+            <SectionHeader>Cost Breakdown</SectionHeader>
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <fieldset disabled={readOnly} className="divide-y divide-gray-50">
+                {COST_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500 w-40">{label}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400">$</span>
+                      <input
+                        type="number"
+                        value={costs[key] || ''}
+                        onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+                        placeholder="0"
+                        className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-70 disabled:cursor-default"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </fieldset>
-            <div className="bg-[#1a2332] text-white px-4 py-2.5 flex justify-between">
-              <span className="text-sm font-semibold">Total Build Cost</span>
-              <span className="text-sm font-bold">${allIn.toLocaleString()}</span>
+                ))}
+              </fieldset>
+              <div className="bg-[#1a2332] text-white px-4 py-2.5 flex justify-between">
+                <span className="text-sm font-semibold">Total Build Cost</span>
+                <span className="text-sm font-bold">${allIn.toLocaleString()}</span>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Profit summary under costs */}
-          <div className="mt-3 bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1.5">
+        {/* Estimated ARV / Profit Summary — always visible */}
+        <div>
+          {isAgent && <SectionHeader>Estimated ARV</SectionHeader>}
+          <div className={`${!isAgent ? 'mt-3' : ''} bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1.5`}>
             <div className="flex justify-between text-xs">
               <span className="text-gray-500">Estimated ARV</span>
               <span className="font-medium text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
@@ -367,21 +375,23 @@ function OverviewTab({
           </div>
         </div>
 
-        {/* Closing Details */}
-        <div>
-          <SectionHeader>Closing Details</SectionHeader>
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-            <InputRow label="Investor" value={investor} onChange={setInvestor} />
-            <InputRow label="Closing Attorney" value={closingAttorney} onChange={setClosingAttorney} />
-            <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} />
-            <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} />
-            <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" />
-            <InputRow label="Contract Date" value={contractDate} onChange={setContractDate} type="date" />
+        {/* Closing Details — hidden for agents */}
+        {!isAgent && (
+          <div>
+            <SectionHeader>Closing Details</SectionHeader>
+            <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+              <InputRow label="Investor" value={investor} onChange={setInvestor} />
+              <InputRow label="Closing Attorney" value={closingAttorney} onChange={setClosingAttorney} />
+              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} />
+              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} />
+              <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" />
+              <InputRow label="Contract Date" value={contractDate} onChange={setContractDate} type="date" />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Financing Scenario */}
-        <div>
+        {/* Financing Scenario — hidden for agents */}
+        {!isAgent && <div>
           <SectionHeader>Financing Scenario</SectionHeader>
 
           {/* Scenario selector */}
@@ -735,10 +745,10 @@ function OverviewTab({
             </div>
           )}
 
-        </div>
+        </div>}
 
-        {/* Scenario Comparison */}
-        <div>
+        {/* Scenario Comparison — hidden for agents */}
+        {!isAgent && <div>
           <SectionHeader>Scenario Comparison</SectionHeader>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <table className="w-full text-xs">
@@ -770,11 +780,11 @@ function OverviewTab({
               </tbody>
             </table>
           </div>
-        </div>
+        </div>}
       </div>
 
-      {/* Right sidebar — documents */}
-      <div className="hidden lg:block w-64 flex-shrink-0 space-y-4">
+      {/* Right sidebar — documents — hidden for agents */}
+      {!isAgent && <div className="hidden lg:block w-64 flex-shrink-0 space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="text-sm font-semibold text-[#1a2332] mb-3">Project Files</h3>
           <button className="w-full flex items-center justify-center gap-2 bg-accent text-white text-xs font-medium py-2 px-3 rounded-lg hover:bg-accent/90 transition-colors mb-3">
@@ -804,7 +814,7 @@ function OverviewTab({
 
         {/* Auto-save indicator */}
         <p className="text-[11px] text-gray-400 text-center">Auto-saving changes...</p>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -968,7 +978,7 @@ function DealDetailContent({ deal }) {
   const navigate = useNavigate();
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
-  const { canEdit } = usePermissions();
+  const { canEdit, isAgent } = usePermissions();
 
   // Initial costs from deal data
   const initCosts = {};
@@ -1128,12 +1138,14 @@ function DealDetailContent({ deal }) {
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
 
-  const TABS = [
+  const ALL_TABS = [
     { key: 'overview', label: 'Overview' },
     { key: 'dd', label: `Due Diligence (${ddComplete}/${DD_TASKS.length})` },
     { key: 'dev', label: `Development (${devComplete}/${devTotal})` },
     { key: 'realized', label: 'Realized Expenses' },
   ];
+  // Agents only see the Overview tab
+  const TABS = isAgent ? ALL_TABS.filter(t => t.key === 'overview') : ALL_TABS;
 
   const STAGE_ORDER = STAGE_OPTIONS;
   const currentStageIdx = STAGE_ORDER.indexOf(stage);
@@ -1200,7 +1212,12 @@ function DealDetailContent({ deal }) {
           </div>
           {!fromInvestorPortal && (
             <div className="flex items-center gap-2">
-              {!canEdit && (
+              {isAgent && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200">
+                  Agent View
+                </span>
+              )}
+              {!canEdit && !isAgent && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
                   View Only
                 </span>
@@ -1260,7 +1277,7 @@ function DealDetailContent({ deal }) {
           <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
-            {(fromInvestorPortal || !canEdit)
+            {(fromInvestorPortal || (!canEdit && !isAgent))
               ? <p className="text-sm font-semibold text-[#1a2332]">{stage}</p>
               : <select
                   value={stage}
@@ -1271,7 +1288,7 @@ function DealDetailContent({ deal }) {
                 </select>
             }
           </div>
-          {nextStage && !fromInvestorPortal && canEdit && (
+          {nextStage && !fromInvestorPortal && (canEdit || isAgent) && (
             <div className="ml-auto">
               <button
                 onClick={() => handleSetStage(nextStage)}
@@ -1355,6 +1372,7 @@ function DealDetailContent({ deal }) {
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
             readOnly={fromInvestorPortal || !canEdit}
+            isAgent={isAgent}
           />
         )}
         {activeTab === 'dd' && (

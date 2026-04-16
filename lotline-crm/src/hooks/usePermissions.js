@@ -5,13 +5,16 @@ import { useAuth } from '../lib/AuthContext';
  *   admin  → canEdit + canAdmin (full access + user management)
  *   editor → canEdit only (create/edit deals, no user management)
  *   viewer → read-only (default for new signups)
+ *   agent  → Deal Overview + Sales only; can move stages; cannot edit fields
  */
 export function usePermissions() {
   const { role } = useAuth();
+  const isAgent = role === 'agent';
   return {
     canEdit:  role === 'admin' || role === 'editor',
     canAdmin: role === 'admin',
     isViewer: role === 'viewer' || role === null,
+    isAgent,
     role,
   };
 }

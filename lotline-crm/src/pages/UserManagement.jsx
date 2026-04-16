@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle, UserPlus, X } from 'lucide-react';
+import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle, UserPlus, X, Briefcase } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
@@ -13,9 +13,10 @@ const tempClient = createClient(
 );
 
 const ROLE_CONFIG = {
-  admin:  { label: 'Admin',  color: 'bg-red-100 text-red-700',    icon: Shield,  desc: 'Full access + user management' },
-  editor: { label: 'Editor', color: 'bg-blue-100 text-blue-700',  icon: Edit3,   desc: 'View + edit deals'              },
-  viewer: { label: 'Viewer', color: 'bg-gray-100 text-gray-600',  icon: Eye,     desc: 'Read-only access'               },
+  admin:  { label: 'Admin',  color: 'bg-red-100 text-red-700',    icon: Shield,    desc: 'Full access + user management'              },
+  editor: { label: 'Editor', color: 'bg-blue-100 text-blue-700',  icon: Edit3,     desc: 'View + edit deals'                          },
+  viewer: { label: 'Viewer', color: 'bg-gray-100 text-gray-600',  icon: Eye,       desc: 'Read-only access'                           },
+  agent:  { label: 'Agent',  color: 'bg-green-100 text-green-700',icon: Briefcase, desc: 'Deal Overview + Sales; can move stages'     },
 };
 
 function RoleBadge({ role }) {
@@ -165,6 +166,7 @@ function CreateUserModal({ onClose, onCreated }) {
             <select value={role} onChange={e => setRole(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
               <option value="viewer">Viewer — Read-only access</option>
+              <option value="agent">Agent — Deal Overview + Sales; can move stages</option>
               <option value="editor">Editor — View + edit deals</option>
               <option value="admin">Admin — Full access + user management</option>
             </select>
@@ -277,7 +279,7 @@ export default function UserManagement() {
       </div>
 
       {/* Role legend */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
           <div key={key} className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3">
             <div className={`p-2 rounded-lg ${cfg.color}`}>
@@ -348,6 +350,7 @@ export default function UserManagement() {
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white disabled:opacity-50"
                           >
                             <option value="viewer">Viewer</option>
+                            <option value="agent">Agent</option>
                             <option value="editor">Editor</option>
                             <option value="admin">Admin</option>
                           </select>
