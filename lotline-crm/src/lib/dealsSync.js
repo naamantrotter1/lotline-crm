@@ -206,39 +206,44 @@ export async function loadArchivedDeals() {
   }
 }
 
-/** Save a single deal — updates localStorage immediately, Supabase async.
- *  Tries UPDATE first (works for all roles incl. agent); falls back to
- *  INSERT for brand-new deals that don't yet exist in the DB. */
-export function saveDeal(deal) {
-  // Update localStorage immediately
+/** Write a single deal to localStorage only (synchronous, no network). */
+export function saveToLS(deal) {
   const all = lsGet();
   const idx = all.findIndex(d => String(d.id) === String(deal.id));
   if (idx >= 0) all[idx] = deal; else all.push(deal);
   lsSet(all);
+}
 
+/** Flush a single deal to Supabase only (async, no localStorage touch).
+ *  Tries UPDATE first; falls back to INSERT for new deals. */
+export function flushToSupabase(deal) {
   if (!supabase) return;
-
   const row = dealToRow(deal);
-
-  // Try UPDATE — only requires the update policy (agents included)
   supabase.from('deals').update(row).eq('id', row.id).select()
     .then(({ error, data }) => {
       if (error) {
-        console.error('[dealsSync] saveDeal update error:', error.code, error.message, error.hint);
+        console.error('[dealsSync] flushToSupabase update error:', error.code, error.message, error.hint);
         return;
       }
       if (!data || data.length === 0) {
-        // No rows updated — deal not yet in DB, fall back to INSERT
-        console.warn('[dealsSync] saveDeal: 0 rows updated, attempting insert for id:', row.id);
+        console.warn('[dealsSync] flushToSupabase: 0 rows updated, attempting insert for id:', row.id);
         supabase.from('deals').insert(row)
           .then(({ error: insertError }) => {
-            if (insertError) console.error('[dealsSync] saveDeal insert error:', insertError.message);
-            else console.log('[dealsSync] saveDeal: inserted new deal', row.id);
+            if (insertError) console.error('[dealsSync] flushToSupabase insert error:', insertError.message);
+            else console.log('[dealsSync] flushToSupabase: inserted new deal', row.id);
           });
       } else {
-        console.log('[dealsSync] saveDeal: updated deal', row.id, '— rows affected:', data.length);
+        console.log('[dealsSync] flushToSupabase: updated deal', row.id);
       }
     });
+}
+
+/** Save a single deal — updates localStorage immediately, Supabase async.
+ *  Tries UPDATE first (works for all roles incl. agent); falls back to
+ *  INSERT for brand-new deals that don't yet exist in the DB. */
+export function saveDeal(deal) {
+  saveToLS(deal);
+  flushToSupabase(deal);
 }
 
 /** Delete a deal from both localStorage and Supabase */

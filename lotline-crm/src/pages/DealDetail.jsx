@@ -6,7 +6,7 @@ import {
   ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal } from '../lib/dealsSync';
+import { saveDeal, saveToLS, flushToSupabase } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { HOME_MODELS } from '../data/homeModels';
@@ -161,6 +161,7 @@ const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Li
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
 function OverviewTab({
   deal, costs, setCosts, notes, setNotes,
+  arv, setArv,
   address, setAddress, county, setCounty, dealState, setDealState, zip, setZip, acreage, setAcreage,
   sellerName, setSellerName, ownerName, setOwnerName, investor, setInvestor, financing, setFinancing,
   leadSource, setLeadSource, ownerType, setOwnerType, utilityScenario, setUtilityScenario,
@@ -193,14 +194,16 @@ function OverviewTab({
   onOpenMapSearch,
   readOnly,
   isAgent,
+  saveNow,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
-  const sellingCosts = (deal.arv || 0) * 0.045 + 4000;
+  const arvVal = arv ?? deal.arv ?? 0;
+  const sellingCosts = arvVal * 0.045 + 4000;
   const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
-  const netProfit = (deal.arv || 0) - allIn - sellingCosts - holdingCosts;
+  const netProfit = arvVal - allIn - sellingCosts - holdingCosts;
   const roi = allIn > 0 ? ((netProfit / allIn) * 100).toFixed(1) : '0.0';
 
   // Financing calculations
@@ -225,7 +228,7 @@ function OverviewTab({
           <SectionHeader>General Notes</SectionHeader>
           <textarea
             value={notes}
-            onChange={e => !readOnly && setNotes(e.target.value)}
+            onChange={e => { if (!readOnly) { setNotes(e.target.value); saveNow?.({ notes: e.target.value }); } }}
             readOnly={readOnly}
             rows={3}
             placeholder={!readOnly ? "Add notes about this deal..." : ""}
@@ -247,12 +250,12 @@ function OverviewTab({
             </a>
           </div>
           <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-            <InputRow label="Parcel ID" value={parcelId} onChange={setParcelId} mono />
-            <InputRow label="Address" value={address} onChange={setAddress} />
-            <InputRow label="County" value={county} onChange={setCounty} />
-            <InputRow label="State" value={dealState} onChange={setDealState} />
-            <InputRow label="Zip Code" value={zip} onChange={setZip} />
-            <InputRow label="Acreage" value={acreage} onChange={setAcreage} type="number" />
+            <InputRow label="Parcel ID" value={parcelId} onChange={v => { setParcelId(v); saveNow?.({ parcelId: v }); }} mono />
+            <InputRow label="Address" value={address} onChange={v => { setAddress(v); saveNow?.({ address: v }); }} />
+            <InputRow label="County" value={county} onChange={v => { setCounty(v); saveNow?.({ county: v }); }} />
+            <InputRow label="State" value={dealState} onChange={v => { setDealState(v); saveNow?.({ state: v }); }} />
+            <InputRow label="Zip Code" value={zip} onChange={v => { setZip(v); saveNow?.({ zip: v }); }} />
+            <InputRow label="Acreage" value={acreage} onChange={v => { setAcreage(v); saveNow?.({ acreage: v }); }} type="number" />
             <div className="py-2 flex items-center gap-4">
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
@@ -288,18 +291,20 @@ function OverviewTab({
         <div>
           <SectionHeader>Deal Evaluation</SectionHeader>
           <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-            <SelectRow label="Utility Scenario" value={utilityScenario} onChange={setUtilityScenario} options={UTILITY_SCENARIO_OPTIONS} />
-            <InputRow label="Water" value={waterCompany} onChange={setWaterCompany} />
-            <InputRow label="Sewer" value={sewerCompany} onChange={setSewerCompany} />
-            <InputRow label="Electric" value={electricCompany} onChange={setElectricCompany} />
+            <SelectRow label="Utility Scenario" value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow?.({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} />
+            <InputRow label="Water" value={waterCompany} onChange={v => { setWaterCompany(v); saveNow?.({ waterCompany: v }); }} />
+            <InputRow label="Sewer" value={sewerCompany} onChange={v => { setSewerCompany(v); saveNow?.({ sewerCompany: v }); }} />
+            <InputRow label="Electric" value={electricCompany} onChange={v => { setElectricCompany(v); saveNow?.({ electricCompany: v }); }} />
             <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
               <span className="text-xs text-gray-500">Home Model</span>
               <select
                 value={homeModel || ''}
                 onChange={e => {
-                  const selected = HOME_MODELS.find(m => `${m.manufacturer} - ${m.model}` === e.target.value);
-                  setHomeModel(e.target.value);
+                  const val = e.target.value;
+                  const selected = HOME_MODELS.find(m => `${m.manufacturer} - ${m.model}` === val);
+                  setHomeModel(val);
                   if (selected) setCosts(prev => ({ ...prev, mobileHome: selected.price }));
+                  saveNow?.({ homeModel: val, ...(selected ? { mobileHome: selected.price } : {}) });
                 }}
                 className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[220px] disabled:opacity-60 disabled:cursor-default"
               >
@@ -350,9 +355,18 @@ function OverviewTab({
         <div>
           {isAgent && <SectionHeader>Estimated ARV</SectionHeader>}
           <div className={`${!isAgent ? 'mt-3' : ''} bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1.5`}>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between items-center text-xs">
               <span className="text-gray-500">Estimated ARV</span>
-              <span className="font-medium text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
+              {isAgent && !readOnly
+                ? <input
+                    type="number"
+                    value={arv ?? ''}
+                    onChange={e => { const v = Number(e.target.value) || 0; setArv(v); saveNow?.({ arv: v }); }}
+                    placeholder="0"
+                    className="w-32 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                  />
+                : <span className="font-medium text-gray-800">${arvVal.toLocaleString()}</span>
+              }
             </div>
             {!isAgent && (
               <>
@@ -983,6 +997,40 @@ function DealDetailContent({ deal }) {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent } = usePermissions();
+  const { setDeals } = useDeals();
+
+  // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
+  const dealRef        = useRef(deal);
+  const stateRef       = useRef({});
+  dealRef.current      = deal; // updated every render
+
+  // Stable callback: saves current state to localStorage + context immediately (no debounce)
+  // Call this from onChange handlers so saves are guaranteed before any navigation
+  const saveNow = useCallback((overrides = {}) => {
+    if (!canEdit && !isAgent) return;
+    const s = stateRef.current;
+    const d = {
+      ...dealRef.current,
+      stage: s.stage, address: s.address, county: s.county, state: s.dealState, zip: s.zip,
+      acreage: s.acreage, ownerName: s.ownerName, sellerName: s.sellerName,
+      investor: s.investor, financing: s.financing, notes: s.notes,
+      leadSource: s.leadSource, ownerType: s.ownerType, utilityScenario: s.utilityScenario,
+      homeModel: s.homeModel, waterCompany: s.waterCompany, sewerCompany: s.sewerCompany,
+      electricCompany: s.electricCompany, parcelId: s.parcelId,
+      closingAttorney: s.closingAttorney, closingAttorneyPhone: s.closingAttorneyPhone,
+      closingAttorneyAddress: s.closingAttorneyAddress, closeDate: s.closeDate,
+      contractDate: s.contractDate, manufacturer: s.manufacturer, deliveryDate: s.deliveryDate,
+      holdingMonths: s.holdPeriod, holdingPerMonth: s.monthlyHoldCost,
+      arv: s.arv, ...s.costs,
+      ...overrides,
+    };
+    saveToLS(d);
+    setDeals(prev => {
+      const idx = prev.findIndex(x => String(x.id) === String(d.id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = d; return next; }
+      return [...prev, d];
+    });
+  }, [canEdit, isAgent, setDeals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial costs from deal data
   const initCosts = {};
@@ -1001,6 +1049,7 @@ function DealDetailContent({ deal }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
+  const [arv,   setArv]   = useState(deal?.arv ?? 0);
   const [ddTasks, setDdTasks] = useState(initDD);
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
@@ -1104,17 +1153,25 @@ function DealDetailContent({ deal }) {
     setSelectedScenario(scenarioId);
   }
 
-  // ── Auto-save every editable field (debounced 1.5 s) ────────────────────────
+  // Keep stateRef in sync with latest state values every render (used by saveNow)
+  stateRef.current = {
+    stage, address, county, dealState, zip, acreage, ownerName, sellerName, investor, financing,
+    notes, leadSource, ownerType, utilityScenario, homeModel, waterCompany, sewerCompany,
+    electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
+    closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, costs,
+  };
+
+  // ── Auto-save every editable field (debounced Supabase write) ───────────────
   const autoSaveMounted  = useRef(false);
   const saveTimer        = useRef(null);
   const pendingDeal      = useRef(null); // holds latest unsaved deal for flush-on-unmount
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
 
-  // Flush any pending save immediately on unmount (navigation before debounce fires)
+  // Flush pending Supabase write on unmount (localStorage + context already updated immediately)
   useEffect(() => {
     return () => {
       if (pendingDeal.current) {
-        saveDeal(pendingDeal.current);
+        flushToSupabase(pendingDeal.current);
         pendingDeal.current = null;
       }
     };
@@ -1123,7 +1180,7 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
-    if (!canEdit && !isAgent) return; // viewers/investors cannot write
+    if (!canEdit && !isAgent) return;
 
     const updatedDeal = {
       ...deal,
@@ -1135,16 +1192,25 @@ function DealDetailContent({ deal }) {
       closingAttorneyAddress, closeDate, contractDate,
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
+      arv,
       ...costs,
     };
 
-    pendingDeal.current = updatedDeal; // always keep latest for flush-on-unmount
+    // Immediately persist to localStorage + context so navigation never sees stale data
+    saveToLS(updatedDeal);
+    setDeals(prev => {
+      const idx = prev.findIndex(x => String(x.id) === String(updatedDeal.id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = updatedDeal; return next; }
+      return [...prev, updatedDeal];
+    });
+
+    // Debounce the Supabase network write only
+    pendingDeal.current = updatedDeal;
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      // writes localStorage immediately + async Supabase upsert (real-time broadcasts to all users)
-      saveDeal(updatedDeal);
-      pendingDeal.current = null; // debounce completed — no need for unmount flush
+      flushToSupabase(updatedDeal);
+      pendingDeal.current = null;
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }, 1500);
@@ -1157,13 +1223,13 @@ function DealDetailContent({ deal }) {
     waterCompany, sewerCompany, electricCompany,
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
-    manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, costs,
+    manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, costs,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
-  const sellingCosts = (deal.arv || 0) * 0.045 + 4000;
-  const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
-  const netProfit = (deal.arv || 0) - allIn - sellingCosts - holdingCosts;
+  const sellingCosts = (arv || 0) * 0.045 + 4000;
+  const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
+  const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
   const ddComplete = ddTasks.filter(Boolean).length;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
@@ -1366,6 +1432,7 @@ function DealDetailContent({ deal }) {
         {activeTab === 'overview' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
+            arv={arv} setArv={setArv}
             address={address} setAddress={setAddress} county={county} setCounty={setCounty}
             dealState={dealState} setDealState={setDealState} zip={zip} setZip={setZip}
             acreage={acreage} setAcreage={setAcreage}
@@ -1414,6 +1481,7 @@ function DealDetailContent({ deal }) {
             onOpenMapSearch={() => setShowMapModal(true)}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             isAgent={isAgent}
+            saveNow={saveNow}
           />
         )}
         {activeTab === 'dd' && (
@@ -1452,8 +1520,10 @@ export default function DealDetail() {
   const navigate = useNavigate();
   const { deals: customDeals, dealsLoading } = useDeals();
 
-  const deal = customDeals.find(d => String(d.id) === String(id))
-    || (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })().find(d => String(d.id) === String(id));
+  // Prefer localStorage (updated synchronously on every edit via saveToLS) over context
+  const lsDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  const deal = lsDeals.find(d => String(d.id) === String(id))
+    || customDeals.find(d => String(d.id) === String(id));
 
   if (dealsLoading && !deal) {
     return (
