@@ -1107,30 +1107,44 @@ function DealDetailContent({ deal }) {
   // ── Auto-save every editable field (debounced 1.5 s) ────────────────────────
   const autoSaveMounted  = useRef(false);
   const saveTimer        = useRef(null);
+  const pendingDeal      = useRef(null); // holds latest unsaved deal for flush-on-unmount
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
+
+  // Flush any pending save immediately on unmount (navigation before debounce fires)
+  useEffect(() => {
+    return () => {
+      if (pendingDeal.current) {
+        saveDeal(pendingDeal.current);
+        pendingDeal.current = null;
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
     if (!canEdit && !isAgent) return; // viewers/investors cannot write
 
+    const updatedDeal = {
+      ...deal,
+      stage, address, county, state: dealState, zip, acreage,
+      ownerName, sellerName, investor, financing, notes,
+      leadSource, ownerType, utilityScenario, homeModel,
+      waterCompany, sewerCompany, electricCompany,
+      parcelId, closingAttorney, closingAttorneyPhone,
+      closingAttorneyAddress, closeDate, contractDate,
+      manufacturer, deliveryDate,
+      holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
+      ...costs,
+    };
+
+    pendingDeal.current = updatedDeal; // always keep latest for flush-on-unmount
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const updatedDeal = {
-        ...deal,
-        stage, address, county, state: dealState, zip, acreage,
-        ownerName, sellerName, investor, financing, notes,
-        leadSource, ownerType, utilityScenario, homeModel,
-        waterCompany, sewerCompany, electricCompany,
-        parcelId, closingAttorney, closingAttorneyPhone,
-        closingAttorneyAddress, closeDate, contractDate,
-        manufacturer, deliveryDate,
-        holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
-        ...costs,
-      };
       // writes localStorage immediately + async Supabase upsert (real-time broadcasts to all users)
       saveDeal(updatedDeal);
+      pendingDeal.current = null; // debounce completed — no need for unmount flush
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }, 1500);
