@@ -8,11 +8,32 @@ import { calcNetProfit } from '../data/deals';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Each entry defines how its pipeline page actually filters deals:
+//   Land Acquisition → pipeline field === 'land-acquisition'
+//   Due Diligence    → stage in ['Contract Signed', 'Due Diligence']
+//   Development      → stage === 'Development'
+//   Complete/Sales   → stage === 'Complete'
 const PIPELINE_CONFIG = [
-  { key: 'land-acquisition', label: 'Land Acquisition', color: 'bg-blue-500' },
-  { key: 'due-diligence',    label: 'Due Diligence',    color: 'bg-yellow-500' },
-  { key: 'development',      label: 'Development',      color: 'bg-orange-500' },
-  { key: 'sales',            label: 'Sales',            color: 'bg-green-500' },
+  {
+    label: 'Land Acquisition',
+    color: 'bg-blue-500',
+    match: d => (d.pipeline || '').toLowerCase() === 'land-acquisition',
+  },
+  {
+    label: 'Due Diligence',
+    color: 'bg-yellow-500',
+    match: d => d.stage === 'Contract Signed' || d.stage === 'Due Diligence',
+  },
+  {
+    label: 'Development',
+    color: 'bg-orange-500',
+    match: d => d.stage === 'Development',
+  },
+  {
+    label: 'Complete',
+    color: 'bg-green-500',
+    match: d => d.stage === 'Complete',
+  },
 ];
 
 function fmt$(n) {
@@ -104,11 +125,9 @@ export default function Dashboard() {
 
   // ── Pipeline summary ─────────────────────────────────────────────────────────
   const pipelineSummary = useMemo(() => {
-    return PIPELINE_CONFIG.map(({ key, label, color }) => {
-      const pDeals = activeDeals.filter(d =>
-        (d.pipeline || '').toLowerCase().replace(/\s+/g, '-') === key,
-      );
-      const value = pDeals.reduce((s, d) => s + (d.arv || 0), 0);
+    return PIPELINE_CONFIG.map(({ label, color, match }) => {
+      const pDeals = activeDeals.filter(match);
+      const value  = pDeals.reduce((s, d) => s + (d.arv || 0), 0);
       return { label, color, deals: pDeals.length, value };
     });
   }, [activeDeals]);
