@@ -54,12 +54,13 @@ function AdminRoute({ children }) {
   return children;
 }
 
-/** Agent landing: redirect to deal overview if agent, otherwise show Dashboard */
+/** Agent/Investor landing: redirect to role landing page */
 function AgentIndexRoute() {
-  const { isAgent } = usePermissions();
+  const { isAgent, isInvestor } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (isAgent) return <Navigate to="/pipelines/deal-overview" replace />;
+  if (isAgent)    return <Navigate to="/pipelines/deal-overview" replace />;
+  if (isInvestor) return <Navigate to="/investors" replace />;
   return <Dashboard />;
 }
 
@@ -70,13 +71,19 @@ const AGENT_PERMITTED = new Set([
   '/homes',
 ]);
 
-/** Redirects agents away from pages they have no access to */
+// Routes investor-role users are permitted to access
+const INVESTOR_PERMITTED = new Set(['/investors']);
+
+/** Redirects agents/investors away from pages they have no access to */
 function AgentRoute({ children, path }) {
-  const { isAgent } = usePermissions();
+  const { isAgent, isInvestor } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (isAgent && path && !AGENT_PERMITTED.has('/' + path)) {
+  if (isAgent    && path && !AGENT_PERMITTED.has('/' + path)) {
     return <Navigate to="/pipelines/deal-overview" replace />;
+  }
+  if (isInvestor && path && !INVESTOR_PERMITTED.has('/' + path)) {
+    return <Navigate to="/investors" replace />;
   }
   return children;
 }

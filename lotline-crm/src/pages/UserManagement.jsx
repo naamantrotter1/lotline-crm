@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle, UserPlus, X, Briefcase, Trash2, Mail, PenLine } from 'lucide-react';
+import { Users, Shield, Eye, Edit3, Loader, CheckCircle, AlertCircle, UserPlus, X, Briefcase, Trash2, Mail, PenLine, Link, DollarSign } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
+import { INVESTORS } from '../data/investors';
 
 // Isolated client used only for signing up new users — never touches the admin's session
 const tempClient = createClient(
@@ -14,11 +15,14 @@ const tempClient = createClient(
 );
 
 const ROLE_CONFIG = {
-  admin:  { label: 'Admin',  color: 'bg-red-100 text-red-700',    icon: Shield,    desc: 'Full access + user management'              },
-  editor: { label: 'Editor', color: 'bg-blue-100 text-blue-700',  icon: Edit3,     desc: 'View + edit deals'                          },
-  viewer: { label: 'Viewer', color: 'bg-gray-100 text-gray-600',  icon: Eye,       desc: 'Read-only access'                           },
-  agent:  { label: 'Agent',  color: 'bg-green-100 text-green-700',icon: Briefcase, desc: 'Deal Overview + Sales; can move stages'     },
+  admin:    { label: 'Admin',    color: 'bg-red-100 text-red-700',    icon: Shield,      desc: 'Full access + user management'              },
+  editor:   { label: 'Editor',   color: 'bg-blue-100 text-blue-700',  icon: Edit3,       desc: 'View + edit deals'                          },
+  viewer:   { label: 'Viewer',   color: 'bg-gray-100 text-gray-600',  icon: Eye,         desc: 'Read-only access'                           },
+  agent:    { label: 'Agent',    color: 'bg-green-100 text-green-700',icon: Briefcase,   desc: 'Deal Overview + Sales; can move stages'     },
+  investor: { label: 'Investor', color: 'bg-amber-100 text-amber-700',icon: DollarSign,  desc: 'Investor Portal only; sees their linked deals' },
 };
+
+const INVESTOR_NAMES = INVESTORS.filter(i => i.name !== 'Cash' && i.name !== 'None').map(i => i.name);
 
 function RoleBadge({ role }) {
   const cfg = ROLE_CONFIG[role] || ROLE_CONFIG.viewer;
@@ -170,6 +174,7 @@ function CreateUserModal({ onClose, onCreated }) {
               <option value="agent">Agent — Deal Overview + Sales; can move stages</option>
               <option value="editor">Editor — View + edit deals</option>
               <option value="admin">Admin — Full access + user management</option>
+              <option value="investor">Investor — Investor Portal only; sees their linked deals</option>
             </select>
           </div>
 
@@ -188,6 +193,60 @@ function CreateUserModal({ onClose, onCreated }) {
         </form>
       </div>
     </div>
+  );
+}
+
+function LinkInvestorModal({ user, onClose, onSave }) {
+  const current = INVESTOR_NAMES.find(n => n === user.company) || '';
+  const [selected, setSelected] = useState(current);
+  const [loading,  setLoading]  = useState(false);
+
+  const handleSave = async () => {
+    setLoading(true);
+    await onSave(user.id, selected);
+    setLoading(false);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-amber-100">
+              <Link size={16} className="text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#1a2332]">Link to Investor</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{user.name || user.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Investor Account</label>
+            <select
+              value={selected}
+              onChange={e => setSelected(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white"
+            >
+              <option value="">— No investor linked —</option>
+              {INVESTOR_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 mt-1.5">This investor will only see deals they are funding.</p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+            style={{ backgroundColor: loading ? '#94a3b8' : '#c9703a' }}
+          >
+            {loading ? 'Saving…' : 'Save Link'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -284,10 +343,11 @@ export default function UserManagement() {
   const [saving,        setSaving]        = useState(null); // userId being saved
   const [toast,         setToast]         = useState(null);
   const [showCreate,    setShowCreate]    = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null); // user object
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [editEmailUser, setEditEmailUser] = useState(null); // user object
-  const [resetLoading,  setResetLoading]  = useState(null); // userId
+  const [confirmDelete,    setConfirmDelete]    = useState(null); // user object
+  const [deleteLoading,    setDeleteLoading]    = useState(false);
+  const [editEmailUser,    setEditEmailUser]    = useState(null); // user object
+  const [resetLoading,     setResetLoading]     = useState(null); // userId
+  const [linkInvestorUser, setLinkInvestorUser] = useState(null); // user object
 
   useEffect(() => {
     if (!canAdmin) return;
@@ -351,6 +411,17 @@ export default function UserManagement() {
     }
   };
 
+  const handleLinkInvestor = async (userId, investorName) => {
+    const { error } = await supabase.from('profiles').update({ company: investorName || null }).eq('id', userId);
+    if (error) {
+      showToast('Failed to link investor: ' + error.message, 'error');
+    } else {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, company: investorName || null } : u));
+      showToast(investorName ? `Linked to ${investorName}.` : 'Investor link removed.');
+      setLinkInvestorUser(null);
+    }
+  };
+
   const handleSendPasswordReset = async (user) => {
     setResetLoading(user.id);
     const { error } = await supabase.auth.resetPasswordForEmail(user.email);
@@ -395,6 +466,13 @@ export default function UserManagement() {
           user={editEmailUser}
           onClose={() => setEditEmailUser(null)}
           onSave={handleChangeEmail}
+        />
+      )}
+      {linkInvestorUser && (
+        <LinkInvestorModal
+          user={linkInvestorUser}
+          onClose={() => setLinkInvestorUser(null)}
+          onSave={handleLinkInvestor}
         />
       )}
 
@@ -495,6 +573,7 @@ export default function UserManagement() {
                             <option value="agent">Agent</option>
                             <option value="editor">Editor</option>
                             <option value="admin">Admin</option>
+                            <option value="investor">Investor</option>
                           </select>
                           {saving === user.id && <Loader size={12} className="animate-spin text-gray-400" />}
                         </div>
@@ -508,6 +587,16 @@ export default function UserManagement() {
                         <span className="text-xs text-gray-300 italic">—</span>
                       ) : (
                         <div className="flex items-center gap-1.5">
+                          {/* Link to investor (investor-role users only) */}
+                          {user.role === 'investor' && (
+                            <button
+                              title={user.company ? `Linked: ${user.company}` : 'Link to investor'}
+                              onClick={() => setLinkInvestorUser(user)}
+                              className={`p-1.5 rounded-lg transition-colors ${user.company ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                            >
+                              <Link size={14} />
+                            </button>
+                          )}
                           {/* Send password reset */}
                           <button
                             title="Send password reset email"

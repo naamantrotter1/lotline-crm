@@ -46,26 +46,29 @@ const BASE_NAV_SECTIONS = [
 ];
 
 // Routes agents are allowed to see
-const AGENT_ALLOWED = new Set(['/pipelines/deal-overview', '/pipelines/sales', '/homes']);
+const AGENT_ALLOWED    = new Set(['/pipelines/deal-overview', '/pipelines/sales', '/homes']);
+// Routes investor-role users are allowed to see
+const INVESTOR_ALLOWED = new Set(['/investors']);
 
-const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer', agent: 'Agent' };
+const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer', agent: 'Agent', investor: 'Investor' };
 
 export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
   const { profile, signOut } = useAuth();
-  const { canAdmin, isAgent } = usePermissions();
+  const { canAdmin, isAgent, isInvestor } = usePermissions();
 
   const initials = profile?.name
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  // Agents only see Deal Overview + Sales
+  const filterItems = (allowed) =>
+    BASE_NAV_SECTIONS
+      .map(section => ({ ...section, items: section.items.filter(item => allowed.has(item.to)) }))
+      .filter(section => section.items.length > 0);
+
   const navSections = isAgent
-    ? BASE_NAV_SECTIONS
-        .map(section => ({
-          ...section,
-          items: section.items.filter(item => AGENT_ALLOWED.has(item.to)),
-        }))
-        .filter(section => section.items.length > 0)
+    ? filterItems(AGENT_ALLOWED)
+    : isInvestor
+    ? filterItems(INVESTOR_ALLOWED)
     : BASE_NAV_SECTIONS;
 
   const handleNavClick = () => {

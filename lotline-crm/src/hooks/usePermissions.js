@@ -9,12 +9,14 @@ import { useAuth } from '../lib/AuthContext';
  */
 export function usePermissions() {
   const { role } = useAuth();
-  const isAgent = role === 'agent';
+  const isAgent    = role === 'agent';
+  const isInvestor = role === 'investor';
   return {
     canEdit:  role === 'admin' || role === 'editor',
     canAdmin: role === 'admin',
     isViewer: role === 'viewer' || role === null,
     isAgent,
+    isInvestor,
     role,
   };
 }

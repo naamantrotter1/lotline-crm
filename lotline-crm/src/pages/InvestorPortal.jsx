@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { useDeals } from '../lib/DealsContext';
+import { usePermissions } from '../hooks/usePermissions';
+import { useAuth } from '../lib/AuthContext';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -490,10 +492,22 @@ function NeedsFundingTab({ onDealClick }) {
 }
 
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
-function ByInvestorTab({ onDealClick }) {
+function ByInvestorTab({ onDealClick, linkedInvestor }) {
+  const displayInvestors = linkedInvestor
+    ? INVESTORS.filter(inv => inv.name === linkedInvestor)
+    : INVESTORS;
+
+  if (linkedInvestor && displayInvestors.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
+        No investor account found for &quot;{linkedInvestor}&quot;. Contact an admin to update your link.
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {INVESTORS.map(inv => (
+      {displayInvestors.map(inv => (
         <InvestorCard key={inv.id} investor={inv} onDealClick={onDealClick} />
       ))}
     </div>
@@ -558,6 +572,11 @@ function DirectoryTab() {
 export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
   const navigate = useNavigate();
+  const { isInvestor } = usePermissions();
+  const { profile } = useAuth();
+  // For investor-role users, their linked investor name is stored in profile.company
+  const linkedInvestor = isInvestor ? (profile?.company || null) : null;
+
   const [activeTab, setActiveTab] = useState('by-investor');
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
@@ -574,12 +593,14 @@ export default function InvestorPortal() {
   const totalDeals = INVESTORS.reduce((s, i) => s + i.activeDeals, 0);
   const totalROI = INVESTORS.reduce((s, i) => s + i.roiDollars, 0);
 
-  const TABS = [
-    { key: 'all-deals', label: 'All Deals' },
-    { key: 'needs-funding', label: 'Needs Funding' },
-    { key: 'by-investor', label: 'By Investor' },
-    { key: 'directory', label: 'Directory' },
-  ];
+  const TABS = isInvestor
+    ? [{ key: 'by-investor', label: 'My Deals' }]
+    : [
+        { key: 'all-deals',     label: 'All Deals'     },
+        { key: 'needs-funding', label: 'Needs Funding'  },
+        { key: 'by-investor',   label: 'By Investor'   },
+        { key: 'directory',     label: 'Directory'     },
+      ];
 
   return (
     <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
@@ -588,7 +609,11 @@ export default function InvestorPortal() {
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-xl font-bold text-[#1a2332]">Investor Portal</h1>
         </div>
-        <p className="text-sm text-gray-400">Manage capital sources and investor relationships</p>
+        <p className="text-sm text-gray-400">
+          {isInvestor
+            ? linkedInvestor ? `Viewing deals for ${linkedInvestor}` : 'Your account has not been linked to an investor yet'
+            : 'Manage capital sources and investor relationships'}
+        </p>
 
         {/* Tabs */}
         <div className="flex gap-0 mt-4">
@@ -608,9 +633,9 @@ export default function InvestorPortal() {
         </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats — hidden for investor-role users */}
       <div className="px-6 pt-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        {!isInvestor && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           {[
             { label: 'Active Investors', value: INVESTORS.filter(i => i.name !== 'Cash').length, icon: Users },
             { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`, icon: DollarSign },
@@ -627,12 +652,12 @@ export default function InvestorPortal() {
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Tab content */}
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
-        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} />}
+        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} />}
         {activeTab === 'directory' && <DirectoryTab />}
       </div>
 
