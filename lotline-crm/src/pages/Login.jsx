@@ -101,38 +101,12 @@ export default function Login() {
   const btnStyle   = (disabled) => ({ backgroundColor: disabled ? '#94a3b8' : '#c9703a' });
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f5f3ee' }}>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: '#f5f3ee' }}>
       {showTos && <TermsOfService onClose={() => setShowTos(false)} />}
 
-      {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 p-10 flex-shrink-0" style={{ backgroundColor: '#1a2332' }}>
-        <div>
-          <img src="/lotline-logo.png" alt="LotLine Homes" style={{ height: '40px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(55%) sepia(60%) saturate(500%) hue-rotate(330deg) brightness(105%)' }} />
-          <p className="text-white/40 text-sm mt-3">Deal Flow Pro</p>
-        </div>
-        <div className="space-y-6">
-          {[
-            { label: 'Land Acquisition', desc: 'Track every lead from first contact to contract.' },
-            { label: 'Real-Time Sync',   desc: 'Changes appear instantly across all devices and teammates.' },
-            { label: 'Role-Based Access',desc: 'Control exactly who can view or edit deal data.' },
-          ].map(f => (
-            <div key={f.label} className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />
-              <div>
-                <p className="text-white text-sm font-medium">{f.label}</p>
-                <p className="text-white/40 text-xs mt-0.5">{f.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-white/20 text-xs">© 2025 LotLine Homes</p>
-      </div>
-
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="lg:hidden mb-8 flex justify-center">
+      <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="mb-8 flex justify-center">
             <img src="/lotline-logo.png" alt="LotLine Homes" style={{ height: '36px', width: 'auto', filter: 'brightness(0) saturate(100%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(100%)' }} />
           </div>
 
@@ -257,7 +231,6 @@ export default function Login() {
               </form>
             </>
           )}
-        </div>
       </div>
     </div>
   );
