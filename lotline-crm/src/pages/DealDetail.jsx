@@ -1261,7 +1261,7 @@ function DealDetailContent({ deal }) {
             <p className="text-xs text-gray-400 uppercase tracking-wide">ARV</p>
             <p className="text-sm font-bold text-[#1a2332]">${(deal.arv || 0).toLocaleString()}</p>
           </div>
-          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          {!isAgent && <><div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Net Profit</p>
             <p className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
@@ -1277,11 +1277,11 @@ function DealDetailContent({ deal }) {
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Investor</p>
             <p className="text-sm font-bold text-[#1a2332]">{deal.investor || 'TBD'}</p>
-          </div>
+          </div></>}
           <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
-            {(fromInvestorPortal || (!canEdit && !isAgent))
+            {(fromInvestorPortal || !canEdit)
               ? <p className="text-sm font-semibold text-[#1a2332]">{stage}</p>
               : <select
                   value={stage}
@@ -1292,7 +1292,7 @@ function DealDetailContent({ deal }) {
                 </select>
             }
           </div>
-          {nextStage && !fromInvestorPortal && (canEdit || isAgent) && (
+          {nextStage && !fromInvestorPortal && canEdit && (
             <div className="ml-auto">
               <button
                 onClick={() => handleSetStage(nextStage)}

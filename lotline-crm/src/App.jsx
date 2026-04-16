@@ -69,6 +69,7 @@ const AGENT_PERMITTED = new Set([
   '/pipelines/deal-overview',
   '/pipelines/sales',
   '/homes',
+  '/flood-map',
 ]);
 
 // Routes investor-role users are permitted to access
