@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { useDeals } from '../lib/DealsContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 
@@ -48,7 +49,7 @@ function isLandClearing(deal) {
   return (deal.tags || []).includes('Land Clearing');
 }
 
-function DealCard({ deal, onClick }) {
+function DealCard({ deal, onClick, isAgent }) {
   const [starred, setStarred] = useState(false);
   const netProfit    = calcNetProfit(deal);
   const closing      = closingCountdown(deal.closeDate);
@@ -124,16 +125,18 @@ function DealCard({ deal, onClick }) {
         ARV: <span className="font-semibold text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
       </div>
 
-      {/* Profit */}
-      <div className="flex items-center gap-1 ml-4 mb-2">
-        <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
-        <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-          ${Math.abs(netProfit).toLocaleString()}
-        </span>
-        {deal.financing && (
-          <span className="text-xs text-gray-400">({deal.financing})</span>
-        )}
-      </div>
+      {/* Profit + financing — hidden for agents */}
+      {!isAgent && (
+        <div className="flex items-center gap-1 ml-4 mb-2">
+          <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
+          <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            ${Math.abs(netProfit).toLocaleString()}
+          </span>
+          {deal.financing && (
+            <span className="text-xs text-gray-400">({deal.financing})</span>
+          )}
+        </div>
+      )}
 
       {/* Closing date + countdown */}
       {(deal.closeDate || closing) && (
@@ -164,6 +167,7 @@ function loadCustomDeals() {
 export default function DealOverview() {
   const navigate = useNavigate();
   const { deals: customDeals } = useDeals();
+  const { isAgent } = usePermissions();
 
   const allDeals = customDeals
     .filter(d => STAGES.includes(d.stage) && !d.isArchived);
@@ -211,6 +215,7 @@ export default function DealOverview() {
                     key={deal.id}
                     deal={deal}
                     onClick={() => navigate(`/deal/${deal.id}`)}
+                    isAgent={isAgent}
                   />
                 ))}
                 {deals.length === 0 && (
