@@ -1112,7 +1112,7 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
-    if (!canEdit) return; // only editors/admins auto-save
+    if (!canEdit && !isAgent) return; // viewers/investors cannot write
 
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
@@ -1229,12 +1229,12 @@ function DealDetailContent({ deal }) {
           {!fromInvestorPortal && (
             <div className="flex items-center gap-2">
               {/* Auto-save indicator */}
-              {canEdit && saveStatus === 'saving' && (
+              {(canEdit || isAgent) && saveStatus === 'saving' && (
                 <span className="text-xs text-gray-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /> Saving…
                 </span>
               )}
-              {canEdit && saveStatus === 'saved' && (
+              {(canEdit || isAgent) && saveStatus === 'saved' && (
                 <span className="text-xs text-green-600 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Saved
                 </span>
