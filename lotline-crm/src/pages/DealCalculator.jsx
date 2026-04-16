@@ -20,6 +20,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
   const [leadSource,  setLeadSource]  = useState('');
   const [ownerType,   setOwnerType]   = useState('Owner');
   const [utility,     setUtility]     = useState('All Utilities Available');
+  const [listingUrl,  setListingUrl]  = useState('');
   const [stage,       setStage]       = useState('New Lead');
   const [saved,       setSaved]       = useState(false);
 
@@ -44,6 +45,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
       ownerType,
       utilityScenario: utility,
       arv: vals.arv,
+      listingUrl: listingUrl.trim() || undefined,
       financing: 'Cash',
       holdingMonths: vals.holdingMonths,
       holdingPerMonth: vals.holdingPerMonth,
@@ -141,6 +143,8 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30">
                 {UTILITY_OPTIONS.map(u => <option key={u}>{u}</option>)}
               </select>
+              <input placeholder="Listing URL (optional)" type="url" value={listingUrl} onChange={e => setListingUrl(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
             </div>
           </div>
 

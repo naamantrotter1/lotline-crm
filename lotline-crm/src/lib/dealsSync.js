@@ -88,6 +88,7 @@ function dealToRow(deal) {
     capital_returned_date:   deal.capitalReturnedDate || null,
     investor_paid_out:       deal.investorPaidOut || false,
     dd_deadline2:            deal.ddDeadline || null,
+    listing_url:             deal.listingUrl || null,
   };
 }
 
@@ -166,6 +167,7 @@ function rowToDeal(row) {
     capitalDeployedDate:   row.capital_deployed_date,
     capitalReturnedDate:   row.capital_returned_date,
     investorPaidOut:       row.investor_paid_out,
+    listingUrl:            row.listing_url,
   };
 }
 

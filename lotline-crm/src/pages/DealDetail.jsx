@@ -165,6 +165,7 @@ const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Li
 function OverviewTab({
   deal, costs, setCosts, notes, setNotes,
   arv, setArv,
+  listingUrl, setListingUrl,
   address, setAddress, county, setCounty, dealState, setDealState, zip, setZip, acreage, setAcreage,
   sellerName, setSellerName, ownerName, setOwnerName, investor, setInvestor, financing, setFinancing,
   leadSource, setLeadSource, ownerType, setOwnerType, utilityScenario, setUtilityScenario,
@@ -264,6 +265,26 @@ function OverviewTab({
             <InputRow label="State" value={dealState} onChange={v => { setDealState(v); saveNow?.({ state: v }); }} />
             <InputRow label="Zip Code" value={zip} onChange={v => { setZip(v); saveNow?.({ zip: v }); }} />
             <InputRow label="Acreage" value={acreage} onChange={v => { setAcreage(v); saveNow?.({ acreage: v }); }} type="number" />
+            </div>
+            {/* Listing URL */}
+            <div className="py-2 border-b border-gray-100">
+              <p className="text-xs text-gray-500 mb-1">Listing URL</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="url"
+                  value={listingUrl || ''}
+                  onChange={e => { setListingUrl(e.target.value); saveNow?.({ listingUrl: e.target.value }); }}
+                  readOnly={readOnly}
+                  placeholder={readOnly ? '' : 'https://...'}
+                  className="flex-1 text-xs text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-60"
+                />
+                {listingUrl && (
+                  <a href={listingUrl} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-accent hover:underline flex-shrink-0">
+                    Open <ExternalLink size={10} />
+                  </a>
+                )}
+              </div>
             </div>
             <div className="py-2 flex items-center gap-4">
               <a
@@ -1013,6 +1034,7 @@ function DealDetailContent({ deal }) {
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
   const [arv,   setArv]   = useState(deal?.arv ?? 0);
+  const [listingUrl, setListingUrl] = useState(deal?.listingUrl || '');
   const [ddTasks, setDdTasks] = useState(initDD);
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
@@ -1124,7 +1146,7 @@ function DealDetailContent({ deal }) {
     stage, address, county, dealState, zip, acreage, ownerName, sellerName, investor, financing,
     notes, leadSource, ownerType, utilityScenario, homeModel, waterCompany, sewerCompany,
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
-    closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, costs,
+    closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
   };
 
   // ── Auto-save every editable field (debounced Supabase write) ───────────────
@@ -1158,7 +1180,7 @@ function DealDetailContent({ deal }) {
       closingAttorneyAddress, closeDate, contractDate,
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
-      arv,
+      arv, listingUrl,
       ...costs,
     };
 
@@ -1189,7 +1211,7 @@ function DealDetailContent({ deal }) {
     waterCompany, sewerCompany, electricCompany,
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
-    manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, costs,
+    manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1399,6 +1421,7 @@ function DealDetailContent({ deal }) {
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
             arv={arv} setArv={setArv}
+            listingUrl={listingUrl} setListingUrl={setListingUrl}
             address={address} setAddress={setAddress} county={county} setCounty={setCounty}
             dealState={dealState} setDealState={setDealState} zip={zip} setZip={setZip}
             acreage={acreage} setAcreage={setAcreage}
