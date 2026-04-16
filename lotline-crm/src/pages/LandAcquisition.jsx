@@ -6,14 +6,13 @@ import { GradeBadge, Tag } from '../components/UI/Badge';
 import { deleteDeal as syncDeleteDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
 
-const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
+const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 
 const STAGE_META = {
   'New Lead':              { icon: Zap,           color: '#c2410c', bg: '#fff7ed' },
   'Underwriting':          { icon: Calculator,    color: '#b45309', bg: '#fffbeb' },
   'Negotiating':           { icon: Handshake,     color: '#15803d', bg: '#f0fdf4' },
   'Waiting on Contract':   { icon: FileSignature, color: '#6366f1', bg: '#eef2ff' },
-  'Contract Signed':       { icon: FileCheck,     color: '#16a34a', bg: '#dcfce7' },
 };
 
 const TAG_STYLES = {
@@ -825,7 +824,7 @@ export default function LandAcquisition() {
   const { deals: customDeals, setDeals: setCustomDeals } = useDeals();
 
   const allDeals = customDeals
-    .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived);
+    .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived && d.stage !== 'Contract Signed');
 
   const handleDelete = (id) => {
     syncDeleteDeal(id);

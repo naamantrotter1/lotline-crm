@@ -1017,10 +1017,13 @@ function DealDetailContent({ deal }) {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
-  const isLandAcq = deal?.pipeline === 'land-acquisition';
+  const DEAL_OVERVIEW_ONLY = new Set(['Due Diligence', 'Development', 'Complete']);
+  const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
+  const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
+  const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
   const [stage, setStage] = useState(
-    localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || (isLandAcq ? 'New Lead' : 'Contract Signed')
+    currentStageVal || (isLandAcq ? 'New Lead' : 'Contract Signed')
   );
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
