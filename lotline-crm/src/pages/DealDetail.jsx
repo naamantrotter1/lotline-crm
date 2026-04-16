@@ -1109,7 +1109,7 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
     if (!deal?.id) return;
-    if (!canEdit) return; // viewers cannot write
+    if (!canEdit && !isAgent) return; // viewers cannot write
     const updatedDeal = {
       ...deal,
       stage, address, county, state: dealState, zip, acreage,
