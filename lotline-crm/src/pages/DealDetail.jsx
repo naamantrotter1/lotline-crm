@@ -105,24 +105,26 @@ function SectionHeader({ children }) {
 }
 
 function InfoRow({ label, value, mono }) {
+  if (!value) return null;
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-xs font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
+    <div className="py-2">
+      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{label}</p>
+      <span className={`text-sm font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   );
 }
 
 function SelectRow({ label, value, onChange, options, readOnly }) {
+  if (readOnly && !value) return null;
   return (
-    <div className="py-2.5 border-b border-gray-100 last:border-0">
-      <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+    <div className="py-2">
+      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{label}</p>
       {readOnly
-        ? <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
+        ? <span className="text-sm font-medium text-gray-800">{value}</span>
         : <select
             value={value || ''}
             onChange={e => onChange(e.target.value)}
-            className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full max-w-xs"
+            className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
           >
             <option value="">— Select —</option>
             {options.map(opt => (
@@ -135,16 +137,17 @@ function SelectRow({ label, value, onChange, options, readOnly }) {
 }
 
 function InputRow({ label, value, onChange, type = 'text', mono, readOnly }) {
+  if (readOnly && !value) return null;
   return (
-    <div className="py-2.5 border-b border-gray-100 last:border-0">
-      <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+    <div className="py-2">
+      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{label}</p>
       {readOnly
-        ? <span className={`text-sm font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
+        ? <span className={`text-sm font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value}</span>
         : <input
             type={type}
             value={value || ''}
             onChange={e => onChange(e.target.value)}
-            className={`text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full max-w-xs ${mono ? 'font-mono' : ''}`}
+            className={`text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full ${mono ? 'font-mono' : ''}`}
           />
       }
     </div>
@@ -249,13 +252,15 @@ function OverviewTab({
               <MapPin size={11} /> GIS Map
             </a>
           </div>
-          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="grid grid-cols-2 gap-x-6 divide-y-0">
             <InputRow label="Parcel ID" value={parcelId} onChange={v => { setParcelId(v); saveNow?.({ parcelId: v }); }} mono />
             <InputRow label="Address" value={address} onChange={v => { setAddress(v); saveNow?.({ address: v }); }} />
             <InputRow label="County" value={county} onChange={v => { setCounty(v); saveNow?.({ county: v }); }} />
             <InputRow label="State" value={dealState} onChange={v => { setDealState(v); saveNow?.({ state: v }); }} />
             <InputRow label="Zip Code" value={zip} onChange={v => { setZip(v); saveNow?.({ zip: v }); }} />
             <InputRow label="Acreage" value={acreage} onChange={v => { setAcreage(v); saveNow?.({ acreage: v }); }} type="number" />
+            </div>
             <div className="py-2 flex items-center gap-4">
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
@@ -278,11 +283,13 @@ function OverviewTab({
         {!isAgent && (
           <div>
             <SectionHeader>Seller Information</SectionHeader>
-            <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
+            <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="grid grid-cols-2 gap-x-6">
               <InputRow label="Seller Name" value={sellerName} onChange={setSellerName} />
               <InputRow label="Owner Name" value={ownerName} onChange={setOwnerName} />
               <SelectRow label="Lead Source" value={leadSource} onChange={setLeadSource} options={LEAD_SOURCE_OPTIONS} />
               <SelectRow label="Seller Type" value={ownerType} onChange={setOwnerType} options={OWNER_TYPE_OPTIONS} />
+              </div>
             </fieldset>
           </div>
         )}
@@ -290,34 +297,41 @@ function OverviewTab({
         {/* Deal Evaluation */}
         <div>
           <SectionHeader>Deal Evaluation</SectionHeader>
-          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-            <SelectRow label="Utility Scenario" value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow?.({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} />
-            <InputRow label="Water" value={waterCompany} onChange={v => { setWaterCompany(v); saveNow?.({ waterCompany: v }); }} />
-            <InputRow label="Sewer" value={sewerCompany} onChange={v => { setSewerCompany(v); saveNow?.({ sewerCompany: v }); }} />
-            <InputRow label="Electric" value={electricCompany} onChange={v => { setElectricCompany(v); saveNow?.({ electricCompany: v }); }} />
-            <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-              <span className="text-xs text-gray-500">Home Model</span>
-              <select
-                value={homeModel || ''}
-                onChange={e => {
-                  const val = e.target.value;
-                  const selected = HOME_MODELS.find(m => `${m.manufacturer} - ${m.model}` === val);
-                  setHomeModel(val);
-                  if (selected) setCosts(prev => ({ ...prev, mobileHome: selected.price }));
-                  saveNow?.({ homeModel: val, ...(selected ? { mobileHome: selected.price } : {}) });
-                }}
-                className="text-xs font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 max-w-[220px] disabled:opacity-60 disabled:cursor-default"
-              >
-                <option value="">— Select Model —</option>
-                {HOME_MODELS.map(m => (
-                  <option key={m.id} value={`${m.manufacturer} - ${m.model}`}>
-                    {m.manufacturer} – {m.model} ({m.beds}bd/{m.baths}ba, {m.sqft} sqft) — ${m.price.toLocaleString()}
-                  </option>
-                ))}
-              </select>
+          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="grid grid-cols-2 gap-x-6">
+            <SelectRow label="Utility Scenario" value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow?.({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} readOnly={readOnly} />
+            {(!readOnly || homeModel) && (
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Home Model</p>
+                {readOnly
+                  ? <span className="text-sm font-medium text-gray-800">{homeModel}</span>
+                  : <select
+                      value={homeModel || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const selected = HOME_MODELS.find(m => `${m.manufacturer} - ${m.model}` === val);
+                        setHomeModel(val);
+                        if (selected) setCosts(prev => ({ ...prev, mobileHome: selected.price }));
+                        saveNow?.({ homeModel: val, ...(selected ? { mobileHome: selected.price } : {}) });
+                      }}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full disabled:opacity-60 disabled:cursor-default"
+                    >
+                      <option value="">— Select Model —</option>
+                      {HOME_MODELS.map(m => (
+                        <option key={m.id} value={`${m.manufacturer} - ${m.model}`}>
+                          {m.manufacturer} – {m.model} ({m.beds}bd/{m.baths}ba, {m.sqft} sqft) — ${m.price.toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                }
+              </div>
+            )}
+            <InputRow label="Water" value={waterCompany} onChange={v => { setWaterCompany(v); saveNow?.({ waterCompany: v }); }} readOnly={readOnly} />
+            <InputRow label="Sewer" value={sewerCompany} onChange={v => { setSewerCompany(v); saveNow?.({ sewerCompany: v }); }} readOnly={readOnly} />
+            <InputRow label="Electric" value={electricCompany} onChange={v => { setElectricCompany(v); saveNow?.({ electricCompany: v }); }} readOnly={readOnly} />
+            <SelectRow label="Subdividable" value={subdividable} onChange={setSubdividable} options={['Yes', 'No']} readOnly={readOnly} />
+            <SelectRow label="Land Clearing" value={landClearing} onChange={setLandClearing} options={['Yes', 'No']} readOnly={readOnly} />
             </div>
-            <SelectRow label="Subdividable" value={subdividable} onChange={setSubdividable} options={['Yes', 'No']} />
-            <SelectRow label="Land Clearing" value={landClearing} onChange={setLandClearing} options={['Yes', 'No']} />
           </fieldset>
         </div>
 
@@ -327,19 +341,22 @@ function OverviewTab({
             <SectionHeader>Cost Breakdown</SectionHeader>
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <fieldset disabled={readOnly} className="divide-y divide-gray-50">
-                {COST_FIELDS.map(({ key, label }) => (
+                {COST_FIELDS.filter(({ key }) => !readOnly || (costs[key] || 0) > 0).map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between px-4 py-2">
-                    <span className="text-xs text-gray-500 w-40">{label}</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-400">$</span>
-                      <input
-                        type="number"
-                        value={costs[key] || ''}
-                        onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
-                        placeholder="0"
-                        className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-70 disabled:cursor-default"
-                      />
-                    </div>
+                    <span className="text-xs text-gray-500">{label}</span>
+                    {readOnly
+                      ? <span className="text-xs font-medium text-gray-800">${(costs[key] || 0).toLocaleString()}</span>
+                      : <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">$</span>
+                          <input
+                            type="number"
+                            value={costs[key] || ''}
+                            onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+                            placeholder="0"
+                            className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                          />
+                        </div>
+                    }
                   </div>
                 ))}
               </fieldset>
@@ -397,13 +414,15 @@ function OverviewTab({
         {!isAgent && (
           <div>
             <SectionHeader>Closing Details</SectionHeader>
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-1">
-              <InputRow label="Investor" value={investor} onChange={setInvestor} />
-              <InputRow label="Closing Attorney" value={closingAttorney} onChange={setClosingAttorney} />
-              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} />
-              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} />
-              <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" />
-              <InputRow label="Contract Date" value={contractDate} onChange={setContractDate} type="date" />
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="grid grid-cols-2 gap-x-6">
+              <InputRow label="Investor" value={investor} onChange={setInvestor} readOnly={readOnly} />
+              <InputRow label="Closing Attorney" value={closingAttorney} onChange={setClosingAttorney} readOnly={readOnly} />
+              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} readOnly={readOnly} />
+              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} readOnly={readOnly} />
+              <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" readOnly={readOnly} />
+              <InputRow label="Contract Date" value={contractDate} onChange={setContractDate} type="date" readOnly={readOnly} />
+              </div>
             </div>
           </div>
         )}
