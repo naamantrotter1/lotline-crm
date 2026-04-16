@@ -340,25 +340,24 @@ function OverviewTab({
           <div>
             <SectionHeader>Cost Breakdown</SectionHeader>
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <fieldset disabled={readOnly} className="divide-y divide-gray-50">
-                {COST_FIELDS.filter(({ key }) => !readOnly || (costs[key] || 0) > 0).map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between px-4 py-2">
-                    <span className="text-xs text-gray-500">{label}</span>
-                    {readOnly
-                      ? <span className="text-xs font-medium text-gray-800">${(costs[key] || 0).toLocaleString()}</span>
-                      : <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-400">$</span>
-                          <input
+              <fieldset disabled={readOnly} className="p-4">
+                <div className="grid grid-cols-2 gap-x-6">
+                  {COST_FIELDS.filter(({ key }) => !readOnly || (costs[key] || 0) > 0).map(({ key, label }) => (
+                    <div key={key} className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{label}</p>
+                      {readOnly
+                        ? <span className="text-sm font-medium text-gray-800">${(costs[key] || 0).toLocaleString()}</span>
+                        : <input
                             type="number"
                             value={costs[key] || ''}
                             onChange={e => setCosts(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
                             placeholder="0"
-                            className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                            className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                           />
-                        </div>
-                    }
-                  </div>
-                ))}
+                      }
+                    </div>
+                  ))}
+                </div>
               </fieldset>
               <div className="bg-[#1a2332] text-white px-4 py-2.5 flex justify-between">
                 <span className="text-sm font-semibold">Total Build Cost</span>
