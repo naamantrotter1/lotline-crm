@@ -378,7 +378,7 @@ function OverviewTab({
             <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Estimated ARV</p>
-                {isAgent && !readOnly
+                {!readOnly
                   ? <input
                       type="number"
                       value={arv ?? ''}
