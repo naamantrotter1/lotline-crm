@@ -101,7 +101,7 @@ export default function Login() {
   const btnStyle   = (disabled) => ({ backgroundColor: disabled ? '#94a3b8' : '#c9703a' });
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: '#f5f3ee' }}>
+    <div className="flex-1 flex items-center justify-center p-8" style={{ background: '#f5f3ee', minHeight: '100vh' }}>
       {showTos && <TermsOfService onClose={() => setShowTos(false)} />}
 
       <div className="w-full max-w-sm">
