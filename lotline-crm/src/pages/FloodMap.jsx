@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
 import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink, Home, Filter } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
+import { MARKET_COUNTY_DATA } from '../data/counties';
 
 function AddToPipelineModal({ parcelData, onClose }) {
   const [address,    setAddress]    = useState(parcelData.siteAddr || '');
@@ -247,9 +248,14 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const [showStateMenu, setShowStateMenu] = useState(false);
   const [showCountyMenu, setShowCountyMenu] = useState(false);
   const searchDebounce = useRef(null);
+  const countyHighlightRef = useRef(null);   // layer for the searched-county outline
+  const usAtlasGeoJSONRef  = useRef(null);   // cached full counties GeoJSON from us-atlas
 
   // ── Filter & Export Parcels ────────────────────────────────────────────────
   const parcelFilterRef = useRef({});
+  const [countySearchResults, setCountySearchResults] = useState([]);
+  const [showCountySearchDrop, setShowCountySearchDrop] = useState(false);
+
   const [showParcelFilterPanel, setShowParcelFilterPanel] = useState(false);
   const [pfSec, setPfSec] = useState({
     parcel: true, aiScrubbing: true, advanced: false, owner: false,
@@ -948,9 +954,78 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
   const SEARCH_TYPES = [
     { id: 'address', label: 'Address' },
+    { id: 'county',  label: 'County' },
     { id: 'parno',   label: 'APN / Parcel ID' },
     { id: 'owner',   label: 'Owner' },
   ];
+
+  // ── County search helpers ─────────────────────────────────────────────────
+  const handleCountyInput = (val) => {
+    setSearchQuery(val);
+    if (val.trim().length < 1) { setCountySearchResults([]); setShowCountySearchDrop(false); return; }
+    const q = val.toLowerCase();
+    const matches = MARKET_COUNTY_DATA
+      .filter(c => c.name.toLowerCase().startsWith(q) || `${c.name}, ${c.state}`.toLowerCase().includes(q))
+      .slice(0, 12)
+      .map(c => ({ fips: c.fips, name: c.name, state: c.state, label: `${c.name}, ${c.state}` }));
+    setCountySearchResults(matches);
+    setShowCountySearchDrop(true);
+  };
+
+  const loadUsAtlasGeoJSON = () => new Promise((resolve, reject) => {
+    if (usAtlasGeoJSONRef.current) { resolve(usAtlasGeoJSONRef.current); return; }
+    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json')
+      .then(r => r.json())
+      .then(us => {
+        const loadTopojson = () => {
+          const gj = window.topojson.feature(us, us.objects.counties);
+          usAtlasGeoJSONRef.current = gj;
+          resolve(gj);
+        };
+        if (window.topojson) { loadTopojson(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js';
+        script.onload = loadTopojson;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      })
+      .catch(reject);
+  });
+
+  const handleCountySelect = async (county) => {
+    const map = leafletMap.current;
+    if (!map) return;
+    setSearchQuery(county.label);
+    setShowCountySearchDrop(false);
+
+    // Remove previous county highlight
+    if (countyHighlightRef.current) { countyHighlightRef.current.remove(); countyHighlightRef.current = null; }
+
+    try {
+      const gj = await loadUsAtlasGeoJSON();
+      const feature = gj.features.find(f => String(f.id).padStart(5, '0') === county.fips);
+      if (!feature) { console.warn('[county search] FIPS not found in atlas:', county.fips); return; }
+
+      const hl = L.geoJSON(feature, {
+        style: {
+          color: '#f97316',       // orange — visible on both satellite and light
+          weight: 4,
+          fillOpacity: 0.06,
+          opacity: 1,
+          dashArray: null,
+        },
+        pane: 'highlightPane',
+      }).addTo(map);
+
+      countyHighlightRef.current = hl;
+      const bounds = hl.getBounds();
+      if (bounds?.isValid()) {
+        map.fitBounds(bounds, { padding: [40, 40], animate: true });
+      }
+    } catch (err) {
+      console.error('[county search] failed to highlight county:', err);
+    }
+  };
 
   const handleSearchInput = (val) => {
     setSearchQuery(val);
@@ -1131,7 +1206,18 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                 {SEARCH_TYPES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => { setSearchType(t.id); setShowTypeMenu(false); setSearchQuery(''); setSearchResults([]); setShowSearchDrop(false); if (t.id === 'address') { setSearchState(''); setSearchCounty(''); setShowStateMenu(false); setShowCountyMenu(false); } }}
+                    onClick={() => {
+                    setSearchType(t.id);
+                    setShowTypeMenu(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setShowSearchDrop(false);
+                    setCountySearchResults([]);
+                    setShowCountySearchDrop(false);
+                    if (t.id === 'address') { setSearchState(''); setSearchCounty(''); setShowStateMenu(false); setShowCountyMenu(false); }
+                    // Clear county highlight when switching away
+                    if (t.id !== 'county' && countyHighlightRef.current) { countyHighlightRef.current.remove(); countyHighlightRef.current = null; }
+                  }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${searchType === t.id ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-gray-700'}`}
                   >
                     {t.label}
@@ -1141,7 +1227,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
             )}
           </div>
 
-          {/* State selector — for APN and Owner search */}
+          {/* State selector — for APN and Owner search only */}
           {(searchType === 'parno' || searchType === 'owner') && (
             <div className="relative flex-shrink-0">
               <button
@@ -1200,20 +1286,57 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
             <input
               type="text"
               value={searchQuery}
-              onChange={e => handleSearchInput(e.target.value)}
-              onFocus={() => searchResults.length > 0 && setShowSearchDrop(true)}
-              placeholder={searchType === 'parno' ? 'Enter parcel ID…' : searchType === 'owner' ? 'Enter owner name…' : 'Enter address…'}
+              onChange={e => searchType === 'county' ? handleCountyInput(e.target.value) : handleSearchInput(e.target.value)}
+              onFocus={() => {
+                if (searchType === 'county' && countySearchResults.length > 0) setShowCountySearchDrop(true);
+                else if (searchResults.length > 0) setShowSearchDrop(true);
+              }}
+              placeholder={
+                searchType === 'county' ? 'Type county name…' :
+                searchType === 'parno'  ? 'Enter parcel ID…' :
+                searchType === 'owner'  ? 'Enter owner name…' :
+                'Enter address…'
+              }
               className="w-full h-10 pl-3 pr-8 text-sm text-white bg-gray-900 border border-gray-600 focus:outline-none focus:border-orange-500 placeholder-gray-500"
               style={{ minWidth: 160 }}
             />
             {searchLoading && (
               <div className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
             )}
+
+            {/* County autocomplete dropdown */}
+            {searchType === 'county' && showCountySearchDrop && countySearchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[1200]"
+                   style={{ minWidth: 220 }}>
+                {countySearchResults.map((c) => (
+                  <button
+                    key={c.fips}
+                    onMouseDown={e => { e.preventDefault(); handleCountySelect(c); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-800 border-b border-gray-700/50 last:border-0 transition-colors"
+                  >
+                    <p className="text-sm text-white font-medium">{c.name}</p>
+                    <p className="text-xs text-gray-400">{c.state} · FIPS {c.fips}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchType === 'county' && showCountySearchDrop && countySearchResults.length === 0 && searchQuery.length >= 2 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl z-[1200]" style={{ minWidth: 220 }}>
+                <p className="px-4 py-3 text-sm text-gray-400">No counties found</p>
+              </div>
+            )}
           </div>
 
           {/* Search button */}
           <button
-            onClick={() => handleSearchInput(searchQuery)}
+            onClick={() => {
+              if (searchType === 'county') {
+                if (countySearchResults.length === 1) handleCountySelect(countySearchResults[0]);
+                else handleCountyInput(searchQuery);
+              } else {
+                handleSearchInput(searchQuery);
+              }
+            }}
             className="flex items-center justify-center w-10 h-10 bg-orange-500 hover:bg-orange-400 rounded-r-xl border border-orange-500 transition-colors flex-shrink-0"
           >
             <Search size={15} className="text-white" />
