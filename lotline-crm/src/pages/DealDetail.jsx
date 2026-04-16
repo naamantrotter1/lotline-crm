@@ -346,7 +346,7 @@ function OverviewTab({
           </div>
         )}
 
-        {/* Estimated ARV / Profit Summary — always visible */}
+        {/* Estimated ARV / Profit Summary */}
         <div>
           {isAgent && <SectionHeader>Estimated ARV</SectionHeader>}
           <div className={`${!isAgent ? 'mt-3' : ''} bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1.5`}>
@@ -354,24 +354,28 @@ function OverviewTab({
               <span className="text-gray-500">Estimated ARV</span>
               <span className="font-medium text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Selling Costs (4.5% + $4,000)</span>
-              <span className="font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</span>
-              <span className="font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
-              <span className="font-semibold text-gray-700">Net Profit ({deal.financing})</span>
-              <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                ${Math.round(netProfit).toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">ROI</span>
-              <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</span>
-            </div>
+            {!isAgent && (
+              <>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Selling Costs (4.5% + $4,000)</span>
+                  <span className="font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</span>
+                  <span className="font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
+                  <span className="font-semibold text-gray-700">Net Profit ({deal.financing})</span>
+                  <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    ${Math.round(netProfit).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">ROI</span>
+                  <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1371,7 +1375,7 @@ function DealDetailContent({ deal }) {
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
-            readOnly={fromInvestorPortal || !canEdit}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             isAgent={isAgent}
           />
         )}
