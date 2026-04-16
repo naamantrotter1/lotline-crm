@@ -206,10 +206,8 @@ function OverviewTab({
   const arvVal = arv ?? deal.arv ?? 0;
   const sellingCosts = arvVal * 0.045 + 4000;
   const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
-  const netProfit = arvVal - allIn - sellingCosts - holdingCosts;
-  const roi = allIn > 0 ? ((netProfit / allIn) * 100).toFixed(1) : '0.0';
 
-  // Financing calculations
+  // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
   const monthlyInterest = totalLent * (interestRate / 100) / 12;
   const originationFee = originationFeeType === 'percentage'
@@ -219,7 +217,13 @@ function OverviewTab({
     ? totalLent * (servicingFeePct / 100)
     : servicingFeeFlat;
   const totalCostOfCapital = (monthlyInterest * holdPeriod) + originationFee + servicingFee;
-  const profitShareAmount = netProfit * (profitSharePct / 100);
+
+  // Deduct financing costs from net profit when a scenario is active
+  const hasFinancing = !!selectedScenario && activeFinancing !== 'Cash';
+  const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts - (hasFinancing ? totalCostOfCapital : 0);
+  const profitShareAmount = hasFinancing ? profitBeforeShare * (profitSharePct / 100) : 0;
+  const netProfit = profitBeforeShare - profitShareAmount;
+  const roi = allIn > 0 ? ((netProfit / allIn) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="flex gap-6">
@@ -395,8 +399,14 @@ function OverviewTab({
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</p>
                     <span className="text-sm font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
                   </div>
+                  {hasFinancing && (
+                    <div className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Financing Costs</p>
+                      <span className="text-sm font-medium text-red-500">-${Math.round(totalCostOfCapital + profitShareAmount).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Net Profit ({deal.financing})</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Net Profit {activeFinancing ? `(${activeFinancing})` : deal.financing ? `(${deal.financing})` : ''}</p>
                     <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       ${Math.round(netProfit).toLocaleString()}
                     </span>
