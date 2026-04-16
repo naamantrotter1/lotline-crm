@@ -67,6 +67,7 @@ function AgentIndexRoute() {
 const AGENT_PERMITTED = new Set([
   '/pipelines/deal-overview',
   '/pipelines/sales',
+  '/homes',
 ]);
 
 /** Redirects agents away from pages they have no access to */

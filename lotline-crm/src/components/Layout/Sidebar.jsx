@@ -46,7 +46,7 @@ const BASE_NAV_SECTIONS = [
 ];
 
 // Routes agents are allowed to see
-const AGENT_ALLOWED = new Set(['/pipelines/deal-overview', '/pipelines/sales']);
+const AGENT_ALLOWED = new Set(['/pipelines/deal-overview', '/pipelines/sales', '/homes']);
 
 const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer', agent: 'Agent' };
 
