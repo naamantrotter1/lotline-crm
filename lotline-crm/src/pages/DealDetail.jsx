@@ -371,42 +371,44 @@ function OverviewTab({
         {/* Estimated ARV / Profit Summary */}
         <div>
           {isAgent && <SectionHeader>Estimated ARV</SectionHeader>}
-          <div className={`${!isAgent ? 'mt-3' : ''} bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1.5`}>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-gray-500">Estimated ARV</span>
-              {isAgent && !readOnly
-                ? <input
-                    type="number"
-                    value={arv ?? ''}
-                    onChange={e => { const v = Number(e.target.value) || 0; setArv(v); saveNow?.({ arv: v }); }}
-                    placeholder="0"
-                    className="w-32 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
-                  />
-                : <span className="font-medium text-gray-800">${arvVal.toLocaleString()}</span>
-              }
+          <div className={`${!isAgent ? 'mt-3' : ''} bg-white rounded-xl border border-gray-100 px-4 py-3`}>
+            <div className="grid grid-cols-2 gap-x-6">
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Estimated ARV</p>
+                {isAgent && !readOnly
+                  ? <input
+                      type="number"
+                      value={arv ?? ''}
+                      onChange={e => { const v = Number(e.target.value) || 0; setArv(v); saveNow?.({ arv: v }); }}
+                      placeholder="0"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                    />
+                  : <span className="text-sm font-medium text-gray-800">${arvVal.toLocaleString()}</span>
+                }
+              </div>
+              {!isAgent && (
+                <>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Selling Costs (4.5% + $4,000)</p>
+                    <span className="text-sm font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</p>
+                    <span className="text-sm font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Net Profit ({deal.financing})</p>
+                    <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      ${Math.round(netProfit).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">ROI</p>
+                    <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</span>
+                  </div>
+                </>
+              )}
             </div>
-            {!isAgent && (
-              <>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Selling Costs (4.5% + $4,000)</span>
-                  <span className="font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</span>
-                  <span className="font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
-                  <span className="font-semibold text-gray-700">Net Profit ({deal.financing})</span>
-                  <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    ${Math.round(netProfit).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">ROI</span>
-                  <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -449,35 +451,37 @@ function OverviewTab({
           {/* ── Hard Money Loan ─────────────────────────────── */}
           {activeFinancing === 'Hard Money Loan' && (
             <div className="space-y-4">
-              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-0">
+              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loan Terms</p>
-                <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                  <span className="text-gray-500">LTC % (Loan-to-Cost)</span>
-                  <input type="number" value={ltcPct} onChange={e => setLtcPct(Number(e.target.value) || 0)}
-                    className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-gray-50 text-xs">
-                  <span className="text-gray-500">Loan Amount</span>
-                  <span className="font-medium text-accent">${Math.round(allIn * ltcPct / 100).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                  <span className="text-gray-500">Annual Interest Rate (%)</span>
-                  <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                    className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-gray-50 text-xs">
-                  <span className="text-gray-500">Monthly Interest Payment</span>
-                  <span className="font-medium text-gray-800">${Math.round(allIn * ltcPct / 100 * interestRate / 100 / 12).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                  <span className="text-gray-500">Origination Points (%)</span>
-                  <input type="number" value={originationPoints} onChange={e => setOriginationPoints(Number(e.target.value) || 0)}
-                    className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-                </div>
-                <div className="flex justify-between items-center py-1.5 text-xs">
-                  <span className="text-gray-500">Loan Term (months)</span>
-                  <input type="number" value={balloonTerm} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
-                    className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">LTC % (Loan-to-Cost)</p>
+                    <input type="number" value={ltcPct} onChange={e => setLtcPct(Number(e.target.value) || 0)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Amount</p>
+                    <span className="text-sm font-medium text-accent">${Math.round(allIn * ltcPct / 100).toLocaleString()}</span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+                    <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(allIn * ltcPct / 100 * interestRate / 100 / 12).toLocaleString()}</span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Points (%)</p>
+                    <input type="number" value={originationPoints} onChange={e => setOriginationPoints(Number(e.target.value) || 0)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Term (months)</p>
+                    <input type="number" value={balloonTerm} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -490,18 +494,18 @@ function OverviewTab({
               {/* Loan Amount */}
               <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loan Amount</p>
-                <div className="space-y-0">
-                  <div className="flex justify-between py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Cost of Manufactured Home</span>
-                    <span className="font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Manufactured Home</p>
+                    <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Cost of Land</span>
-                    <span className="font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
+                    <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 text-xs font-semibold">
-                    <span className="text-gray-700">Total Amount Lent</span>
-                    <span className="text-accent">${totalLent.toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Amount Lent</p>
+                    <span className="text-sm font-semibold text-accent">${totalLent.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -509,19 +513,19 @@ function OverviewTab({
               {/* Interest */}
               <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Interest</p>
-                <div className="space-y-0">
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Annual Interest Rate (%)</span>
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
                     <input
                       type="number"
                       value={interestRate}
                       onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                      className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
-                  <div className="flex justify-between py-1.5 text-xs">
-                    <span className="text-gray-500">Monthly Interest Payment</span>
-                    <span className="font-medium text-gray-800">${Math.round(monthlyInterest).toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterest).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -545,31 +549,31 @@ function OverviewTab({
                     </button>
                   </div>
                 </div>
-                <div className="space-y-0">
+                <div className="grid grid-cols-2 gap-x-6">
                   {originationFeeType === 'percentage' ? (
-                    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                      <span className="text-gray-500">Fee Percentage (%)</span>
+                    <div className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Fee Percentage (%)</p>
                       <input
                         type="number"
                         value={originationFeePct}
                         onChange={e => setOriginationFeePct(Number(e.target.value) || 0)}
-                        className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                        className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                       />
                     </div>
                   ) : (
-                    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                      <span className="text-gray-500">Flat Amount ($)</span>
+                    <div className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Flat Amount ($)</p>
                       <input
                         type="number"
                         value={originationFeeFlat}
                         onChange={e => setOriginationFeeFlat(Number(e.target.value) || 0)}
-                        className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                        className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                       />
                     </div>
                   )}
-                  <div className="flex justify-between py-1.5 text-xs">
-                    <span className="text-gray-500">Calculated Fee</span>
-                    <span className="font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -593,31 +597,31 @@ function OverviewTab({
                     </button>
                   </div>
                 </div>
-                <div className="space-y-0">
+                <div className="grid grid-cols-2 gap-x-6">
                   {servicingFeeType === 'percentage' ? (
-                    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                      <span className="text-gray-500">Fee Percentage (%)</span>
+                    <div className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Fee Percentage (%)</p>
                       <input
                         type="number"
                         value={servicingFeePct}
                         onChange={e => setServicingFeePct(Number(e.target.value) || 0)}
-                        className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                        className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                       />
                     </div>
                   ) : (
-                    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                      <span className="text-gray-500">Flat Amount ($)</span>
+                    <div className="py-2">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Flat Amount ($)</p>
                       <input
                         type="number"
                         value={servicingFeeFlat}
                         onChange={e => setServicingFeeFlat(Number(e.target.value) || 0)}
-                        className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                        className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                       />
                     </div>
                   )}
-                  <div className="flex justify-between py-1.5 text-xs">
-                    <span className="text-gray-500">Calculated Fee</span>
-                    <span className="font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -625,19 +629,19 @@ function OverviewTab({
               {/* Profit Share */}
               <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Profit Share</p>
-                <div className="space-y-0">
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Profit Share (%)</span>
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share (%)</p>
                     <input
                       type="number"
                       value={profitSharePct}
                       onChange={e => setProfitSharePct(Number(e.target.value) || 0)}
-                      className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
-                  <div className="flex justify-between py-1.5 text-xs">
-                    <span className="text-gray-500">Profit Share Amount</span>
-                    <span className="font-medium text-gray-800">${Math.round(profitShareAmount).toLocaleString()}</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share Amount</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(profitShareAmount).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -645,32 +649,32 @@ function OverviewTab({
               {/* Balloon Term & Hold Period */}
               <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Terms & Hold Period</p>
-                <div className="space-y-0">
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Balloon Payment Term (months)</span>
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Balloon Payment Term (months)</p>
                     <input
                       type="number"
                       value={balloonTerm}
                       onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
-                      className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Hold Period (months)</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
                     <input
                       type="number"
                       value={holdPeriod}
                       onChange={e => setHoldPeriod(Number(e.target.value) || 0)}
-                      className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
-                  <div className="flex justify-between items-center py-1.5 text-xs">
-                    <span className="text-gray-500">Monthly Holding Costs ($)</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Holding Costs ($)</p>
                     <input
                       type="number"
                       value={monthlyHoldCost}
                       onChange={e => setMonthlyHoldCost(Number(e.target.value) || 0)}
-                      className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
                 </div>
@@ -710,23 +714,23 @@ function OverviewTab({
               {/* Capital Tracking */}
               <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Capital Tracking</p>
-                <div className="space-y-0">
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                    <span className="text-gray-500">Capital Deployed Date</span>
+                <div className="grid grid-cols-2 gap-x-6">
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
                     <input
                       type="date"
                       value={capitalDeployedDate}
                       onChange={e => setCapitalDeployedDate(e.target.value)}
-                      className="text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
-                  <div className="flex justify-between items-center py-1.5 text-xs">
-                    <span className="text-gray-500">Capital Returned Date</span>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
                     <input
                       type="date"
                       value={capitalReturnedDate}
                       onChange={e => setCapitalReturnedDate(e.target.value)}
-                      className="text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
                 </div>
@@ -737,47 +741,51 @@ function OverviewTab({
 
           {/* ── Line of Credit ──────────────────────────────── */}
           {activeFinancing === 'Line of Credit' && (
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-0">
+            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line of Credit Terms</p>
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                <span className="text-gray-500">Credit Limit ($)</span>
-                <input type="number" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value) || 0)}
-                  className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                <span className="text-gray-500">Draw % (of Credit Limit)</span>
-                <input type="number" value={drawPct} onChange={e => setDrawPct(Number(e.target.value) || 0)}
-                  className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-50 text-xs">
-                <span className="text-gray-500">Draw Amount</span>
-                <span className="font-medium text-accent">${Math.round(creditLimit * drawPct / 100).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                <span className="text-gray-500">Annual Interest Rate (%)</span>
-                <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                  className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-              </div>
-              <div className="flex justify-between items-center py-1.5 text-xs">
-                <span className="text-gray-500">Annual Fee (%)</span>
-                <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)}
-                  className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
+              <div className="grid grid-cols-2 gap-x-6">
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Limit ($)</p>
+                  <input type="number" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value) || 0)}
+                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw % (of Credit Limit)</p>
+                  <input type="number" value={drawPct} onChange={e => setDrawPct(Number(e.target.value) || 0)}
+                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Amount</p>
+                  <span className="text-sm font-medium text-accent">${Math.round(creditLimit * drawPct / 100).toLocaleString()}</span>
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+                  <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
+                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
+                  <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)}
+                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                </div>
               </div>
             </div>
           )}
 
           {/* ── Profit Split ─────────────────────────────────── */}
           {activeFinancing === 'Profit Split' && (
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-0">
+            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Profit Split Terms</p>
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50 text-xs">
-                <span className="text-gray-500">Investor Profit Split (%)</span>
-                <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)}
-                  className="w-20 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30" />
-              </div>
-              <div className="flex justify-between py-1.5 text-xs">
-                <span className="text-gray-500">Investor Split Amount</span>
-                <span className="font-medium text-accent">${Math.round(netProfit * investorProfitSplitPct / 100).toLocaleString()}</span>
+              <div className="grid grid-cols-2 gap-x-6">
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Profit Split (%)</p>
+                  <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)}
+                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split Amount</p>
+                  <span className="text-sm font-medium text-accent">${Math.round(netProfit * investorProfitSplitPct / 100).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           )}
@@ -961,26 +969,31 @@ function DevTab({ devTasks, setDevTasks, readOnly }) {
 // ── Tab: Realized Expenses ────────────────────────────────────────────────────
 function RealizedTab({ realized, setRealized, readOnly }) {
   const total = COST_FIELDS.reduce((s, f) => s + (realized[f.key] || 0), 0);
+  const visibleFields = readOnly
+    ? COST_FIELDS.filter(({ key }) => (realized[key] || 0) !== 0)
+    : COST_FIELDS;
   return (
     <div className="max-w-lg">
       <h3 className="font-semibold text-[#1a2332] mb-4">Realized Expenses</h3>
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="divide-y divide-gray-50">
-          {COST_FIELDS.map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between px-4 py-2">
-              <span className="text-xs text-gray-500 w-40">{label}</span>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-400">$</span>
-                <input
-                  type="number"
-                  value={realized[key] || ''}
-                  onChange={e => setRealized(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
-                  placeholder="0"
-                  className="w-28 text-right text-xs font-medium text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
-                />
+        <div className="px-4 py-3">
+          <div className="grid grid-cols-2 gap-x-6">
+            {visibleFields.map(({ key, label }) => (
+              <div key={key} className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{label}</p>
+                {readOnly
+                  ? <span className="text-sm font-medium text-gray-800">${(realized[key] || 0).toLocaleString()}</span>
+                  : <input
+                      type="number"
+                      value={realized[key] || ''}
+                      onChange={e => setRealized(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+                      placeholder="0"
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                    />
+                }
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         <div className="bg-[#1a2332] text-white px-4 py-2.5 flex justify-between">
           <span className="text-sm font-semibold">Total Realized</span>
