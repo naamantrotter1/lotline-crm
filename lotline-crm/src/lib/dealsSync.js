@@ -220,19 +220,23 @@ export function saveDeal(deal) {
 
   const row = dealToRow(deal);
 
-  // Try UPDATE first — only requires the update policy (agents included)
-  supabase.from('deals').update(row).eq('id', row.id)
+  // Try UPDATE — only requires the update policy (agents included)
+  supabase.from('deals').update(row).eq('id', row.id).select()
     .then(({ error, data }) => {
       if (error) {
-        console.error('[dealsSync] saveDeal update error:', error.message);
+        console.error('[dealsSync] saveDeal update error:', error.code, error.message, error.hint);
         return;
       }
-      // If no rows matched (new deal not yet in DB), fall back to INSERT
-      if (data !== null && Array.isArray(data) && data.length === 0) {
+      if (!data || data.length === 0) {
+        // No rows updated — deal not yet in DB, fall back to INSERT
+        console.warn('[dealsSync] saveDeal: 0 rows updated, attempting insert for id:', row.id);
         supabase.from('deals').insert(row)
           .then(({ error: insertError }) => {
             if (insertError) console.error('[dealsSync] saveDeal insert error:', insertError.message);
+            else console.log('[dealsSync] saveDeal: inserted new deal', row.id);
           });
+      } else {
+        console.log('[dealsSync] saveDeal: updated deal', row.id, '— rows affected:', data.length);
       }
     });
 }
