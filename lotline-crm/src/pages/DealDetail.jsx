@@ -6,7 +6,7 @@ import {
   ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal, saveToLS, flushToSupabase } from '../lib/dealsSync';
+import { saveDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { HOME_MODELS } from '../data/homeModels';
@@ -990,8 +990,7 @@ function DealDetailContent({ deal }) {
   const stateRef       = useRef({});
   dealRef.current      = deal; // updated every render
 
-  // Stable callback: saves current state to localStorage + context immediately (no debounce)
-  // Call this from onChange handlers so saves are guaranteed before any navigation
+  // Stable callback: saves current state to localStorage + Supabase immediately
   const saveNow = useCallback((overrides = {}) => {
     if (!canEdit && !isAgent) return;
     const s = stateRef.current;
@@ -999,6 +998,7 @@ function DealDetailContent({ deal }) {
       ...dealRef.current,
       stage: s.stage, address: s.address, county: s.county, state: s.dealState, zip: s.zip,
       acreage: s.acreage, ownerName: s.ownerName, sellerName: s.sellerName,
+      phone: s.phone, email: s.email,
       investor: s.investor, financing: s.financing, notes: s.notes,
       leadSource: s.leadSource, ownerType: s.ownerType, utilityScenario: s.utilityScenario,
       homeModel: s.homeModel, waterCompany: s.waterCompany, sewerCompany: s.sewerCompany,
@@ -1007,10 +1007,11 @@ function DealDetailContent({ deal }) {
       closingAttorneyAddress: s.closingAttorneyAddress, closeDate: s.closeDate,
       contractDate: s.contractDate, manufacturer: s.manufacturer, deliveryDate: s.deliveryDate,
       holdingMonths: s.holdPeriod, holdingPerMonth: s.monthlyHoldCost,
-      arv: s.arv, ...s.costs,
+      arv: s.arv, listingUrl: s.listingUrl, ...s.costs,
       ...overrides,
     };
-    saveToLS(d);
+    // Save to localStorage + context immediately, and fire Supabase write
+    saveDeal(d);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(d.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = d; return next; }
@@ -1153,21 +1154,9 @@ function DealDetailContent({ deal }) {
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
   };
 
-  // ── Auto-save every editable field (debounced Supabase write) ───────────────
-  const autoSaveMounted  = useRef(false);
-  const saveTimer        = useRef(null);
-  const pendingDeal      = useRef(null); // holds latest unsaved deal for flush-on-unmount
-  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
-
-  // Flush pending Supabase write on unmount (localStorage + context already updated immediately)
-  useEffect(() => {
-    return () => {
-      if (pendingDeal.current) {
-        flushToSupabase(pendingDeal.current);
-        pendingDeal.current = null;
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Auto-save: fires immediately on every field change ───────────────────────
+  const autoSaveMounted = useRef(false);
+  const [saveStatus, setSaveStatus] = useState('idle');
 
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
@@ -1188,26 +1177,16 @@ function DealDetailContent({ deal }) {
       ...costs,
     };
 
-    // Immediately persist to localStorage + context so navigation never sees stale data
-    saveToLS(updatedDeal);
+    // Save immediately — localStorage, context, and Supabase all at once
+    saveDeal(updatedDeal);
+    setSaveStatus('saved');
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updatedDeal.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = updatedDeal; return next; }
       return [...prev, updatedDeal];
     });
-
-    // Debounce the Supabase network write only
-    pendingDeal.current = updatedDeal;
-    setSaveStatus('saving');
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      flushToSupabase(updatedDeal);
-      pendingDeal.current = null;
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    }, 1500);
-
-    return () => clearTimeout(saveTimer.current);
+    const t = setTimeout(() => setSaveStatus('idle'), 2000);
+    return () => clearTimeout(t);
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
     ownerName, sellerName, phone, email, investor, financing, notes,
