@@ -513,7 +513,7 @@ function OverviewTab({
               <div className="bg-white rounded-xl border border-gray-100 p-4">
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0 divide-x divide-gray-100">
 
-                  {/* Left column: Interest + Servicing Fee */}
+                  {/* Left column: Interest + Origination Fee */}
                   <div className="pr-6 space-y-4">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Interest</p>
@@ -527,29 +527,6 @@ function OverviewTab({
                         <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterest).toLocaleString()}</span>
                       </div>
                     </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Servicing Fee</p>
-                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-                          <button onClick={() => setServicingFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
-                          <button onClick={() => setServicingFeeType('flat')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
-                        </div>
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <input type="number" value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
-                          onChange={e => servicingFeeType === 'percentage' ? setServicingFeePct(Number(e.target.value) || 0) : setServicingFeeFlat(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
-                        <span className="text-sm font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right column: Origination Fee + Profit Share & Terms */}
-                  <div className="pl-6 space-y-4">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Origination Fee</p>
@@ -567,6 +544,29 @@ function OverviewTab({
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
                         <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right column: Servicing Fee + Profit Share & Terms */}
+                  <div className="pl-6 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Servicing Fee</p>
+                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                          <button onClick={() => setServicingFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
+                          <button onClick={() => setServicingFeeType('flat')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
+                        <input type="number" value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
+                          onChange={e => servicingFeeType === 'percentage' ? setServicingFeePct(Number(e.target.value) || 0) : setServicingFeeFlat(Number(e.target.value) || 0)}
+                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                      </div>
+                      <div className="py-2">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
+                        <span className="text-sm font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
                       </div>
                     </div>
                     <div>
