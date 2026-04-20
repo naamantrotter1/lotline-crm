@@ -1100,7 +1100,13 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
-      saveDeal({ ...deal, stage: val });
+      const updated = { ...deal, stage: val };
+      saveDeal(updated);
+      setDeals(prev => {
+        const idx = prev.findIndex(x => String(x.id) === String(updated.id));
+        if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
+        return [...prev, updated];
+      });
     }
   };
 
