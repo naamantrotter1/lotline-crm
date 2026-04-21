@@ -67,12 +67,6 @@ export default function Settings() {
       const ext = file.name.split('.').pop();
       const path = `avatars/${userId}.${ext}`;
 
-      // Create bucket if it doesn't exist yet
-      const { error: bucketError } = await supabase.storage.createBucket('profiles', { public: true });
-      if (bucketError && !bucketError.message?.includes('already exists')) {
-        throw bucketError;
-      }
-
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(path, file, { upsert: true });
