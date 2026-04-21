@@ -8,6 +8,11 @@
   box-sizing: border-box;
 }
 
+/* Remove focus outline on Recharts SVG bar elements */
+.recharts-wrapper svg *:focus {
+  outline: none;
+}
+
 /* Contour line elevation labels */
 .contour-label {
   background: transparent !important;

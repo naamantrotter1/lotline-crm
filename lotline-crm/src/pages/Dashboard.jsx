@@ -232,7 +232,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-              <Tooltip />
+              <Tooltip cursor={false} />
               <Bar
                 dataKey="deals"
                 name="Deals"
