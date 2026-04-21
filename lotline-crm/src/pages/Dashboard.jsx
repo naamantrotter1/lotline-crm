@@ -291,9 +291,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Year at a Glance + Recent Deals */}
+      {/* Year at a Glance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Year at a Glance */}
         <div className="bg-card rounded-xl shadow-sm p-4 lg:col-span-1">
           <h2 className="text-base font-semibold text-sidebar mb-4">Year at a Glance — {year}</h2>
           <div className="space-y-4">
@@ -311,44 +310,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Deals */}
-        <div className="bg-card rounded-xl shadow-sm overflow-hidden lg:col-span-2">
-          <div className="p-4 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-sidebar">Recent Deals</h2>
-          </div>
-          {recentDeals.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No deals yet</p>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-2 px-4 text-xs font-semibold text-gray-500 uppercase">Address</th>
-                  <th className="text-left py-2 px-4 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Stage</th>
-                  <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase">ARV</th>
-                  <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Est. Profit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentDeals.map((d) => {
-                  const profit = calcNetProfit(d);
-                  return (
-                    <tr key={d.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-2.5 px-4 text-sm text-gray-700 max-w-[180px]">
-                        <p className="truncate">{d.address || '—'}</p>
-                        <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''}</p>
-                      </td>
-                      <td className="py-2.5 px-4 text-sm text-gray-500 hidden md:table-cell">{d.stage || '—'}</td>
-                      <td className="py-2.5 px-4 text-sm text-right text-gray-600 font-medium">{fmt$(d.arv)}</td>
-                      <td className={`py-2.5 px-4 text-sm text-right font-semibold hidden sm:table-cell ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {fmt$(profit)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
       </div>
       {/* Month Drilldown Modal */}
       {monthModal && (
