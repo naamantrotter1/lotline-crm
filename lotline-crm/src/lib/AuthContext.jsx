@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
       if (!error && data) {
         setProfile(data);
         // Update crm_user so Homes iframe pre-fill still works
-        localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email }));
+        localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
       }
     } catch {
       // profile fetch failed — user still logged in, just no role data yet
@@ -70,6 +70,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('crm_user', JSON.stringify({
         name: updates.name ?? profile?.name,
         email: profile?.email,
+        phone: updates.phone ?? profile?.phone ?? '',
       }));
     }
     return { error };

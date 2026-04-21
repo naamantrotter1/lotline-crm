@@ -336,8 +336,9 @@ function openOrderDrawer(id) {
   // Pre-fill from CRM session if available
   try {
     const u = JSON.parse(localStorage.getItem('crm_user') || '{}');
-    if (u.name) _orderData.name = u.name;
+    if (u.name)  _orderData.name  = u.name;
     if (u.email) _orderData.email = u.email;
+    if (u.phone) _orderData.phone = u.phone;
   } catch {}
   const ov = document.getElementById('orderOverlay');
   const dr = document.getElementById('orderDrawer');
