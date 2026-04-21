@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
+import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
@@ -402,8 +403,8 @@ function NeedsFundingTab({ onDealClick }) {
   const totalNeeded = deals.reduce((s, d) => s + d.totalCapital, 0);
 
   const allInvestors = [
-    ...INVESTORS.filter(i => i.name !== 'Cash' && i.name !== 'None'),
-    ...extraInvestors,
+    ...loadInvestors().filter(i => i.name !== 'Cash' && i.name !== 'None'),
+    ...extraInvestors.filter(e => !loadInvestors().find(i => i.name === e.name)),
   ];
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
@@ -492,10 +493,10 @@ function NeedsFundingTab({ onDealClick }) {
 }
 
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
-function ByInvestorTab({ onDealClick, linkedInvestor }) {
+function ByInvestorTab({ onDealClick, linkedInvestor, investors }) {
   const displayInvestors = linkedInvestor
-    ? INVESTORS.filter(inv => inv.name === linkedInvestor)
-    : INVESTORS;
+    ? investors.filter(inv => inv.name === linkedInvestor)
+    : investors;
 
   if (linkedInvestor && displayInvestors.length === 0) {
     return (
@@ -515,8 +516,8 @@ function ByInvestorTab({ onDealClick, linkedInvestor }) {
 }
 
 // ── Tab: Directory ───────────────────────────────────────────────────────────
-function DirectoryTab() {
-  const contacts = INVESTORS.filter(i => i.contact && i.name !== 'Cash');
+function DirectoryTab({ investors }) {
+  const contacts = investors.filter(i => i.contact && i.name !== 'Cash');
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -578,6 +579,7 @@ export default function InvestorPortal() {
   const linkedInvestor = isInvestor ? (profile?.company || null) : null;
 
   const [activeTab, setActiveTab] = useState('by-investor');
+  const [investors, setInvestors] = useState(() => loadInvestors());
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
@@ -589,9 +591,9 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  const totalCapital = INVESTORS.reduce((s, i) => s + i.capitalInvested, 0);
-  const totalDeals = INVESTORS.reduce((s, i) => s + i.activeDeals, 0);
-  const totalROI = INVESTORS.reduce((s, i) => s + i.roiDollars, 0);
+  const totalCapital = investors.reduce((s, i) => s + i.capitalInvested, 0);
+  const totalDeals = investors.reduce((s, i) => s + i.activeDeals, 0);
+  const totalROI = investors.reduce((s, i) => s + i.roiDollars, 0);
 
   const TABS = isInvestor
     ? [{ key: 'by-investor', label: 'My Deals' }]
@@ -637,7 +639,7 @@ export default function InvestorPortal() {
       <div className="px-6 pt-5">
         {!isInvestor && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           {[
-            { label: 'Active Investors', value: INVESTORS.filter(i => i.name !== 'Cash').length, icon: Users },
+            { label: 'Active Investors', value: investors.filter(i => i.name !== 'Cash').length, icon: Users },
             { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`, icon: DollarSign },
             { label: 'Active Deals Funded', value: totalDeals, icon: Briefcase },
             { label: 'Total Projected ROI', value: `$${totalROI.toLocaleString()}`, icon: TrendingUp },
@@ -657,8 +659,8 @@ export default function InvestorPortal() {
         {/* Tab content */}
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
-        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} />}
-        {activeTab === 'directory' && <DirectoryTab />}
+        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} />}
+        {activeTab === 'directory' && <DirectoryTab investors={investors} />}
       </div>
 
     </div>

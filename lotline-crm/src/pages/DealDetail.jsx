@@ -13,6 +13,7 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
+import { loadInvestors, addInvestor } from '../lib/investorsStore';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -201,6 +202,8 @@ function OverviewTab({
   agentUsers,
   navigate,
   onOpenMapSearch,
+  investorList,
+  onAddInvestor,
   readOnly,
   isAgent,
   saveNow,
@@ -455,7 +458,31 @@ function OverviewTab({
             <SectionHeader>Closing Details</SectionHeader>
             <div className="bg-white rounded-xl border border-gray-100 p-4">
               <div className="grid grid-cols-2 gap-x-6">
-              <InputRow label="Investor" value={investor} onChange={v => { setInvestor(v); saveNow?.({ investor: v }); }} readOnly={readOnly} />
+              {/* Investor dropdown */}
+              <div className="py-2 border-b border-gray-50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-400 font-medium">Investor</span>
+                  {!readOnly && (
+                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-medium flex items-center gap-0.5">
+                      <span>+ Add Investor</span>
+                    </button>
+                  )}
+                </div>
+                {readOnly ? (
+                  <p className="text-sm font-medium text-gray-800">{investor || '—'}</p>
+                ) : (
+                  <select
+                    value={investor}
+                    onChange={e => { setInvestor(e.target.value); saveNow?.({ investor: e.target.value }); }}
+                    className="w-full text-sm font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
+                  >
+                    <option value="">— Select investor —</option>
+                    {(investorList || []).map(inv => (
+                      <option key={inv.id} value={inv.name}>{inv.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <InputRow label="Closing Attorney" value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow?.({ closingAttorney: v }); }} readOnly={readOnly} />
               <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={v => { setClosingAttorneyPhone(v); saveNow?.({ closingAttorneyPhone: v }); }} readOnly={readOnly} />
               <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow?.({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
@@ -832,6 +859,72 @@ function OverviewTab({
         {/* Auto-save indicator */}
         <p className="text-[11px] text-gray-400 text-center">Auto-saving changes...</p>
       </div>}
+    </div>
+  );
+}
+
+// ── Add Investor Modal ────────────────────────────────────────────────────────
+function AddInvestorModal({ onClose, onSave }) {
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [type, setType] = useState('Private Lender');
+  const [standardTerms, setStandardTerms] = useState('');
+
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent';
+  const labelCls = 'text-xs font-medium text-gray-500 mb-1 block';
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-sidebar">Add Investor</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XIcon size={18} /></button>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          <div>
+            <label className={labelCls}>Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Investor name" className={inputCls} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Contact Name</label>
+              <input value={contact} onChange={e => setContact(e.target.value)} placeholder="First Last" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Type</label>
+              <select value={type} onChange={e => setType(e.target.value)} className={inputCls + ' bg-white'}>
+                {['Hard Money Lender', 'Private Lender', 'Line of Credit', 'Internal'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Phone</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(000) 000-0000" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Standard Terms</label>
+            <input value={standardTerms} onChange={e => setStandardTerms(e.target.value)} placeholder="e.g. 3 and 13" className={inputCls} />
+          </div>
+        </div>
+        <div className="flex gap-3 px-6 pb-5">
+          <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button
+            onClick={() => { if (name.trim()) onSave({ name: name.trim(), contact, phone, email, type, standardTerms }); }}
+            disabled={!name.trim()}
+            className="flex-1 bg-accent text-white text-sm font-medium py-2 rounded-lg hover:bg-accent/90 disabled:opacity-40"
+          >
+            Save Investor
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1286,6 +1379,8 @@ function DealDetailContent({ deal }) {
   const [phone, setPhone] = useState(deal?.phone || '');
   const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
+  const [investorList, setInvestorList] = useState(() => loadInvestors());
+  const [showAddInvestor, setShowAddInvestor] = useState(false);
   const [financing, setFinancing] = useState(deal?.financing || '');
 
   // Deal Evaluation
@@ -1749,6 +1844,8 @@ function DealDetailContent({ deal }) {
             agentUsers={agentUsers}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
+            investorList={investorList}
+            onAddInvestor={() => setShowAddInvestor(true)}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             isAgent={isAgent}
             saveNow={saveNow}
@@ -1765,6 +1862,20 @@ function DealDetailContent({ deal }) {
         )}
       </div>
     </div>
+
+    {/* Add Investor Modal */}
+    {showAddInvestor && (
+      <AddInvestorModal
+        onClose={() => setShowAddInvestor(false)}
+        onSave={(newInv) => {
+          const updated = addInvestor(newInv);
+          setInvestorList(updated);
+          setInvestor(newInv.name);
+          saveNow?.({ investor: newInv.name });
+          setShowAddInvestor(false);
+        }}
+      />
+    )}
 
     {/* Map Search Modal */}
     {showMapModal && (
