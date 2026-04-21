@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { seedDeals } from './utils/seedDeals';
+import { seedDeals, migrateContractSignedAt } from './utils/seedDeals';
 import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
 seedDeals();
+migrateContractSignedAt();
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
