@@ -191,10 +191,12 @@ export async function loadAllDeals() {
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
+      // Supabase fields take precedence, but fall back to localStorage for
+      // fields not yet in the DB schema (contractSignedAt, listingUrl)
       return {
-        contractSignedAt: fromLS.contractSignedAt || null,
-        listingUrl: fromLS.listingUrl || null,
         ...fromSupabase,
+        contractSignedAt: fromSupabase.contractSignedAt || fromLS.contractSignedAt || null,
+        listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
       };
     });
     lsSet(deals);
