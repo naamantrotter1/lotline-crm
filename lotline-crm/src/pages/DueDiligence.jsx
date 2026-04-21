@@ -273,9 +273,6 @@ export default function DueDiligence() {
             <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
             <p className="text-sm text-gray-500">{ddDeals.length} deals</p>
           </div>
-          <button className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-            All Deals <ChevronDown size={13} />
-          </button>
         </div>
 
         {/* Sort */}
@@ -316,19 +313,7 @@ export default function DueDiligence() {
             <div key={col.key} className="flex-shrink-0 w-60">
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: col.color }}
-                  />
-                  <div
-                    className="px-2 py-0.5 rounded-md flex-shrink-0"
-                    style={{ backgroundColor: col.bg }}
-                  >
-                    <span className="text-[10px] font-bold" style={{ color: col.color }}>
-                      {col.label.split(' ')[0]}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5 min-w-0">
                   <h3 className="font-semibold text-gray-700 text-[11px] leading-tight truncate">{col.label}</h3>
                 </div>
                 <span className="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center flex-shrink-0 ml-1">

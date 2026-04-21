@@ -272,9 +272,6 @@ export default function Development() {
             <h1 className="text-2xl font-bold text-sidebar">Development</h1>
             <p className="text-sm text-gray-500">{devDeals.length} deals in pipeline</p>
           </div>
-          <button className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-            All Deals <ChevronDown size={13} />
-          </button>
         </div>
 
         {/* Sort */}
