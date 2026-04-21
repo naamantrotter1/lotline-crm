@@ -88,7 +88,7 @@ function dealToRow(deal) {
     capital_returned_date:   deal.capitalReturnedDate || null,
     investor_paid_out:       deal.investorPaidOut || false,
     dd_deadline2:            deal.ddDeadline || null,
-    listing_url:             deal.listingUrl || null,
+    // listing_url: omitted until column is added to Supabase (inclusion causes all saves to fail)
     contract_signed_at:      deal.contractSignedAt || null,
   };
 }
