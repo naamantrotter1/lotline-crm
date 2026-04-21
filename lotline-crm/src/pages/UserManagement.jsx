@@ -424,7 +424,9 @@ export default function UserManagement() {
 
   const handleSendPasswordReset = async (user) => {
     setResetLoading(user.id);
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     if (error) {
       showToast('Failed to send reset email: ' + error.message, 'error');
     } else {

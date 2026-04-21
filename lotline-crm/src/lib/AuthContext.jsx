@@ -38,6 +38,13 @@ export function AuthProvider({ children }) {
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        if (_event === 'PASSWORD_RECOVERY') {
+          // Don't log in — redirect to the reset-password page so user can set a new password
+          if (window.location.pathname !== '/reset-password') {
+            window.location.href = '/reset-password';
+          }
+          return;
+        }
         setSession(session);
         if (session) {
           fetchProfile(session.user.id);
