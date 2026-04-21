@@ -79,9 +79,14 @@ export default function Dashboard() {
   );
   const newThisMonth = newThisMonthDeals.length;
 
+  const salesClosedDeals = useMemo(
+    () => (deals || []).filter(d => d.stage === 'Closed'),
+    [deals],
+  );
+
   const closedProfit = useMemo(
-    () => closedDeals.reduce((s, d) => s + calcNetProfit(d), 0),
-    [closedDeals],
+    () => salesClosedDeals.reduce((s, d) => s + calcNetProfit(d), 0),
+    [salesClosedDeals],
   );
 
   const totalARV = useMemo(
@@ -208,7 +213,7 @@ export default function Dashboard() {
         <StatCard
           label="Closed Profit"
           value={fmt$(closedProfit)}
-          subtext="archived deals"
+          subtext="sales pipeline closed"
           icon={DollarSign}
           color="text-purple-500"
         />
