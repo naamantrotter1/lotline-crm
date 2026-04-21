@@ -157,6 +157,7 @@ function InputRow({ label, value, onChange, type = 'text', mono, readOnly }) {
 
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
+const REALTOR_OPTIONS = ['Amy Reinholt', 'Brian Kelly', 'Carol Hayes', 'David Monroe', 'Emily Torres', 'Frank Simmons', 'Grace Nguyen', 'Henry Patel', 'Isabella Reed', 'James Carter'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
 const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
@@ -195,6 +196,8 @@ function OverviewTab({
   drawPct, setDrawPct,
   annualFeePct, setAnnualFeePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
+  realtor, setRealtor,
+  dateListed, setDateListed,
   navigate,
   onOpenMapSearch,
   readOnly,
@@ -459,6 +462,19 @@ function OverviewTab({
               <InputRow label="Contract Signed Date" value={contractDate} onChange={v => { setContractDate(v); saveNow?.({ contractDate: v }); }} type="date" readOnly={readOnly} />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Sales */}
+        {!isAgent && (
+          <div>
+            <SectionHeader>Sales</SectionHeader>
+            <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="grid grid-cols-2 gap-x-6">
+                <SelectRow label="Realtor" value={realtor} onChange={v => { setRealtor(v); saveNow?.({ realtor: v }); }} options={REALTOR_OPTIONS} readOnly={readOnly} />
+                <InputRow label="Date Listed" value={dateListed} onChange={v => { setDateListed(v); saveNow?.({ dateListed: v }); }} type="date" readOnly={readOnly} />
+              </div>
+            </fieldset>
           </div>
         )}
 
@@ -1143,6 +1159,8 @@ function DealDetailContent({ deal }) {
   const [contractDate, setContractDate] = useState(deal?.contractDate || '');
   const [manufacturer, setManufacturer] = useState(deal?.manufacturer || '');
   const [deliveryDate, setDeliveryDate] = useState(deal?.deliveryDate || '');
+  const [realtor, setRealtor] = useState(deal?.realtor || '');
+  const [dateListed, setDateListed] = useState(deal?.dateListed || '');
 
   // Financing scenario state
   const [selectedScenario, setSelectedScenario] = useState('');
@@ -1182,6 +1200,7 @@ function DealDetailContent({ deal }) {
     notes, leadSource, ownerType, utilityScenario, homeModel, waterCompany, sewerCompany,
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
+    realtor, dateListed,
   };
 
   // ── Auto-save: fires immediately on every field change ───────────────────────
@@ -1204,6 +1223,7 @@ function DealDetailContent({ deal }) {
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
+      realtor, dateListed,
       ...costs,
     };
 
@@ -1225,6 +1245,7 @@ function DealDetailContent({ deal }) {
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
+    realtor, dateListed,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1481,6 +1502,8 @@ function DealDetailContent({ deal }) {
             drawPct={drawPct} setDrawPct={setDrawPct}
             annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
+            realtor={realtor} setRealtor={setRealtor}
+            dateListed={dateListed} setDateListed={setDateListed}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
