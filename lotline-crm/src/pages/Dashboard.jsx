@@ -212,21 +212,18 @@ export default function Dashboard() {
         <StatCard
           label="Pipeline Profit"
           value={fmt$(pipelineProfit)}
-          subtext="est. from active deals"
           icon={TrendingUp}
           color="text-accent"
         />
         <StatCard
           label="Closed Profit"
           value={fmt$(closedProfit)}
-          subtext="sales pipeline closed"
           icon={DollarSign}
           color="text-purple-500"
         />
         <StatCard
           label="Total Pipeline ARV"
           value={fmt$(totalARV)}
-          subtext="active deals"
           icon={Target}
           color="text-gray-500"
         />
