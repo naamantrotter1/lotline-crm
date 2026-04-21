@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { supabase } from '../lib/supabase';
 import UserManagement from './UserManagement';
 
 export default function Settings() {
@@ -57,25 +56,29 @@ export default function Settings() {
       showToast('Please select an image file.', 'error');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image must be under 5MB.', 'error');
-      return;
-    }
     setPhotoUploading(true);
     try {
-      const userId = profile?.id;
-      const ext = file.name.split('.').pop();
-      const path = `avatars/${userId}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(path);
-      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
-      if (updateError) throw updateError;
+      // Resize to 256×256 and convert to compressed JPEG data URL (no storage bucket needed)
+      const dataUrl = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const size = 256;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          // Crop to square from center
+          const min = Math.min(img.width, img.height);
+          const sx = (img.width - min) / 2;
+          const sy = (img.height - min) / 2;
+          ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+      const { error } = await updateProfile({ avatar_url: dataUrl });
+      if (error) throw error;
       showToast('Photo updated.');
     } catch (err) {
       showToast('Upload failed: ' + (err.message || err), 'error');
