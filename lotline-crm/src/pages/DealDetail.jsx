@@ -20,13 +20,11 @@ import FloodMap from './FloodMap';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
-  { key: 'title_search', label: 'Title Search',                    icon: FileText  },
   { key: 'survey',       label: 'Survey / Boundary Review',        icon: Layers    },
   { key: 'zoning',       label: 'Zoning & Land Use Verification',  icon: MapPin    },
   { key: 'perc_test',    label: 'Perc Test',                       icon: Droplets  },
   { key: 'flood_zone',   label: 'Flood Zone & Environmental Check',icon: AlertCircle },
   { key: 'utilities',    label: 'Utilities & Access Confirmation', icon: Zap       },
-  { key: 'tax_lien',     label: 'Tax & Lien Search',               icon: Scale     },
   { key: 'hoa',          label: 'HOA / Deed Restrictions Review',  icon: LayoutGrid },
   { key: 'attorney',     label: 'Attorney Review',                 icon: Briefcase },
 ];

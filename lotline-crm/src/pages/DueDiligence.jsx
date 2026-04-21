@@ -6,13 +6,11 @@ import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions ────────────────────────────────────────────────────────
 const DD_COLUMNS = [
-  { key: 'title_search',  label: 'Title Search',                       color: '#d97706', bg: '#fef3c7', hasDate: false, hasContractor: false },
   { key: 'survey',        label: 'Survey / Boundary Review',            color: '#2563eb', bg: '#dbeafe', hasDate: false, hasContractor: true  },
   { key: 'zoning',        label: 'Zoning & Land Use Verification',      color: '#7c3aed', bg: '#ede9fe', hasDate: false, hasContractor: true  },
   { key: 'perc_test',     label: 'Perc Test',                           color: '#16a34a', bg: '#dcfce7', hasDate: true,  hasContractor: true  },
   { key: 'flood_zone',    label: 'Flood Zone & Environmental Check',    color: '#0891b2', bg: '#cffafe', hasDate: false, hasContractor: true  },
   { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: true  },
-  { key: 'tax_lien',      label: 'Tax & Lien Search',                   color: '#4f46e5', bg: '#e0e7ff', hasDate: false, hasContractor: false },
   { key: 'hoa',           label: 'HOA / Deed Restrictions Review',      color: '#db2777', bg: '#fce7f3', hasDate: false, hasContractor: false },
   { key: 'attorney',      label: 'Attorney Review',                     color: '#374151', bg: '#f3f4f6', hasDate: false, hasContractor: false },
 ];
