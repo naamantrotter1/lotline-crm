@@ -4,7 +4,8 @@ import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
-  CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon
+  CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon,
+  Landmark, Handshake,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
@@ -1861,6 +1862,48 @@ function DealDetailContent({ deal }) {
           <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
       </div>
+
+      {/* Capital & Partnerships shortcuts */}
+      {!fromInvestorPortal && !isAgent && (
+        <div className="px-4 md:px-6 pb-8 pt-2">
+          <div className="border-t border-gray-200 pt-6">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Capital &amp; Partnerships</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate('/lending', { state: { prefillLoan: {
+                  address: deal.address || '',
+                  purchasePrice: String(costs.land || 0),
+                  loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
+                  arv: String(arv || deal.arv || 0),
+                  loanType: 'Land + Home Package',
+                  propertyType: 'Manufactured Home',
+                  exitStrategy: 'Sell',
+                  notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
+                }}})}
+                className="flex items-center gap-2.5 px-5 py-3 bg-[#1a2332] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2332]/90 transition-colors shadow-sm"
+              >
+                <Landmark size={16} className="text-accent flex-shrink-0" />
+                Apply for Financing
+              </button>
+              <button
+                onClick={() => navigate('/lending', { state: { prefillPartner: {
+                  address: deal.address || '',
+                  arv: String(arv || deal.arv || 0),
+                  projectedProfit: String(Math.max(0, Math.round(netProfit))),
+                  dealType: 'Land + Home Package',
+                  propertyType: 'Manufactured',
+                  purchasePrice: String(costs.land || 0),
+                  repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+                }}})}
+                className="flex items-center gap-2.5 px-5 py-3 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent/90 transition-colors shadow-sm"
+              >
+                <Handshake size={16} className="flex-shrink-0" />
+                Submit a Deal for Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
 
     {/* Add Investor Modal */}
