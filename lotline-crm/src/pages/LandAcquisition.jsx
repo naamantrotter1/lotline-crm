@@ -848,9 +848,6 @@ export default function LandAcquisition() {
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: meta.bg }}>
-                    <Icon size={14} style={{ color: meta.color }} />
-                  </div>
                   <h3 className="font-semibold text-gray-700 text-sm">{stage}</h3>
                 </div>
                 <span className="bg-gray-800 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[22px] text-center">
