@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -569,6 +569,121 @@ function DirectoryTab({ investors }) {
   );
 }
 
+// ── Tab: Available Investments ───────────────────────────────────────────────
+const LOAN_STATUS_COLORS = {
+  'Pending Review': 'bg-yellow-100 text-yellow-700',
+  'In Review':      'bg-blue-100 text-blue-700',
+  'Approved':       'bg-green-100 text-green-700',
+  'Declined':       'bg-red-100 text-red-700',
+};
+const PARTNER_STATUS_COLORS = {
+  'Under Review':  'bg-yellow-100 text-yellow-700',
+  'Interested':    'bg-blue-100 text-blue-700',
+  'In Discussion': 'bg-green-100 text-green-700',
+  'Pass':          'bg-red-100 text-red-700',
+};
+
+function AvailableInvestmentsTab() {
+  const loanRequests = (() => { try { return JSON.parse(localStorage.getItem('lending_requests') || '[]'); } catch { return []; } })();
+  const partnerships = (() => { try { return JSON.parse(localStorage.getItem('partnership_submissions') || '[]'); } catch { return []; } })();
+
+  const hasAny = loanRequests.length > 0 || partnerships.length > 0;
+
+  if (!hasAny) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+        <div className="flex justify-center mb-3">
+          <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+            <Landmark size={22} className="text-accent" />
+          </div>
+        </div>
+        <p className="text-sm font-semibold text-gray-700 mb-1">No available investments yet</p>
+        <p className="text-xs text-gray-400">Deals submitted for financing or partnership will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Financing Requests */}
+      {loanRequests.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Landmark size={15} className="text-accent" />
+            <h3 className="text-sm font-bold text-[#1a2332]">Financing Requests</h3>
+            <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">{loanRequests.length}</span>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {['Ref #', 'Address', 'Loan Amount', 'Loan Type', 'Date Submitted', 'Status'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {loanRequests.map(r => (
+                  <tr key={r.ref} className="hover:bg-gray-50/60">
+                    <td className="px-4 py-3 font-semibold text-accent whitespace-nowrap">{r.ref}</td>
+                    <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate">{r.address}</td>
+                    <td className="px-4 py-3 font-semibold text-[#1a2332] whitespace-nowrap">${(r.loanAmount || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.loanType}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{r.dateSubmitted}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${LOAN_STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-500'}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Partnership Submissions */}
+      {partnerships.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Handshake size={15} className="text-accent" />
+            <h3 className="text-sm font-bold text-[#1a2332]">Partnership Submissions</h3>
+            <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">{partnerships.length}</span>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {['Ref #', 'Address', 'Deal Type', 'Projected Profit', 'Date Submitted', 'Status'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {partnerships.map(r => (
+                  <tr key={r.ref} className="hover:bg-gray-50/60">
+                    <td className="px-4 py-3 font-semibold text-accent whitespace-nowrap">{r.ref}</td>
+                    <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate">{r.address}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.dealType}</td>
+                    <td className="px-4 py-3 font-semibold text-[#1a2332] whitespace-nowrap">${(r.projectedProfit || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{r.dateSubmitted}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${PARTNER_STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-500'}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Investor Portal ──────────────────────────────────────────────────────
 export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
@@ -598,10 +713,11 @@ export default function InvestorPortal() {
   const TABS = isInvestor
     ? [{ key: 'by-investor', label: 'My Deals' }]
     : [
-        { key: 'all-deals',     label: 'All Deals'     },
-        { key: 'needs-funding', label: 'Needs Funding'  },
-        { key: 'by-investor',   label: 'By Investor'   },
-        { key: 'directory',     label: 'Directory'     },
+        { key: 'all-deals',            label: 'All Deals'            },
+        { key: 'needs-funding',        label: 'Needs Funding'         },
+        { key: 'by-investor',          label: 'By Investor'          },
+        { key: 'directory',            label: 'Directory'            },
+        { key: 'available-investments',label: 'Available Investments' },
       ];
 
   return (
@@ -661,6 +777,7 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
+        {activeTab === 'available-investments' && <AvailableInvestmentsTab />}
       </div>
 
     </div>
