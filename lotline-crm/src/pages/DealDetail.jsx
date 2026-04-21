@@ -218,12 +218,14 @@ function OverviewTab({
 
   // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const monthlyInterest = totalLent * (interestRate / 100) / 12;
+  const [loanAmountOverride, setLoanAmountOverride] = useState(0);
+  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
   const originationFee = originationFeeType === 'percentage'
-    ? totalLent * (originationFeePct / 100)
+    ? effectiveLoanAmount * (originationFeePct / 100)
     : originationFeeFlat;
   const servicingFee = servicingFeeType === 'percentage'
-    ? totalLent * (servicingFeePct / 100)
+    ? effectiveLoanAmount * (servicingFeePct / 100)
     : servicingFeeFlat;
   const totalCostOfCapital = (monthlyInterest * holdPeriod) + originationFee + servicingFee;
 
@@ -525,47 +527,8 @@ function OverviewTab({
             </select>
           </div>
 
-          {/* ── Hard Money Loan ─────────────────────────────── */}
-          {activeFinancing === 'Hard Money Loan' && (
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loan Terms</p>
-                <div className="grid grid-cols-2 gap-x-6">
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">LTC % (Loan-to-Cost)</p>
-                    <input type="number" value={ltcPct} onChange={e => setLtcPct(Number(e.target.value) || 0)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Amount</p>
-                    <span className="text-sm font-medium text-accent">${Math.round(allIn * ltcPct / 100).toLocaleString()}</span>
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                    <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
-                    <span className="text-sm font-medium text-gray-800">${Math.round(allIn * ltcPct / 100 * interestRate / 100 / 12).toLocaleString()}</span>
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Points (%)</p>
-                    <input type="number" value={originationPoints} onChange={e => setOriginationPoints(Number(e.target.value) || 0)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Term (months)</p>
-                    <input type="number" value={balloonTerm} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Hard Money (Land + Home) ─────────────────────── */}
-          {activeFinancing === 'Hard Money (Land + Home)' && (
+          {/* ── Hard Money Loan / Hard Money (Land + Home) ──── */}
+          {(activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)') && (
             <div className="space-y-4">
 
               {/* Loan Amount */}
@@ -582,7 +545,13 @@ function OverviewTab({
                   </div>
                   <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Amount Lent</p>
-                    <span className="text-sm font-semibold text-accent">${totalLent.toLocaleString()}</span>
+                    <input
+                      type="number"
+                      value={loanAmountOverride || totalLent}
+                      onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
+                      onFocus={e => e.target.select()}
+                      className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                    />
                   </div>
                 </div>
               </div>
@@ -597,8 +566,8 @@ function OverviewTab({
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Interest</p>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                        <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <input type="text" inputMode="decimal" value={interestRate || ''} onChange={e => setInterestRate(Number(e.target.value) || 0)}
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
@@ -615,9 +584,9 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{originationFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <input type="number" value={originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat}
+                        <input type="text" inputMode="decimal" value={(originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat) || ''}
                           onChange={e => originationFeeType === 'percentage' ? setOriginationFeePct(Number(e.target.value) || 0) : setOriginationFeeFlat(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
@@ -634,9 +603,9 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <input type="number" value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
+                        <input type="text" inputMode="decimal" value={(servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat) || ''}
                           onChange={e => servicingFeeType === 'percentage' ? setServicingFeePct(Number(e.target.value) || 0) : setServicingFeeFlat(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
@@ -651,8 +620,8 @@ function OverviewTab({
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Profit Share & Terms</p>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share (%)</p>
-                        <input type="number" value={profitSharePct} onChange={e => setProfitSharePct(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <input type="text" inputMode="decimal" value={profitSharePct || ''} onChange={e => setProfitSharePct(Number(e.target.value) || 0)}
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share Amount</p>
@@ -660,18 +629,18 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Balloon Term (months)</p>
-                        <input type="number" value={balloonTerm} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <input type="text" inputMode="numeric" value={balloonTerm || ''} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
-                        <input type="number" value={holdPeriod} onChange={e => setHoldPeriod(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)}
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Holding Costs ($)</p>
-                        <input type="number" value={monthlyHoldCost} onChange={e => setMonthlyHoldCost(Number(e.target.value) || 0)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <input type="text" inputMode="decimal" value={monthlyHoldCost || ''} onChange={e => setMonthlyHoldCost(Number(e.target.value) || 0)}
+                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                     </div>
                   </div>
@@ -685,7 +654,7 @@ function OverviewTab({
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400">Total Amount Lent</span>
-                    <span className="font-medium">${totalLent.toLocaleString()}</span>
+                    <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
@@ -791,8 +760,8 @@ function OverviewTab({
 
         </div>}
 
-        {/* Scenario Comparison — hidden for agents */}
-        {!isAgent && <div>
+        {/* Scenario Comparison — hidden for agents and when no scenario selected */}
+        {!isAgent && !!selectedScenario && <div>
           <SectionHeader>Scenario Comparison</SectionHeader>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <table className="w-full text-xs">
