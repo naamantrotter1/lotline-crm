@@ -1,4 +1,6 @@
-const PREFS_KEY = 'lotline_notification_prefs';
+const PREFS_KEY  = 'lotline_notification_prefs';
+const STORE_KEY  = 'lotline_notifications';
+const MAX_STORED = 50;
 
 export function getNotifPrefs() {
   try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
@@ -15,7 +17,32 @@ export async function requestNotifPermission() {
   return await Notification.requestPermission();
 }
 
+// ── Stored notifications (shown in the bell dropdown) ──────────────────────
+
+export function getStoredNotifs() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; }
+}
+
+export function markAllNotifsRead() {
+  const notifs = getStoredNotifs().map(n => ({ ...n, read: true }));
+  localStorage.setItem(STORE_KEY, JSON.stringify(notifs));
+  window.dispatchEvent(new Event('lotline_notifs_updated'));
+}
+
+export function clearAllNotifs() {
+  localStorage.setItem(STORE_KEY, '[]');
+  window.dispatchEvent(new Event('lotline_notifs_updated'));
+}
+
+function storeNotif(title, body) {
+  const notifs = getStoredNotifs();
+  notifs.unshift({ id: Date.now(), title, body, timestamp: new Date().toISOString(), read: false });
+  localStorage.setItem(STORE_KEY, JSON.stringify(notifs.slice(0, MAX_STORED)));
+  window.dispatchEvent(new Event('lotline_notifs_updated'));
+}
+
 function fire(title, body) {
+  storeNotif(title, body);
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   new Notification(title, { body, icon: '/favicon.ico' });
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
+import { getStoredNotifs, markAllNotifsRead, clearAllNotifs } from '../../lib/notify';
 
 function GlobalSearch() {
   const [query, setQuery]     = useState('');
@@ -104,6 +105,65 @@ function GlobalSearch() {
   );
 }
 
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function NotifPanel({ onClose }) {
+  const [notifs, setNotifs] = useState(getStoredNotifs);
+
+  useEffect(() => {
+    const refresh = () => setNotifs(getStoredNotifs());
+    window.addEventListener('lotline_notifs_updated', refresh);
+    return () => window.removeEventListener('lotline_notifs_updated', refresh);
+  }, []);
+
+  useEffect(() => {
+    markAllNotifsRead();
+  }, []);
+
+  return (
+    <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-sidebar dark:text-white">Notifications</h3>
+        <div className="flex items-center gap-2">
+          {notifs.length > 0 && (
+            <button
+              onClick={() => { clearAllNotifs(); setNotifs([]); }}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+              title="Clear all"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+      </div>
+      <div className="max-h-96 overflow-y-auto">
+        {notifs.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
+        ) : (
+          <ul className="divide-y divide-gray-50 dark:divide-gray-700">
+            {notifs.map(n => (
+              <li key={n.id} className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'}`}>
+                <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                <p className="text-xs text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TopBar({ onToggleSidebar }) {
   const { profile } = useAuth();
   const initials = profile?.name
@@ -113,6 +173,25 @@ export default function TopBar({ onToggleSidebar }) {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(() => getStoredNotifs().filter(n => !n.read).length);
+  const bellRef = useRef(null);
+
+  useEffect(() => {
+    const refresh = () => setUnreadCount(getStoredNotifs().filter(n => !n.read).length);
+    window.addEventListener('lotline_notifs_updated', refresh);
+    return () => window.removeEventListener('lotline_notifs_updated', refresh);
+  }, []);
+
+  // Close panel on outside click
+  useEffect(() => {
+    if (!showNotifs) return;
+    const handler = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) setShowNotifs(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNotifs]);
 
   const toggleDarkMode = () => {
     const next = !darkMode;
@@ -121,6 +200,9 @@ export default function TopBar({ onToggleSidebar }) {
     if (next) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   };
+
+  // Show avatar photo if profile has one
+  const avatarUrl = profile?.avatar_url;
 
   return (
     <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 gap-3 flex-shrink-0">
@@ -140,11 +222,28 @@ export default function TopBar({ onToggleSidebar }) {
         >
           {darkMode ? <Sun size={16} /> : <Moon size={16} />}
         </button>
-        <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
-          <Bell size={16} />
-          <span className="absolute top-1 right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">1</span>
-        </button>
-        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold ml-1">{initials}</div>
+
+        <div className="relative" ref={bellRef}>
+          <button
+            onClick={() => setShowNotifs(v => !v)}
+            className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+          >
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          {showNotifs && <NotifPanel onClose={() => setShowNotifs(false)} />}
+        </div>
+
+        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold ml-1 overflow-hidden">
+          {avatarUrl
+            ? <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            : initials
+          }
+        </div>
       </div>
     </header>
   );
