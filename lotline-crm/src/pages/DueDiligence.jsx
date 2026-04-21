@@ -12,7 +12,6 @@ const DD_COLUMNS = [
   { key: 'flood_zone',    label: 'Flood Zone & Environmental Check',    color: '#0891b2', bg: '#cffafe', hasDate: false, hasContractor: true  },
   { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: true  },
   { key: 'hoa',           label: 'HOA / Deed Restrictions Review',      color: '#db2777', bg: '#fce7f3', hasDate: false, hasContractor: false },
-  { key: 'attorney',      label: 'Attorney Review',                     color: '#374151', bg: '#f3f4f6', hasDate: false, hasContractor: false },
 ];
 
 const TOTAL_TASKS = DD_COLUMNS.length;

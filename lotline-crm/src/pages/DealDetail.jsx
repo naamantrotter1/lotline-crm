@@ -26,7 +26,6 @@ const DD_COLS = [
   { key: 'flood_zone',   label: 'Flood Zone & Environmental Check',icon: AlertCircle },
   { key: 'utilities',    label: 'Utilities & Access Confirmation', icon: Zap       },
   { key: 'hoa',          label: 'HOA / Deed Restrictions Review',  icon: LayoutGrid },
-  { key: 'attorney',     label: 'Attorney Review',                 icon: Briefcase },
 ];
 const DD_LS_INIT_MAP = {
   'Perk Test': 'perc_test', 'Perc Test / Soil Report': 'perc_test',
