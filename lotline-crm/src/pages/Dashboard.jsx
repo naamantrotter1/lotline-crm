@@ -228,21 +228,20 @@ export default function Dashboard() {
           <h3 className="font-semibold text-sidebar mb-4">Deals Added by Month ({year})</h3>
           <p className="text-xs text-gray-400 -mt-3 mb-3">Click a bar to see deals</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart
-              data={monthlyData}
-              onClick={e => {
-                if (e?.activePayload?.[0]) {
-                  const entry = e.activePayload[0].payload;
-                  if (entry.dealList?.length > 0) setMonthModal({ month: entry.month, deals: entry.dealList });
-                }
-              }}
-              style={{ cursor: 'pointer' }}
-            >
+            <BarChart data={monthlyData} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
               <Tooltip />
-              <Bar dataKey="deals" name="Deals" fill="#c8613a" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="deals"
+                name="Deals"
+                fill="#c8613a"
+                radius={[4, 4, 0, 0]}
+                onClick={(data) => {
+                  if (data?.dealList?.length > 0) setMonthModal({ month: data.month, deals: data.dealList });
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
