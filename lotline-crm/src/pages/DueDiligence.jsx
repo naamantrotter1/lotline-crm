@@ -239,9 +239,7 @@ function DDTaskCard({ deal, column, onUpdate }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
   const { deals } = useDeals();
-  const [tick, setTick]     = useState(0);
-  const [sortBy, setSortBy] = useState('closing');
-  const [showSort, setShowSort] = useState(false);
+  const [tick, setTick] = useState(0);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
@@ -252,52 +250,19 @@ export default function DueDiligence() {
   }, [deals]);
 
   const sortedDeals = [...ddDeals].sort((a, b) => {
-    if (sortBy === 'closing') {
-      if (!a.closeDate && !b.closeDate) return 0;
-      if (!a.closeDate) return 1;
-      if (!b.closeDate) return -1;
-      return new Date(a.closeDate) - new Date(b.closeDate);
-    }
-    if (sortBy === 'days') {
-      return (getDayCount(b.contractDate) ?? 0) - (getDayCount(a.contractDate) ?? 0);
-    }
-    return 0;
+    if (!a.closeDate && !b.closeDate) return 0;
+    if (!a.closeDate) return 1;
+    if (!b.closeDate) return -1;
+    return new Date(a.closeDate) - new Date(b.closeDate);
   });
 
   return (
     <div className="space-y-0">
       {/* Header bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
-            <p className="text-sm text-gray-500">{ddDeals.length} deals</p>
-          </div>
-        </div>
-
-        {/* Sort */}
-        <div className="relative">
-          <button
-            onClick={() => setShowSort(s => !s)}
-            className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
-          >
-            <Calendar size={13} />
-            {sortBy === 'closing' ? 'Closing Date' : 'Days in Pipeline'}
-            <ChevronDown size={13} />
-          </button>
-          {showSort && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[160px] py-1">
-              {[['closing', 'Closing Date'], ['days', 'Days in Pipeline']].map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => { setSortBy(val); setShowSort(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${sortBy === val ? 'text-accent font-medium' : 'text-gray-700'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+      <div className="flex items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
+          <p className="text-sm text-gray-500">{ddDeals.length} deals</p>
         </div>
       </div>
 
