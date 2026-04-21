@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2 } from 'lucide-react';
+import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2, Plus } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
-import { deleteDeal as syncDeleteDeal } from '../lib/dealsSync';
+import { deleteDeal as syncDeleteDeal, saveDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
@@ -831,11 +831,34 @@ export default function LandAcquisition() {
     setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
   };
 
+  const handleAddLead = () => {
+    const newDeal = {
+      id: `land-${Date.now()}`,
+      pipeline: 'land-acquisition',
+      stage: 'New Lead',
+      address: 'New Lead',
+      county: '',
+      state: '',
+    };
+    saveDeal(newDeal);
+    setCustomDeals(prev => [...prev, newDeal]);
+    navigate(`/deal/${newDeal.id}`);
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-sidebar">Land Acquisition</h1>
-        <p className="text-sm text-gray-500 mt-1">{allDeals.length} leads across acquisition pipeline</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-sidebar">Land Acquisition</h1>
+          <p className="text-sm text-gray-500 mt-1">{allDeals.length} leads across acquisition pipeline</p>
+        </div>
+        <button
+          onClick={handleAddLead}
+          className="flex items-center gap-2 bg-accent text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors"
+        >
+          <Plus size={15} />
+          Add Lead
+        </button>
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 200px)' }}>
