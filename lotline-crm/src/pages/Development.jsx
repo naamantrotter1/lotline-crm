@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
-import { ChevronDown, User, CheckSquare, Square } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions (matches Lovable CRM) ──────────────────────────────────
@@ -133,8 +133,13 @@ function DevTaskCard({ deal, column, onUpdate }) {
   const [checks, setChecks] = useState(() =>
     column.subtasks.map((_, i) => isSubtaskDone(deal.id, column.key, i))
   );
-  const [contractor, setContractor] = useState(() => lsGet(contractorKey(deal.id, column.key)));
-  const [editingCont, setEditingCont] = useState(false);
+  const ck = contractorKey(deal.id, column.key);
+  const [contExpanded, setContExpanded] = useState(false);
+  const [contractor, setContractor] = useState(() => lsGet(ck));
+  const [contPhone,   setContPhone]   = useState(() => lsGet(`${ck}_phone`));
+  const [contEmail,   setContEmail]   = useState(() => lsGet(`${ck}_email`));
+  const [contCompany, setContCompany] = useState(() => lsGet(`${ck}_company`));
+  const [contNotes,   setContNotes]   = useState(() => lsGet(`${ck}_notes`));
 
   const allDone = checks.every(Boolean);
   if (allDone) return null;
@@ -153,10 +158,13 @@ function DevTaskCard({ deal, column, onUpdate }) {
     else onUpdate();
   };
 
-  const saveCont = (val) => {
-    lsSet(contractorKey(deal.id, column.key), val);
-    setContractor(val);
-    setEditingCont(false);
+  const saveCont = (field, val) => {
+    lsSet(`${ck}${field === 'cont' ? '' : `_${field}`}`, val);
+    if (field === 'cont')     setContractor(val);
+    if (field === 'phone')    setContPhone(val);
+    if (field === 'email')    setContEmail(val);
+    if (field === 'company')  setContCompany(val);
+    if (field === 'notes')    setContNotes(val);
   };
 
   return (
@@ -203,34 +211,48 @@ function DevTaskCard({ deal, column, onUpdate }) {
         ))}
       </div>
 
-      {/* Contractor */}
+      {/* Contractor panel */}
       <div onClick={e => e.stopPropagation()}>
-        {contractor ? (
-          <button
-            onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-            className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 rounded-lg px-2 py-1 w-full text-left"
-          >
-            <User size={9} className="flex-shrink-0" />
-            <span className="truncate">{contractor}</span>
-          </button>
-        ) : editingCont ? (
-          <input
-            autoFocus
-            type="text"
-            placeholder="Contractor name..."
-            className="text-[10px] border border-gray-300 rounded-lg px-2 py-1 w-full outline-none focus:border-blue-400"
-            onBlur={e => saveCont(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') saveCont(e.target.value); if (e.key === 'Escape') setEditingCont(false); }}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <button
-            onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-            className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
-          >
-            <ChevronDown size={9} />
-            Add Contractor
-          </button>
+        <button
+          onClick={e => { e.stopPropagation(); setContExpanded(v => !v); }}
+          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
+        >
+          <User size={9} className="flex-shrink-0" />
+          <span className="flex-1 text-left truncate">{contractor || 'Add Contractor'}</span>
+          {contExpanded ? <ChevronUp size={9} className="flex-shrink-0" /> : <ChevronDown size={9} className="flex-shrink-0" />}
+        </button>
+
+        {contExpanded && (
+          <div className="mt-1.5 space-y-1.5 border border-gray-100 rounded-lg p-2 bg-gray-50">
+            {[
+              { icon: User,     key: 'cont',    val: contractor, ph: 'Contractor name' },
+              { icon: Phone,    key: 'phone',   val: contPhone,  ph: 'Phone' },
+              { icon: Mail,     key: 'email',   val: contEmail,  ph: 'Email' },
+              { icon: Building, key: 'company', val: contCompany,ph: 'Company (optional)' },
+            ].map(({ icon: Icon, key: fk, val, ph }) => (
+              <div key={fk} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
+                <Icon size={11} className="text-gray-400 flex-shrink-0" />
+                <input
+                  value={val}
+                  onChange={e => saveCont(fk, e.target.value)}
+                  placeholder={ph}
+                  onClick={e => e.stopPropagation()}
+                  className="flex-1 text-[10px] outline-none bg-transparent placeholder-gray-400"
+                />
+              </div>
+            ))}
+            <div className="flex items-start gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
+              <FileText size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
+              <textarea
+                value={contNotes}
+                onChange={e => saveCont('notes', e.target.value)}
+                placeholder="Notes for this task..."
+                onClick={e => e.stopPropagation()}
+                rows={2}
+                className="flex-1 text-[10px] outline-none bg-transparent resize-none placeholder-gray-400"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
