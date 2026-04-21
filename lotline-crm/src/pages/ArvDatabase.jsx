@@ -351,6 +351,12 @@ export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
   const [minArvInput, setMinArvInput] = useState('');
   const [maxArvInput, setMaxArvInput] = useState('');
+
+  const formatMoneyInput = (raw) => {
+    const digits = raw.replace(/[^0-9]/g, '');
+    if (!digits) return '';
+    return '$' + Number(digits).toLocaleString();
+  };
   const [minComps, setMinComps] = useState('All');
   const [countySearch, setCountySearch] = useState('');
   const [mhFilter, setMhFilter] = useState('All');
@@ -472,16 +478,16 @@ export default function ArvDatabase() {
             <FilterInfo tip="Average After-Repair Value of MH homes sold in the county. Filter to target specific price tiers." />
             <input
               value={minArvInput}
-              onChange={e => setMinArvInput(e.target.value)}
-              placeholder="Min $"
-              className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              onChange={e => setMinArvInput(formatMoneyInput(e.target.value))}
+              placeholder="$0"
+              className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
             />
             <span className="text-xs text-gray-400">–</span>
             <input
               value={maxArvInput}
-              onChange={e => setMaxArvInput(e.target.value)}
-              placeholder="Max $"
-              className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              onChange={e => setMaxArvInput(formatMoneyInput(e.target.value))}
+              placeholder="$999,999"
+              className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
             />
           </div>
 
