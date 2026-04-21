@@ -172,7 +172,7 @@ function CreateUserModal({ onClose, onCreated }) {
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
               <option value="viewer">Viewer — Read-only access</option>
               <option value="realtor">Realtor — Deal Overview + Sales; can move stages</option>
-              <option value="editor">Editor — View + edit deals</option>
+              <option value="user">User — View + edit deals</option>
               <option value="admin">Admin — Full access + user management</option>
               <option value="investor">Investor — Investor Portal only; sees their linked deals</option>
             </select>
@@ -571,7 +571,7 @@ export default function UserManagement() {
                           >
                             <option value="viewer">Viewer</option>
                             <option value="realtor">Realtor</option>
-                            <option value="editor">Editor</option>
+                            <option value="user">User</option>
                             <option value="admin">Admin</option>
                             <option value="investor">Investor</option>
                           </select>

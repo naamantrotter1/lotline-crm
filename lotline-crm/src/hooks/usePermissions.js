@@ -12,7 +12,7 @@ export function usePermissions() {
   const isAgent    = role === 'realtor';
   const isInvestor = role === 'investor';
   return {
-    canEdit:  role === 'admin' || role === 'editor',
+    canEdit:  role === 'admin' || role === 'user',
     canAdmin: role === 'admin',
     isViewer: role === 'viewer' || role === null,
     isAgent,
