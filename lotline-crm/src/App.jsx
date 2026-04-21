@@ -6,6 +6,7 @@ import { usePermissions } from './hooks/usePermissions';
 seedDeals();
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import BigRocks from './pages/BigRocks';
 import PnlDashboard from './pages/PnlDashboard';
@@ -97,6 +98,7 @@ export default function App() {
           <Routes>
             {/* Public route */}
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* All other routes require authentication */}
             <Route

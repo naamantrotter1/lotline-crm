@@ -12,7 +12,7 @@ export default function Login() {
     if (session) navigate('/', { replace: true });
   }, [session]);
 
-  // Mode: 'signin' | 'signup-step1' | 'signup-step2'
+  // Mode: 'signin' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
   const [mode,         setMode]         = useState('signin');
   const [email,        setEmail]        = useState('');
   const [password,     setPassword]     = useState('');
@@ -97,6 +97,22 @@ export default function Login() {
   const switchToSignin = () => { setMode('signin'); setError(''); setEmail(''); setPassword(''); };
   const switchToSignup = () => { setMode('signup-step1'); setError(''); };
 
+  // Forgot password handler
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      setMode('forgot-sent');
+    }
+  };
+
   const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white";
   const btnStyle   = (disabled) => ({ backgroundColor: disabled ? '#94a3b8' : '#c9703a' });
 
@@ -121,7 +137,10 @@ export default function Login() {
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Password</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">Password</label>
+                    <button type="button" onClick={() => { setMode('forgot-password'); setError(''); }} className="text-xs text-accent hover:underline">Forgot password?</button>
+                  </div>
                   <PasswordInput value={password} onChange={setPassword} show={showPassword} onToggle={() => setShowPassword(v => !v)} />
                 </div>
                 {error && <ErrorBox>{error}</ErrorBox>}
@@ -229,6 +248,47 @@ export default function Login() {
                   {loading ? 'Saving…' : 'Complete Setup'}
                 </button>
               </form>
+            </>
+          )}
+          {/* ── FORGOT PASSWORD ── */}
+          {mode === 'forgot-password' && (
+            <>
+              <h1 className="text-2xl font-bold text-[#1a2332] mb-1">Reset password</h1>
+              <p className="text-sm text-gray-400 mb-8">Enter your email and we'll send you a link to reset your password.</p>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Email address</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required className={inputClass} />
+                </div>
+                {error && <ErrorBox>{error}</ErrorBox>}
+                <button type="submit" disabled={loading || !email} className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed" style={btnStyle(loading || !email)}>
+                  {loading ? 'Sending…' : 'Send reset link'}
+                </button>
+              </form>
+              <p className="text-center text-xs text-gray-400 mt-6">
+                <button onClick={switchToSignin} className="text-accent hover:underline font-medium">Back to sign in</button>
+              </p>
+            </>
+          )}
+
+          {/* ── FORGOT PASSWORD SENT ── */}
+          {mode === 'forgot-sent' && (
+            <>
+              <div className="flex justify-center mb-6">
+                <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9703a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                </div>
+              </div>
+              <h1 className="text-2xl font-bold text-[#1a2332] mb-2 text-center">Check your email</h1>
+              <p className="text-sm text-gray-500 text-center mb-8">
+                We sent a password reset link to <span className="font-medium text-gray-700">{email}</span>. Click the link in the email to set a new password.
+              </p>
+              <p className="text-center text-xs text-gray-400">
+                <button onClick={switchToSignin} className="text-accent hover:underline font-medium">Back to sign in</button>
+              </p>
             </>
           )}
       </div>
