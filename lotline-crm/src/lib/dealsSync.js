@@ -184,7 +184,19 @@ export async function loadAllDeals() {
       .select('*')
       .eq('is_archived', false);
     if (error) throw error;
-    const deals = data.map(rowToDeal);
+    // Merge Supabase rows with any locally-stored fields not yet synced to DB
+    // (e.g. contractSignedAt, listingUrl before those columns exist in Supabase)
+    const lsDeals = lsGet();
+    const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
+    const deals = data.map(row => {
+      const fromSupabase = rowToDeal(row);
+      const fromLS = lsById[String(fromSupabase.id)] || {};
+      return {
+        contractSignedAt: fromLS.contractSignedAt || null,
+        listingUrl: fromLS.listingUrl || null,
+        ...fromSupabase,
+      };
+    });
     lsSet(deals);
     return deals;
   } catch (e) {
