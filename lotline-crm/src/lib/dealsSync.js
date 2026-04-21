@@ -209,6 +209,14 @@ export async function loadAllDeals() {
       const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
       const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
+      // For seeded deals: if Supabase contractDate is from a different month than the
+      // seeded date, it's a migration artifact — use the seeded date instead.
+      const seededMonth = seededDate ? seededDate.slice(0, 7) : null;
+      const supabaseContractMonth = fromSupabase.contractDate ? fromSupabase.contractDate.slice(0, 7) : null;
+      const contractDate = seededMonth && supabaseContractMonth && seededMonth !== supabaseContractMonth
+        ? seededDate.slice(0, 10)
+        : (fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null));
+
       return {
         ...fromSupabase,
         // Seeded deals use the hardcoded date (overrides stale LS migration values)
@@ -218,10 +226,7 @@ export async function loadAllDeals() {
           || fromLS.contractSignedAt
           || null,
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
-        // Fall back to localStorage, then derive from seeded contractSignedAt month
-        contractDate: fromSupabase.contractDate
-          || fromLS.contractDate
-          || (seededDate ? seededDate.slice(0, 10) : null),
+        contractDate,
       };
     });
     lsSet(deals);
