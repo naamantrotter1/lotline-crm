@@ -274,7 +274,7 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h3 className="font-semibold text-sidebar mb-4">Deals Added by Month ({year})</h3>
+          <h3 className="font-semibold text-sidebar mb-4">Deals Added by Month</h3>
           <p className="text-xs text-gray-400 -mt-3 mb-3">Click a bar to see deals</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyData} style={{ cursor: 'pointer' }}>
@@ -296,7 +296,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h3 className="font-semibold text-sidebar mb-4">Pipeline ARV by Month ({year})</h3>
+          <h3 className="font-semibold text-sidebar mb-4">Pipeline ARV by Month</h3>
           <p className="text-xs text-gray-400 -mt-3 mb-3">Click a bar to see deals</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyData} style={{ cursor: 'pointer' }}>
@@ -336,7 +336,7 @@ export default function Dashboard() {
       {/* Year at a Glance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h2 className="text-base font-semibold text-sidebar mb-4">Year at a Glance — {year}</h2>
+          <h2 className="text-base font-semibold text-sidebar mb-4">Year at a Glance</h2>
           <div className="space-y-4">
             {[
               { label: 'Deals Closed', value: closedThisYear.length },
@@ -353,7 +353,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview — {year}</h2>
+          <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview</h2>
           <div className="space-y-4">
             {[
               { label: 'Deals', value: doAllDeals.length },
