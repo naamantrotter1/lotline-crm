@@ -59,6 +59,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [showNewThisMonth, setShowNewThisMonth] = useState(false);
+  const [monthModal, setMonthModal] = useState(null); // { month: 'Apr', deals: [] }
 
   const LAND_ACQ_ONLY = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const activeDeals   = (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage));
@@ -90,16 +91,21 @@ export default function Dashboard() {
 
   // ── Monthly activity chart (current year, active deals by contractDate) ──────
   const monthlyData = useMemo(() => {
-    const counts   = Array(12).fill(0);
+    const counts    = Array(12).fill(0);
     const arvTotals = Array(12).fill(0);
+    const dealLists = Array.from({ length: 12 }, () => []);
     activeDeals.forEach(d => {
-      const dt = d.contractDate ? new Date(d.contractDate) : null;
-      if (dt && !isNaN(dt) && dt.getFullYear() === year) {
-        counts[dt.getMonth()]    += 1;
-        arvTotals[dt.getMonth()] += (d.arv || 0);
-      }
+      if (!d.contractDate) return;
+      // Use noon to avoid UTC-midnight timezone shift on date-only strings
+      const normalized = /^\d{4}-\d{2}-\d{2}$/.test(d.contractDate) ? d.contractDate + 'T12:00:00' : d.contractDate;
+      const dt = new Date(normalized);
+      if (isNaN(dt) || dt.getFullYear() !== year) return;
+      const m = dt.getMonth();
+      counts[m]    += 1;
+      arvTotals[m] += (d.arv || 0);
+      dealLists[m].push(d);
     });
-    return MONTHS.map((month, i) => ({ month, deals: counts[i], arv: arvTotals[i] }));
+    return MONTHS.map((month, i) => ({ month, deals: counts[i], arv: arvTotals[i], dealList: dealLists[i] }));
   }, [activeDeals, year]);
 
   // ── Closed deals this year (use archivedAt or closeDate) ────────────────────
@@ -220,8 +226,18 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl shadow-sm p-4">
           <h3 className="font-semibold text-sidebar mb-4">Deals Added by Month ({year})</h3>
+          <p className="text-xs text-gray-400 -mt-3 mb-3">Click a bar to see deals</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyData}>
+            <BarChart
+              data={monthlyData}
+              onClick={e => {
+                if (e?.activePayload?.[0]) {
+                  const entry = e.activePayload[0].payload;
+                  if (entry.dealList?.length > 0) setMonthModal({ month: entry.month, deals: entry.dealList });
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
@@ -323,6 +339,41 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      {/* Month Drilldown Modal */}
+      {monthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setMonthModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-sidebar">{monthModal.month} {year}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{monthModal.deals.length} deal{monthModal.deals.length !== 1 ? 's' : ''} by contract signed date</p>
+              </div>
+              <button onClick={() => setMonthModal(null)} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={18} /></button>
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              <ul className="divide-y divide-gray-100">
+                {monthModal.deals.map(d => {
+                  const profit = calcNetProfit(d);
+                  return (
+                    <li key={d.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => { setMonthModal(null); navigate(`/deal/${d.id}`); }}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
+                        <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''} · {d.stage}</p>
+                      </div>
+                      <div className="ml-4 text-right shrink-0">
+                        <p className="text-sm font-semibold text-gray-700">{fmt$(d.arv)}</p>
+                        <p className={`text-xs font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt$(profit)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New This Month Modal */}
       {showNewThisMonth && (
         <div
