@@ -70,12 +70,7 @@ export default function Dashboard() {
   );
 
   const newThisMonthDeals = useMemo(
-    () => activeDeals.filter(d => {
-      // Use contractSignedAt (when deal entered Deal Overview) as primary;
-      // fall back to contractDate only when contractSignedAt is absent
-      const stamp = d.contractSignedAt || d.contractDate;
-      return stamp && getMonthKey(stamp) === thisMonthKey;
-    }),
+    () => activeDeals.filter(d => d.contractDate && getMonthKey(d.contractDate) === thisMonthKey),
     [activeDeals, thisMonthKey],
   );
   const newThisMonth = newThisMonthDeals.length;
