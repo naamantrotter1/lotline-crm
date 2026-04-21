@@ -850,7 +850,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
   const lk = `dd_${dealId}_${col.key}`;
   const [status, setStatus]   = useState(() => localStorage.getItem(lk) || 'not_started');
   const [expanded, setExpanded] = useState(false);
-  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_name`)    || '');
+  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_cont`)    || '');
   const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`${lk}_phone`)   || '');
   const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`${lk}_email`)   || '');
   const [cCompany, setCCompany]= useState(() => localStorage.getItem(`${lk}_company`) || '');
@@ -945,7 +945,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
             <p className="text-xs font-semibold text-gray-500 mb-2">Contractor</p>
             <div className="space-y-2">
               {[
-                { icon: User,     val: cName,    set: setCName,    sfx: 'name',    ph: 'Contractor name' },
+                { icon: User,     val: cName,    set: setCName,    sfx: 'cont',    ph: 'Contractor name' },
                 { icon: Phone,    val: cPhone,   set: setCPhone,   sfx: 'phone',   ph: 'Phone' },
                 { icon: Mail,     val: cEmail,   set: setCEmail,   sfx: 'email',   ph: 'Email' },
                 { icon: Building, val: cCompany, set: setCCompany, sfx: 'company', ph: 'Company (optional)' },
