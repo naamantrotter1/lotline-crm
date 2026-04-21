@@ -359,7 +359,6 @@ export default function ArvDatabase() {
   };
   const [minComps, setMinComps] = useState('All');
   const [countySearch, setCountySearch] = useState('');
-  const [mhFilter, setMhFilter] = useState('All');
   const [oppScoreFilter, setOppScoreFilter] = useState('All');
   const [domFilter, setDomFilter] = useState('All');
   const [sortKey, setSortKey] = useState('county');
@@ -377,8 +376,6 @@ export default function ArvDatabase() {
         if (maxArvNum != null && d.avgArv != null && d.avgArv > maxArvNum) return false;
         if (d.comps < minCompsNum) return false;
         if (!d.county.toLowerCase().includes(countySearch.toLowerCase())) return false;
-        if (mhFilter === 'Yes' && !d.mhFriendly) return false;
-        if (mhFilter === 'No' && d.mhFriendly !== false) return false;
         if (oppScoreFilter !== 'All' && d.oppScore != null) {
           if (oppScoreFilter === 'Under 40' && d.oppScore >= 40) return false;
           if (oppScoreFilter === '40–59' && (d.oppScore < 40 || d.oppScore >= 60)) return false;
@@ -402,14 +399,14 @@ export default function ArvDatabase() {
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [stateFilter, minArvInput, maxArvInput, minComps, countySearch, mhFilter, oppScoreFilter, domFilter, sortKey, sortDir]);
+  }, [stateFilter, minArvInput, maxArvInput, minComps, countySearch, oppScoreFilter, domFilter, sortKey, sortDir]);
 
   const totalComps = filtered.reduce((s, d) => s + d.comps, 0);
   const rowsWithArv = filtered.filter(d => d.avgArv != null);
   const avgOfAvgs = rowsWithArv.length ? Math.round(rowsWithArv.reduce((s, d) => s + d.avgArv, 0) / rowsWithArv.length) : 0;
 
   const anyFilter = stateFilter !== 'All' || minArvInput || maxArvInput || minComps !== 'All' || countySearch ||
-    mhFilter !== 'All' || oppScoreFilter !== 'All' || domFilter !== 'All';
+    oppScoreFilter !== 'All' || domFilter !== 'All';
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -500,14 +497,6 @@ export default function ArvDatabase() {
             </select>
           </div>
 
-          {/* MH Friendly */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">MH Friendly</label>
-            <select value={mhFilter} onChange={e => setMhFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
-              {['All', 'Yes', 'No'].map(v => <option key={v}>{v}</option>)}
-            </select>
-          </div>
 
           {/* Opp Score */}
           <div className="flex items-center gap-1.5">
@@ -531,7 +520,7 @@ export default function ArvDatabase() {
 
           {anyFilter && (
             <button
-              onClick={() => { setStateFilter('All'); setMinArvInput(''); setMaxArvInput(''); setMinComps('All'); setCountySearch(''); setMhFilter('All'); setOppScoreFilter('All'); setDomFilter('All'); }}
+              onClick={() => { setStateFilter('All'); setMinArvInput(''); setMaxArvInput(''); setMinComps('All'); setCountySearch(''); setOppScoreFilter('All'); setDomFilter('All'); }}
               className="text-xs text-accent hover:underline ml-auto"
             >
               Clear filters
