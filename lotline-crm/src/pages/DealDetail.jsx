@@ -1137,6 +1137,24 @@ function DealDetailContent({ deal }) {
     if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
   };
 
+  const handleSendToLandAcq = () => {
+    if (!deal?.id) return;
+    const updated = {
+      ...deal,
+      pipeline: 'land-acquisition',
+      stage: 'Waiting on Contract',
+      contractSignedAt: null,
+    };
+    localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
+    saveDeal(updated);
+    setDeals(prev => {
+      const idx = prev.findIndex(x => String(x.id) === String(updated.id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
+      return [...prev, updated];
+    });
+    navigate('/pipelines/land');
+  };
+
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
@@ -1456,16 +1474,24 @@ function DealDetailContent({ deal }) {
               : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
           </div>
-          {nextStage && !fromInvestorPortal && canEdit && (
-            <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {!isLandAcq && !fromInvestorPortal && canEdit && (
+              <button
+                onClick={handleSendToLandAcq}
+                className="flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                ← Land Acquisition
+              </button>
+            )}
+            {nextStage && !fromInvestorPortal && canEdit && (
               <button
                 onClick={() => handleSetStage(nextStage)}
                 className="flex items-center gap-1.5 bg-accent text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-accent/90 transition-colors"
               >
                 → {nextStage}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
