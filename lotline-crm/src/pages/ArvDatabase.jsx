@@ -449,22 +449,25 @@ export default function ArvDatabase() {
 
       {/* Filters */}
       <div className="bg-card rounded-xl shadow-sm p-4">
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex flex-wrap gap-x-6 gap-y-3 items-end">
           {/* County search */}
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search county..."
-              value={countySearch}
-              onChange={e => setCountySearch(e.target.value)}
-              className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-accent w-36"
-            />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-400 font-medium">County</label>
+            <div className="relative">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={countySearch}
+                onChange={e => setCountySearch(e.target.value)}
+                className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-accent w-32"
+              />
+            </div>
           </div>
 
           {/* State */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">State</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-400 font-medium">State</label>
             <select value={stateFilter} onChange={e => setStateFilter(e.target.value)}
               className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
               {STATE_OPTIONS.map(s => <option key={s}>{s}</option>)}
@@ -472,78 +475,92 @@ export default function ArvDatabase() {
           </div>
 
           {/* Avg ARV range */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">Avg ARV</label>
-            <FilterInfo tip="Average After-Repair Value of MH homes sold in the county. Filter to target specific price tiers." />
-            <input
-              value={minArvInput}
-              onChange={e => setMinArvInput(formatMoneyInput(e.target.value))}
-              placeholder="$0"
-              className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
-            <span className="text-xs text-gray-400">–</span>
-            <input
-              value={maxArvInput}
-              onChange={e => setMaxArvInput(formatMoneyInput(e.target.value))}
-              placeholder="$999,999"
-              className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <label className="text-xs text-gray-400 font-medium">Avg ARV</label>
+              <FilterInfo tip="Average After-Repair Value of MH homes sold in the county. Filter to target specific price tiers." />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={minArvInput}
+                onChange={e => setMinArvInput(formatMoneyInput(e.target.value))}
+                placeholder="Min"
+                className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+              <span className="text-xs text-gray-300">–</span>
+              <input
+                value={maxArvInput}
+                onChange={e => setMaxArvInput(formatMoneyInput(e.target.value))}
+                placeholder="Max"
+                className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+            </div>
           </div>
 
-          {/* Min/Max Comps */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">Comps</label>
-            <input
-              value={minComps}
-              onChange={e => setMinComps(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Min"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
-            <span className="text-xs text-gray-400">–</span>
-            <input
-              value={maxComps}
-              onChange={e => setMaxComps(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Max"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
+          {/* Comps */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-400 font-medium">Comps</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={minComps}
+                onChange={e => setMinComps(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Min"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+              <span className="text-xs text-gray-300">–</span>
+              <input
+                value={maxComps}
+                onChange={e => setMaxComps(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Max"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+            </div>
           </div>
 
           {/* Opp Score */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">Opp Score</label>
-            <FilterInfo tip="Opportunity Score (0–100) — combines absorption rate, months of supply, and population growth. Filter to focus on high-opportunity markets." />
-            <input
-              value={minOppScore}
-              onChange={e => setMinOppScore(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Min"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
-            <span className="text-xs text-gray-400">–</span>
-            <input
-              value={maxOppScore}
-              onChange={e => setMaxOppScore(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Max"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <label className="text-xs text-gray-400 font-medium">Opp Score</label>
+              <FilterInfo tip="Opportunity Score (0–100) — combines absorption rate, months of supply, and population growth. Filter to focus on high-opportunity markets." />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={minOppScore}
+                onChange={e => setMinOppScore(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Min"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+              <span className="text-xs text-gray-300">–</span>
+              <input
+                value={maxOppScore}
+                onChange={e => setMaxOppScore(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Max"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+            </div>
           </div>
 
           {/* Days on Market */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">Days on Market</label>
-            <FilterInfo tip="Median days a parcel sits on the market before going under contract. Lower = faster-moving market. Filter to find active markets." />
-            <input
-              value={minDom}
-              onChange={e => setMinDom(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Min"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
-            <span className="text-xs text-gray-400">–</span>
-            <input
-              value={maxDom}
-              onChange={e => setMaxDom(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="Max"
-              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <label className="text-xs text-gray-400 font-medium">Days on Market</label>
+              <FilterInfo tip="Median days a parcel sits on the market before going under contract. Lower = faster-moving market. Filter to find active markets." />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={minDom}
+                onChange={e => setMinDom(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Min"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+              <span className="text-xs text-gray-300">–</span>
+              <input
+                value={maxDom}
+                onChange={e => setMaxDom(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Max"
+                className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+              />
+            </div>
           </div>
 
           {anyFilter && (
