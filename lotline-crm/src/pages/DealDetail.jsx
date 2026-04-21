@@ -528,7 +528,7 @@ function OverviewTab({
           </div>
 
           {/* ── Hard Money Loan / Hard Money (Land + Home) ──── */}
-          {(activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)') && (
+          {!!selectedScenario && (activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)') && (
             <div className="space-y-4">
 
               {/* Loan Amount */}
@@ -708,7 +708,7 @@ function OverviewTab({
           )}
 
           {/* ── Line of Credit ──────────────────────────────── */}
-          {activeFinancing === 'Line of Credit' && (
+          {!!selectedScenario && activeFinancing === 'Line of Credit' && (
             <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line of Credit Terms</p>
               <div className="grid grid-cols-2 gap-x-6">
@@ -741,7 +741,7 @@ function OverviewTab({
           )}
 
           {/* ── Profit Split ─────────────────────────────────── */}
-          {activeFinancing === 'Profit Split' && (
+          {!!selectedScenario && activeFinancing === 'Profit Split' && (
             <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Profit Split Terms</p>
               <div className="grid grid-cols-2 gap-x-6">
