@@ -349,7 +349,8 @@ function FilterInfo({ tip }) {
 
 export default function ArvDatabase() {
   const [stateFilter, setStateFilter] = useState('All');
-  const [arvRange, setArvRange] = useState('All');
+  const [minArvInput, setMinArvInput] = useState('');
+  const [maxArvInput, setMaxArvInput] = useState('');
   const [minComps, setMinComps] = useState('All');
   const [countySearch, setCountySearch] = useState('');
   const [mhFilter, setMhFilter] = useState('All');
@@ -359,13 +360,15 @@ export default function ArvDatabase() {
   const [sortDir, setSortDir] = useState('asc');
 
   const filtered = useMemo(() => {
-    const range = AVG_ARV_RANGES.find(r => r.label === arvRange) || AVG_ARV_RANGES[0];
+    const minArvNum = minArvInput ? parseFloat(minArvInput.replace(/[^0-9.]/g, '')) : null;
+    const maxArvNum = maxArvInput ? parseFloat(maxArvInput.replace(/[^0-9.]/g, '')) : null;
     const minCompsNum = minComps === 'All' ? 0 : parseInt(minComps);
 
     return [...MERGED_DATA]
       .filter(d => {
         if (stateFilter !== 'All' && d.state !== stateFilter) return false;
-        if (d.avgArv != null && (d.avgArv < range.min || d.avgArv >= range.max)) return false;
+        if (minArvNum != null && d.avgArv != null && d.avgArv < minArvNum) return false;
+        if (maxArvNum != null && d.avgArv != null && d.avgArv > maxArvNum) return false;
         if (d.comps < minCompsNum) return false;
         if (!d.county.toLowerCase().includes(countySearch.toLowerCase())) return false;
         if (mhFilter === 'Yes' && !d.mhFriendly) return false;
@@ -393,13 +396,13 @@ export default function ArvDatabase() {
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [stateFilter, arvRange, minComps, countySearch, mhFilter, oppScoreFilter, domFilter, sortKey, sortDir]);
+  }, [stateFilter, minArvInput, maxArvInput, minComps, countySearch, mhFilter, oppScoreFilter, domFilter, sortKey, sortDir]);
 
   const totalComps = filtered.reduce((s, d) => s + d.comps, 0);
   const rowsWithArv = filtered.filter(d => d.avgArv != null);
   const avgOfAvgs = rowsWithArv.length ? Math.round(rowsWithArv.reduce((s, d) => s + d.avgArv, 0) / rowsWithArv.length) : 0;
 
-  const anyFilter = stateFilter !== 'All' || arvRange !== 'All' || minComps !== 'All' || countySearch ||
+  const anyFilter = stateFilter !== 'All' || minArvInput || maxArvInput || minComps !== 'All' || countySearch ||
     mhFilter !== 'All' || oppScoreFilter !== 'All' || domFilter !== 'All';
 
   const toggleSort = (key) => {
@@ -467,10 +470,19 @@ export default function ArvDatabase() {
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Avg ARV</label>
             <FilterInfo tip="Average After-Repair Value of MH homes sold in the county. Filter to target specific price tiers." />
-            <select value={arvRange} onChange={e => setArvRange(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
-              {AVG_ARV_RANGES.map(r => <option key={r.label}>{r.label}</option>)}
-            </select>
+            <input
+              value={minArvInput}
+              onChange={e => setMinArvInput(e.target.value)}
+              placeholder="Min $"
+              className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              value={maxArvInput}
+              onChange={e => setMaxArvInput(e.target.value)}
+              placeholder="Max $"
+              className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
           </div>
 
           {/* Min comps */}
@@ -513,7 +525,7 @@ export default function ArvDatabase() {
 
           {anyFilter && (
             <button
-              onClick={() => { setStateFilter('All'); setArvRange('All'); setMinComps('All'); setCountySearch(''); setMhFilter('All'); setOppScoreFilter('All'); setDomFilter('All'); }}
+              onClick={() => { setStateFilter('All'); setMinArvInput(''); setMaxArvInput(''); setMinComps('All'); setCountySearch(''); setMhFilter('All'); setOppScoreFilter('All'); setDomFilter('All'); }}
               className="text-xs text-accent hover:underline ml-auto"
             >
               Clear filters

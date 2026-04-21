@@ -287,7 +287,8 @@ function ColHeader({ col, sort, onSort }) {
 function MarketStats() {
   const [timePeriod, setTimePeriod] = useState('90 days');
   const [dataType,   setDataType]   = useState('Manufactured');
-  const [acreage,    setAcreage]    = useState('All');
+  const [minArv,     setMinArv]     = useState('');
+  const [maxArv,     setMaxArv]     = useState('');
   const [status,     setStatus]     = useState('Sold');
   const [sort,       setSort]       = useState({ col: 'oppScore', dir: -1 });
   const [search,     setSearch]     = useState('');
@@ -297,10 +298,14 @@ function MarketStats() {
   const adj  = TIME_ADJ[timePeriod]  ?? TIME_ADJ['90 days'];
   const sadj = STATUS_ADJ[status]    ?? STATUS_ADJ['Sold'];
 
+  const minArvNum = minArv ? parseFloat(minArv.replace(/[^0-9.]/g, '')) : null;
+  const maxArvNum = maxArv ? parseFloat(maxArv.replace(/[^0-9.]/g, '')) : null;
+
   const filtered = applyDataType(
     COUNTY_DATA
       .filter(r => !search || r.name.toLowerCase().includes(search.toLowerCase()))
-      .filter(r => ACREAGE_FILTER[acreage]?.(r))
+      .filter(r => minArvNum == null || r.medianPpa >= minArvNum)
+      .filter(r => maxArvNum == null || r.medianPpa <= maxArvNum)
       .filter(r => DATA_TYPE_FILTERS[dataType]?.(r))
       .filter(r => !(dataType === 'Land' && r.medianPpa > 500000)),
     dataType
@@ -343,9 +348,22 @@ function MarketStats() {
         <FilterDropdown label="Data"      value={dataType}   onChange={v => setDataType(v)}
           options={['All','Land','House','Townhouse','Condo','MultiFamily','Manufactured']}
           tooltip="Property type to include in the stats. 'Land' filters to vacant parcels only — best for land acquisition analysis." />
-        <FilterDropdown label="Acreage"   value={acreage}    onChange={setAcreage}
-          options={['All','0-1 acre','1-2 acres','2-5 acres','5-10 acres','10-20 acres','20-50 acres','50-70 acres','70-100 acres','100-150 acres','150+ acres']}
-          tooltip="Narrow results to parcels within a specific size range. Useful for targeting MH-ready lot sizes (1–10 acres)." />
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-500 font-medium whitespace-nowrap">ARV</span>
+          <input
+            value={minArv}
+            onChange={e => setMinArv(e.target.value)}
+            placeholder="Min $"
+            className="w-20 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-accent"
+          />
+          <span className="text-xs text-gray-400">–</span>
+          <input
+            value={maxArv}
+            onChange={e => setMaxArv(e.target.value)}
+            placeholder="Max $"
+            className="w-20 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-accent"
+          />
+        </div>
         <div className="flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg border border-gray-200 bg-white flex-1 min-w-0">
           <Search size={11} className="text-gray-400 shrink-0" />
           <input value={search} onChange={e => setSearch(e.target.value)}
