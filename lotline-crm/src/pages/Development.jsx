@@ -16,12 +16,12 @@ const DEV_COLUMNS = [
     subtasks: ['Septic Permit', 'Well Permit', 'Construction Authorization Permit'],
   },
   {
-    key: 'construction_permits', label: 'Construction Permits', color: '#d97706', bg: '#fef3c7',
-    subtasks: ['Building Permit', 'Electrical Permit', 'Plumbing Permit', 'Mechanical Permit'],
-  },
-  {
     key: 'mh_order', label: 'Mobile Home Order', color: '#7c3aed', bg: '#ede9fe',
     subtasks: ['Order mobile home', 'MH ordered'],
+  },
+  {
+    key: 'construction_permits', label: 'Construction Permits', color: '#d97706', bg: '#fef3c7',
+    subtasks: ['Building Permit', 'Electrical Permit', 'Plumbing Permit', 'Mechanical Permit'],
   },
   {
     key: 'setup_crew', label: 'Set-Up Crew', color: '#0891b2', bg: '#cffafe',
