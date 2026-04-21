@@ -1,7 +1,79 @@
 import { useState, useRef } from 'react';
 import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
 import UserManagement from './UserManagement';
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${checked ? 'bg-accent' : 'bg-gray-200'}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
+  );
+}
+
+function NotificationsTab({ showToast }) {
+  const prefs = getNotifPrefs();
+  const [pipelineMove, setPipelineMove] = useState(prefs.pipelineMove || false);
+  const [stageMove, setStageMove] = useState(prefs.stageMove || false);
+  const [permissionStatus, setPermissionStatus] = useState(
+    'Notification' in window ? Notification.permission : 'unsupported'
+  );
+
+  const handleToggle = async (key, value, setter) => {
+    if (value && permissionStatus !== 'granted') {
+      const result = await requestNotifPermission();
+      setPermissionStatus(result);
+      if (result !== 'granted') {
+        showToast('Please allow notifications in your browser to enable this.', 'error');
+        return;
+      }
+    }
+    setter(value);
+    setNotifPrefs({ ...getNotifPrefs(), [key]: value });
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-6 max-w-md space-y-1">
+      <h3 className="font-semibold text-sidebar mb-1">Notification Preferences</h3>
+      {permissionStatus === 'denied' && (
+        <p className="text-xs text-red-500 mb-3">Notifications are blocked in your browser. Enable them in browser settings to use this feature.</p>
+      )}
+      {permissionStatus === 'unsupported' && (
+        <p className="text-xs text-gray-400 mb-3">Your browser doesn't support notifications.</p>
+      )}
+
+      <div className="divide-y divide-gray-100">
+        <div className="flex items-center justify-between py-4">
+          <div>
+            <p className="text-sm font-medium text-sidebar">Deal moves pipelines</p>
+            <p className="text-xs text-gray-400 mt-0.5">Notify when a deal moves from Land Acquisition to Deal Overview (or back)</p>
+          </div>
+          <Toggle
+            checked={pipelineMove}
+            onChange={() => handleToggle('pipelineMove', !pipelineMove, setPipelineMove)}
+          />
+        </div>
+        <div className="flex items-center justify-between py-4">
+          <div>
+            <p className="text-sm font-medium text-sidebar">Deal moves stages in Deal Overview</p>
+            <p className="text-xs text-gray-400 mt-0.5">Notify when a deal moves between Contract Signed, Due Diligence, Development, or Complete</p>
+          </div>
+          <Toggle
+            checked={stageMove}
+            onChange={() => handleToggle('stageMove', !stageMove, setStageMove)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Settings() {
   const [tab, setTab] = useState('profile');
@@ -216,10 +288,7 @@ export default function Settings() {
       {tab === 'team' && <UserManagement />}
 
       {tab === 'notifications' && (
-        <div className="bg-card rounded-xl shadow-sm p-6 max-w-2xl">
-          <h3 className="font-semibold text-sidebar mb-4">Notification Preferences</h3>
-          <p className="text-sm text-gray-500">Notification settings coming soon.</p>
-        </div>
+        <NotificationsTab showToast={showToast} />
       )}
 
       {toast && (

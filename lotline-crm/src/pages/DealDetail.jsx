@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
+import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { HOME_MODELS } from '../data/homeModels';
@@ -1123,6 +1124,8 @@ function DealDetailContent({ deal }) {
           : {}),
       };
       saveDeal(updated);
+      notifyPipelineChange(deal, val);
+      notifyStageChange(deal, val);
       setDeals(prev => {
         const idx = prev.findIndex(x => String(x.id) === String(updated.id));
         if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
