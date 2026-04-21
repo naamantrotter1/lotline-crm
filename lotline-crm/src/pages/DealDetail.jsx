@@ -9,6 +9,7 @@ import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
 import { HOME_MODELS } from '../data/homeModels';
@@ -1000,9 +1001,11 @@ function DealDetailContent({ deal }) {
   const navigate = useNavigate();
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
-  const { canEdit, isAgent } = usePermissions();
+  const { canEdit, isAgent, canAdmin } = usePermissions();
   const { setDeals } = useDeals();
+  const { profile } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1010,6 +1013,13 @@ function DealDetailContent({ deal }) {
       if (data) setAgentUsers(data.map(u => u.name).filter(Boolean));
     });
   }, []);
+
+  useEffect(() => {
+    if (!supabase || !canAdmin) return;
+    supabase.from('profiles').select('name').then(({ data }) => {
+      if (data) setAllUsers(data.map(u => u.name).filter(Boolean));
+    });
+  }, [canAdmin]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
@@ -1088,6 +1098,9 @@ function DealDetailContent({ deal }) {
   const [dealState, setDealState] = useState(deal?.state || '');
   const [zip, setZip] = useState(deal?.zip || '');
   const [acreage, setAcreage] = useState(deal?.acreage?.toString() || '');
+
+  // Deal Owner
+  const [dealOwner, setDealOwner] = useState(deal?.dealOwner || profile?.name || '');
 
   // Seller Information
   const [sellerName, setSellerName] = useState(deal?.sellerName || '');
@@ -1211,7 +1224,7 @@ function DealDetailContent({ deal }) {
     notes, leadSource, ownerType, utilityScenario, homeModel, waterCompany, sewerCompany,
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
-    realtor, dateListed,
+    realtor, dateListed, dealOwner,
   };
 
   // ── Auto-save: fires immediately on every field change ───────────────────────
@@ -1234,7 +1247,7 @@ function DealDetailContent({ deal }) {
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
-      realtor, dateListed,
+      realtor, dateListed, dealOwner,
       ...costs,
     };
 
@@ -1256,7 +1269,7 @@ function DealDetailContent({ deal }) {
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
-    realtor, dateListed,
+    realtor, dateListed, dealOwner,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1426,6 +1439,21 @@ function DealDetailContent({ deal }) {
                 >
                   {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+            }
+          </div>
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Deal Owner</p>
+            {canAdmin
+              ? <select
+                  value={dealOwner}
+                  onChange={e => setDealOwner(e.target.value)}
+                  className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="">Unassigned</option>
+                  {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
           </div>
           {nextStage && !fromInvestorPortal && canEdit && (

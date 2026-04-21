@@ -88,6 +88,7 @@ function dealToRow(deal) {
     capital_returned_date:   deal.capitalReturnedDate || null,
     investor_paid_out:       deal.investorPaidOut || false,
     dd_deadline2:            deal.ddDeadline || null,
+    deal_owner:              deal.dealOwner || null,
     // listing_url: omitted until column is added to Supabase
     // contract_signed_at: omitted until column is added to Supabase
   };
@@ -170,6 +171,7 @@ function rowToDeal(row) {
     investorPaidOut:       row.investor_paid_out,
     listingUrl:            row.listing_url,
     contractSignedAt:      row.contract_signed_at,
+    dealOwner:             row.deal_owner,
   };
 }
 
