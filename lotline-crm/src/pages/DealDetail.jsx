@@ -1073,9 +1073,10 @@ function DealDetailContent({ deal }) {
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
-  const [stage, setStage] = useState(
-    currentStageVal || (isLandAcq ? 'New Lead' : 'Contract Signed')
-  );
+  const [stage, setStage] = useState(() => {
+    const val = currentStageVal || (isLandAcq ? 'New Lead' : 'Contract Signed');
+    return STAGE_OPTIONS.includes(val) ? val : STAGE_OPTIONS[0];
+  });
   const [showMapModal, setShowMapModal] = useState(false);
   const [leadSource, setLeadSource] = useState(deal?.leadSource || '');
   const [ownerType, setOwnerType] = useState(deal?.ownerType || '');
@@ -1126,6 +1127,7 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
+      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
       const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       const isMovingToContractSigned = val === 'Contract Signed';
       // Auto-fill Contract Signed Date when moving to Deal Overview
