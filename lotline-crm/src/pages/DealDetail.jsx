@@ -1068,7 +1068,7 @@ function DealDetailContent({ deal }) {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
-  const DEAL_OVERVIEW_ONLY = new Set(['Due Diligence', 'Development', 'Complete']);
+  const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
@@ -1291,7 +1291,7 @@ function DealDetailContent({ deal }) {
             <ArrowLeft size={16} /> <span className="hidden sm:inline">{fromInvestorPortal ? 'Back to Investor Portal' : 'Back to Pipeline'}</span>
           </button>
           <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
-          <span className="text-sm text-gray-400 hidden sm:block">{fromInvestorPortal ? 'Investor Portal' : deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview'}</span>
+          <span className="text-sm text-gray-400 hidden sm:block">{fromInvestorPortal ? 'Investor Portal' : isLandAcq ? 'Land Acquisition' : 'Deal Overview'}</span>
           <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
           <span className="text-sm text-gray-600 font-medium truncate max-w-[200px] md:max-w-xs">{deal.address}</span>
         </div>
