@@ -321,12 +321,6 @@ export default function Development() {
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
-                  <div className="px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: col.bg }}>
-                    <span className="text-[9px] font-bold" style={{ color: col.color }}>
-                      {col.label.split(' ')[0]}
-                    </span>
-                  </div>
                   <h3 className="font-semibold text-gray-700 text-[11px] leading-tight truncate">{col.label}</h3>
                 </div>
                 <span className="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center flex-shrink-0 ml-1">
@@ -344,35 +338,14 @@ export default function Development() {
                       </div>
                     );
                   }
-                  return STAGE_ORDER.map(stage => {
-                    const stageDeals = colDeals.filter(d => d.stage === stage);
-                    if (stageDeals.length === 0) return null;
-                    const sc = STAGE_COLORS[stage] || { color: '#6b7280', bg: '#f3f4f6' };
-                    return (
-                      <div key={stage}>
-                        <div
-                          className="flex items-center gap-1.5 mb-1.5 px-1"
-                        >
-                          <div className="h-px flex-1" style={{ backgroundColor: sc.color, opacity: 0.25 }} />
-                          <span
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{ color: sc.color, backgroundColor: sc.bg }}
-                          >
-                            {stage}
-                          </span>
-                          <div className="h-px flex-1" style={{ backgroundColor: sc.color, opacity: 0.25 }} />
-                        </div>
-                        {stageDeals.map(deal => (
-                          <DevTaskCard
-                            key={`${deal.id}-${col.key}-${tick}`}
-                            deal={deal}
-                            column={col}
-                            onUpdate={forceUpdate}
-                          />
-                        ))}
-                      </div>
-                    );
-                  });
+                  return colDeals.map(deal => (
+                    <DevTaskCard
+                      key={`${deal.id}-${col.key}-${tick}`}
+                      deal={deal}
+                      column={col}
+                      onUpdate={forceUpdate}
+                    />
+                  ));
                 })()}
               </div>
             </div>
