@@ -268,7 +268,6 @@ export default function DueDiligence() {
 
       {/* Kanban board */}
       <div
-        key={tick}
         className="flex gap-3 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
@@ -290,7 +289,7 @@ export default function DueDiligence() {
               <div>
                 {colDeals.map(deal => (
                   <DDTaskCard
-                    key={`${deal.id}-${col.key}-${tick}`}
+                    key={`${deal.id}-${col.key}`}
                     deal={deal}
                     column={col}
                     onUpdate={forceUpdate}
