@@ -1100,11 +1100,21 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
+      const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const isMovingToContractSigned = val === 'Contract Signed';
+      // Auto-fill Contract Signed Date when moving to Deal Overview
+      if (isMovingToContractSigned && !deal.contractDate) {
+        setContractDate(todayStr);
+      }
       const updated = {
         ...deal,
         stage: val,
+        // Auto-fill contractDate if not already set
+        ...(isMovingToContractSigned && !deal.contractDate
+          ? { contractDate: todayStr }
+          : {}),
         // Stamp the moment this deal moves into Deal Overview (only set once)
-        ...(val === 'Contract Signed' && !deal.contractSignedAt
+        ...(isMovingToContractSigned && !deal.contractSignedAt
           ? { contractSignedAt: new Date().toISOString() }
           : {}),
         // Clear the timestamp if moved back to a Land Acq stage
