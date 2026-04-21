@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
+import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
@@ -8,7 +9,7 @@ const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler',
 const OWNER_TYPE_OPTIONS  = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_OPTIONS     = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
 
-function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
+function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved }) {
   const [address,     setAddress]     = useState('');
   const [county,      setCounty]      = useState('');
   const [dealState,   setDealState]   = useState('NC');
@@ -78,6 +79,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose }) {
     };
 
     saveDeal(deal);
+    onDealSaved(deal);
     setSaved(true);
     setTimeout(onClose, 1200);
   };
@@ -252,6 +254,7 @@ export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
   const { canEdit } = usePermissions();
+  const { setDeals } = useDeals();
 
   const set = (key, val) => setVals((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }));
 
@@ -440,6 +443,7 @@ export default function DealCalculator() {
           buildCost={buildCost}
           projectedProfit={projectedProfit}
           onClose={() => setShowImport(false)}
+          onDealSaved={deal => setDeals(prev => [...prev, deal])}
         />
       )}
     </div>
