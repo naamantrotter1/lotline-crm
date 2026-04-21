@@ -2,7 +2,7 @@ import { LAND_DEALS, DEAL_OVERVIEW_DEALS } from '../data/deals';
 
 const LS_KEY = 'lotline_custom_deals';
 const SEED_KEY = 'lotline_deals_seeded_v2';
-const MIGRATION_KEY = 'lotline_migration_contract_signed_at_v1';
+const MIGRATION_KEY = 'lotline_migration_contract_signed_at_v2';
 
 export function seedDeals() {
   if (localStorage.getItem(SEED_KEY)) return;
@@ -29,7 +29,6 @@ export function migrateContractSignedAt() {
 
   const deals = (() => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } })();
   const updated = deals.map(d => {
-    if (d.contractSignedAt) return d; // already set, don't overwrite
     // Only stamp Deal Overview deals (not land-acquisition pipeline)
     if (d.pipeline === 'land-acquisition') return d;
     return { ...d, contractSignedAt: aprilIds.has(String(d.id)) ? APRIL : MARCH };
