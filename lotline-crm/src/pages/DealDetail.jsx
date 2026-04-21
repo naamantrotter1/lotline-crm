@@ -22,10 +22,10 @@ import FloodMap from './FloodMap';
 const DD_COLS = [
   { key: 'survey',       label: 'Survey / Boundary Review',        icon: Layers    },
   { key: 'zoning',       label: 'Zoning & Land Use Verification',  icon: MapPin    },
+  { key: 'hoa',          label: 'HOA / Deed Restrictions Review',  icon: LayoutGrid },
   { key: 'perc_test',    label: 'Perc Test',                       icon: Droplets  },
   { key: 'flood_zone',   label: 'Flood Zone & Environmental Check',icon: AlertCircle },
   { key: 'utilities',    label: 'Utilities & Access Confirmation', icon: Zap       },
-  { key: 'hoa',          label: 'HOA / Deed Restrictions Review',  icon: LayoutGrid },
 ];
 const DD_LS_INIT_MAP = {
   'Perk Test': 'perc_test', 'Perc Test / Soil Report': 'perc_test',
