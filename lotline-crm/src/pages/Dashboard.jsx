@@ -67,7 +67,7 @@ export default function Dashboard() {
   );
 
   const newThisMonth = useMemo(
-    () => activeDeals.filter(d => d.contractSignedAt && getMonthKey(d.contractSignedAt) === thisMonthKey).length,
+    () => activeDeals.filter(d => d.contractDate && getMonthKey(d.contractDate) === thisMonthKey).length,
     [activeDeals, thisMonthKey],
   );
 
