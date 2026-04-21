@@ -194,7 +194,6 @@ export default function Dashboard() {
           <StatCard
             label="New This Month"
             value={newThisMonth}
-            subtext="click to view"
             icon={Activity}
             color="text-green-500"
           />
