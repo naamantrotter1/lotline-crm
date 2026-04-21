@@ -177,18 +177,18 @@ function rowToDeal(row) {
 
 // Hardcoded contractSignedAt dates for seeded deals (until Supabase column exists)
 // April 2026 = moved to Deal Overview this month; March 2026 = moved prior month
+const APR = '2026-04-01T12:00:00.000Z';
+const MAR = '2026-03-15T12:00:00.000Z';
+// Explicit mapping for all seeded Deal Overview deals — overrides any stale localStorage values
 const SEEDED_CONTRACT_SIGNED_DATES = {
-  'deal-005': '2026-04-01T12:00:00.000Z',
-  'deal-006': '2026-04-01T12:00:00.000Z',
-  'deal-007': '2026-04-01T12:00:00.000Z',
-  'deal-008': '2026-04-01T12:00:00.000Z',
-  'deal-009': '2026-04-01T12:00:00.000Z',
-  'deal-010': '2026-04-01T12:00:00.000Z',
-  'deal-011': '2026-04-01T12:00:00.000Z',
-  'deal-013': '2026-04-01T12:00:00.000Z',
-  'deal-014': '2026-04-01T12:00:00.000Z',
-  'deal-015': '2026-04-01T12:00:00.000Z',
-  'deal-016': '2026-04-01T12:00:00.000Z',
+  'deal-001': MAR, 'deal-002': MAR, 'deal-003': MAR,
+  'deal-004': MAR, // Blue Newkirk Rd
+  'deal-005': APR, 'deal-006': APR, 'deal-007': APR, 'deal-008': APR,
+  'deal-009': APR, 'deal-010': APR, 'deal-011': APR,
+  'deal-012': MAR, // Henry Jenkins Rd
+  'deal-013': APR, 'deal-014': APR, 'deal-015': APR, 'deal-016': APR,
+  'deal-017': MAR, 'deal-018': MAR, 'deal-019': MAR,
+  'deal-020': MAR, 'deal-021': MAR,
 };
 
 /** Load all deals: Supabase first, localStorage fallback */
@@ -207,11 +207,16 @@ export async function loadAllDeals() {
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
-      const seededDate = SEEDED_CONTRACT_SIGNED_DATES[String(fromSupabase.id)] || null;
+      const id = String(fromSupabase.id);
+      const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
       return {
         ...fromSupabase,
-        // Priority: Supabase value → manually set (LS) → seeded fallback
-        contractSignedAt: fromSupabase.contractSignedAt || fromLS.contractSignedAt || seededDate,
+        // Seeded deals use the hardcoded date (overrides stale LS migration values)
+        // User-created deals fall back to LS then null
+        contractSignedAt: fromSupabase.contractSignedAt
+          || seededDate
+          || fromLS.contractSignedAt
+          || null,
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
       };
     });
