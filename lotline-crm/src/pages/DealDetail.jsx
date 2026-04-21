@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
-  ChevronDown, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine
+  ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
+  CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal } from '../lib/dealsSync';
@@ -18,24 +19,24 @@ import { GradeBadge, Tag } from '../components/UI/Badge';
 import FloodMap from './FloodMap';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
-const DD_TASKS = [
-  'Perk Test',
-  'Confirm Zoning',
-  'Confirm Sewer',
-  'Confirm Water',
-  'Confirm Driveway',
-  'Confirm Flood Plain',
-  'Request Title Work',
-  'Request Survey',
-  'Request Insurance Quote',
-  'Make Site Plan',
-  'Confirm MH Installer Accessibility',
-  'Confirm Permit Process',
-  'Home Ordered',
-  'Building Permit Submitted',
-  'Septic Permit Submitted',
-  'Well Permit Submitted',
+const DD_COLS = [
+  { key: 'title_search', label: 'Title Search',                    icon: FileText  },
+  { key: 'survey',       label: 'Survey / Boundary Review',        icon: Layers    },
+  { key: 'zoning',       label: 'Zoning & Land Use Verification',  icon: MapPin    },
+  { key: 'perc_test',    label: 'Perc Test',                       icon: Droplets  },
+  { key: 'flood_zone',   label: 'Flood Zone & Environmental Check',icon: AlertCircle },
+  { key: 'utilities',    label: 'Utilities & Access Confirmation', icon: Zap       },
+  { key: 'tax_lien',     label: 'Tax & Lien Search',               icon: Scale     },
+  { key: 'hoa',          label: 'HOA / Deed Restrictions Review',  icon: LayoutGrid },
+  { key: 'attorney',     label: 'Attorney Review',                 icon: Briefcase },
 ];
+const DD_LS_INIT_MAP = {
+  'Perk Test': 'perc_test', 'Perc Test / Soil Report': 'perc_test',
+  'Survey': 'survey', 'Title Search': 'title_search',
+  'Zoning Verification': 'zoning', 'Flood Zone Check': 'flood_zone',
+  'Utility Check': 'utilities', 'HOA Check': 'hoa',
+  'Final DD Review': 'attorney',
+};
 
 // ── Development task groups ───────────────────────────────────────────────────
 const DEV_GROUPS = [
@@ -838,41 +839,220 @@ function OverviewTab({
 }
 
 // ── Tab: Due Diligence ────────────────────────────────────────────────────────
-function DDTab({ deal, ddTasks, setDdTasks, readOnly }) {
-  const complete = ddTasks.filter(Boolean).length;
+const DD_STATUS_CONFIG = {
+  not_started: { label: 'Not Started', bg: 'bg-gray-100',    text: 'text-gray-500'   },
+  in_progress:  { label: 'In Progress', bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  complete:     { label: 'Complete',    bg: 'bg-orange-100', text: 'text-orange-600' },
+};
+const STATUS_CYCLE = { not_started: 'in_progress', in_progress: 'complete', complete: 'not_started' };
+
+function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
+  const lk = `dd_${dealId}_${col.key}`;
+  const [status, setStatus]   = useState(() => localStorage.getItem(lk) || 'not_started');
+  const [expanded, setExpanded] = useState(false);
+  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_name`)    || '');
+  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`${lk}_phone`)   || '');
+  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`${lk}_email`)   || '');
+  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`${lk}_company`) || '');
+  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`${lk}_notes`) || '');
+  const [files, setFiles] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`${lk}_files`) || '[]'); } catch { return []; }
+  });
+
+  const save = (suffix, val) => localStorage.setItem(`${lk}_${suffix}`, val);
+
+  const cycleStatus = (e) => {
+    e.stopPropagation();
+    if (readOnly) return;
+    const next = STATUS_CYCLE[status];
+    localStorage.setItem(lk, next);
+    setStatus(next);
+    onCountChange();
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const updated = [...files, { name: file.name, url: ev.target.result }];
+      setFiles(updated);
+      localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = (idx) => {
+    const updated = files.filter((_, i) => i !== idx);
+    setFiles(updated);
+    localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+  };
+
+  const sc = DD_STATUS_CONFIG[status];
+  const Icon = col.icon;
+  const isComplete = status === 'complete';
+
+  return (
+    <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
+      {/* Row header */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <Icon size={15} className={`flex-shrink-0 ${isComplete ? 'text-gray-300' : 'text-gray-400'}`} />
+        <span className={`flex-1 text-sm font-medium ${isComplete ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+          {col.label}
+        </span>
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${sc.bg} ${sc.text} cursor-pointer`}
+          onClick={cycleStatus}
+        >
+          {sc.label}
+        </span>
+        {expanded
+          ? <ChevronUp size={15} className="text-gray-400 flex-shrink-0" />
+          : <ChevronDown size={15} className="text-gray-400 flex-shrink-0" />
+        }
+      </div>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-4">
+          {/* Status action row */}
+          <div className="flex items-center gap-3">
+            {isComplete ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!readOnly) { localStorage.setItem(lk, 'not_started'); setStatus('not_started'); onCountChange(); } }}
+                disabled={readOnly}
+                className="text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Reopen Task
+              </button>
+            ) : (
+              <button
+                onClick={cycleStatus}
+                disabled={readOnly}
+                className="text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {status === 'not_started' ? 'Mark In Progress' : 'Mark Complete'}
+              </button>
+            )}
+            <span className="text-xs text-gray-400">Click to cycle: Not Started → In Progress → Complete</span>
+          </div>
+
+          {/* Contractor fields */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Contractor</p>
+            <div className="space-y-2">
+              {[
+                { icon: User,     val: cName,    set: setCName,    sfx: 'name',    ph: 'Contractor name' },
+                { icon: Phone,    val: cPhone,   set: setCPhone,   sfx: 'phone',   ph: 'Phone' },
+                { icon: Mail,     val: cEmail,   set: setCEmail,   sfx: 'email',   ph: 'Email' },
+                { icon: Building, val: cCompany, set: setCCompany, sfx: 'company', ph: 'Company (optional)' },
+              ].map(({ icon: FieldIcon, val, set, sfx, ph }) => (
+                <div key={sfx} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2">
+                  <FieldIcon size={14} className="text-gray-400 flex-shrink-0" />
+                  <input
+                    value={val}
+                    onChange={e => { set(e.target.value); save(sfx, e.target.value); }}
+                    placeholder={ph}
+                    disabled={readOnly}
+                    className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <FileText size={14} className="text-gray-400" />
+              <p className="text-xs font-semibold text-gray-500">Notes</p>
+            </div>
+            <textarea
+              value={taskNotes}
+              onChange={e => { setTaskNotes(e.target.value); save('notes', e.target.value); }}
+              placeholder="Add notes for this task..."
+              disabled={readOnly}
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-accent"
+            />
+          </div>
+
+          {/* Files */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Paperclip size={14} className="text-gray-400" />
+                <p className="text-xs font-semibold text-gray-500">Files & Photos</p>
+              </div>
+              {!readOnly && (
+                <label className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 cursor-pointer">
+                  <Upload size={12} />
+                  Upload
+                  <input type="file" className="hidden" onChange={handleFileUpload} />
+                </label>
+              )}
+            </div>
+            {files.length > 0 && (
+              <div className="space-y-1.5">
+                {files.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <Paperclip size={12} className="text-gray-400 flex-shrink-0" />
+                    <a href={f.url} download={f.name} className="flex-1 text-xs text-blue-600 hover:underline truncate">{f.name}</a>
+                    {!readOnly && (
+                      <button onClick={() => removeFile(idx)} className="text-gray-400 hover:text-red-400 flex-shrink-0">
+                        <XIcon size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DDTab({ deal, readOnly, onStatusChange }) {
+  const [completeCount, setCompleteCount] = useState(() =>
+    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
+  );
+
+  // Seed legacy ddTasksCompleted on first render
+  useEffect(() => {
+    for (const name of (deal.ddTasksCompleted || [])) {
+      const k = DD_LS_INIT_MAP[name];
+      if (k) {
+        const lk = `dd_${deal.id}_${k}`;
+        if (!localStorage.getItem(lk)) localStorage.setItem(lk, 'complete');
+      }
+    }
+    setCompleteCount(DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length);
+  }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCountChange = () => {
+    const count = DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length;
+    setCompleteCount(count);
+    onStatusChange?.(count);
+  };
+
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#1a2332]">Due Diligence Tasks</h3>
-        <span className="text-sm text-gray-500">{complete} / {DD_TASKS.length} Complete</span>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 size={16} className="text-gray-400" />
+          <span className="text-sm font-semibold text-gray-700">{completeCount} / {DD_COLS.length} Complete</span>
+        </div>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
-        {DD_TASKS.map((task, i) => (
-          <div
-            key={task}
-            className={`flex items-center gap-3 px-4 py-3 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
-            onClick={readOnly ? undefined : () => setDdTasks(prev => { const n = [...prev]; n[i] = !n[i]; return n; })}
-          >
-            {ddTasks[i]
-              ? <CheckSquare size={18} className="text-green-500 flex-shrink-0" />
-              : <Square size={18} className="text-gray-300 flex-shrink-0" />
-            }
-            <span className={`text-sm ${ddTasks[i] ? 'line-through text-gray-400' : 'text-gray-700'}`}>{task}</span>
-            {ddTasks[i] && <span className="ml-auto text-xs text-green-500 font-medium">Complete</span>}
-          </div>
+      <div className="space-y-2">
+        {DD_COLS.map(col => (
+          <DDTaskRow key={col.key} dealId={deal.id} col={col} readOnly={readOnly} onCountChange={handleCountChange} />
         ))}
-      </div>
-      <div className="mt-4 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-green-700">Progress</span>
-          <span className="text-sm font-bold text-green-700">{complete}/{DD_TASKS.length}</span>
-        </div>
-        <div className="mt-2 h-2 bg-green-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-green-500 rounded-full transition-all duration-300"
-            style={{ width: `${(complete / DD_TASKS.length) * 100}%` }}
-          />
-        </div>
       </div>
     </div>
   );
@@ -1059,9 +1239,10 @@ function DealDetailContent({ deal }) {
   const initCosts = {};
   COST_FIELDS.forEach(f => { initCosts[f.key] = deal?.[f.key] || 0; });
 
-  // Initial DD tasks — seed from ddTasksCompleted array on the deal
-  const completedSet = new Set(deal?.ddTasksCompleted || []);
-  const initDD = DD_TASKS.map(task => completedSet.has(task));
+  // DD complete count for tab label (updated via callback from DDTab)
+  const [ddCompleteCount, setDdCompleteCount] = useState(() =>
+    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
+  );
 
   // Initial dev tasks — Swanson has 1/38 complete (land cleared)
   const totalDevTasks = DEV_GROUPS.flatMap(g => g.tasks).length;
@@ -1074,7 +1255,6 @@ function DealDetailContent({ deal }) {
   const [notes, setNotes] = useState(deal?.notes || '');
   const [arv,   setArv]   = useState(deal?.arv ?? 0);
   const [listingUrl, setListingUrl] = useState(deal?.listingUrl || '');
-  const [ddTasks, setDdTasks] = useState(initDD);
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [starred, setStarred] = useState(false);
@@ -1294,13 +1474,12 @@ function DealDetailContent({ deal }) {
   const sellingCosts = (arv || 0) * 0.045 + 4000;
   const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
   const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
-  const ddComplete = ddTasks.filter(Boolean).length;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
 
   const ALL_TABS = [
     { key: 'overview', label: 'Overview' },
-    { key: 'dd', label: `Due Diligence (${ddComplete}/${DD_TASKS.length})` },
+    { key: 'dd', label: `Due Diligence (${ddCompleteCount}/${DD_COLS.length})` },
     { key: 'dev', label: `Development (${devComplete}/${devTotal})` },
     { key: 'realized', label: 'Realized Expenses' },
   ];
@@ -1578,7 +1757,7 @@ function DealDetailContent({ deal }) {
           />
         )}
         {activeTab === 'dd' && (
-          <DDTab deal={deal} ddTasks={ddTasks} setDdTasks={setDdTasks} readOnly={fromInvestorPortal || !canEdit} />
+          <DDTab deal={deal} readOnly={fromInvestorPortal || !canEdit} onStatusChange={setDdCompleteCount} />
         )}
         {activeTab === 'dev' && (
           <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal || !canEdit} />
