@@ -54,7 +54,8 @@ export default function Dashboard() {
   const { deals, archivedDeals, dealsLoading } = useDeals();
   const { profile } = useAuth();
 
-  const activeDeals   = deals        || [];
+  const LAND_ACQ_ONLY = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
+  const activeDeals   = (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage));
   const closedDeals   = archivedDeals || [];
   const year          = new Date().getFullYear();
   const thisMonthKey  = getMonthKey(new Date().toISOString());
