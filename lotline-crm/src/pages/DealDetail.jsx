@@ -1006,7 +1006,7 @@ function DealDetailContent({ deal }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.from('profiles').select('name').eq('role', 'agent').then(({ data }) => {
+    supabase.from('profiles').select('name').eq('role', 'realtor').then(({ data }) => {
       if (data) setAgentUsers(data.map(u => u.name).filter(Boolean));
     });
   }, []);

@@ -171,7 +171,7 @@ function CreateUserModal({ onClose, onCreated }) {
             <select value={role} onChange={e => setRole(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
               <option value="viewer">Viewer — Read-only access</option>
-              <option value="agent">Agent — Deal Overview + Sales; can move stages</option>
+              <option value="realtor">Realtor — Deal Overview + Sales; can move stages</option>
               <option value="editor">Editor — View + edit deals</option>
               <option value="admin">Admin — Full access + user management</option>
               <option value="investor">Investor — Investor Portal only; sees their linked deals</option>
@@ -570,7 +570,7 @@ export default function UserManagement() {
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white disabled:opacity-50"
                           >
                             <option value="viewer">Viewer</option>
-                            <option value="agent">Agent</option>
+                            <option value="realtor">Realtor</option>
                             <option value="editor">Editor</option>
                             <option value="admin">Admin</option>
                             <option value="investor">Investor</option>
