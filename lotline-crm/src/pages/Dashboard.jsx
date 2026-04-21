@@ -70,10 +70,7 @@ export default function Dashboard() {
   );
 
   const newThisMonthDeals = useMemo(
-    () => activeDeals.filter(d => {
-      const stamp = d.contractSignedAt || d.contractDate;
-      return stamp && getMonthKey(stamp) === thisMonthKey;
-    }),
+    () => activeDeals.filter(d => d.contractDate && getMonthKey(d.contractDate) === thisMonthKey),
     [activeDeals, thisMonthKey],
   );
   const newThisMonth = newThisMonthDeals.length;
