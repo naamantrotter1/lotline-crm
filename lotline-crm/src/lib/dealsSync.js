@@ -175,6 +175,22 @@ function rowToDeal(row) {
 
 // ── Deals ─────────────────────────────────────────────────────────────────────
 
+// Hardcoded contractSignedAt dates for seeded deals (until Supabase column exists)
+// April 2026 = moved to Deal Overview this month; March 2026 = moved prior month
+const SEEDED_CONTRACT_SIGNED_DATES = {
+  'deal-005': '2026-04-01T12:00:00.000Z',
+  'deal-006': '2026-04-01T12:00:00.000Z',
+  'deal-007': '2026-04-01T12:00:00.000Z',
+  'deal-008': '2026-04-01T12:00:00.000Z',
+  'deal-009': '2026-04-01T12:00:00.000Z',
+  'deal-010': '2026-04-01T12:00:00.000Z',
+  'deal-011': '2026-04-01T12:00:00.000Z',
+  'deal-013': '2026-04-01T12:00:00.000Z',
+  'deal-014': '2026-04-01T12:00:00.000Z',
+  'deal-015': '2026-04-01T12:00:00.000Z',
+  'deal-016': '2026-04-01T12:00:00.000Z',
+};
+
 /** Load all deals: Supabase first, localStorage fallback */
 export async function loadAllDeals() {
   if (!supabase) return lsGet();
@@ -191,11 +207,11 @@ export async function loadAllDeals() {
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
-      // Supabase fields take precedence, but fall back to localStorage for
-      // fields not yet in the DB schema (contractSignedAt, listingUrl)
+      const seededDate = SEEDED_CONTRACT_SIGNED_DATES[String(fromSupabase.id)] || null;
       return {
         ...fromSupabase,
-        contractSignedAt: fromSupabase.contractSignedAt || fromLS.contractSignedAt || null,
+        // Priority: Supabase value → manually set (LS) → seeded fallback
+        contractSignedAt: fromSupabase.contractSignedAt || fromLS.contractSignedAt || seededDate,
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
       };
     });
