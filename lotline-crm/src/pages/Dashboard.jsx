@@ -325,24 +325,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Pipeline Summary */}
-      <div>
-        <h2 className="text-lg font-semibold text-sidebar mb-3">Pipeline Summary</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {pipelineSummary.map((p) => (
-            <div key={p.label} className="bg-card rounded-xl shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`w-3 h-3 rounded-full ${p.color}`} />
-                <span className="text-sm font-medium text-gray-700">{p.label}</span>
-              </div>
-              <p className="text-2xl font-bold text-sidebar">{p.deals}</p>
-              <p className="text-xs text-gray-500 mt-1">deals</p>
-              <p className="text-sm font-semibold text-accent mt-2">{fmt$(p.value)}</p>
-              <p className="text-xs text-gray-400">pipeline ARV</p>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Deal Overview + Sales Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
