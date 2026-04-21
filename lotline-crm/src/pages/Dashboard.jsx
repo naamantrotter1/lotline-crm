@@ -357,7 +357,7 @@ export default function Dashboard() {
           <div className="space-y-4">
             {[
               { label: 'Deals', value: doAllDeals.length },
-              { label: 'Avg Profit / Deal', value: doAllDeals.length ? fmt$(doAvgProfit) : '—' },
+              { label: 'Avg Profit / Deal', value: doAllDeals.length ? `$${Math.round(doAvgProfit).toLocaleString()}` : '—' },
               { label: 'Avg Days to List', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
