@@ -10,6 +10,7 @@ import { saveDeal } from '../lib/dealsSync';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { supabase } from '../lib/supabase';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -157,7 +158,6 @@ function InputRow({ label, value, onChange, type = 'text', mono, readOnly }) {
 
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
-const REALTOR_OPTIONS = ['Amy Reinholt', 'Brian Kelly', 'Carol Hayes', 'David Monroe', 'Emily Torres', 'Frank Simmons', 'Grace Nguyen', 'Henry Patel', 'Isabella Reed', 'James Carter'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
 const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
 const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
@@ -198,6 +198,7 @@ function OverviewTab({
   investorProfitSplitPct, setInvestorProfitSplitPct,
   realtor, setRealtor,
   dateListed, setDateListed,
+  agentUsers,
   navigate,
   onOpenMapSearch,
   readOnly,
@@ -471,7 +472,7 @@ function OverviewTab({
             <SectionHeader>Sales</SectionHeader>
             <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
               <div className="grid grid-cols-2 gap-x-6">
-                <SelectRow label="Realtor" value={realtor} onChange={v => { setRealtor(v); saveNow?.({ realtor: v }); }} options={REALTOR_OPTIONS} readOnly={readOnly} />
+                <SelectRow label="Realtor" value={realtor} onChange={v => { setRealtor(v); saveNow?.({ realtor: v }); }} options={agentUsers} readOnly={readOnly} />
                 <InputRow label="Date Listed" value={dateListed} onChange={v => { setDateListed(v); saveNow?.({ dateListed: v }); }} type="date" readOnly={readOnly} />
               </div>
             </fieldset>
@@ -1001,6 +1002,14 @@ function DealDetailContent({ deal }) {
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent } = usePermissions();
   const { setDeals } = useDeals();
+  const [agentUsers, setAgentUsers] = useState([]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('profiles').select('name').eq('role', 'agent').then(({ data }) => {
+      if (data) setAgentUsers(data.map(u => u.name).filter(Boolean));
+    });
+  }, []);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
@@ -1504,6 +1513,7 @@ function DealDetailContent({ deal }) {
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             realtor={realtor} setRealtor={setRealtor}
             dateListed={dateListed} setDateListed={setDateListed}
+            agentUsers={agentUsers}
             navigate={navigate}
             onOpenMapSearch={() => setShowMapModal(true)}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
