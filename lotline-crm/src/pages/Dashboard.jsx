@@ -247,13 +247,18 @@ export default function Dashboard() {
 
         <div className="bg-card rounded-xl shadow-sm p-4">
           <h3 className="font-semibold text-sidebar mb-4">Pipeline ARV by Month ({year})</h3>
+          <p className="text-xs text-gray-400 -mt-3 mb-3">Click a bar to see deals</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyData}>
+            <BarChart data={monthlyData} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={v => `$${v.toLocaleString()}`} />
-              <Bar dataKey="arv" name="ARV" fill="#1a2332" radius={[4, 4, 0, 0]} />
+              <Tooltip cursor={false} formatter={v => `$${v.toLocaleString()}`} />
+              <Bar dataKey="arv" name="ARV" fill="#1a2332" radius={[4, 4, 0, 0]}
+                onClick={(data) => {
+                  if (data?.dealList?.length > 0) setMonthModal({ month: data.month, deals: data.dealList });
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
