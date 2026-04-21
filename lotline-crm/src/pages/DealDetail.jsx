@@ -450,12 +450,12 @@ function OverviewTab({
             <SectionHeader>Closing Details</SectionHeader>
             <div className="bg-white rounded-xl border border-gray-100 p-4">
               <div className="grid grid-cols-2 gap-x-6">
-              <InputRow label="Investor" value={investor} onChange={setInvestor} readOnly={readOnly} />
-              <InputRow label="Closing Attorney" value={closingAttorney} onChange={setClosingAttorney} readOnly={readOnly} />
-              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} readOnly={readOnly} />
-              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} readOnly={readOnly} />
-              <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" readOnly={readOnly} />
-              <InputRow label="Contract Signed Date" value={contractDate} onChange={setContractDate} type="date" readOnly={readOnly} />
+              <InputRow label="Investor" value={investor} onChange={v => { setInvestor(v); saveNow?.({ investor: v }); }} readOnly={readOnly} />
+              <InputRow label="Closing Attorney" value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow?.({ closingAttorney: v }); }} readOnly={readOnly} />
+              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={v => { setClosingAttorneyPhone(v); saveNow?.({ closingAttorneyPhone: v }); }} readOnly={readOnly} />
+              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow?.({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
+              <InputRow label="Closing Date" value={closeDate} onChange={v => { setCloseDate(v); saveNow?.({ closeDate: v }); }} type="date" readOnly={readOnly} />
+              <InputRow label="Contract Signed Date" value={contractDate} onChange={v => { setContractDate(v); saveNow?.({ contractDate: v }); }} type="date" readOnly={readOnly} />
               </div>
             </div>
           </div>
