@@ -31,9 +31,9 @@ const PIPELINE_CONFIG = [
     match: d => d.stage === 'Development',
   },
   {
-    label: 'Complete',
+    label: 'For Sale',
     color: 'bg-green-500',
-    match: d => d.stage === 'Complete',
+    match: d => d.stage === 'Listed' || d.stage === 'Under Contract',
   },
 ];
 
