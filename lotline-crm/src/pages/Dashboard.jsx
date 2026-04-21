@@ -143,6 +143,35 @@ export default function Dashboard() {
     return Math.round(total / withDates.length);
   }, [closedThisYear]);
 
+  // ── Deal Overview "Complete" deals this year ─────────────────────────────────
+  const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
+  const doCompleteThisYear = useMemo(
+    () => activeDeals.filter(d => {
+      if (d.stage !== 'Complete') return false;
+      const dt = new Date(d.closeDate || d.contractDate || '');
+      return !isNaN(dt) && dt.getFullYear() === year;
+    }),
+    [activeDeals, year],
+  );
+
+  const doCompleteProfit = useMemo(
+    () => doCompleteThisYear.reduce((s, d) => s + calcNetProfit(d), 0),
+    [doCompleteThisYear],
+  );
+
+  const doAvgProfit = doCompleteThisYear.length
+    ? Math.round(doCompleteProfit / doCompleteThisYear.length)
+    : 0;
+
+  const doAvgDaysToClose = useMemo(() => {
+    const withDates = doCompleteThisYear.filter(d => d.contractDate && d.closeDate);
+    if (!withDates.length) return null;
+    const total = withDates.reduce((s, d) => {
+      return s + (new Date(d.closeDate) - new Date(d.contractDate)) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(total / withDates.length);
+  }, [doCompleteThisYear]);
+
   // ── Pipeline summary ─────────────────────────────────────────────────────────
   const pipelineSummary = useMemo(() => {
     return PIPELINE_CONFIG.map(({ label, color, match }) => {
@@ -292,8 +321,8 @@ export default function Dashboard() {
       </div>
 
       {/* Year at a Glance */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-card rounded-xl shadow-sm p-4 lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-card rounded-xl shadow-sm p-4">
           <h2 className="text-base font-semibold text-sidebar mb-4">Year at a Glance — {year}</h2>
           <div className="space-y-4">
             {[
@@ -310,6 +339,22 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="bg-card rounded-xl shadow-sm p-4">
+          <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview — {year}</h2>
+          <div className="space-y-4">
+            {[
+              { label: 'Deals Completed', value: doCompleteThisYear.length },
+              { label: 'Completed Profit', value: fmt$(doCompleteProfit) },
+              { label: 'Avg Profit / Deal', value: doCompleteThisYear.length ? fmt$(doAvgProfit) : '—' },
+              { label: 'Avg Days to Close', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <p className="text-sm text-gray-500">{item.label}</p>
+                <p className="text-base font-bold text-sidebar">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       {/* Month Drilldown Modal */}
       {monthModal && (
