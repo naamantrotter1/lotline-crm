@@ -167,8 +167,13 @@ export default function Dashboard() {
     [doCompleteThisYear],
   );
 
-  const doAvgProfit = doCompleteThisYear.length
-    ? Math.round(doCompleteProfit / doCompleteThisYear.length)
+  const doAllProfit = useMemo(
+    () => doAllDeals.reduce((s, d) => s + calcNetProfit(d), 0),
+    [doAllDeals],
+  );
+
+  const doAvgProfit = doAllDeals.length
+    ? doAllProfit / doAllDeals.length
     : 0;
 
   const doAvgDaysToClose = useMemo(() => {
@@ -352,9 +357,8 @@ export default function Dashboard() {
           <div className="space-y-4">
             {[
               { label: 'Deals', value: doAllDeals.length },
-              { label: 'Completed Profit', value: fmt$(doCompleteProfit) },
-              { label: 'Avg Profit / Deal', value: doCompleteThisYear.length ? fmt$(doAvgProfit) : '—' },
-              { label: 'Avg Days to Close', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
+              { label: 'Avg Profit / Deal', value: doAllDeals.length ? fmt$(doAvgProfit) : '—' },
+              { label: 'Avg Days to List', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <p className="text-sm text-gray-500">{item.label}</p>
