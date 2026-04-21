@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X, Trash2 } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
@@ -170,12 +170,16 @@ export default function TopBar({ onToggleSidebar }) {
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : (profile?.email ? profile.email.slice(0, 2).toUpperCase() : '?');
 
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(() => getStoredNotifs().filter(n => !n.read).length);
   const bellRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const refresh = () => setUnreadCount(getStoredNotifs().filter(n => !n.read).length);
@@ -183,7 +187,7 @@ export default function TopBar({ onToggleSidebar }) {
     return () => window.removeEventListener('lotline_notifs_updated', refresh);
   }, []);
 
-  // Close panel on outside click
+  // Close panels on outside click
   useEffect(() => {
     if (!showNotifs) return;
     const handler = (e) => {
@@ -192,6 +196,15 @@ export default function TopBar({ onToggleSidebar }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showNotifs]);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handler = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showUserMenu]);
 
   const toggleDarkMode = () => {
     const next = !darkMode;
@@ -238,11 +251,35 @@ export default function TopBar({ onToggleSidebar }) {
           {showNotifs && <NotifPanel onClose={() => setShowNotifs(false)} />}
         </div>
 
-        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold ml-1 overflow-hidden">
-          {avatarUrl
-            ? <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-            : initials
-          }
+        <div className="relative ml-1" ref={userMenuRef}>
+          <button
+            onClick={() => setShowUserMenu(v => !v)}
+            className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold overflow-hidden hover:ring-2 hover:ring-accent/50 transition-all"
+          >
+            {avatarUrl
+              ? <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              : initials
+            }
+          </button>
+          {showUserMenu && (
+            <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden py-1">
+              <button
+                onClick={() => { setShowUserMenu(false); navigate('/settings'); }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Settings size={14} className="text-gray-400" />
+                Settings
+              </button>
+              <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+              <button
+                onClick={() => { setShowUserMenu(false); signOut(); }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <LogOut size={14} />
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
