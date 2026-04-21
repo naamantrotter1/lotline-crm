@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Home, DollarSign, Target, Activity, Loader2 } from 'lucide-react';
+import { TrendingUp, Home, DollarSign, Target, Activity, Loader2, X } from 'lucide-react';
 import { StatCard } from '../components/UI/Card';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { calcNetProfit } from '../data/deals';
+import { useNavigate } from 'react-router-dom';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -53,6 +54,8 @@ function getMonthKey(dateStr) {
 export default function Dashboard() {
   const { deals, archivedDeals, dealsLoading } = useDeals();
   const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [showNewThisMonth, setShowNewThisMonth] = useState(false);
 
   const LAND_ACQ_ONLY = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const activeDeals   = (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage));
@@ -66,10 +69,14 @@ export default function Dashboard() {
     [activeDeals],
   );
 
-  const newThisMonth = useMemo(
-    () => activeDeals.filter(d => d.contractDate && getMonthKey(d.contractDate) === thisMonthKey).length,
+  const newThisMonthDeals = useMemo(
+    () => activeDeals.filter(d => {
+      const stamp = d.contractSignedAt || d.contractDate;
+      return stamp && getMonthKey(stamp) === thisMonthKey;
+    }),
     [activeDeals, thisMonthKey],
   );
+  const newThisMonth = newThisMonthDeals.length;
 
   const closedProfit = useMemo(
     () => closedDeals.reduce((s, d) => s + calcNetProfit(d), 0),
@@ -173,13 +180,19 @@ export default function Dashboard() {
           icon={Home}
           color="text-blue-500"
         />
-        <StatCard
-          label="New This Month"
-          value={newThisMonth}
-          subtext="by contract date"
-          icon={Activity}
-          color="text-green-500"
-        />
+        <div
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setShowNewThisMonth(true)}
+          title="Click to view deals"
+        >
+          <StatCard
+            label="New This Month"
+            value={newThisMonth}
+            subtext="click to view"
+            icon={Activity}
+            color="text-green-500"
+          />
+        </div>
         <StatCard
           label="Pipeline Profit"
           value={fmt$(pipelineProfit)}
@@ -310,6 +323,58 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      {/* New This Month Modal */}
+      {showNewThisMonth && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowNewThisMonth(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-sidebar">New This Month</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{newThisMonthDeals.length} deal{newThisMonthDeals.length !== 1 ? 's' : ''} with contract signed date in {MONTHS[new Date().getMonth()]}</p>
+              </div>
+              <button
+                onClick={() => setShowNewThisMonth(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              {newThisMonthDeals.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-10">No deals this month</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {newThisMonthDeals.map(d => {
+                    const profit = calcNetProfit(d);
+                    return (
+                      <li
+                        key={d.id}
+                        className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => { setShowNewThisMonth(false); navigate(`/deal/${d.id}`); }}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
+                          <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''} · {d.stage}</p>
+                        </div>
+                        <div className="ml-4 text-right shrink-0">
+                          <p className="text-sm font-semibold text-gray-700">{fmt$(d.arv)}</p>
+                          <p className={`text-xs font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt$(profit)}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
