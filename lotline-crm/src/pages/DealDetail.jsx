@@ -455,7 +455,7 @@ function OverviewTab({
               <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={setClosingAttorneyPhone} readOnly={readOnly} />
               <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={setClosingAttorneyAddress} readOnly={readOnly} />
               <InputRow label="Closing Date" value={closeDate} onChange={setCloseDate} type="date" readOnly={readOnly} />
-              <InputRow label="Contract Date" value={contractDate} onChange={setContractDate} type="date" readOnly={readOnly} />
+              <InputRow label="Contract Signed Date" value={contractDate} onChange={setContractDate} type="date" readOnly={readOnly} />
               </div>
             </div>
           </div>
