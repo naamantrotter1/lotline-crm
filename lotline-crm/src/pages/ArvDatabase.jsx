@@ -357,36 +357,38 @@ export default function ArvDatabase() {
     if (!digits) return '';
     return '$' + Number(digits).toLocaleString();
   };
-  const [minComps, setMinComps] = useState('All');
+  const [minComps, setMinComps] = useState('');
+  const [maxComps, setMaxComps] = useState('');
   const [countySearch, setCountySearch] = useState('');
-  const [oppScoreFilter, setOppScoreFilter] = useState('All');
-  const [domFilter, setDomFilter] = useState('All');
+  const [minOppScore, setMinOppScore] = useState('');
+  const [maxOppScore, setMaxOppScore] = useState('');
+  const [minDom, setMinDom] = useState('');
+  const [maxDom, setMaxDom] = useState('');
   const [sortKey, setSortKey] = useState('county');
   const [sortDir, setSortDir] = useState('asc');
 
   const filtered = useMemo(() => {
     const minArvNum = minArvInput ? parseFloat(minArvInput.replace(/[^0-9.]/g, '')) : null;
     const maxArvNum = maxArvInput ? parseFloat(maxArvInput.replace(/[^0-9.]/g, '')) : null;
-    const minCompsNum = minComps === 'All' ? 0 : parseInt(minComps);
+    const minCompsNum = minComps ? parseInt(minComps) : null;
+    const maxCompsNum = maxComps ? parseInt(maxComps) : null;
+    const minOppNum = minOppScore ? parseFloat(minOppScore) : null;
+    const maxOppNum = maxOppScore ? parseFloat(maxOppScore) : null;
+    const minDomNum = minDom ? parseFloat(minDom) : null;
+    const maxDomNum = maxDom ? parseFloat(maxDom) : null;
 
     return [...MERGED_DATA]
       .filter(d => {
         if (stateFilter !== 'All' && d.state !== stateFilter) return false;
         if (minArvNum != null && d.avgArv != null && d.avgArv < minArvNum) return false;
         if (maxArvNum != null && d.avgArv != null && d.avgArv > maxArvNum) return false;
-        if (d.comps < minCompsNum) return false;
+        if (minCompsNum != null && d.comps < minCompsNum) return false;
+        if (maxCompsNum != null && d.comps > maxCompsNum) return false;
         if (!d.county.toLowerCase().includes(countySearch.toLowerCase())) return false;
-        if (oppScoreFilter !== 'All' && d.oppScore != null) {
-          if (oppScoreFilter === 'Under 40' && d.oppScore >= 40) return false;
-          if (oppScoreFilter === '40–59' && (d.oppScore < 40 || d.oppScore >= 60)) return false;
-          if (oppScoreFilter === '60–79' && (d.oppScore < 60 || d.oppScore >= 80)) return false;
-          if (oppScoreFilter === '80+' && d.oppScore < 80) return false;
-        }
-        if (domFilter !== 'All' && d.medianDOM != null) {
-          if (domFilter === '<65d' && d.medianDOM >= 65) return false;
-          if (domFilter === '65–130d' && (d.medianDOM < 65 || d.medianDOM >= 130)) return false;
-          if (domFilter === '130d+' && d.medianDOM < 130) return false;
-        }
+        if (minOppNum != null && (d.oppScore == null || d.oppScore < minOppNum)) return false;
+        if (maxOppNum != null && (d.oppScore == null || d.oppScore > maxOppNum)) return false;
+        if (minDomNum != null && (d.medianDOM == null || d.medianDOM < minDomNum)) return false;
+        if (maxDomNum != null && (d.medianDOM == null || d.medianDOM > maxDomNum)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -399,14 +401,14 @@ export default function ArvDatabase() {
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [stateFilter, minArvInput, maxArvInput, minComps, countySearch, oppScoreFilter, domFilter, sortKey, sortDir]);
+  }, [stateFilter, minArvInput, maxArvInput, minComps, maxComps, countySearch, minOppScore, maxOppScore, minDom, maxDom, sortKey, sortDir]);
 
   const totalComps = filtered.reduce((s, d) => s + d.comps, 0);
   const rowsWithArv = filtered.filter(d => d.avgArv != null);
   const avgOfAvgs = rowsWithArv.length ? Math.round(rowsWithArv.reduce((s, d) => s + d.avgArv, 0) / rowsWithArv.length) : 0;
 
-  const anyFilter = stateFilter !== 'All' || minArvInput || maxArvInput || minComps !== 'All' || countySearch ||
-    oppScoreFilter !== 'All' || domFilter !== 'All';
+  const anyFilter = stateFilter !== 'All' || minArvInput || maxArvInput || minComps || maxComps || countySearch ||
+    minOppScore || maxOppScore || minDom || maxDom;
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -488,39 +490,65 @@ export default function ArvDatabase() {
             />
           </div>
 
-          {/* Min comps */}
+          {/* Min/Max Comps */}
           <div className="flex items-center gap-1.5">
-            <label className="text-xs text-gray-500 font-medium">Min Comps</label>
-            <select value={minComps} onChange={e => setMinComps(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
-              {['All', '2', '3', '5', '10'].map(v => <option key={v}>{v}</option>)}
-            </select>
+            <label className="text-xs text-gray-500 font-medium">Comps</label>
+            <input
+              value={minComps}
+              onChange={e => setMinComps(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Min"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              value={maxComps}
+              onChange={e => setMaxComps(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Max"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
           </div>
-
 
           {/* Opp Score */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Opp Score</label>
             <FilterInfo tip="Opportunity Score (0–100) — combines absorption rate, months of supply, and population growth. Filter to focus on high-opportunity markets." />
-            <select value={oppScoreFilter} onChange={e => setOppScoreFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
-              {['All', 'Under 40', '40–59', '60–79', '80+'].map(v => <option key={v}>{v}</option>)}
-            </select>
+            <input
+              value={minOppScore}
+              onChange={e => setMinOppScore(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Min"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              value={maxOppScore}
+              onChange={e => setMaxOppScore(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Max"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
           </div>
 
           {/* Days on Market */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 font-medium">Days on Market</label>
             <FilterInfo tip="Median days a parcel sits on the market before going under contract. Lower = faster-moving market. Filter to find active markets." />
-            <select value={domFilter} onChange={e => setDomFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white">
-              {['All', '<65d', '65–130d', '130d+'].map(v => <option key={v}>{v}</option>)}
-            </select>
+            <input
+              value={minDom}
+              onChange={e => setMinDom(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Min"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              value={maxDom}
+              onChange={e => setMaxDom(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Max"
+              className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-accent bg-white"
+            />
           </div>
 
           {anyFilter && (
             <button
-              onClick={() => { setStateFilter('All'); setMinArvInput(''); setMaxArvInput(''); setMinComps('All'); setCountySearch(''); setOppScoreFilter('All'); setDomFilter('All'); }}
+              onClick={() => { setStateFilter('All'); setMinArvInput(''); setMaxArvInput(''); setMinComps(''); setMaxComps(''); setCountySearch(''); setMinOppScore(''); setMaxOppScore(''); setMinDom(''); setMaxDom(''); }}
               className="text-xs text-accent hover:underline ml-auto"
             >
               Clear filters
