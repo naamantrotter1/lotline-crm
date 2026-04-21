@@ -90,6 +90,17 @@ export default function Dashboard() {
     [salesClosedDeals],
   );
 
+  const salesAvgProfit = salesClosedDeals.length ? closedProfit / salesClosedDeals.length : 0;
+
+  const salesAvgDaysToList = useMemo(() => {
+    const withDates = salesClosedDeals.filter(d => d.contractDate && d.dateListed);
+    if (!withDates.length) return null;
+    const total = withDates.reduce((s, d) => {
+      return s + (new Date(d.dateListed) - new Date(d.contractDate)) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(total / withDates.length);
+  }, [salesClosedDeals]);
+
   const totalARV = useMemo(
     () => activeDeals.reduce((s, d) => s + (d.arv || 0), 0),
     [activeDeals],
@@ -333,16 +344,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Year at a Glance */}
+      {/* Sales Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h2 className="text-base font-semibold text-sidebar mb-4">Year at a Glance</h2>
+          <h2 className="text-base font-semibold text-sidebar mb-4">Sales Overview</h2>
           <div className="space-y-4">
             {[
-              { label: 'Deals Closed', value: closedThisYear.length },
-              { label: 'Closed Profit', value: fmt$(closedThisYearProfit) },
-              { label: 'Avg Profit / Deal', value: closedThisYear.length ? fmt$(avgProfitClosed) : '—' },
-              { label: 'Avg Days to Close', value: avgDaysToClose != null ? `${avgDaysToClose}d` : '—' },
+              { label: 'Deals Closed', value: salesClosedDeals.length },
+              { label: 'Closed Profit', value: fmt$(closedProfit) },
+              { label: 'Avg Profit / Deal', value: salesClosedDeals.length ? fmt$(salesAvgProfit) : '—' },
+              { label: 'Avg Days to List', value: salesAvgDaysToList != null ? `${salesAvgDaysToList}d` : '—' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <p className="text-sm text-gray-500">{item.label}</p>
