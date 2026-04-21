@@ -12,8 +12,12 @@ const DEV_COLUMNS = [
     tagOnly: true, // only show deals tagged 'Land Clearing'
   },
   {
-    key: 'permits', label: 'Permits', color: '#d97706', bg: '#fef3c7',
-    subtasks: ['Permits submitted', 'Permits approved'],
+    key: 'env_permits', label: 'Environmental Permits', color: '#16a34a', bg: '#dcfce7',
+    subtasks: ['Septic Permit', 'Well Permit', 'Construction Authorization Permit'],
+  },
+  {
+    key: 'construction_permits', label: 'Construction Permits', color: '#d97706', bg: '#fef3c7',
+    subtasks: ['Building Permit', 'Electrical Permit', 'Plumbing Permit', 'Mechanical Permit'],
   },
   {
     key: 'mh_order', label: 'Mobile Home Order', color: '#7c3aed', bg: '#ede9fe',

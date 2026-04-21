@@ -38,7 +38,8 @@ const DD_LS_INIT_MAP = {
 // ── Development task groups ───────────────────────────────────────────────────
 const DEV_GROUPS = [
   { name: 'Land Clearing', tasks: ['Land cleared'] },
-  { name: 'Permits', tasks: ['Permits submitted', 'Permits approved'] },
+  { name: 'Environmental Permits', tasks: ['Septic Permit', 'Well Permit', 'Construction Authorization Permit'] },
+  { name: 'Construction Permits', tasks: ['Building Permit', 'Electrical Permit', 'Plumbing Permit', 'Mechanical Permit'] },
   { name: 'Mobile Home Order', tasks: ['Order mobile home', 'MH ordered'] },
   { name: 'Set-Up Crew', tasks: ['Schedule set-up crew', 'Set-up crew scheduled', 'Set-up crew complete (home set)', 'De-title home (after set)'] },
   { name: 'Septic', tasks: ['Schedule septic', 'Septic scheduled', 'Septic complete'] },
