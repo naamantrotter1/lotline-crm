@@ -58,6 +58,7 @@ export default function Dashboard() {
   const { deals, archivedDeals, dealsLoading } = useDeals();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [showActiveDeals, setShowActiveDeals] = useState(false);
   const [showNewThisMonth, setShowNewThisMonth] = useState(false);
   const [monthModal, setMonthModal] = useState(null); // { month: 'Apr', deals: [] }
 
@@ -185,12 +186,17 @@ export default function Dashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard
-          label="Active Deals"
-          value={activeDeals.length}
-          icon={Home}
-          color="text-blue-500"
-        />
+        <div
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setShowActiveDeals(true)}
+        >
+          <StatCard
+            label="Active Deals"
+            value={activeDeals.length}
+            icon={Home}
+            color="text-blue-500"
+          />
+        </div>
         <div
           className="cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => setShowNewThisMonth(true)}
@@ -377,6 +383,45 @@ export default function Dashboard() {
                   );
                 })}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Deals Modal */}
+      {showActiveDeals && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowActiveDeals(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-sidebar">Active Deals</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{activeDeals.length} deal{activeDeals.length !== 1 ? 's' : ''} in pipeline</p>
+              </div>
+              <button onClick={() => setShowActiveDeals(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={18} /></button>
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              {activeDeals.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-10">No active deals</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {activeDeals.map(d => {
+                    const profit = calcNetProfit(d);
+                    return (
+                      <li key={d.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => { setShowActiveDeals(false); navigate(`/deal/${d.id}`); }}>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
+                          <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''} · {d.stage}</p>
+                        </div>
+                        <div className="ml-4 text-right shrink-0">
+                          <p className="text-sm font-semibold text-gray-700">{fmt$(d.arv)}</p>
+                          <p className={`text-xs font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt$(profit)}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
         </div>
