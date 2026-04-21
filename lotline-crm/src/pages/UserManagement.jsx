@@ -530,7 +530,6 @@ export default function UserManagement() {
               <tr>
                 <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">User</th>
                 <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Email</th>
-                <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Current Role</th>
                 <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Change Role</th>
                 <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Joined</th>
                 <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Actions</th>
@@ -555,9 +554,6 @@ export default function UserManagement() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-gray-500">{user.email}</td>
-                    <td className="px-5 py-3.5">
-                      <RoleBadge role={user.role} />
-                    </td>
                     <td className="px-5 py-3.5">
                       {isMe ? (
                         <span className="text-xs text-gray-400 italic">Cannot change own role</span>
