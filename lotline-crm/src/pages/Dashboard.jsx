@@ -344,16 +344,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Sales Overview */}
+      {/* Deal Overview + Sales Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h2 className="text-base font-semibold text-sidebar mb-4">Sales Overview</h2>
+          <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview</h2>
           <div className="space-y-4">
             {[
-              { label: 'Deals Closed', value: salesClosedDeals.length },
-              { label: 'Closed Profit', value: fmt$(closedProfit) },
-              { label: 'Avg Profit / Deal', value: salesClosedDeals.length ? fmt$(salesAvgProfit) : '—' },
-              { label: 'Avg Days to List', value: salesAvgDaysToList != null ? `${salesAvgDaysToList}d` : '—' },
+              { label: 'Deals', value: doAllDeals.length },
+              { label: 'Avg Profit / Deal', value: doAllDeals.length ? `$${Math.round(doAvgProfit).toLocaleString()}` : '—' },
+              { label: 'Avg Days to List', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <p className="text-sm text-gray-500">{item.label}</p>
@@ -364,12 +363,13 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-card rounded-xl shadow-sm p-4">
-          <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview</h2>
+          <h2 className="text-base font-semibold text-sidebar mb-4">Sales Overview</h2>
           <div className="space-y-4">
             {[
-              { label: 'Deals', value: doAllDeals.length },
-              { label: 'Avg Profit / Deal', value: doAllDeals.length ? `$${Math.round(doAvgProfit).toLocaleString()}` : '—' },
-              { label: 'Avg Days to List', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
+              { label: 'Deals Closed', value: salesClosedDeals.length },
+              { label: 'Closed Profit', value: fmt$(closedProfit) },
+              { label: 'Avg Profit / Deal', value: salesClosedDeals.length ? fmt$(salesAvgProfit) : '—' },
+              { label: 'Avg Days to List', value: salesAvgDaysToList != null ? `${salesAvgDaysToList}d` : '—' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <p className="text-sm text-gray-500">{item.label}</p>
