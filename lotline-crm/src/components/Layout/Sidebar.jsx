@@ -2,10 +2,9 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
-  Calculator, Building, HardHat, Archive, Settings,
-  Globe, Landmark, LogOut,
+  Calculator, Building, HardHat, Archive,
+  Globe, Landmark,
 } from 'lucide-react';
-import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 
 const BASE_NAV_SECTIONS = [
@@ -40,7 +39,6 @@ const BASE_NAV_SECTIONS = [
       { icon: Building,    label: 'Home Models',            to: '/home-models'     },
       { icon: HardHat,     label: 'Contractor Database',    to: '/contractors'     },
       { icon: Archive,     label: 'Archived Deals',         to: '/archived'        },
-      { icon: Settings,    label: 'Settings',               to: '/settings'        },
     ],
   },
 ];
@@ -50,15 +48,8 @@ const AGENT_ALLOWED    = new Set(['/pipelines/deal-overview', '/pipelines/sales'
 // Routes investor-role users are allowed to see
 const INVESTOR_ALLOWED = new Set(['/investors']);
 
-const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', viewer: 'Viewer', agent: 'Agent', investor: 'Investor' };
-
 export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
-  const { profile, signOut } = useAuth();
-  const { canAdmin, isAgent, isInvestor } = usePermissions();
-
-  const initials = profile?.name
-    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
+  const { isAgent, isInvestor } = usePermissions();
 
   const filterItems = (allowed) =>
     BASE_NAV_SECTIONS
@@ -82,7 +73,6 @@ export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose
         width: isMobile ? '250px' : (collapsed ? '64px' : '250px'),
         backgroundColor: '#1a2332',
         color: 'white',
-        // Mobile: fixed overlay drawer; Desktop: inline in flex row
         ...(isMobile ? {
           position: 'fixed',
           top: 0,
@@ -139,45 +129,6 @@ export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose
           </div>
         ))}
       </nav>
-
-      {/* Bottom user area */}
-      {!collapsed && (
-        <div className="border-t border-white/10 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {initials}
-            </div>
-            <div className="overflow-hidden flex-1 min-w-0">
-              <p className="text-white text-xs font-medium truncate">
-                {profile?.name || profile?.email || 'Loading…'}
-              </p>
-              <p className="text-white/40 text-xs truncate capitalize">
-                {ROLE_LABEL[profile?.role] || '—'}
-              </p>
-            </div>
-            <button
-              onClick={signOut}
-              title="Sign out"
-              className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Collapsed sign-out */}
-      {collapsed && !isMobile && (
-        <div className="border-t border-white/10 p-3 flex justify-center">
-          <button
-            onClick={signOut}
-            title="Sign out"
-            className="text-white/40 hover:text-white/80 transition-colors"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
-      )}
     </aside>
   );
 }
