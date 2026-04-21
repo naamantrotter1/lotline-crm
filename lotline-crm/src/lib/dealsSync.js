@@ -218,6 +218,8 @@ export async function loadAllDeals() {
           || fromLS.contractSignedAt
           || null,
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
+        // Fall back to localStorage if Supabase has null (e.g. previous saves failed)
+        contractDate: fromSupabase.contractDate || fromLS.contractDate || null,
       };
     });
     lsSet(deals);
