@@ -1100,7 +1100,18 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
-      const updated = { ...deal, stage: val };
+      const updated = {
+        ...deal,
+        stage: val,
+        // Stamp the moment this deal moves into Deal Overview (only set once)
+        ...(val === 'Contract Signed' && !deal.contractSignedAt
+          ? { contractSignedAt: new Date().toISOString() }
+          : {}),
+        // Clear the timestamp if moved back to a Land Acq stage
+        ...(val !== 'Contract Signed' && !['Due Diligence', 'Development', 'Complete'].includes(val)
+          ? { contractSignedAt: null }
+          : {}),
+      };
       saveDeal(updated);
       setDeals(prev => {
         const idx = prev.findIndex(x => String(x.id) === String(updated.id));
