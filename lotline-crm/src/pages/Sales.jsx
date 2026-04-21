@@ -2,12 +2,8 @@ import { Home } from 'lucide-react';
 
 const SALES_STAGES = [
   'Listed',
-  'Showing',
-  'Offer Received',
   'Under Contract',
-  'Inspection',
-  'Appraisal',
-  'Closing',
+  'Closed',
 ];
 
 export default function Sales() {
