@@ -46,7 +46,10 @@ function fmt$(n) {
 
 function getMonthKey(dateStr) {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
+  // Date-only strings (YYYY-MM-DD) are parsed as UTC midnight which shifts the day
+  // in non-UTC timezones — append local noon to force correct local-date parsing.
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr + 'T12:00:00' : dateStr;
+  const d = new Date(normalized);
   if (isNaN(d)) return null;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
