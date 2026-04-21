@@ -164,6 +164,38 @@ const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on 
 const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Line of Credit', 'Conventional'];
 
+// ── Decimal input — keeps "13." in display while typing ───────────────────────
+function DecimalInput({ value, onChange, className }) {
+  const [display, setDisplay] = useState(() => value === 0 ? '' : String(value));
+  const committed = useRef(value);
+  if (committed.current !== value) {
+    committed.current = value;
+    // only resync if not in the middle of decimal entry
+  }
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      onFocus={e => e.target.select()}
+      onChange={e => {
+        const raw = e.target.value;
+        if (raw !== '' && !/^-?\d*\.?\d*$/.test(raw)) return;
+        setDisplay(raw);
+        if (raw === '') { onChange(0); return; }
+        if (!raw.endsWith('.')) { const n = parseFloat(raw); if (!isNaN(n)) onChange(n); }
+      }}
+      onBlur={() => {
+        const n = parseFloat(display) || 0;
+        onChange(n);
+        committed.current = n;
+        setDisplay(n === 0 ? '' : String(n));
+      }}
+      className={className}
+    />
+  );
+}
+
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
 function OverviewTab({
   deal, costs, setCosts, notes, setNotes,
@@ -549,7 +581,7 @@ function OverviewTab({
                       type="number"
                       value={loanAmountOverride || totalLent}
                       onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
-                      onFocus={e => e.target.select()}
+                      onFocus={e => e.target.select()} type="number"
                       className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>
@@ -566,8 +598,7 @@ function OverviewTab({
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Interest</p>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                        <input type="text" inputMode="decimal" value={interestRate || ''} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <DecimalInput value={interestRate} onChange={setInterestRate} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
@@ -584,9 +615,10 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{originationFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <input type="text" inputMode="decimal" value={(originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat) || ''}
-                          onChange={e => originationFeeType === 'percentage' ? setOriginationFeePct(Number(e.target.value) || 0) : setOriginationFeeFlat(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <DecimalInput
+                          value={originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat}
+                          onChange={v => originationFeeType === 'percentage' ? setOriginationFeePct(v) : setOriginationFeeFlat(v)}
+                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
@@ -603,9 +635,10 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <input type="text" inputMode="decimal" value={(servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat) || ''}
-                          onChange={e => servicingFeeType === 'percentage' ? setServicingFeePct(Number(e.target.value) || 0) : setServicingFeeFlat(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <DecimalInput
+                          value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
+                          onChange={v => servicingFeeType === 'percentage' ? setServicingFeePct(v) : setServicingFeeFlat(v)}
+                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
@@ -620,8 +653,7 @@ function OverviewTab({
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Profit Share & Terms</p>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share (%)</p>
-                        <input type="text" inputMode="decimal" value={profitSharePct || ''} onChange={e => setProfitSharePct(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <DecimalInput value={profitSharePct} onChange={setProfitSharePct} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share Amount</p>
@@ -639,8 +671,7 @@ function OverviewTab({
                       </div>
                       <div className="py-2">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Holding Costs ($)</p>
-                        <input type="text" inputMode="decimal" value={monthlyHoldCost || ''} onChange={e => setMonthlyHoldCost(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                        <DecimalInput value={monthlyHoldCost} onChange={setMonthlyHoldCost} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
                       </div>
                     </div>
                   </div>
