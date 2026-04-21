@@ -143,15 +143,23 @@ export default function Dashboard() {
     return Math.round(total / withDates.length);
   }, [closedThisYear]);
 
-  // ── Deal Overview "Complete" deals this year ─────────────────────────────────
-  const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
+  // ── Deal Overview + Sales pipeline stats ─────────────────────────────────────
+  const DO_AND_SALES_STAGES = new Set([
+    'Contract Signed', 'Due Diligence', 'Development', 'Complete',
+    'Listed', 'Under Contract', 'Closed',
+  ]);
+  const doAllDeals = useMemo(
+    () => (deals || []).filter(d => DO_AND_SALES_STAGES.has(d.stage)),
+    [deals],
+  );
+
   const doCompleteThisYear = useMemo(
-    () => activeDeals.filter(d => {
+    () => doAllDeals.filter(d => {
       if (d.stage !== 'Complete') return false;
       const dt = new Date(d.closeDate || d.contractDate || '');
       return !isNaN(dt) && dt.getFullYear() === year;
     }),
-    [activeDeals, year],
+    [doAllDeals, year],
   );
 
   const doCompleteProfit = useMemo(
@@ -343,7 +351,7 @@ export default function Dashboard() {
           <h2 className="text-base font-semibold text-sidebar mb-4">Deal Overview — {year}</h2>
           <div className="space-y-4">
             {[
-              { label: 'Deals Completed', value: doCompleteThisYear.length },
+              { label: 'Deals', value: doAllDeals.length },
               { label: 'Completed Profit', value: fmt$(doCompleteProfit) },
               { label: 'Avg Profit / Deal', value: doCompleteThisYear.length ? fmt$(doAvgProfit) : '—' },
               { label: 'Avg Days to Close', value: doAvgDaysToClose != null ? `${doAvgDaysToClose}d` : '—' },
