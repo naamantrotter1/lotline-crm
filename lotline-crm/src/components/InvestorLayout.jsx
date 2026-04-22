@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { logImpersonationEnd, fetchAllInvestors } from '../lib/investorPortalData';
+import { logImpersonationEnd, fetchAllInvestors, fetchInvestorNamesFromDeals } from '../lib/investorPortalData';
 
 const NAV = [
   { to: '/investor/home',           icon: LayoutDashboard, label: 'Dashboard'       },
@@ -31,10 +31,16 @@ export default function InvestorLayout() {
 
   const isOperator = canEdit || canAdmin;
 
-  // Operators: fetch investor list for the picker
+  // Operators: fetch investor list for the picker — try investors table first, fall back to deal data
   useEffect(() => {
     if (!isOperator || investorRecord) return;
-    fetchAllInvestors().then(({ investors: list }) => setInvestors(list));
+    fetchAllInvestors().then(({ investors: list }) => {
+      if (list.length > 0) {
+        setInvestors(list);
+      } else {
+        fetchInvestorNamesFromDeals().then(({ investors: fallback }) => setInvestors(fallback));
+      }
+    });
   }, [isOperator, investorRecord]);
 
   // The investor we're viewing as — impersonated > selected (operator picker) > linked record

@@ -38,7 +38,6 @@ export async function fetchMyDeals(investorName) {
     .select('*')
     .eq('investor', investorName)
     .eq('is_archived', false)
-    .eq('visible_to_investors', true)
     .order('close_date', { ascending: true, nullsFirst: false });
   return { deals: data ?? [], error };
 }
@@ -49,9 +48,24 @@ export async function fetchMyDeal(dealId, investorName) {
     .select('*')
     .eq('id', dealId)
     .eq('investor', investorName)
-    .eq('visible_to_investors', true)
     .single();
   return { deal: data ?? null, error };
+}
+
+/**
+ * Fetch distinct investor names from the deals table.
+ * Used as a fallback when the investors table doesn't exist yet.
+ */
+export async function fetchInvestorNamesFromDeals() {
+  const { data, error } = await supabase
+    .from('deals')
+    .select('investor')
+    .not('investor', 'is', null)
+    .neq('investor', '')
+    .eq('is_archived', false);
+  if (error) return { investors: [], error };
+  const names = [...new Set((data ?? []).map(d => d.investor).filter(Boolean))].sort();
+  return { investors: names.map(name => ({ id: name, name })), error: null };
 }
 
 // ─────────────────────────────────────────────────────────────
