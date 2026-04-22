@@ -407,11 +407,11 @@ function NeedsFundingTab({ onDealClick }) {
   const allUnfunded = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
-  // Also include live context deals with no investor that aren't already in static table
-  const staticAddrs = new Set(ALL_DEALS_TABLE.map(d => (d.address || '').trim().toLowerCase()));
+  // Also include live context deals with no investor not already covered by a static unfunded entry
+  const staticUnfundedAddrs = new Set(allUnfunded.map(d => (d.address || '').trim().toLowerCase()));
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
-    .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticAddrs.has((d.address || '').trim().toLowerCase()))
+    .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticUnfundedAddrs.has((d.address || '').trim().toLowerCase()))
     .map(d => {
       const totalCapital = (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return {
