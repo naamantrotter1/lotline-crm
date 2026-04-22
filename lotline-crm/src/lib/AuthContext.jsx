@@ -3,10 +3,16 @@ import { supabase } from './supabase';
 
 const AuthContext = createContext(null);
 
+// ── Impersonation context (operator "view as investor") ───────
+export const ImpersonationContext = createContext({ impersonating: null, setImpersonating: () => {} });
+
 export function AuthProvider({ children }) {
-  const [session, setSession]   = useState(null);
-  const [profile, setProfile]   = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [session, setSession]         = useState(null);
+  const [profile, setProfile]         = useState(null);
+  const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
+  const [loading, setLoading]         = useState(true);
+  // Operator impersonation: { investor, logId }
+  const [impersonating, setImpersonating] = useState(null);
 
   async function fetchProfile(userId) {
     try {
@@ -17,8 +23,18 @@ export function AuthProvider({ children }) {
         .single();
       if (!error && data) {
         setProfile(data);
-        // Update crm_user so Homes iframe pre-fill still works
         localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
+        // If investor role, resolve their linked investor record
+        if (data.role === 'investor') {
+          const { data: link } = await supabase
+            .from('investor_users')
+            .select('investor_id, investors(*)')
+            .eq('user_id', userId)
+            .single();
+          setInvestorRecord(link?.investors ?? null);
+        } else {
+          setInvestorRecord(null);
+        }
       }
     } catch {
       // profile fetch failed — user still logged in, just no role data yet
@@ -50,6 +66,8 @@ export function AuthProvider({ children }) {
           fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setInvestorRecord(null);
+          setImpersonating(null);
           localStorage.removeItem('crm_user');
           // Clear cached deals on logout so next user starts fresh
           localStorage.removeItem('lotline_custom_deals');
@@ -86,21 +104,28 @@ export function AuthProvider({ children }) {
   const refreshProfile = (userId) => fetchProfile(userId);
 
   return (
-    <AuthContext.Provider value={{
-      session,
-      profile,
-      role: profile?.role ?? null,
-      loading,
-      signIn,
-      signOut,
-      updateProfile,
-      refreshProfile,
-    }}>
-      {children}
-    </AuthContext.Provider>
+    <ImpersonationContext.Provider value={{ impersonating, setImpersonating }}>
+      <AuthContext.Provider value={{
+        session,
+        profile,
+        role: profile?.role ?? null,
+        investorRecord,   // { id, name, ... } — only non-null for investor-role users
+        loading,
+        signIn,
+        signOut,
+        updateProfile,
+        refreshProfile,
+      }}>
+        {children}
+      </AuthContext.Provider>
+    </ImpersonationContext.Provider>
   );
 }
 
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+export function useImpersonation() {
+  return useContext(ImpersonationContext);
 }

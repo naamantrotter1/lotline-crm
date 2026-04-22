@@ -3,6 +3,15 @@ import { seedDeals, migrateContractSignedAt } from './utils/seedDeals';
 import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
+import InvestorLayout from './components/InvestorLayout';
+import InvestorHome from './pages/investor/InvestorHome';
+import InvestorDeals from './pages/investor/InvestorDeals';
+import InvestorDealDetail from './pages/investor/InvestorDealDetail';
+import InvestorDocuments from './pages/investor/InvestorDocuments';
+import InvestorUpdates from './pages/investor/InvestorUpdates';
+import InvestorDistributions from './pages/investor/InvestorDistributions';
+import InvestorOpportunities from './pages/investor/InvestorOpportunities';
+import InvestorMessages from './pages/investor/InvestorMessages';
 seedDeals();
 migrateContractSignedAt();
 import Layout from './components/Layout/Layout';
@@ -62,7 +71,7 @@ function AgentIndexRoute() {
   const { loading } = useAuth();
   if (loading) return null;
   if (isAgent)    return <Navigate to="/pipelines/deal-overview" replace />;
-  if (isInvestor) return <Navigate to="/investors" replace />;
+  if (isInvestor) return <Navigate to="/investor/home" replace />;
   return <Dashboard />;
 }
 
@@ -75,7 +84,26 @@ const AGENT_PERMITTED = new Set([
 ]);
 
 // Routes investor-role users are permitted to access
-const INVESTOR_PERMITTED = new Set(['/investors']);
+const INVESTOR_PERMITTED = new Set([
+  '/investors',
+  '/investor/home',
+  '/investor/deals',
+  '/investor/distributions',
+  '/investor/updates',
+  '/investor/documents',
+  '/investor/opportunities',
+  '/investor/messages',
+]);
+
+/** Gate for investor-only routes: operators can also enter via impersonation */
+function InvestorRoute({ children }) {
+  const { isInvestor, canEdit, canAdmin } = usePermissions();
+  const { loading } = useAuth();
+  if (loading) return null;
+  // Operators are allowed in (they may be impersonating)
+  if (isInvestor || canEdit || canAdmin) return children;
+  return <Navigate to="/" replace />;
+}
 
 /** Redirects agents/investors away from pages they have no access to */
 function AgentRoute({ children, path }) {
@@ -86,7 +114,7 @@ function AgentRoute({ children, path }) {
     return <Navigate to="/pipelines/deal-overview" replace />;
   }
   if (isInvestor && path && !INVESTOR_PERMITTED.has('/' + path)) {
-    return <Navigate to="/investors" replace />;
+    return <Navigate to="/investor/home" replace />;
   }
   return children;
 }
@@ -143,6 +171,28 @@ export default function App() {
                   </AdminRoute>
                 }
               />
+            </Route>
+
+            {/* ── Investor Portal (dual-mode: investor login or operator impersonation) */}
+            <Route
+              path="/investor"
+              element={
+                <ProtectedRoute>
+                  <InvestorRoute>
+                    <InvestorLayout />
+                  </InvestorRoute>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/investor/home" replace />} />
+              <Route path="home"                  element={<InvestorHome />} />
+              <Route path="deals"                 element={<InvestorDeals />} />
+              <Route path="deals/:id"             element={<InvestorDealDetail />} />
+              <Route path="distributions"         element={<InvestorDistributions />} />
+              <Route path="updates"               element={<InvestorUpdates />} />
+              <Route path="documents"             element={<InvestorDocuments />} />
+              <Route path="opportunities"         element={<InvestorOpportunities />} />
+              <Route path="messages"              element={<InvestorMessages />} />
             </Route>
           </Routes>
         </DealsProvider>
