@@ -407,6 +407,26 @@ function NeedsFundingTab({ onDealClick }) {
   const allUnfunded = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
+  // Also include live context deals with no investor that aren't already in static table
+  const staticAddrs = new Set(ALL_DEALS_TABLE.map(d => (d.address || '').trim().toLowerCase()));
+  const liveUnfunded = contextDeals
+    .filter(d => !d.isArchived && UNFUNDED.includes(d.investor || '') && !staticAddrs.has((d.address || '').trim().toLowerCase()))
+    .map(d => {
+      const totalCapital = (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
+      return {
+        address: d.address,
+        pipeline: d.stage,
+        stage: d.stage,
+        lender: '',
+        totalCapital,
+        landCost: d.land || 0,
+        construction: totalCapital - (d.land || 0),
+        arv: d.arv || 0,
+        closeDate: d.closeDate || null,
+        _isLive: true,
+      };
+    });
+
   // Persist assignments & new investors across sessions
   const [assignments, setAssignments] = useState(() => {
     try { return JSON.parse(localStorage.getItem('nf_assignments') || '{}'); } catch { return {}; }
@@ -417,8 +437,11 @@ function NeedsFundingTab({ onDealClick }) {
   const [modalDeal, setModalDeal] = useState(null);
 
   // Once assigned, deal leaves the list
-  const deals = allUnfunded.filter(d => !assignments[d.address]);
-  const totalNeeded = deals.reduce((s, d) => s + d.totalCapital, 0);
+  const deals = [
+    ...allUnfunded.filter(d => !assignments[d.address]),
+    ...liveUnfunded.filter(d => !assignments[d.address]),
+  ];
+  const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
   const allInvestors = [
     ...loadInvestors().filter(i => i.name !== 'Cash' && i.name !== 'None'),
