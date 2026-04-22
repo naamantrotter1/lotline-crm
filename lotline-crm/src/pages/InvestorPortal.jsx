@@ -583,7 +583,7 @@ const PARTNER_STATUS_COLORS = {
   'Pass':          'bg-red-100 text-red-700',
 };
 
-function AvailableInvestmentsTab() {
+function AvailableInvestmentsTab({ onDealClick }) {
   const loanRequests = (() => { try { return JSON.parse(localStorage.getItem('lending_requests') || '[]'); } catch { return []; } })();
   const partnerships = (() => { try { return JSON.parse(localStorage.getItem('partnership_submissions') || '[]'); } catch { return []; } })();
 
@@ -624,7 +624,7 @@ function AvailableInvestmentsTab() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loanRequests.map(r => (
-                  <tr key={r.ref} className="hover:bg-gray-50/60">
+                  <tr key={r.ref} onClick={() => onDealClick({ address: r.address })} className="hover:bg-gray-50/60 cursor-pointer">
                     <td className="px-4 py-3 font-semibold text-accent whitespace-nowrap">{r.ref}</td>
                     <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate">{r.address}</td>
                     <td className="px-4 py-3 font-semibold text-[#1a2332] whitespace-nowrap">${(r.loanAmount || 0).toLocaleString()}</td>
@@ -662,7 +662,7 @@ function AvailableInvestmentsTab() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {partnerships.map(r => (
-                  <tr key={r.ref} className="hover:bg-gray-50/60">
+                  <tr key={r.ref} onClick={() => onDealClick({ address: r.address })} className="hover:bg-gray-50/60 cursor-pointer">
                     <td className="px-4 py-3 font-semibold text-accent whitespace-nowrap">{r.ref}</td>
                     <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate">{r.address}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.dealType}</td>
@@ -777,7 +777,7 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
-        {activeTab === 'available-investments' && <AvailableInvestmentsTab />}
+        {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
 
     </div>
