@@ -92,8 +92,9 @@ function dealToRow(deal) {
     projected_payout_date:         deal.projectedPayoutDate || null,
     dd_deadline2:            deal.ddDeadline || null,
     deal_owner:              deal.dealOwner || null,
-    // listing_url: omitted until column is added to Supabase
-    // contract_signed_at: omitted until column is added to Supabase
+    listing_url:             deal.listingUrl || null,
+    contract_signed_at:      deal.contractSignedAt || null,
+    scenario_data:           deal.scenarioData ? JSON.stringify(deal.scenarioData) : null,
   };
 }
 
@@ -178,6 +179,7 @@ function rowToDeal(row) {
     listingUrl:            row.listing_url,
     contractSignedAt:      row.contract_signed_at,
     dealOwner:             row.deal_owner,
+    scenarioData:          row.scenario_data ? (typeof row.scenario_data === 'string' ? JSON.parse(row.scenario_data) : row.scenario_data) : null,
   };
 }
 

@@ -233,6 +233,7 @@ function OverviewTab({
   drawPct, setDrawPct,
   annualFeePct, setAnnualFeePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
+  loanAmountOverride, setLoanAmountOverride,
   realtor, setRealtor,
   dateListed, setDateListed,
   agentUsers,
@@ -254,7 +255,6 @@ function OverviewTab({
 
   // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const [loanAmountOverride, setLoanAmountOverride] = useState(0);
   const effectiveLoanAmount = loanAmountOverride || totalLent;
   const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
   const originationFee = originationFeeType === 'percentage'
@@ -1517,21 +1517,24 @@ function DealDetailContent({ deal }) {
   const [realtor, setRealtor] = useState(deal?.realtor || '');
   const [dateListed, setDateListed] = useState(deal?.dateListed || '');
 
-  // Financing scenario state
-  const [selectedScenario, setSelectedScenario] = useState('');
-  const [interestRate, setInterestRate] = useState(getDefaultRate(deal?.investor));
-  const [originationFeeType, setOriginationFeeType] = useState('percentage');
-  const [originationFeePct, setOriginationFeePct] = useState(
-    deal?.investor === 'Louis Isom' || deal?.investor === 'Blue Bay Capital' || deal?.investor === 'Windstone' ? 3 : 0
+  // Financing scenario state — restored from scenarioData if available
+  const sd = deal?.scenarioData || {};
+  const [selectedScenario, setSelectedScenario] = useState(
+    FINANCING_SCENARIOS.find(s => s.financingType === (deal?.financing || ''))?.id || ''
   );
-  const [originationFeeFlat, setOriginationFeeFlat] = useState(0);
-  const [servicingFeeType, setServicingFeeType] = useState('flat');
-  const [servicingFeeFlat, setServicingFeeFlat] = useState(deal?.investor === 'Louis Isom' ? 750 : 0);
-  const [servicingFeePct, setServicingFeePct] = useState(0);
-  const [balloonTerm, setBalloonTerm] = useState(12);
-  const [holdPeriod, setHoldPeriod] = useState(deal?.holdingMonths || 6);
-  const [monthlyHoldCost, setMonthlyHoldCost] = useState(deal?.holdingPerMonth || 250);
-  const [profitSharePct, setProfitSharePct] = useState(deal?.investor === 'Atium Build Group LLC' ? 5 : 0);
+  const [interestRate, setInterestRate] = useState(sd.interestRate ?? getDefaultRate(deal?.investor));
+  const [originationFeeType, setOriginationFeeType] = useState(sd.originationFeeType ?? 'percentage');
+  const [originationFeePct, setOriginationFeePct] = useState(
+    sd.originationFeePct ?? (deal?.investor === 'Louis Isom' || deal?.investor === 'Blue Bay Capital' || deal?.investor === 'Windstone' ? 3 : 0)
+  );
+  const [originationFeeFlat, setOriginationFeeFlat] = useState(sd.originationFeeFlat ?? 0);
+  const [servicingFeeType, setServicingFeeType] = useState(sd.servicingFeeType ?? 'flat');
+  const [servicingFeeFlat, setServicingFeeFlat] = useState(sd.servicingFeeFlat ?? (deal?.investor === 'Louis Isom' ? 750 : 0));
+  const [servicingFeePct, setServicingFeePct] = useState(sd.servicingFeePct ?? 0);
+  const [balloonTerm, setBalloonTerm] = useState(sd.balloonTerm ?? 12);
+  const [holdPeriod, setHoldPeriod] = useState(sd.holdPeriod ?? deal?.holdingMonths ?? 6);
+  const [monthlyHoldCost, setMonthlyHoldCost] = useState(sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
+  const [profitSharePct, setProfitSharePct] = useState(sd.profitSharePct ?? (deal?.investor === 'Atium Build Group LLC' ? 5 : 0));
   const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
   const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
   const [investorCapitalContributed, setInvestorCapitalContributed] = useState(deal?.investorCapitalContributed ?? null);
@@ -1539,17 +1542,25 @@ function DealDetailContent({ deal }) {
   const [projectedPayoutDate, setProjectedPayoutDate] = useState(deal?.projectedPayoutDate ?? null);
 
   // Hard Money Loan specific
-  const [ltcPct, setLtcPct] = useState(0);
-  const [originationPoints, setOriginationPoints] = useState(0);
+  const [ltcPct, setLtcPct] = useState(sd.ltcPct ?? 0);
+  const [originationPoints, setOriginationPoints] = useState(sd.originationPoints ?? 0);
   // Line of Credit specific
-  const [creditLimit, setCreditLimit] = useState(0);
-  const [drawPct, setDrawPct] = useState(0);
-  const [annualFeePct, setAnnualFeePct] = useState(0);
+  const [creditLimit, setCreditLimit] = useState(sd.creditLimit ?? 0);
+  const [drawPct, setDrawPct] = useState(sd.drawPct ?? 0);
+  const [annualFeePct, setAnnualFeePct] = useState(sd.annualFeePct ?? 0);
   // Profit Split specific
-  const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(0);
+  const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
+  const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? 0);
+
+  // Compute active financing type from selected scenario (used by auto-save)
+  const activeFinancingForSave = selectedScenario
+    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
+    : financing;
 
   function applyScenario(scenarioId) {
     setSelectedScenario(scenarioId);
+    const scenario = FINANCING_SCENARIOS.find(s => s.id === scenarioId);
+    setFinancing(scenario?.financingType || '');
   }
 
   // Keep stateRef in sync with latest state values every render (used by saveNow)
@@ -1582,7 +1593,23 @@ function DealDetailContent({ deal }) {
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
       realtor, dateListed, dealOwner,
-      investorCapitalContributed, investorEquityPct, projectedPayoutDate,
+      // Derive investor position fields from scenario — only when a scenario is explicitly active
+      investorCapitalContributed:
+        (selectedScenario === 'hard-money-loan' || selectedScenario === 'hard-money-land-home')
+          ? (loanAmountOverride || (costs.mobileHome || 0) + (costs.land || 0))
+          : investorCapitalContributed,
+      investorEquityPct:
+        selectedScenario === 'profit-split'
+          ? investorProfitSplitPct
+          : investorEquityPct,
+      projectedPayoutDate,
+      // Pack all scenario-specific inputs so they survive page reload
+      scenarioData: {
+        interestRate, originationFeeType, originationFeePct, originationFeeFlat,
+        servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
+        holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
+        loanAmountOverride, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+      },
       ...costs,
     };
 
@@ -1606,6 +1633,10 @@ function DealDetailContent({ deal }) {
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate,
+    loanAmountOverride, investorProfitSplitPct, selectedScenario,
+    interestRate, originationFeeType, originationFeePct, originationFeeFlat,
+    servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
+    profitSharePct, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1887,6 +1918,7 @@ function DealDetailContent({ deal }) {
             drawPct={drawPct} setDrawPct={setDrawPct}
             annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
+            loanAmountOverride={loanAmountOverride} setLoanAmountOverride={setLoanAmountOverride}
             realtor={realtor} setRealtor={setRealtor}
             dateListed={dateListed} setDateListed={setDateListed}
             agentUsers={agentUsers}
