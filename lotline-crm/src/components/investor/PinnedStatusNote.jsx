@@ -14,13 +14,13 @@ export default function PinnedStatusNote({ update }) {
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <p className="text-sm font-semibold text-white">{update.title}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">{update.title}</p>
           {update.posted_at && (
-            <span className="text-[10px] text-gray-500">{fmtDate(update.posted_at)}</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">{fmtDate(update.posted_at)}</span>
           )}
         </div>
         {update.body_md && (
-          <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{update.body_md}</p>
+          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{update.body_md}</p>
         )}
       </div>
     </div>

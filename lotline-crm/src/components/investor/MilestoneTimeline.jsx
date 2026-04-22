@@ -58,8 +58,8 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
   const activeIndex = steps.findIndex(s => s.status === 'in_progress');
 
   return (
-    <div className="bg-[#1c2130] rounded-2xl border border-white/8 p-5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-5">
+    <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 p-5">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">
         Project Milestones
       </p>
 
@@ -76,7 +76,7 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
               {/* Connector line */}
               {!isLast && (
                 <div className="absolute top-[14px] left-1/2 w-full h-0.5 z-0">
-                  <div className={`h-full transition-all ${done ? 'bg-accent' : 'bg-white/10'}`} />
+                  <div className={`h-full transition-all ${done ? 'bg-accent' : 'bg-gray-200 dark:bg-white/10'}`} />
                 </div>
               )}
 
@@ -85,8 +85,8 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
                 relative z-10 w-7 h-7 rounded-full flex items-center justify-center mb-2 transition-all
                 ${done  ? 'bg-accent text-white'                              : ''}
                 ${active ? 'bg-accent/20 text-accent ring-2 ring-accent/40 animate-pulse' : ''}
-                ${!done && !active && !skip ? 'bg-white/8 text-gray-600'      : ''}
-                ${skip   ? 'bg-white/5 text-gray-700'                          : ''}
+                ${!done && !active && !skip ? 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-600' : ''}
+                ${skip   ? 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-700' : ''}
               `}>
                 <StatusIcon status={step.status} />
               </div>
@@ -94,14 +94,14 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
               {/* Label */}
               <p className={`
                 text-[9px] text-center leading-tight whitespace-pre-line transition-colors px-0.5
-                ${active ? 'text-accent font-semibold' : done ? 'text-gray-300' : 'text-gray-600'}
+                ${active ? 'text-accent font-semibold' : done ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}
               `}>
                 {step.label}
               </p>
 
               {/* Date / ETA */}
               {(step.completedAt || step.eta) && (
-                <p className="text-[8px] text-gray-600 mt-0.5 text-center">
+                <p className="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5 text-center">
                   {step.completedAt ? fmtDate(step.completedAt) : `ETA ${fmtDate(step.eta)}`}
                 </p>
               )}
@@ -126,28 +126,28 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
                   w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all
                   ${done  ? 'bg-accent text-white'                                : ''}
                   ${active ? 'bg-accent/20 text-accent ring-2 ring-accent/40'     : ''}
-                  ${!done && !active && !skip ? 'bg-white/8 text-gray-600'         : ''}
-                  ${skip   ? 'bg-white/5 text-gray-700'                             : ''}
+                  ${!done && !active && !skip ? 'bg-gray-200 dark:bg-white/8 text-gray-400 dark:text-gray-600' : ''}
+                  ${skip   ? 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-700' : ''}
                 `}>
                   <StatusIcon status={step.status} />
                 </div>
                 {!isLast && (
-                  <div className={`w-0.5 flex-1 my-1 min-h-[20px] ${done ? 'bg-accent/40' : 'bg-white/8'}`} />
+                  <div className={`w-0.5 flex-1 my-1 min-h-[20px] ${done ? 'bg-accent/40' : 'bg-gray-200 dark:bg-white/8'}`} />
                 )}
               </div>
 
               {/* Content */}
               <div className={`pb-4 flex-1 min-w-0 ${isLast ? 'pb-0' : ''}`}>
-                <p className={`text-sm font-medium leading-snug ${active ? 'text-accent' : done ? 'text-gray-200' : 'text-gray-600'}`}>
+                <p className={`text-sm font-medium leading-snug ${active ? 'text-accent' : done ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
                   {step.label.replace('\n', ' ')}
                 </p>
                 {(step.completedAt || step.eta) && (
-                  <p className="text-[10px] text-gray-600 mt-0.5">
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                     {step.completedAt ? `Completed ${fmtDate(step.completedAt)}` : `ETA ${fmtDate(step.eta)}`}
                   </p>
                 )}
                 {step.note && (
-                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{step.note}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{step.note}</p>
                 )}
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function MilestoneTimeline({ deal, milestones = [] }) {
 
       {/* Active step note (desktop) */}
       {activeIndex >= 0 && steps[activeIndex].note && (
-        <p className="hidden md:block mt-4 text-xs text-gray-400 bg-white/3 rounded-lg px-4 py-2.5 border border-white/5">
+        <p className="hidden md:block mt-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/3 rounded-lg px-4 py-2.5 border border-gray-100 dark:border-white/5">
           <span className="text-accent font-semibold">{steps[activeIndex].label.replace('\n', ' ')}:</span>{' '}
           {steps[activeIndex].note}
         </p>

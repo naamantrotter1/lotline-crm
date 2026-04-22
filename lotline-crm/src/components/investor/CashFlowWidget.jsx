@@ -9,8 +9,8 @@ function fmtK(v) {
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#0f1117] border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
-      <p className="text-gray-400 mb-1">{label}</p>
+    <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/10 shadow-sm rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white">
+      <p className="text-gray-500 dark:text-gray-400 mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: p.fill }} className="font-medium">
           {p.name}: {fmtK(p.value)}
@@ -41,16 +41,16 @@ export default function CashFlowWidget({ distributions = [] }) {
   const hasData = data.length > 0;
 
   return (
-    <div className="bg-[#1c2130] rounded-2xl border border-white/8 p-5">
+    <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 p-5">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-1.5 h-4 rounded-full bg-green-400" />
-        <h2 className="text-xs font-semibold text-white uppercase tracking-widest">Cash Flow</h2>
+        <h2 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-widest">Cash Flow</h2>
       </div>
 
       {!hasData ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <TrendingUp size={24} className="text-gray-700" />
-          <p className="text-xs text-gray-600">No distributions yet.<br />Returns will appear here when issued.</p>
+          <TrendingUp size={24} className="text-gray-400 dark:text-gray-500" />
+          <p className="text-xs text-gray-400 dark:text-gray-500">No distributions yet.<br />Returns will appear here when issued.</p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={180}>
@@ -67,7 +67,7 @@ export default function CashFlowWidget({ distributions = [] }) {
               axisLine={false}
               tickLine={false}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
             <Legend
               iconType="circle"
               iconSize={6}

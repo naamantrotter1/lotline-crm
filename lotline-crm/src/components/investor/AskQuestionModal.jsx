@@ -25,16 +25,16 @@ export default function AskQuestionModal({ deal, investor, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-[#1c2130] rounded-t-2xl md:rounded-2xl border border-white/10 w-full md:max-w-md shadow-2xl"
+        className="bg-white dark:bg-[#1c2130] rounded-t-2xl md:rounded-2xl border border-gray-200 dark:border-white/8 w-full md:max-w-md shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/8">
           <div className="flex items-center gap-2">
             <MessageCircle size={16} className="text-accent" />
-            <h2 className="text-sm font-semibold text-white">Ask a Question</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Ask a Question</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -44,11 +44,11 @@ export default function AskQuestionModal({ deal, investor, onClose }) {
             <div className="w-12 h-12 rounded-full bg-green-500/15 flex items-center justify-center mx-auto">
               <MessageCircle size={20} className="text-green-400" />
             </div>
-            <p className="text-white font-semibold">Message sent!</p>
-            <p className="text-xs text-gray-400">We'll get back to you shortly.</p>
+            <p className="text-gray-900 dark:text-white font-semibold">Message sent!</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">We'll get back to you shortly.</p>
             <button
               onClick={onClose}
-              className="mt-2 px-4 py-2 bg-white/8 text-gray-300 rounded-lg text-sm hover:bg-white/12 transition-colors"
+              className="mt-2 px-4 py-2 bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
             >
               Close
             </button>
@@ -56,21 +56,21 @@ export default function AskQuestionModal({ deal, investor, onClose }) {
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Subject</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">Subject</label>
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 outline-none focus:border-accent/50 transition-colors"
+                className="w-full px-3 py-2.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-accent/50 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Message</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">Message</label>
               <textarea
                 value={body}
                 onChange={e => { setBody(e.target.value); setError(null); }}
                 rows={4}
                 placeholder="What would you like to know?"
-                className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 outline-none focus:border-accent/50 transition-colors resize-none"
+                className="w-full px-3 py-2.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-accent/50 transition-colors resize-none"
                 required
               />
             </div>
@@ -79,7 +79,7 @@ export default function AskQuestionModal({ deal, investor, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-white/8 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>

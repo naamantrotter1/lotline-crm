@@ -71,13 +71,13 @@ export default function InvestorDistributions() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Distributions</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{distributions.length} distribution{distributions.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Distributions</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{distributions.length} distribution{distributions.length !== 1 ? 's' : ''}</p>
         </div>
         {distributions.length > 0 && (
           <button
             onClick={exportCsv}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/8 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
@@ -91,18 +91,18 @@ export default function InvestorDistributions() {
           { label: 'Projected Returns', value: fmt(totalProjected),   icon: TrendingUp, color: 'text-blue-400'  },
           { label: 'Remaining',         value: fmt(Math.max(0, totalProjected - totalDistributed)), icon: BarChart2, color: 'text-purple-400' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-[#1c2130] rounded-xl p-5 border border-white/8">
+          <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl p-5 border border-gray-200 dark:border-white/8">
             <div className={`flex items-center gap-1.5 mb-1 ${color}`}><Icon size={13} /></div>
-            <p className="text-xl font-bold text-white">{value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Chart */}
       {chartData.length > 1 && (
-        <div className="bg-[#1c2130] rounded-xl p-5 border border-white/8">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Cumulative Distributions</p>
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl p-5 border border-gray-200 dark:border-white/8">
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Cumulative Distributions</p>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
               <defs>
@@ -111,11 +111,11 @@ export default function InvestorDistributions() {
                   <stop offset="95%" stopColor="var(--accent, #c2651a)" stopOpacity={0}   />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
               <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
               <Tooltip
-                contentStyle={{ background: '#1c2130', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, color: '#fff' }}
+                contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11, color: '#111827' }}
                 formatter={v => [`$${v.toLocaleString()}`, 'Cumulative']}
               />
               <Area type="monotone" dataKey="cumulative" stroke="#c2651a" strokeWidth={2} fill="url(#distGrad)" />
@@ -126,35 +126,35 @@ export default function InvestorDistributions() {
 
       {/* Table */}
       {loading ? (
-        <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="bg-white/5 rounded-xl h-12 animate-pulse" />)}</div>
+        <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-white/8 rounded-xl h-12 animate-pulse" />)}</div>
       ) : distributions.length === 0 ? (
-        <div className="bg-[#1c2130] rounded-xl p-12 text-center border border-white/8">
-          <DollarSign size={32} className="mx-auto text-gray-600 mb-3" />
-          <p className="text-gray-400 text-sm">No distributions recorded yet.</p>
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl p-12 text-center border border-gray-200 dark:border-white/8">
+          <DollarSign size={32} className="mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No distributions recorded yet.</p>
         </div>
       ) : (
-        <div className="bg-[#1c2130] rounded-xl border border-white/8 overflow-hidden">
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="border-b border-white/10">
+            <thead className="border-b border-gray-200 dark:border-white/8">
               <tr>
                 {['Date', 'Deal', 'Amount', 'Type', 'Wire Ref', 'Notes'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
               {distributions.map(d => (
-                <tr key={d.id} className="hover:bg-white/3 transition-colors">
-                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{fmtDate(d.date)}</td>
-                  <td className="px-4 py-3 text-gray-400 max-w-[160px] truncate">{d.deals?.address ?? '—'}</td>
+                <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtDate(d.date)}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[160px] truncate">{d.deals?.address ?? '—'}</td>
                   <td className="px-4 py-3 font-semibold text-green-400 whitespace-nowrap">{fmt(d.amount)}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_COLORS[d.type] ?? 'bg-white/10 text-gray-400'}`}>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_COLORS[d.type] ?? 'bg-gray-200 text-gray-500'}`}>
                       {TYPE_LABELS[d.type] ?? d.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{d.wire_reference ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 max-w-[140px] truncate">{d.notes ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{d.wire_reference ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[140px] truncate">{d.notes ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

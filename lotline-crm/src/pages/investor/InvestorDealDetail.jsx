@@ -74,14 +74,14 @@ export default function InvestorDealDetail() {
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="w-full h-64 md:h-80 bg-white/5" />
+        <div className="w-full h-64 md:h-80 bg-gray-100 dark:bg-white/8" />
         <div className="max-w-5xl mx-auto px-4 md:px-8 mt-8 space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="h-52 bg-white/5 rounded-2xl" />
-            <div className="h-52 bg-white/5 rounded-2xl" />
+            <div className="h-52 bg-gray-100 dark:bg-white/8 rounded-2xl" />
+            <div className="h-52 bg-gray-100 dark:bg-white/8 rounded-2xl" />
           </div>
-          <div className="h-28 bg-white/5 rounded-2xl" />
-          <div className="h-16 bg-white/5 rounded-2xl" />
+          <div className="h-28 bg-gray-100 dark:bg-white/8 rounded-2xl" />
+          <div className="h-16 bg-gray-100 dark:bg-white/8 rounded-2xl" />
         </div>
       </div>
     );
@@ -91,7 +91,7 @@ export default function InvestorDealDetail() {
   if (!deal) {
     return (
       <div className="p-8 text-center space-y-3">
-        <p className="text-gray-400 text-sm">Deal not found or not accessible.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Deal not found or not accessible.</p>
         <Link to="/investor/deals" className="text-accent text-sm hover:underline inline-flex items-center gap-1">
           <ArrowLeft size={12} /> Back to deals
         </Link>
@@ -190,10 +190,10 @@ export default function InvestorDealDetail() {
         {/* ── 9. Property Details (demoted) ── */}
         {[deal.financing, deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
           <div>
-            <h2 className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">
+            <h2 className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
               Property Details
             </h2>
-            <div className="bg-[#1c2130] rounded-2xl border border-white/8 divide-y divide-white/5">
+            <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 divide-y divide-gray-100 dark:divide-white/5">
               {[
                 { label: 'Financing',        value: deal.financing         },
                 { label: 'Utility Scenario', value: deal.utility_scenario  },
@@ -203,8 +203,8 @@ export default function InvestorDealDetail() {
                 { label: 'State',            value: deal.state             },
               ].filter(r => r.value).map(({ label, value }) => (
                 <div key={label} className="flex justify-between px-5 py-3 text-xs">
-                  <span className="text-gray-500">{label}</span>
-                  <span className="text-gray-200 font-medium">{value}</span>
+                  <span className="text-gray-500 dark:text-gray-400">{label}</span>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">{value}</span>
                 </div>
               ))}
             </div>

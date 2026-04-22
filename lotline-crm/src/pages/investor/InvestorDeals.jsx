@@ -38,16 +38,16 @@ export default function InvestorDeals() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">My Deals</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{deals.length} active deal{deals.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Deals</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{deals.length} active deal{deals.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search deals…"
-            className="pl-8 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 outline-none focus:border-accent/50 w-52"
+            className="pl-8 pr-4 py-2 bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/10 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-accent/50 w-52"
           />
         </div>
       </div>
@@ -56,11 +56,11 @@ export default function InvestorDeals() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {STAGE_ORDER.map(stage => {
           const count = deals.filter(d => d.stage === stage).length;
-          const { bg, text } = STAGE_COLORS[stage] ?? { bg: 'bg-white/5', text: 'text-gray-400' };
+          const { bg, text } = STAGE_COLORS[stage] ?? { bg: 'bg-gray-100', text: 'text-gray-500' };
           return (
-            <div key={stage} className={`${bg} rounded-xl p-4 border border-white/8`}>
+            <div key={stage} className={`${bg} rounded-xl p-4 border border-gray-200 dark:border-white/8`}>
               <p className={`text-lg font-bold ${text}`}>{count}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{stage}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stage}</p>
             </div>
           );
         })}
@@ -69,19 +69,19 @@ export default function InvestorDeals() {
       {/* Deal list */}
       {loading ? (
         <div className="space-y-3">
-          {[...Array(4)].map((_, i) => <div key={i} className="bg-white/5 rounded-xl h-24 animate-pulse" />)}
+          {[...Array(4)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-white/8 rounded-xl h-24 animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-[#1c2130] rounded-xl p-12 text-center border border-white/8">
-          <Briefcase size={32} className="mx-auto text-gray-600 mb-3" />
-          <p className="text-gray-400 text-sm">{query ? 'No matching deals.' : 'No deals assigned yet.'}</p>
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl p-12 text-center border border-gray-200 dark:border-white/8">
+          <Briefcase size={32} className="mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{query ? 'No matching deals.' : 'No deals assigned yet.'}</p>
         </div>
       ) : (
-        <div className="bg-[#1c2130] rounded-xl border border-white/8 overflow-hidden divide-y divide-white/5">
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
           {filtered.map(deal => {
             const stageIdx = STAGE_ORDER.indexOf(deal.stage);
             const pct = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
-            const { bg, text } = STAGE_COLORS[deal.stage] ?? { bg: 'bg-white/5', text: 'text-gray-400' };
+            const { bg, text } = STAGE_COLORS[deal.stage] ?? { bg: 'bg-gray-100', text: 'text-gray-500' };
             const totalCost = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
               (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
               (deal.hvac ?? 0) + (deal.clear_land ?? 0);
@@ -89,27 +89,27 @@ export default function InvestorDeals() {
               <Link
                 key={deal.id}
                 to={`/investor/deals/${deal.id}`}
-                className="flex items-center justify-between p-5 hover:bg-white/3 transition-colors group"
+                className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
               >
                 <div className="flex-1 min-w-0 mr-4">
-                  <p className="text-sm font-semibold text-white group-hover:text-accent transition-colors truncate">{deal.address}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-accent transition-colors truncate">{deal.address}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${bg} ${text}`}>{deal.stage}</span>
                     {deal.close_date && (
-                      <span className="text-[10px] text-gray-500">Close: {fmtDate(deal.close_date)}</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">Close: {fmtDate(deal.close_date)}</span>
                     )}
                   </div>
-                  <div className="mt-2 w-full bg-white/10 rounded-full h-1">
+                  <div className="mt-2 w-full bg-gray-200 dark:bg-white/10 rounded-full h-1">
                     <div className="bg-accent h-1 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right mr-3">
-                  <p className="text-xs text-gray-500 mb-0.5">ARV</p>
-                  <p className="text-sm font-bold text-white">{fmt(deal.arv)}</p>
-                  <p className="text-xs text-gray-500 mt-1">Capital</p>
-                  <p className="text-xs font-semibold text-gray-300">{fmt(totalCost)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">ARV</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{fmt(deal.arv)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Capital</p>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{fmt(totalCost)}</p>
                 </div>
-                <ChevronRight size={14} className="text-gray-600 group-hover:text-accent transition-colors flex-shrink-0" />
+                <ChevronRight size={14} className="text-gray-400 dark:text-gray-500 group-hover:text-accent transition-colors flex-shrink-0" />
               </Link>
             );
           })}

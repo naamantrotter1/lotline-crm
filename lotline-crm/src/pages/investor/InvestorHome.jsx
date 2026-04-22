@@ -116,7 +116,7 @@ export default function InvestorHome() {
 
   if (!investor) {
     return (
-      <div className="p-8 text-center text-gray-400">
+      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
         <p className="text-sm">Your account has not been linked to an investor yet.</p>
         <p className="text-xs mt-1">Contact your LotLine operator to complete setup.</p>
       </div>
@@ -135,10 +135,10 @@ export default function InvestorHome() {
       {/* Greeting */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <p className="text-gray-400 text-sm">{greeting()},</p>
-          <h1 className="text-2xl font-bold text-white mt-0.5">{investor.name}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{greeting()},</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">{investor.name}</h1>
           {metrics?.nextDistribution && (
-            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
               <Calendar size={11} />
               Next expected payout: <span className="text-accent font-semibold ml-1">{fmtDate(metrics.nextDistribution)}</span>
             </p>
@@ -147,7 +147,7 @@ export default function InvestorHome() {
         {!loading && metrics && (
           <button
             onClick={() => exportPortfolioPdf(investor, deals, distributions, metrics)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/8 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
           >
             <Download size={14} /> Portfolio Summary
           </button>
@@ -158,18 +158,18 @@ export default function InvestorHome() {
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white/5 rounded-xl p-5 animate-pulse h-24" />
+            <div key={i} className="bg-gray-100 dark:bg-white/8 rounded-xl p-5 animate-pulse h-24" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {STAT_CARDS.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-[#1c2130] rounded-xl p-5 border border-white/8">
+            <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl p-5 border border-gray-200 dark:border-white/8">
               <div className={`flex items-center gap-2 mb-2 ${color}`}>
                 <Icon size={15} />
-                <span className="text-xs font-medium text-gray-400">{label}</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
               </div>
-              <p className="text-xl font-bold text-white">{value}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
             </div>
           ))}
         </div>
@@ -178,7 +178,7 @@ export default function InvestorHome() {
       {/* Active deals */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-widest">My Deals</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">My Deals</h2>
           <Link to="/investor/deals" className="flex items-center gap-1 text-xs text-accent hover:underline">
             View all <ChevronRight size={12} />
           </Link>
@@ -187,11 +187,11 @@ export default function InvestorHome() {
         {loading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white/5 rounded-xl h-20 animate-pulse" />
+              <div key={i} className="bg-gray-100 dark:bg-white/8 rounded-xl h-20 animate-pulse" />
             ))}
           </div>
         ) : deals.length === 0 ? (
-          <div className="bg-[#1c2130] rounded-xl p-8 text-center text-gray-500 text-sm border border-white/8">
+          <div className="bg-white dark:bg-[#1c2130] rounded-xl p-8 text-center text-gray-500 dark:text-gray-400 text-sm border border-gray-200 dark:border-white/8">
             No active deals yet.
           </div>
         ) : (
@@ -203,31 +203,31 @@ export default function InvestorHome() {
                 <Link
                   key={deal.id}
                   to={`/investor/deals/${deal.id}`}
-                  className="block bg-[#1c2130] rounded-xl p-4 border border-white/8 hover:border-accent/40 transition-colors group"
+                  className="block bg-white dark:bg-[#1c2130] rounded-xl p-4 border border-gray-200 dark:border-white/8 hover:border-accent/40 transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm font-semibold text-white group-hover:text-accent transition-colors leading-snug">{deal.address}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-accent transition-colors leading-snug">{deal.address}</p>
                       <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${STAGE_COLOR[deal.stage] ?? 'bg-gray-600'} bg-opacity-20 text-white`}>
                         {deal.stage}
                       </span>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
-                      <p className="text-xs text-gray-500">ARV</p>
-                      <p className="text-sm font-bold text-white">{fmt(deal.arv)}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">ARV</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{fmt(deal.arv)}</p>
                     </div>
                   </div>
                   {/* Pipeline progress bar */}
-                  <div className="w-full bg-white/10 rounded-full h-1.5">
+                  <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
                     <div
                       className="bg-accent h-1.5 rounded-full transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-gray-500">{pct}% complete</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">{pct}% complete</span>
                     {deal.close_date && (
-                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
                         <Clock size={9} /> {fmtDate(deal.close_date)}
                       </span>
                     )}
@@ -243,27 +243,27 @@ export default function InvestorHome() {
       {distributions.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-widest">Recent Distributions</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Recent Distributions</h2>
             <Link to="/investor/distributions" className="flex items-center gap-1 text-xs text-accent hover:underline">
               View all <ChevronRight size={12} />
             </Link>
           </div>
-          <div className="bg-[#1c2130] rounded-xl border border-white/8 overflow-hidden">
+          <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="border-b border-white/10">
+              <thead className="border-b border-gray-200 dark:border-white/8">
                 <tr>
                   {['Date', 'Deal', 'Amount', 'Type'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-gray-500 font-medium">{h}</th>
+                    <th key={h} className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {distributions.slice(0, 5).map(d => (
-                  <tr key={d.id} className="hover:bg-white/3">
-                    <td className="px-4 py-3 text-gray-300">{fmtDate(d.date)}</td>
-                    <td className="px-4 py-3 text-gray-400 max-w-[180px] truncate">{d.deals?.address ?? '—'}</td>
+                  <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtDate(d.date)}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[180px] truncate">{d.deals?.address ?? '—'}</td>
                     <td className="px-4 py-3 font-semibold text-green-400">{fmt(d.amount)}</td>
-                    <td className="px-4 py-3 text-gray-400 capitalize">{(d.type ?? '').replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">{(d.type ?? '').replace(/_/g, ' ')}</td>
                   </tr>
                 ))}
               </tbody>

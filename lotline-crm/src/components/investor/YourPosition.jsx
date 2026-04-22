@@ -17,21 +17,21 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function Metric({ icon: Icon, label, value, tooltip, color = 'text-white', comingSoon = false }) {
+function Metric({ icon: Icon, label, value, tooltip, color = 'text-gray-900 dark:text-white', comingSoon = false }) {
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
-      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon size={13} className="text-gray-400" />
+    <div className="flex items-start gap-3 py-3 border-b border-gray-100 dark:border-white/5 last:border-0">
+      <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-white/8 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Icon size={13} className="text-gray-500 dark:text-gray-400" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5 mb-0.5">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</p>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</p>
           <InfoTooltip text={tooltip} />
         </div>
         {value ? (
           <p className={`text-sm font-bold ${color}`}>{value}</p>
         ) : (
-          <p className="text-sm text-gray-600 italic">{comingSoon ? 'Coming soon' : '—'}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 italic">{comingSoon ? 'Coming soon' : '—'}</p>
         )}
       </div>
     </div>
@@ -69,12 +69,12 @@ export default function YourPosition({ deal, totalDistributed }) {
   }
 
   return (
-    <div className="bg-[#1c2130] rounded-2xl border border-white/8 p-5">
+    <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 p-5">
       <div className="flex items-center gap-2 mb-1">
         <div className="w-1.5 h-4 rounded-full bg-accent" />
-        <h2 className="text-xs font-semibold text-white uppercase tracking-widest">Your Position</h2>
+        <h2 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-widest">Your Position</h2>
       </div>
-      <p className="text-[10px] text-gray-600 mb-4 ml-3.5">Personal to your investment</p>
+      <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-4 ml-3.5">Personal to your investment</p>
 
       <div>
         <Metric

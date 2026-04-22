@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Briefcase, FileText, Bell, DollarSign,
   TrendingUp, MessageSquare, LogOut, Menu, X,
-  Eye, EyeOff, ChevronDown,
+  Eye, EyeOff, ChevronDown, Sun, Moon,
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -29,6 +29,13 @@ export default function InvestorLayout() {
   const [investors, setInvestors]       = useState([]);
   const [selectedInvestor, setSelectedInvestor] = useState(null);
   const [pickerOpen, setPickerOpen]     = useState(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('investor-theme') === 'dark');
+
+  const toggleTheme = () => setIsDark(v => {
+    const next = !v;
+    localStorage.setItem('investor-theme', next ? 'dark' : 'light');
+    return next;
+  });
 
   const isOperator = canEdit || canAdmin;
 
@@ -60,7 +67,8 @@ export default function InvestorLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0f1117] text-white">
+    <div className={isDark ? 'dark' : ''}>
+    <div className="min-h-screen flex bg-cream text-gray-900 dark:bg-[#0f1117] dark:text-white">
       {/* ── Mobile header ─────────────────────────────────────── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#161b22] border-b border-white/10 flex items-center justify-between px-4 h-14">
         <span className="font-bold text-accent text-sm">LotLine Investor</span>
@@ -144,6 +152,14 @@ export default function InvestorLayout() {
 
         {/* Footer */}
         <div className="px-3 py-4 border-t border-white/10 space-y-1">
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            {isDark ? 'Light mode' : 'Dark mode'}
+          </button>
           {impersonating ? (
             <button
               onClick={stopImpersonating}
@@ -195,6 +211,7 @@ export default function InvestorLayout() {
           </NavLink>
         ))}
       </nav>
+    </div>
     </div>
   );
 }

@@ -29,30 +29,30 @@ function MessageThread({ message, onRead }) {
 
   return (
     <div
-      className={`border-b border-white/5 last:border-0 transition-colors ${!isRead ? 'bg-accent/3' : ''}`}
+      className={`border-b border-gray-100 dark:border-white/5 last:border-0 transition-colors ${!isRead ? 'bg-accent/3' : ''}`}
     >
       <button
         onClick={handleOpen}
-        className="w-full flex items-start gap-4 px-5 py-4 hover:bg-white/3 transition-colors text-left"
+        className="w-full flex items-start gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
       >
         <div className="mt-0.5 flex-shrink-0">
           {isRead
-            ? <MailOpen size={16} className="text-gray-600" />
+            ? <MailOpen size={16} className="text-gray-400 dark:text-gray-500" />
             : <Mail size={16} className="text-accent" />
           }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-3">
-            <p className={`text-sm truncate ${isRead ? 'text-gray-300' : 'text-white font-semibold'}`}>
+            <p className={`text-sm truncate ${isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white font-semibold'}`}>
               {message.subject}
             </p>
-            <span className="text-[10px] text-gray-500 flex-shrink-0">{fmtDate(message.created_at)}</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0">{fmtDate(message.created_at)}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             From: {message.profiles?.name ?? 'LotLine Team'}
           </p>
           {!open && (
-            <p className="text-xs text-gray-600 mt-1 truncate">{message.body}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{message.body}</p>
           )}
         </div>
         {!isRead && (
@@ -62,9 +62,9 @@ function MessageThread({ message, onRead }) {
 
       {open && (
         <div className="px-5 pb-5 pt-1">
-          <div className="bg-[#0f1117] rounded-xl p-5 border border-white/5">
-            <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{message.body}</p>
-            <p className="text-[10px] text-gray-600 mt-4">
+          <div className="bg-gray-50 dark:bg-[#0f1117] rounded-xl p-5 border border-gray-100 dark:border-white/5">
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{message.body}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-4">
               {new Date(message.created_at).toLocaleString('en-US', {
                 month: 'long', day: 'numeric', year: 'numeric',
                 hour: 'numeric', minute: '2-digit',
@@ -101,8 +101,8 @@ export default function InvestorMessages() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Messages</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Messages</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {unread > 0 ? `${unread} unread` : 'All caught up'} · {messages.length} total
           </p>
         </div>
@@ -118,17 +118,17 @@ export default function InvestorMessages() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white/5 rounded-xl h-16 animate-pulse" />
+            <div key={i} className="bg-gray-100 dark:bg-white/8 rounded-xl h-16 animate-pulse" />
           ))}
         </div>
       ) : messages.length === 0 ? (
-        <div className="bg-[#1c2130] rounded-xl p-12 text-center border border-white/8">
-          <MessageSquare size={32} className="mx-auto text-gray-600 mb-3" />
-          <p className="text-gray-400 text-sm">No messages yet.</p>
-          <p className="text-gray-600 text-xs mt-1">Your team will send updates and announcements here.</p>
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl p-12 text-center border border-gray-200 dark:border-white/8">
+          <MessageSquare size={32} className="mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet.</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Your team will send updates and announcements here.</p>
         </div>
       ) : (
-        <div className="bg-[#1c2130] rounded-xl border border-white/8 overflow-hidden">
+        <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden">
           {messages.map(msg => (
             <MessageThread key={msg.id} message={msg} onRead={handleRead} />
           ))}
