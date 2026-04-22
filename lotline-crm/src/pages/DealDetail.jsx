@@ -1572,6 +1572,22 @@ function DealDetailContent({ deal }) {
     realtor, dateListed, dealOwner,
   };
 
+  // ── One-time hydration save: populate investor position from scenario on mount ─
+  useEffect(() => {
+    if (!selectedScenario || !deal?.id || (!canEdit && !isAgent)) return;
+    const capital =
+      (selectedScenario === 'hard-money-loan' || selectedScenario === 'hard-money-land-home')
+        ? (loanAmountOverride || (costs.mobileHome || 0) + (costs.land || 0))
+        : (deal.investorCapitalContributed ?? null);
+    const equity =
+      selectedScenario === 'profit-split'
+        ? investorProfitSplitPct
+        : (deal.investorEquityPct ?? null);
+    if (capital !== deal.investorCapitalContributed || equity !== deal.investorEquityPct) {
+      saveDeal({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Auto-save: fires immediately on every field change ───────────────────────
   const autoSaveMounted = useRef(false);
   const [saveStatus, setSaveStatus] = useState('idle');
