@@ -5,6 +5,7 @@ const TOOLTIPS = {
   capital:      'The total amount of money you have contributed to this project.',
   equity:       "Your ownership percentage of this deal's profits and returns.",
   projReturn:   'Your estimated share of the projected profit based on your equity percentage.',
+  projInterest: 'Estimated total interest income based on your loan amount, rate, and hold period.',
   payout:       'The date we expect to distribute your returns. Subject to change based on market conditions.',
   distributed:  'Cash you have already received from this investment across all distribution types.',
 };
@@ -37,15 +38,35 @@ function Metric({ icon: Icon, label, value, tooltip, color = 'text-white', comin
   );
 }
 
+const HARD_MONEY = ['Hard Money Loan', 'Hard Money (Land + Home)', 'Hard Money'];
+
 export default function YourPosition({ deal, totalDistributed }) {
-  const totalCost = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
-    (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
-    (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
-  const sellCost  = (deal.arv ?? 0) * 0.045;
-  const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
-  const projReturn = deal.investor_equity_pct
-    ? projProfit * (deal.investor_equity_pct / 100)
-    : null;
+  const sd = deal.scenario_data ?? {};
+  const isHardMoney = HARD_MONEY.includes(deal.financing);
+  const isProfitSplit = deal.financing === 'Profit Split';
+
+  // Projected return: interest income for hard money, equity share for profit split
+  let projReturn = null;
+  if (isHardMoney && deal.investor_capital_contributed) {
+    const rate = sd.interestRate ?? 13;
+    const months = sd.holdPeriod ?? 6;
+    projReturn = deal.investor_capital_contributed * (rate / 100 / 12) * months;
+  } else if (isProfitSplit && deal.investor_equity_pct) {
+    const totalCost = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.setup ?? 0) +
+      (deal.septic ?? 0) + (deal.electric ?? 0) + (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
+    const sellCost = (deal.arv ?? 0) * 0.045;
+    const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
+    projReturn = projProfit * (deal.investor_equity_pct / 100);
+  }
+
+  // Target payout: use stored date, or estimate from closing_date + balloon term
+  let payoutDate = deal.projected_payout_date ?? null;
+  if (!payoutDate && deal.closing_date && isHardMoney) {
+    const balloon = sd.balloonTerm ?? 12;
+    const d = new Date(deal.closing_date);
+    d.setMonth(d.getMonth() + balloon);
+    payoutDate = d.toISOString();
+  }
 
   return (
     <div className="bg-[#1c2130] rounded-2xl border border-white/8 p-5">
@@ -64,25 +85,27 @@ export default function YourPosition({ deal, totalDistributed }) {
           color="text-accent"
           comingSoon
         />
-        <Metric
-          icon={Percent}
-          label="Pro-Rata %"
-          value={fmtPct(deal.investor_equity_pct)}
-          tooltip={TOOLTIPS.equity}
-          comingSoon
-        />
+        {!isHardMoney && (
+          <Metric
+            icon={Percent}
+            label="Pro-Rata %"
+            value={fmtPct(deal.investor_equity_pct)}
+            tooltip={TOOLTIPS.equity}
+            comingSoon
+          />
+        )}
         <Metric
           icon={TrendingUp}
           label="Projected Return"
           value={fmt(projReturn)}
-          tooltip={TOOLTIPS.projReturn}
+          tooltip={isHardMoney ? TOOLTIPS.projInterest : TOOLTIPS.projReturn}
           color="text-green-400"
           comingSoon
         />
         <Metric
           icon={Calendar}
           label="Target Payout Date"
-          value={fmtDate(deal.projected_payout_date)}
+          value={fmtDate(payoutDate)}
           tooltip={TOOLTIPS.payout}
           color="text-blue-400"
           comingSoon
