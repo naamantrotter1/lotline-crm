@@ -43,12 +43,9 @@ export async function fetchMyDeals(investorName) {
 }
 
 export async function fetchMyDeal(dealId, investorName) {
-  const { data, error } = await supabase
-    .from('deals')
-    .select('*')
-    .eq('id', dealId)
-    .eq('investor', investorName)
-    .single();
+  let query = supabase.from('deals').select('*').eq('id', dealId);
+  if (investorName) query = query.eq('investor', investorName);
+  const { data, error } = await query.single();
   return { deal: data ?? null, error };
 }
 
@@ -428,6 +425,137 @@ export function computePortfolioMetrics(deals, distributions) {
   const nextDistribution = future[0]?.projected_payout_date ?? null;
 
   return { committed, deployed, returned, unrealizedGain, weightedIrr, nextDistribution };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Deal Photos
+// ─────────────────────────────────────────────────────────────
+
+export async function fetchDealPhotos(dealId) {
+  const { data, error } = await supabase
+    .from('deal_photos')
+    .select('*')
+    .eq('deal_id', dealId)
+    .order('sort_order', { ascending: true });
+  return { photos: data ?? [], error };
+}
+
+export async function uploadDealPhoto({ dealId, file, caption, type, sortOrder = 0 }) {
+  const ext  = file.name.split('.').pop();
+  const path = `${dealId}/${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('deal-photos')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+  if (uploadErr) return { error: uploadErr };
+  const { data: { publicUrl } } = supabase.storage.from('deal-photos').getPublicUrl(path);
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('deal_photos')
+    .insert({ deal_id: dealId, url: publicUrl, caption, type, sort_order: sortOrder, uploaded_by: user.id })
+    .select().single();
+  return { photo: data, error };
+}
+
+export async function deleteDealPhoto(photoId) {
+  const { error } = await supabase.from('deal_photos').delete().eq('id', photoId);
+  return { error };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Deal Milestones
+// ─────────────────────────────────────────────────────────────
+
+export async function fetchDealMilestones(dealId) {
+  const { data, error } = await supabase
+    .from('deal_milestones')
+    .select('*')
+    .eq('deal_id', dealId)
+    .order('updated_at', { ascending: true });
+  return { milestones: data ?? [], error };
+}
+
+export async function upsertDealMilestone({ dealId, milestoneKey, status, completedAt, eta, note }) {
+  const { data, error } = await supabase
+    .from('deal_milestones')
+    .upsert({
+      deal_id: dealId, milestone_key: milestoneKey,
+      status, completed_at: completedAt ?? null, eta: eta ?? null, note: note ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'deal_id,milestone_key' })
+    .select().single();
+  return { milestone: data, error };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pinned Update (status callout)
+// ─────────────────────────────────────────────────────────────
+
+export async function fetchPinnedUpdate(dealId) {
+  const { data, error } = await supabase
+    .from('deal_updates')
+    .select('*')
+    .eq('deal_id', dealId)
+    .eq('pinned', true)
+    .order('posted_at', { ascending: false })
+    .limit(1);
+  return { update: data?.[0] ?? null, error };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Inline Documents (deal-scoped)
+// ─────────────────────────────────────────────────────────────
+
+export async function fetchInlineDocuments(dealId, investorId) {
+  let q = supabase
+    .from('documents')
+    .select('*')
+    .eq('deal_id', dealId)
+    .eq('visible_to_investor', true);
+  if (investorId) q = q.eq('investor_id', investorId);
+  const { data, error } = await q.order('created_at', { ascending: false });
+  return { documents: data ?? [], error };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Investor Inquiry (ask a question → inbound message)
+// ─────────────────────────────────────────────────────────────
+
+export async function sendInvestorInquiry(investorId, dealId, subject, body) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('investor_messages')
+    .insert({
+      investor_id: investorId,
+      sent_by:     user?.id ?? null,
+      subject,
+      body,
+      deal_id:     dealId ?? null,
+      direction:   'inbound',
+    })
+    .select().single();
+  return { message: data, error };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────────────────────
+
+export async function fetchNotifications(investorId) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('investor_id', investorId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return { notifications: data ?? [], error };
+}
+
+export async function markNotificationRead(notificationId) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId);
+  return { error };
 }
 
 /**
