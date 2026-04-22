@@ -753,7 +753,7 @@ export default function InvestorPortal() {
 
       {/* Summary stats — hidden for investor-role users */}
       <div className="px-6 pt-5">
-        {!isInvestor && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        {!isInvestor && activeTab !== 'available-investments' && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           {[
             { label: 'Active Investors', value: investors.filter(i => i.name !== 'Cash').length, icon: Users },
             { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`, icon: DollarSign },
