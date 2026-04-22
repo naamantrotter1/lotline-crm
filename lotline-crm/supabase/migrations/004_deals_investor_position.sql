@@ -5,7 +5,8 @@
 -- Per-investor position on a deal
 ALTER TABLE deals
   ADD COLUMN IF NOT EXISTS investor_capital_contributed numeric,
-  ADD COLUMN IF NOT EXISTS investor_equity_pct          numeric;
+  ADD COLUMN IF NOT EXISTS investor_equity_pct          numeric,
+  ADD COLUMN IF NOT EXISTS projected_payout_date        date;
 
 -- Allow deal_id on investor_messages (for "ask a question" deep-link)
 ALTER TABLE investor_messages

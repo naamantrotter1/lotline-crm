@@ -223,6 +223,9 @@ function OverviewTab({
   profitSharePct, setProfitSharePct,
   capitalDeployedDate, setCapitalDeployedDate,
   capitalReturnedDate, setCapitalReturnedDate,
+  investorCapitalContributed, setInvestorCapitalContributed,
+  investorEquityPct, setInvestorEquityPct,
+  projectedPayoutDate, setProjectedPayoutDate,
   selectedScenario, applyScenario,
   ltcPct, setLtcPct,
   originationPoints, setOriginationPoints,
@@ -738,6 +741,42 @@ function OverviewTab({
 
             </div>
           )}
+
+          {/* ── Investor Portal Position (always visible) ────── */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Investor Portal — Position Data</p>
+            <div className="grid grid-cols-2 gap-x-6">
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+                <input
+                  type="number"
+                  value={investorCapitalContributed ?? ''}
+                  onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder="e.g. 50000"
+                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
+                <input
+                  type="number"
+                  value={investorEquityPct ?? ''}
+                  onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder="e.g. 25"
+                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                />
+              </div>
+              <div className="py-2 col-span-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
+                <input
+                  type="date"
+                  value={projectedPayoutDate ?? ''}
+                  onChange={e => setProjectedPayoutDate(e.target.value || null)}
+                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full md:w-1/2"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* ── Line of Credit ──────────────────────────────── */}
           {!!selectedScenario && activeFinancing === 'Line of Credit' && (
@@ -1495,6 +1534,9 @@ function DealDetailContent({ deal }) {
   const [profitSharePct, setProfitSharePct] = useState(deal?.investor === 'Atium Build Group LLC' ? 5 : 0);
   const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
   const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
+  const [investorCapitalContributed, setInvestorCapitalContributed] = useState(deal?.investorCapitalContributed ?? null);
+  const [investorEquityPct, setInvestorEquityPct] = useState(deal?.investorEquityPct ?? null);
+  const [projectedPayoutDate, setProjectedPayoutDate] = useState(deal?.projectedPayoutDate ?? null);
 
   // Hard Money Loan specific
   const [ltcPct, setLtcPct] = useState(0);
@@ -1540,6 +1582,7 @@ function DealDetailContent({ deal }) {
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
       realtor, dateListed, dealOwner,
+      investorCapitalContributed, investorEquityPct, projectedPayoutDate,
       ...costs,
     };
 
@@ -1562,6 +1605,7 @@ function DealDetailContent({ deal }) {
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
+    investorCapitalContributed, investorEquityPct, projectedPayoutDate,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1833,6 +1877,9 @@ function DealDetailContent({ deal }) {
             profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
             capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
             capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
+            investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
+            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             ltcPct={ltcPct} setLtcPct={setLtcPct}
             originationPoints={originationPoints} setOriginationPoints={setOriginationPoints}
