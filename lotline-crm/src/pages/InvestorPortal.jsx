@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -780,8 +780,14 @@ export default function InvestorPortal() {
     <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center justify-between mb-1">
           <h1 className="text-xl font-bold text-[#1a2332]">Investor Portal</h1>
+          <Link
+            to="/investor/home"
+            className="flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+          >
+            <ExternalLink size={14} /> Investor View
+          </Link>
         </div>
         <p className="text-sm text-gray-400">
           {isInvestor
