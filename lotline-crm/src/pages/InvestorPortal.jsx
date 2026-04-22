@@ -388,6 +388,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 function NeedsFundingTab({ onDealClick }) {
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
   const allUnfunded = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
+  const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
   // Persist assignments & new investors across sessions
   const [assignments, setAssignments] = useState(() => {
@@ -416,6 +417,20 @@ function NeedsFundingTab({ onDealClick }) {
     const updated = { ...assignments, [modalDeal.address]: { funder: funderName, terms } };
     setAssignments(updated);
     localStorage.setItem('nf_assignments', JSON.stringify(updated));
+
+    // Write investor + financing back to the deal
+    const norm = a => (a || '').trim().toLowerCase();
+    const matchedDeal = contextDeals.find(d => norm(d.address) === norm(modalDeal.address));
+    if (matchedDeal) {
+      const updatedDeal = {
+        ...matchedDeal,
+        investor: funderName,
+        financing: terms?.scenario || matchedDeal.financing,
+      };
+      saveDeal(updatedDeal);
+      setDeals(prev => prev.map(d => d.id === updatedDeal.id ? updatedDeal : d));
+    }
+
     setModalDeal(null);
   };
 
