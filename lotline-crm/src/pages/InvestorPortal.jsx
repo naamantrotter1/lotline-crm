@@ -71,9 +71,26 @@ function AllDealsTab({ onDealClick }) {
 }
 
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
-function InvestorCard({ investor, onDealClick }) {
+function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
+
+  // Merge static + context deals, deduplicating by address (static wins)
+  const staticDeals = ALL_DEALS_TABLE.filter(d => d.lender === investor.name);
+  const staticAddresses = new Set(staticDeals.map(d => (d.address || '').trim().toLowerCase()));
+  const liveDeals = contextDeals
+    .filter(d => (d.investor || '').trim() === investor.name.trim() && !staticAddresses.has((d.address || '').trim().toLowerCase()))
+    .map(d => ({
+      address: d.address,
+      stage: d.stage,
+      lender: investor.name,
+      totalCapital: (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      landCost: d.land || 0,
+      construction: (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      arv: d.arv || 0,
+      closeDate: d.closeDate || null,
+    }));
+  const allInvestorDeals = [...staticDeals, ...liveDeals];
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -134,7 +151,7 @@ function InvestorCard({ investor, onDealClick }) {
       {/* Expanded deals */}
       {expanded && (
         <div className="border-t border-gray-100 divide-y divide-gray-50">
-          {ALL_DEALS_TABLE.filter(d => d.lender === investor.name).map((deal, i) => (
+          {allInvestorDeals.map((deal, i) => (
             <div
               key={i}
               className="px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -149,18 +166,18 @@ function InvestorCard({ investor, onDealClick }) {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs text-gray-400">Capital</p>
-                  <p className="text-xs font-bold text-gray-800">${deal.totalCapital.toLocaleString()}</p>
+                  <p className="text-xs font-bold text-gray-800">${(deal.totalCapital || 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="flex gap-4 mt-2 text-[10px] text-gray-400">
-                <span>Land: ${deal.landCost.toLocaleString()}</span>
-                <span>Build: ${deal.construction.toLocaleString()}</span>
-                <span>ARV: ${deal.arv.toLocaleString()}</span>
+                <span>Land: ${(deal.landCost || 0).toLocaleString()}</span>
+                <span>Build: ${(deal.construction || 0).toLocaleString()}</span>
+                <span>ARV: ${(deal.arv || 0).toLocaleString()}</span>
                 {deal.closeDate && <span>Close: {deal.closeDate}</span>}
               </div>
             </div>
           ))}
-          {ALL_DEALS_TABLE.filter(d => d.lender === investor.name).length === 0 && (
+          {allInvestorDeals.length === 0 && (
             <div className="px-5 py-4 text-xs text-gray-400 text-center">No deals assigned yet</div>
           )}
         </div>
@@ -508,7 +525,7 @@ function NeedsFundingTab({ onDealClick }) {
 }
 
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
-function ByInvestorTab({ onDealClick, linkedInvestor, investors }) {
+function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals }) {
   const displayInvestors = linkedInvestor
     ? investors.filter(inv => inv.name === linkedInvestor)
     : investors;
@@ -524,7 +541,7 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {displayInvestors.map(inv => (
-        <InvestorCard key={inv.id} investor={inv} onDealClick={onDealClick} />
+        <InvestorCard key={inv.id} investor={inv} onDealClick={onDealClick} contextDeals={contextDeals} />
       ))}
     </div>
   );
@@ -790,7 +807,7 @@ export default function InvestorPortal() {
         {/* Tab content */}
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
-        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} />}
+        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
