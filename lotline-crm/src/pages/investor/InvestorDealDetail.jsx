@@ -12,6 +12,9 @@ import MilestoneTimeline from '../../components/investor/MilestoneTimeline';
 import PinnedStatusNote  from '../../components/investor/PinnedStatusNote';
 import InlineDocs        from '../../components/investor/InlineDocs';
 import AskQuestionModal  from '../../components/investor/AskQuestionModal';
+import PropertyMap       from '../../components/investor/PropertyMap';
+import CashFlowWidget    from '../../components/investor/CashFlowWidget';
+import ActivityLog       from '../../components/investor/ActivityLog';
 
 const STAGE_COLORS = {
   'Contract Signed': 'bg-green-500/80',
@@ -172,8 +175,17 @@ export default function InvestorDealDetail() {
         {/* ── 4. Pinned Status Note ── */}
         {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
 
-        {/* ── 8. Inline Documents ── */}
+        {/* ── 5. Cash Flow ── */}
+        <CashFlowWidget distributions={distributions} />
+
+        {/* ── 6. Inline Documents ── */}
         <InlineDocs dealId={deal.id} investorId={investor?.id} />
+
+        {/* ── 7. Activity Log ── */}
+        <ActivityLog dealId={deal.id} />
+
+        {/* ── 8. Property Map ── */}
+        <PropertyMap address={deal.address} />
 
         {/* ── 9. Property Details (demoted) ── */}
         {[deal.financing, deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
