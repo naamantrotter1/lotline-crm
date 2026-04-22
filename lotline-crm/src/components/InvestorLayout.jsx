@@ -8,6 +8,7 @@ import {
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { logImpersonationEnd, fetchAllInvestors, fetchInvestorNamesFromDeals } from '../lib/investorPortalData';
+import NotificationsBell from './investor/NotificationsBell';
 
 const NAV = [
   { to: '/investor/home',           icon: LayoutDashboard, label: 'Dashboard'       },
@@ -63,9 +64,12 @@ export default function InvestorLayout() {
       {/* ── Mobile header ─────────────────────────────────────── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#161b22] border-b border-white/10 flex items-center justify-between px-4 h-14">
         <span className="font-bold text-accent text-sm">LotLine Investor</span>
-        <button onClick={() => setSidebarOpen(v => !v)} className="text-gray-400 hover:text-white">
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationsBell investorId={activeInvestor?.id} />
+          <button onClick={() => setSidebarOpen(v => !v)} className="text-gray-400 hover:text-white">
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* ── Sidebar ───────────────────────────────────────────── */}
@@ -164,9 +168,33 @@ export default function InvestorLayout() {
       )}
 
       {/* ── Main content ──────────────────────────────────────── */}
-      <main className="flex-1 overflow-auto pt-14 md:pt-0">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0 pb-16 md:pb-0">
         <Outlet context={{ investor: activeInvestor }} />
       </main>
+
+      {/* ── Mobile bottom tab bar ─────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#161b22] border-t border-white/10 flex items-center">
+        {[
+          { to: '/investor/home',          icon: LayoutDashboard, label: 'Home'    },
+          { to: '/investor/deals',         icon: Briefcase,       label: 'Deals'   },
+          { to: '/investor/distributions', icon: DollarSign,      label: 'Returns' },
+          { to: '/investor/updates',       icon: Bell,            label: 'Updates' },
+          { to: '/investor/messages',      icon: MessageSquare,   label: 'Inbox'   },
+        ].map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-center transition-colors ${
+                isActive ? 'text-accent' : 'text-gray-500'
+              }`
+            }
+          >
+            <Icon size={18} />
+            <span className="text-[9px] font-medium">{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 }
