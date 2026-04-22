@@ -8,7 +8,7 @@ import {
   Landmark, Handshake,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal } from '../lib/dealsSync';
+import { saveDeal, flushToSupabase } from '../lib/dealsSync';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -1572,7 +1572,7 @@ function DealDetailContent({ deal }) {
     realtor, dateListed, dealOwner,
   };
 
-  // ── One-time hydration save: populate investor position from scenario on mount ─
+  // ── One-time hydration save: push investor position to DB on mount when scenario active ─
   useEffect(() => {
     if (!selectedScenario || !deal?.id || (!canEdit && !isAgent)) return;
     const capital =
@@ -1583,9 +1583,8 @@ function DealDetailContent({ deal }) {
       selectedScenario === 'profit-split'
         ? investorProfitSplitPct
         : (deal.investorEquityPct ?? null);
-    if (capital !== deal.investorCapitalContributed || equity !== deal.investorEquityPct) {
-      saveDeal({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
-    }
+    // Always flush to DB — local state may already be correct but DB could be stale
+    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-save: fires immediately on every field change ───────────────────────
