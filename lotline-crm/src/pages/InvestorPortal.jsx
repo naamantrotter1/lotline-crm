@@ -410,7 +410,7 @@ function NeedsFundingTab({ onDealClick }) {
   // Also include live context deals with no investor that aren't already in static table
   const staticAddrs = new Set(ALL_DEALS_TABLE.map(d => (d.address || '').trim().toLowerCase()));
   const liveUnfunded = contextDeals
-    .filter(d => !d.isArchived && UNFUNDED.includes(d.investor || '') && !staticAddrs.has((d.address || '').trim().toLowerCase()))
+    .filter(d => !d.isArchived && d.pipeline !== 'land-acquisition' && UNFUNDED.includes(d.investor || '') && !staticAddrs.has((d.address || '').trim().toLowerCase()))
     .map(d => {
       const totalCapital = (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return {
