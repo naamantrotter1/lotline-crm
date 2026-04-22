@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Briefcase, FileText, Bell, DollarSign,
-  TrendingUp, MessageSquare, LogOut, Menu, X, ChevronRight,
-  Eye, EyeOff,
+  TrendingUp, MessageSquare, LogOut, Menu, X,
+  Eye, EyeOff, ChevronDown,
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
-import { logImpersonationEnd } from '../lib/investorPortalData';
+import { usePermissions } from '../hooks/usePermissions';
+import { logImpersonationEnd, fetchAllInvestors } from '../lib/investorPortalData';
 
 const NAV = [
   { to: '/investor/home',           icon: LayoutDashboard, label: 'Dashboard'       },
@@ -21,12 +22,24 @@ const NAV = [
 export default function InvestorLayout() {
   const { profile, investorRecord, signOut } = useAuth();
   const { impersonating, setImpersonating }  = useImpersonation();
+  const { canEdit, canAdmin }                = usePermissions();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [investors, setInvestors]       = useState([]);
+  const [selectedInvestor, setSelectedInvestor] = useState(null);
+  const [pickerOpen, setPickerOpen]     = useState(false);
 
-  // The investor we're viewing as — either real (investor-role) or impersonated (operator)
-  const activeInvestor = impersonating?.investor ?? investorRecord;
-  const displayName    = activeInvestor?.name ?? profile?.name ?? 'Investor';
+  const isOperator = canEdit || canAdmin;
+
+  // Operators: fetch investor list for the picker
+  useEffect(() => {
+    if (!isOperator || investorRecord) return;
+    fetchAllInvestors().then(({ investors: list }) => setInvestors(list));
+  }, [isOperator, investorRecord]);
+
+  // The investor we're viewing as — impersonated > selected (operator picker) > linked record
+  const activeInvestor = impersonating?.investor ?? selectedInvestor ?? investorRecord;
+  const displayName    = activeInvestor?.name ?? (isOperator ? 'Select Investor' : 'Investor');
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,10 +69,41 @@ export default function InvestorLayout() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         pt-14 md:pt-0
       `}>
-        {/* Logo */}
+        {/* Logo / Investor picker */}
         <div className="px-5 py-5 border-b border-white/10">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-1">Investor Portal</p>
-          <p className="text-sm font-bold text-white leading-snug">{displayName}</p>
+
+          {isOperator && !impersonating ? (
+            <div className="relative">
+              <button
+                onClick={() => setPickerOpen(v => !v)}
+                className="flex items-center justify-between w-full text-sm font-bold text-white hover:text-accent transition-colors"
+              >
+                <span className="truncate">{displayName}</span>
+                <ChevronDown size={14} className={`flex-shrink-0 ml-1 transition-transform ${pickerOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {pickerOpen && (
+                <div className="absolute left-0 top-full mt-1 w-full bg-[#0f1117] border border-white/10 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                  {investors.length === 0 ? (
+                    <p className="text-xs text-gray-500 px-3 py-2">No investors found</p>
+                  ) : investors.map(inv => (
+                    <button
+                      key={inv.id}
+                      onClick={() => { setSelectedInvestor(inv); setPickerOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
+                        selectedInvestor?.id === inv.id ? 'text-accent' : 'text-gray-300'
+                      }`}
+                    >
+                      {inv.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm font-bold text-white leading-snug">{displayName}</p>
+          )}
+
           {impersonating && (
             <span className="inline-flex items-center gap-1 mt-1 text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
               <Eye size={9} /> Operator view
