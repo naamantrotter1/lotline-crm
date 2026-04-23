@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase } from '../lib/dealsSync';
-import { fetchActiveCommitmentsForModal } from '../lib/capitalStackData';
+import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -1373,6 +1373,10 @@ function CommittedCapitalPartnerPanel({
   ccpPrefPaymentTiming, setCcpPrefPaymentTiming,
   ccpPosition, setCcpPosition,
   ccpTranches, setCcpTranches,
+  ccpAllocationId,
+  onSaveToStack,
+  ccpSaving,
+  ccpSaved,
 }) {
   const [commitments, setCommitments] = useState([]);
   const [amountInput, setAmountInput] = useState(ccpAllocationAmount > 0 ? String(ccpAllocationAmount) : '');
@@ -1666,6 +1670,23 @@ function CommittedCapitalPartnerPanel({
         <button onClick={addTrancheRow} className="text-xs text-accent font-medium hover:underline">+ Add tranche</button>
       </div>
 
+      {/* ── Save to Capital Stack ── */}
+      {ccpInvestorId && ccpCommitmentId && amountNum > 0 && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onSaveToStack}
+            disabled={ccpSaving || exceedsHeadroom || exceedsDealCap}
+            className="flex-1 text-sm font-medium bg-accent text-white rounded-xl py-2.5 hover:bg-accent/90 transition-colors disabled:opacity-50"
+          >
+            {ccpSaving ? 'Saving…' : ccpAllocationId ? 'Update in Capital Stack' : 'Save to Capital Stack'}
+          </button>
+          {ccpSaved && <span className="text-xs text-green-600 font-medium">✓ Saved</span>}
+          {ccpAllocationId && !ccpSaved && (
+            <span className="text-xs text-gray-400 italic">Allocation on stack</span>
+          )}
+        </div>
+      )}
+
       {/* ── Section 4: Committed Capital Cost Summary ── */}
       {amountNum > 0 && (
         <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
@@ -1710,12 +1731,12 @@ function CommittedCapitalPartnerPanel({
 
 // ── Financing scenario types (matching Lovable CRM) ──────────────────────────
 const FINANCING_SCENARIOS = [
-  { id: 'cash',                label: 'Cash',                    financingType: 'Cash' },
-  { id: 'hard-money-loan',     label: 'Hard Money Loan',         financingType: 'Hard Money Loan' },
-  { id: 'hard-money-land-home',label: 'Hard Money (Land + Home)',financingType: 'Hard Money (Land + Home)' },
-  { id: 'loc',                 label: 'Line of Credit',          financingType: 'Line of Credit' },
-  { id: 'profit-split',        label: 'Profit Split',            financingType: 'Profit Split' },
-  { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner' },
+  { id: 'cash',                    label: 'Cash',                                         financingType: 'Cash',                       dbType: 'cash' },
+  { id: 'hard-money-loan',         label: 'Hard Money Loan',                              financingType: 'Hard Money Loan',            dbType: 'hard_money_loan' },
+  { id: 'hard-money-land-home',    label: 'Hard Money (Land + Home)',                     financingType: 'Hard Money (Land + Home)',   dbType: 'hard_money_land_home' },
+  { id: 'loc',                     label: 'Line of Credit',                               financingType: 'Line of Credit',             dbType: 'line_of_credit' },
+  { id: 'profit-split',            label: 'Profit Split',                                 financingType: 'Profit Split',               dbType: 'profit_split' },
+  { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner', dbType: 'committed_capital_partner' },
 ];
 
 // ── Per-investor default terms ────────────────────────────────────────────────
@@ -1735,7 +1756,7 @@ function DealDetailContent({ deal }) {
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
   const { setDeals } = useDeals();
-  const { profile } = useAuth();
+  const { profile, activeOrgId, orgSlug } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
@@ -1840,7 +1861,7 @@ function DealDetailContent({ deal }) {
   const [phone, setPhone] = useState(deal?.phone || '');
   const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
-  const [investorList, setInvestorList] = useState(() => loadInvestors());
+  const [investorList, setInvestorList] = useState(() => loadInvestors(activeOrgId, orgSlug));
   const [showAddInvestor, setShowAddInvestor] = useState(false);
   const [financing, setFinancing] = useState(deal?.financing || '');
 
@@ -1984,6 +2005,9 @@ function DealDetailContent({ deal }) {
   const [ccpTranches, setCcpTranches] = useState(sd.ccpTranches ?? []);
   const [ccpAllocationId, setCcpAllocationId] = useState(sd.ccpAllocationId ?? null);
   const [ccpScheduleId, setCcpScheduleId] = useState(sd.ccpScheduleId ?? null);
+  const [financingScenarioType, setFinancingScenarioType] = useState(deal?.financingScenarioType ?? null);
+  const [ccpSaving, setCcpSaving] = useState(false);
+  const [ccpSaved, setCcpSaved] = useState(false);
 
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
@@ -1991,9 +2015,55 @@ function DealDetailContent({ deal }) {
     : financing;
 
   function applyScenario(scenarioId) {
+    // If switching away from CCP and an allocation exists, orphan it
+    if (selectedScenario === 'committed-capital-partner' && scenarioId !== 'committed-capital-partner' && ccpAllocationId) {
+      updateAllocation(ccpAllocationId, { status: 'orphaned_scenario_change' }).catch(console.warn);
+      setCcpAllocationId(null);
+    }
     setSelectedScenario(scenarioId);
     const scenario = FINANCING_SCENARIOS.find(s => s.id === scenarioId);
     setFinancing(scenario?.financingType || '');
+    setFinancingScenarioType(scenario?.dbType || null);
+  }
+
+  async function saveCCPToStack() {
+    if (!ccpInvestorId || !ccpCommitmentId || !ccpAllocationAmount) return;
+    setCcpSaving(true);
+    try {
+      if (ccpAllocationId) {
+        await updateAllocation(ccpAllocationId, {
+          amount: ccpAllocationAmount,
+          position: ccpPosition,
+          preferred_return_pct: ccpPrefReturnPct || null,
+          profit_share_pct: ccpProfitSharePct ?? null,
+          pref_payment_timing: ccpPrefPaymentTiming,
+          source_scenario: 'committed_capital_partner',
+          status: 'planned',
+        });
+      } else {
+        const { allocation, error, blocked } = await addAllocation({
+          dealId: deal.id,
+          commitmentId: ccpCommitmentId,
+          investorId: ccpInvestorId,
+          amount: ccpAllocationAmount,
+          position: ccpPosition,
+          preferredReturnPct: ccpPrefReturnPct || null,
+          profitSharePct: ccpProfitSharePct ?? null,
+          prefPaymentTiming: ccpPrefPaymentTiming,
+          sourceScenario: 'committed_capital_partner',
+          status: 'planned',
+        });
+        if (!blocked && !error && allocation) {
+          setCcpAllocationId(allocation.id);
+        }
+      }
+      setCcpSaved(true);
+      setTimeout(() => setCcpSaved(false), 3000);
+    } catch (e) {
+      console.error('[saveCCPToStack]', e);
+    } finally {
+      setCcpSaving(false);
+    }
   }
 
   // Keep stateRef in sync with latest state values every render (used by saveNow)
@@ -2051,6 +2121,7 @@ function DealDetailContent({ deal }) {
           ? investorProfitSplitPct
           : investorEquityPct,
       projectedPayoutDate,
+      financingScenarioType,
       // Pack all scenario-specific inputs so they survive page reload
       scenarioData: {
         interestRate, originationFeeType, originationFeePct, originationFeeFlat,
@@ -2092,6 +2163,7 @@ function DealDetailContent({ deal }) {
     ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
     ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
     ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
+    financingScenarioType,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -2392,6 +2464,10 @@ function DealDetailContent({ deal }) {
             ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
             ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
             ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+            ccpAllocationId={ccpAllocationId}
+            onSaveToStack={saveCCPToStack}
+            ccpSaving={ccpSaving}
+            ccpSaved={ccpSaved}
           />
         )}
         {activeTab === 'dd' && (
@@ -2453,7 +2529,7 @@ function DealDetailContent({ deal }) {
       <AddInvestorModal
         onClose={() => setShowAddInvestor(false)}
         onSave={(newInv) => {
-          const updated = addInvestor(newInv);
+          const updated = addInvestor(newInv, activeOrgId, orgSlug);
           setInvestorList(updated);
           setInvestor(newInv.name);
           saveNow?.({ investor: newInv.name });

@@ -403,7 +403,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 }
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
-function NeedsFundingTab({ onDealClick }) {
+function NeedsFundingTab({ onDealClick, orgId, orgSlug }) {
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
   const allUnfunded = ALL_DEALS_TABLE.filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
@@ -446,8 +446,8 @@ function NeedsFundingTab({ onDealClick }) {
   const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
   const allInvestors = [
-    ...loadInvestors().filter(i => i.name !== 'Cash' && i.name !== 'None'),
-    ...extraInvestors.filter(e => !loadInvestors().find(i => i.name === e.name)),
+    ...loadInvestors(orgId, orgSlug).filter(i => i.name !== 'Cash' && i.name !== 'None'),
+    ...extraInvestors.filter(e => !loadInvestors(orgId, orgSlug).find(i => i.name === e.name)),
   ];
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
@@ -864,12 +864,12 @@ export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
   const navigate = useNavigate();
   const { isInvestor } = usePermissions();
-  const { profile } = useAuth();
+  const { profile, activeOrgId, orgSlug } = useAuth();
   // For investor-role users, their linked investor name is stored in profile.company
   const linkedInvestor = isInvestor ? (profile?.company || null) : null;
 
   const [activeTab, setActiveTab] = useState('by-investor');
-  const [investors, setInvestors] = useState(() => loadInvestors());
+  const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
@@ -956,7 +956,7 @@ export default function InvestorPortal() {
 
         {/* Tab content */}
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
-        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
+        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
