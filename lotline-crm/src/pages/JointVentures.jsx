@@ -589,14 +589,12 @@ function ActivityFeed() {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function JointVentures() {
-  const { isJvHub, activeJVs, refreshJvs } = useJv();
-  const { activeOrgId } = useAuth();
+  const { isJvHub, refreshJvs } = useJv();
 
-  const [allJvs,     setAllJvs]     = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState('active');
+  const [allJvs,      setAllJvs]      = useState([]);
+  const [loading,     setLoading]     = useState(true);
   const [showPropose, setShowPropose] = useState(false);
-  const [toast,      setToast]      = useState(null);
+  const [toast,       setToast]       = useState(null);
 
   const showToastFn = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -617,21 +615,6 @@ export default function JointVentures() {
   useEffect(() => { loadJvs(); }, []);
 
   const refresh = () => { loadJvs(); refreshJvs(); };
-
-  const jvsForTab = {
-    active:     allJvs.filter(j => j.status === 'active'),
-    pending:    allJvs.filter(j => j.status === 'proposed'),
-    suspended:  allJvs.filter(j => j.status === 'suspended'),
-    terminated: allJvs.filter(j => j.status === 'terminated'),
-  };
-
-  const TABS = [
-    { key: 'active',     label: 'Active',     count: jvsForTab.active.length },
-    { key: 'pending',    label: 'Pending',    count: jvsForTab.pending.length },
-    { key: 'suspended',  label: 'Suspended',  count: jvsForTab.suspended.length },
-    { key: 'terminated', label: 'Terminated', count: jvsForTab.terminated.length },
-    { key: 'activity',   label: 'Activity',   count: null },
-  ];
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -661,7 +644,7 @@ export default function JointVentures() {
         )}
       </div>
 
-      {/* Hub-only info banner */}
+      {/* Info banner for non-hub */}
       {!isJvHub && (
         <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
           <AlertCircle size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
@@ -672,70 +655,39 @@ export default function JointVentures() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex bg-gray-100 rounded-lg p-1 w-fit gap-0.5">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-white text-sidebar shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t.label}
-            {t.count !== null && t.count > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                tab === t.key ? 'bg-accent text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      {loading && tab !== 'activity' ? (
+      {/* Partner list */}
+      {loading ? (
         <div className="flex justify-center py-12">
           <Loader2 size={24} className="animate-spin text-gray-300" />
         </div>
-      ) : tab === 'activity' ? (
-        <ActivityFeed />
+      ) : allJvs.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <Building2 size={36} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No partners yet</p>
+          {isJvHub && (
+            <button
+              onClick={() => setShowPropose(true)}
+              className="mt-4 text-sm font-semibold text-accent hover:underline"
+            >
+              Add your first partner
+            </button>
+          )}
+        </div>
       ) : (
         <div className="space-y-3">
-          {(jvsForTab[tab] || []).length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <Building2 size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">
-                {tab === 'active'    ? 'No active partnerships yet' :
-                 tab === 'pending'   ? 'No pending proposals' :
-                 tab === 'suspended' ? 'No suspended partnerships' :
-                                      'No terminated partnerships'}
-              </p>
-              {isJvHub && tab === 'active' && (
-                <button
-                  onClick={() => setShowPropose(true)}
-                  className="mt-4 text-sm font-semibold text-accent hover:underline"
-                >
-                  Add your first partner
-                </button>
-              )}
-            </div>
-          ) : (
-            (jvsForTab[tab] || []).map(jv => (
-              <JvCard
-                key={jv.id}
-                jv={jv}
-                isHub={isJvHub}
-                onRefresh={refresh}
-                showToast={showToastFn}
-              />
-            ))
-          )}
+          {allJvs.map(jv => (
+            <JvCard
+              key={jv.id}
+              jv={jv}
+              isHub={isJvHub}
+              onRefresh={refresh}
+              showToast={showToastFn}
+            />
+          ))}
         </div>
       )}
 
-      {/* Propose modal */}
+      {/* Add partner modal */}
       {showPropose && (
         <ProposeModal
           onClose={() => setShowPropose(false)}
@@ -743,7 +695,6 @@ export default function JointVentures() {
             setShowPropose(false);
             showToastFn('Partner added successfully!');
             refresh();
-            setTab('active');
           }}
         />
       )}
