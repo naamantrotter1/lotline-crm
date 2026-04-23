@@ -90,7 +90,8 @@ export default function AcceptInvite() {
   const [email,     setEmail]     = useState('');
   const [password,  setPassword]  = useState('');
   const [confirm,   setConfirm]   = useState('');
-  const [name,      setName]      = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
 
   useEffect(() => {
     if (!token) { setPhase('invalid'); return; }
@@ -129,18 +130,19 @@ export default function AcceptInvite() {
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setPhase('signing-up');
     try {
+      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(), password,
-        options: { data: { name: name.trim() } },
+        options: { data: { name: fullName, first_name: firstName.trim(), last_name: lastName.trim() } },
       });
       if (signUpErr) throw signUpErr;
       if (!data.session) { setPhase('check-email'); return; }
       await new Promise(r => setTimeout(r, 800));
-      if (name.trim()) {
+      if (fullName) {
         await supabase.from('profiles').update({
-          name:       name.trim(),
-          first_name: name.trim().split(' ')[0],
-          last_name:  name.trim().split(' ').slice(1).join(' ') || '',
+          name:       fullName,
+          first_name: firstName.trim(),
+          last_name:  lastName.trim(),
         }).eq('id', data.user.id);
       }
       await callAcceptApi(token, data.session.access_token);
@@ -268,16 +270,29 @@ export default function AcceptInvite() {
             {/* ── Create account form ── */}
             {phase === 'sign-up' && (
               <form onSubmit={handleSignUp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Jane Smith"
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">First Name</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={e => setFirstName(e.target.value)}
+                      placeholder="Jane"
+                      required
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Last Name</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={e => setLastName(e.target.value)}
+                      placeholder="Smith"
+                      required
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
