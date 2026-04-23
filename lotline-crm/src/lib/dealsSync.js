@@ -256,7 +256,6 @@ export async function loadAllDeals(orgIds) {
     // Keep any LS-only deals (created locally but not yet synced to Supabase)
     // and re-flush them so they eventually land in the DB.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
-    const lsDeals = lsGet(orgId);
     const unsynced = lsDeals.filter(d => !supabaseIds.has(String(d.id)) && !d.isArchived);
     if (unsynced.length > 0) {
       unsynced.forEach(d => flushToSupabase(d, orgId));
