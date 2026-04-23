@@ -54,12 +54,11 @@ export async function fetchInvestors(orgId) {
  * Used for the deal-page health check (CommitmentHealthBadge) and global views.
  * Includes commitment_type (added by migration 008).
  */
-export async function fetchCommitmentSummaries() {
+export async function fetchCommitmentSummaries(orgId) {
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('investor_commitment_summary')
-    .select('*')
-    .order('priority_rank');
+  let q = supabase.from('investor_commitment_summary').select('*').order('priority_rank');
+  if (orgId) q = q.eq('organization_id', orgId);
+  const { data, error } = await q;
   return guard(data, error);
 }
 

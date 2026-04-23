@@ -746,15 +746,16 @@ function AvailableInvestmentsTab({ onDealClick }) {
 
 // ── Tab: Commitments (headroom overview) ─────────────────────────────────────
 function CommitmentsTab() {
+  const { activeOrgId } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCommitmentSummaries().then(data => {
+    fetchCommitmentSummaries(activeOrgId).then(data => {
       setRows(data ?? []);
       setLoading(false);
     });
-  }, []);
+  }, [activeOrgId]);
 
   const fmt = v => v == null ? '—' : `$${Number(v).toLocaleString()}`;
 

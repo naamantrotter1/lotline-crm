@@ -590,7 +590,7 @@ export default function CapitalStackModule({ deal, readOnly = false }) {
     setLoading(true);
     const [stack, allSummaries, modalSummaries, invList] = await Promise.all([
       fetchDealStack(deal.id),
-      fetchCommitmentSummaries(),
+      fetchCommitmentSummaries(activeOrgId),
       fetchActiveCommitmentsForModal(),
       fetchInvestors(activeOrgId),
     ]);
