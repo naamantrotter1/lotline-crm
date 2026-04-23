@@ -412,7 +412,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 
 -- Drop the old single-tenant helpers (no longer used)
-DROP FUNCTION IF EXISTS public.current_role_is(TEXT);
+DROP FUNCTION IF EXISTS public.current_role_is(TEXT) CASCADE;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1055,7 +1055,8 @@ CREATE POLICY "checklists_admin_write" ON public.checklists
 --     view output lets the application layer do org-aware client filtering.
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE OR REPLACE VIEW public.investor_commitment_summary AS
+DROP VIEW IF EXISTS public.investor_commitment_summary CASCADE;
+CREATE VIEW public.investor_commitment_summary AS
 SELECT
   i.organization_id,
   i.id                                                             AS investor_id,
@@ -1064,7 +1065,6 @@ SELECT
   cc.name                                                          AS commitment_name,
   cc.committed_amount,
   cc.revolving,
-  cc.commitment_type,
   cc.status                                                        AS commitment_status,
   cc.priority_rank,
   cc.commitment_date,
@@ -1089,12 +1089,13 @@ JOIN  public.capital_commitments cc ON cc.investor_id = i.id
 LEFT JOIN public.deal_allocations da ON da.commitment_id = cc.id
 GROUP BY
   i.organization_id, i.id, i.name,
-  cc.id, cc.name, cc.committed_amount, cc.revolving, cc.commitment_type,
+  cc.id, cc.name, cc.committed_amount, cc.revolving,
   cc.status, cc.priority_rank, cc.commitment_date, cc.expiration_date;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE OR REPLACE VIEW public.deal_capital_stack_view AS
+DROP VIEW IF EXISTS public.deal_capital_stack_view CASCADE;
+CREATE VIEW public.deal_capital_stack_view AS
 SELECT
   da.organization_id,
   da.deal_id,
@@ -1111,10 +1112,9 @@ SELECT
   da.pref_payment_timing,
   da.source_scenario,
   da.status,
-  da.funding_status,
-  da.amount_scheduled,
-  da.amount_funded,
-  (da.amount - COALESCE(da.amount_funded, 0))         AS amount_outstanding,
+  -- da.funding_status        -- added in migration 006 (not yet applied)
+  -- da.amount_scheduled      -- added in migration 006 (not yet applied)
+  -- da.amount_funded         -- added in migration 006 (not yet applied)
   da.allocated_at,
   da.notes,
   SUM(da.amount) OVER (
@@ -1128,40 +1128,9 @@ JOIN  public.capital_commitments cc ON cc.id = da.commitment_id;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE OR REPLACE VIEW public.deal_draw_schedule_view AS
-SELECT
-  ds.organization_id,
-  ds.id                               AS schedule_id,
-  ds.allocation_id,
-  ds.name                             AS schedule_name,
-  ds.status                           AS schedule_status,
-  ds.total_scheduled,
-  da.deal_id,
-  da.investor_id,
-  i.name                              AS investor_name,
-  da.amount                           AS allocation_amount,
-  da.amount_funded,
-  da.funding_status,
-  dt.id                               AS tranche_id,
-  dt.sequence,
-  dt.amount                           AS tranche_amount,
-  dt.trigger_type,
-  dt.trigger_date,
-  dt.trigger_milestone_key,
-  dt.due_date,
-  dt.status                           AS tranche_status,
-  dt.called_at,
-  dt.funded_at,
-  dt.funding_event_id,
-  dt.notes                            AS tranche_notes,
-  fe.wire_reference,
-  fe.occurred_at                      AS funded_occurred_at,
-  fe.reconciled
-FROM  public.draw_schedules ds
-JOIN  public.deal_allocations da ON da.id = ds.allocation_id
-JOIN  public.investors i          ON i.id  = da.investor_id
-LEFT JOIN public.draw_tranches  dt ON dt.draw_schedule_id = ds.id
-LEFT JOIN public.funding_events fe ON fe.id               = dt.funding_event_id;
+-- deal_draw_schedule_view depends on draw_schedules / draw_tranches / funding_events
+-- which are created in migration 006 (not yet applied). Skip here; migration 006 creates it.
+DROP VIEW IF EXISTS public.deal_draw_schedule_view CASCADE;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1329,9 +1298,19 @@ ALTER TABLE public.funding_events             ALTER COLUMN organization_id SET N
 ALTER TABLE public.capital_calls              ALTER COLUMN organization_id SET NOT NULL;
 
 -- New composite UNIQUE: one investor-portal account per auth user per org
-ALTER TABLE public.investor_users
-  ADD CONSTRAINT IF NOT EXISTS investor_users_user_org_unique
-  UNIQUE (user_id, organization_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+      AND table_name   = 'investor_users'
+      AND constraint_name = 'investor_users_user_org_unique'
+  ) THEN
+    ALTER TABLE public.investor_users
+      ADD CONSTRAINT investor_users_user_org_unique
+      UNIQUE (user_id, organization_id);
+  END IF;
+END $$;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════

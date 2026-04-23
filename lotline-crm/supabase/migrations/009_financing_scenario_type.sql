@@ -53,23 +53,25 @@ ALTER TABLE public.deal_allocations
 -- 4. deal_allocations.status — extend CHECK to include orphaned_scenario_change
 --    PostgreSQL requires DROP + re-ADD for CHECK constraints.
 -- ─────────────────────────────────────────────────────────────────────
+-- Drop any existing status CHECK constraints (inline ones get auto-generated names)
 DO $$
 DECLARE
-  v_constraint_name TEXT;
+  r RECORD;
 BEGIN
-  -- Find the existing status CHECK constraint name
-  SELECT constraint_name INTO v_constraint_name
-  FROM information_schema.table_constraints
-  WHERE table_schema = 'public'
-    AND table_name   = 'deal_allocations'
-    AND constraint_type = 'CHECK'
-    AND constraint_name LIKE '%status%'
-  LIMIT 1;
-
-  IF v_constraint_name IS NOT NULL THEN
-    EXECUTE format('ALTER TABLE public.deal_allocations DROP CONSTRAINT IF EXISTS %I', v_constraint_name);
-  END IF;
+  FOR r IN
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+      AND table_name   = 'deal_allocations'
+      AND constraint_type = 'CHECK'
+      AND constraint_name LIKE '%status%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.deal_allocations DROP CONSTRAINT IF EXISTS %I', r.constraint_name);
+  END LOOP;
 END $$;
+
+ALTER TABLE public.deal_allocations
+  DROP CONSTRAINT IF EXISTS deal_allocations_status_check;
 
 ALTER TABLE public.deal_allocations
   ADD CONSTRAINT deal_allocations_status_check

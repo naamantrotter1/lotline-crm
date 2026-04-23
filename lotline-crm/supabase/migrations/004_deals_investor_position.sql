@@ -10,7 +10,7 @@ ALTER TABLE deals
 
 -- Allow deal_id on investor_messages (for "ask a question" deep-link)
 ALTER TABLE investor_messages
-  ADD COLUMN IF NOT EXISTS deal_id   uuid REFERENCES deals(id),
+  ADD COLUMN IF NOT EXISTS deal_id   text REFERENCES deals(id),
   ADD COLUMN IF NOT EXISTS direction text DEFAULT 'outbound'
     CHECK (direction IN ('inbound', 'outbound'));
 

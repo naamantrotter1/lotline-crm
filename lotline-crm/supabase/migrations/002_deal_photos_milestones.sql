@@ -5,7 +5,7 @@
 -- Photos carousel
 CREATE TABLE IF NOT EXISTS deal_photos (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  deal_id      uuid NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  deal_id      text NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
   url          text NOT NULL,
   caption      text,
   taken_at     date,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS deal_photos (
 -- Milestone stepper
 CREATE TABLE IF NOT EXISTS deal_milestones (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  deal_id       uuid NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  deal_id       text NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
   milestone_key text NOT NULL,
   status        text NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending','in_progress','complete','skipped')),
@@ -35,7 +35,7 @@ ALTER TABLE deal_photos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deal_milestones ENABLE ROW LEVEL SECURITY;
 
 -- Helper: investor can read photos/milestones for their own deal
-CREATE OR REPLACE FUNCTION investor_owns_deal(p_deal_id uuid)
+CREATE OR REPLACE FUNCTION investor_owns_deal(p_deal_id text)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$
   SELECT EXISTS (
     SELECT 1 FROM deals d

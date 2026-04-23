@@ -95,7 +95,7 @@ ALTER TABLE public.capital_commitments ENABLE ROW LEVEL SECURITY;
 -- ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.deal_allocations (
   id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  deal_id              UUID        NOT NULL
+  deal_id              TEXT        NOT NULL
                                    REFERENCES public.deals(id) ON DELETE CASCADE,
   commitment_id        UUID        NOT NULL
                                    REFERENCES public.capital_commitments(id) ON DELETE RESTRICT,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS public.commitment_ledger_entries (
                                 'commitment_increased', 'commitment_decreased',
                                 'migration'
                               )),
-  deal_id         UUID        REFERENCES public.deals(id) ON DELETE SET NULL,
+  deal_id         TEXT        REFERENCES public.deals(id) ON DELETE SET NULL,
   allocation_id   UUID        REFERENCES public.deal_allocations(id) ON DELETE SET NULL,
   override_reason TEXT,       -- populated when an operator bypassed a guardrail
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -343,7 +343,7 @@ BEGIN
     ) VALUES (
       r.id, v_commitment_id, v_investor_id,
       v_amount, 100,
-      'pari_passu', v_pref_rate, v_profit_share,
+      '1st Position', v_pref_rate, v_profit_share,
       v_alloc_status,
       'Migrated from legacy deals.investor field (005)'
     )

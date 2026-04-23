@@ -1,4 +1,4 @@
-import { DollarSign, Percent, TrendingUp, Calendar, ArrowDownToLine } from 'lucide-react';
+import { DollarSign, Percent, TrendingUp, Calendar, ArrowDownToLine, Layers } from 'lucide-react';
 import InfoTooltip from './InfoTooltip';
 
 const TOOLTIPS = {
@@ -39,11 +39,14 @@ function Metric({ icon: Icon, label, value, tooltip, color = 'text-gray-900 dark
 }
 
 const HARD_MONEY = ['Hard Money Loan', 'Hard Money (Land + Home)', 'Hard Money'];
+const CCP_TRIGGER_LABELS = { date: 'Date', milestone: 'Milestone', manual_call: 'Manual Call' };
 
 export default function YourPosition({ deal, totalDistributed }) {
   const sd = deal.scenario_data ?? {};
   const isHardMoney = HARD_MONEY.includes(deal.financing);
   const isProfitSplit = deal.financing === 'Profit Split';
+  const isCCP = deal.financing === 'Committed Capital Partner';
+  const ccpTranches = sd.ccpTranches ?? [];
 
   // Projected return: interest income for hard money, equity share for profit split
   let projReturn = null;
@@ -118,6 +121,28 @@ export default function YourPosition({ deal, totalDistributed }) {
           color="text-purple-400"
         />
       </div>
+
+      {/* CCP draw schedule */}
+      {isCCP && ccpTranches.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Layers size={11} className="text-gray-400" />
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Draw Schedule</p>
+          </div>
+          <div className="space-y-1.5">
+            {ccpTranches.map((t, i) => (
+              <div key={i} className="flex items-center justify-between text-xs">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Tranche {t.sequence ?? i + 1}
+                  {t.triggerType ? ` · ${CCP_TRIGGER_LABELS[t.triggerType] ?? t.triggerType}` : ''}
+                  {t.triggerDate ? ` · ${new Date(t.triggerDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                </span>
+                <span className="font-semibold text-gray-800 dark:text-white">{fmt(t.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

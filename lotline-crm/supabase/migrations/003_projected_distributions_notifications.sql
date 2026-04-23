@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS projected_distributions (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  deal_id            uuid NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  deal_id            text NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
   investor_id        uuid REFERENCES investors(id) ON DELETE CASCADE,
   month              text NOT NULL,  -- YYYY-MM
   return_of_capital  numeric DEFAULT 0,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   type        text NOT NULL, -- 'distribution' | 'milestone' | 'document' | 'message' | 'update'
   title       text NOT NULL,
   body        text,
-  deal_id     uuid REFERENCES deals(id),
+  deal_id     text REFERENCES deals(id),
   read_at     timestamptz,
   created_at  timestamptz DEFAULT now()
 );
