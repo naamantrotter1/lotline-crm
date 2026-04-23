@@ -290,11 +290,13 @@ export function saveToLS(deal, orgId) {
 /** Flush a single deal to Supabase only (async, no localStorage touch).
  *  Tries UPDATE first; falls back to INSERT only for genuinely new deals.
  *  Skips entirely when there is no authenticated session. */
-export function flushToSupabase(deal) {
+export function flushToSupabase(deal, orgId) {
   if (!supabase) return;
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (!session) return; // No auth — skip DB write silently
     const row = dealToRow(deal);
+    // Always stamp organization_id — required for INSERT and keeps UPDATE consistent
+    if (orgId) row.organization_id = orgId;
     supabase.from('deals').update(row).eq('id', row.id).select()
       .then(({ error, data }) => {
         if (error) {
@@ -325,7 +327,7 @@ export function flushToSupabase(deal) {
  *  INSERT for brand-new deals that don't yet exist in the DB. */
 export function saveDeal(deal, orgId) {
   saveToLS(deal, orgId);
-  flushToSupabase(deal);
+  flushToSupabase(deal, orgId);
 }
 
 /** Delete a deal from both localStorage and Supabase */
