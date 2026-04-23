@@ -103,8 +103,8 @@ CREATE TABLE IF NOT EXISTS public.deal_allocations (
                                    REFERENCES public.investors(id) ON DELETE RESTRICT,
   amount               NUMERIC     NOT NULL CHECK (amount >= 0),
   percent_of_deal      NUMERIC,    -- cached; recomputed when stack changes
-  position             TEXT        NOT NULL DEFAULT 'pari_passu'
-                                   CHECK (position IN ('senior','pari_passu','subordinate')),
+  position             TEXT        NOT NULL DEFAULT '1st Position'
+                                   CHECK (position IN ('1st Position','2nd Position')),
   preferred_return_pct NUMERIC,    -- annual %; computed before pro-rata profit split
   profit_share_pct     NUMERIC,    -- when set, overrides percent_of_deal for profit step only
   allocated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),

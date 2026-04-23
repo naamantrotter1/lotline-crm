@@ -47,7 +47,7 @@ const STATUS_CONFIG = {
 };
 
 const ALLOC_STATUS_OPTIONS = ['planned', 'committed', 'funded', 'returned'];
-const POSITION_OPTIONS = ['senior', 'pari_passu', 'subordinate'];
+const POSITION_OPTIONS = ['1st Position', '2nd Position'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
@@ -111,7 +111,7 @@ function AllocationModal({ deal, commitments, investors, existing, onClose, onSa
   const [investorId, setInvestorId] = useState(existing?.investor_id ?? '');
   const [commitmentId, setCommitmentId] = useState(existing?.commitment_id ?? '');
   const [amount, setAmount] = useState(existing?.amount ?? '');
-  const [position, setPosition] = useState(existing?.position ?? 'pari_passu');
+  const [position, setPosition] = useState(existing?.position ?? '1st Position');
   const [preferredReturnPct, setPreferredReturnPct] = useState(existing?.preferred_return_pct ?? '');
   const [profitSharePct, setProfitSharePct] = useState(existing?.profit_share_pct ?? '');
   const [status, setStatus] = useState(existing?.status ?? 'planned');
@@ -212,7 +212,7 @@ function AllocationModal({ deal, commitments, investors, existing, onClose, onSa
           <div>
             <p className={labelCls}>Position</p>
             <select value={position} onChange={e => setPosition(e.target.value)} className={inputCls}>
-              {POSITION_OPTIONS.map(p => <option key={p} value={p}>{p.replace('_', ' ')}</option>)}
+              {POSITION_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           {/* Preferred return */}
@@ -317,7 +317,7 @@ function AllocationRow({ alloc, onEdit, onReturn, onRemove, readOnly }) {
         <tr className="bg-gray-50 border-b border-gray-100">
           <td colSpan={6} className="px-4 py-3">
             <div className="flex flex-wrap gap-4 text-xs text-gray-600 mb-2">
-              {alloc.position && <span><strong>Position:</strong> {alloc.position.replace('_', ' ')}</span>}
+              {alloc.position && <span><strong>Position:</strong> {alloc.position}</span>}
               {alloc.preferred_return_pct != null && <span><strong>Preferred return:</strong> {alloc.preferred_return_pct}%/yr</span>}
               {alloc.profit_share_pct != null && <span><strong>Profit share:</strong> {alloc.profit_share_pct}%</span>}
               {alloc.notes && <span><strong>Notes:</strong> {alloc.notes}</span>}
