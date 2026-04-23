@@ -24,6 +24,7 @@ import {
   refreshDealStackStatus,
 } from '../lib/capitalStackData';
 import { flushToSupabase } from '../lib/dealsSync';
+import { INVESTORS as STATIC_INVESTORS } from '../data/investors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -379,7 +380,10 @@ export default function CapitalStackModule({ deal, readOnly = false }) {
     ]);
     setAllocations(stack);
     setCommitments(summaries);
-    setInvestors(invList);
+    // Fall back to static investor list if Supabase hasn't been seeded yet
+    // (i.e. migration 005 hasn't run — real investors won't be in DB yet)
+    const realInvestors = invList.filter(i => !['Alpha Investor', 'Beta Investor'].includes(i.name));
+    setInvestors(realInvestors.length > 0 ? realInvestors : STATIC_INVESTORS);
     setLoading(false);
   }, [deal.id]);
 
