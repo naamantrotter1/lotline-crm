@@ -86,8 +86,8 @@ function PermissionsEditor({ jv, onSaved }) {
     setErr('');
     try {
       await apiPatch('/api/jv/update-permissions', {
-        jv_id: jv.id,
-        permissions: perms,
+        jvId: jv.id,
+        permissionsOnPartner: perms,
       });
       onSaved(perms);
     } catch (e) {
@@ -185,7 +185,7 @@ function JvCard({ jv, isHub, onRefresh, showToast }) {
   const action = async (endpoint, reason) => {
     setActioning(true);
     try {
-      await apiPost(`/api/jv/${endpoint}`, { jv_id: jv.id, reason });
+      await apiPost(`/api/jv/${endpoint}`, { jvId: jv.id, reason });
       showToast(`Partnership ${endpoint}d.`);
       setModal(null);
       onRefresh();
