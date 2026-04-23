@@ -252,8 +252,18 @@ export async function loadAllDeals(orgIds) {
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
       };
     });
-    lsSet(deals, orgId);
-    return deals;
+
+    // Keep any LS-only deals (created locally but not yet synced to Supabase)
+    // and re-flush them so they eventually land in the DB.
+    const supabaseIds = new Set(deals.map(d => String(d.id)));
+    const lsDeals = lsGet(orgId);
+    const unsynced = lsDeals.filter(d => !supabaseIds.has(String(d.id)) && !d.isArchived);
+    if (unsynced.length > 0) {
+      unsynced.forEach(d => flushToSupabase(d, orgId));
+    }
+    const merged = [...deals, ...unsynced];
+    lsSet(merged, orgId);
+    return merged;
   } catch (e) {
     console.warn('[dealsSync] Supabase unavailable, using localStorage:', e.message);
     return lsGet(orgId);
