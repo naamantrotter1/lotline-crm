@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   let query = adminClient
     .from('organizations')
     .select('id, name, slug, status')
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
     .neq('id', orgId)          // exclude self
     .neq('is_jv_hub', true)    // exclude other hub orgs (only one anyway)
     .limit(50);
