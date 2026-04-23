@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import JvScopeBanner from '../JV/JvScopeBanner';
 
 const AUTO_COLLAPSE_ROUTES = ['/flood-map'];
 
@@ -59,6 +60,7 @@ export default function Layout() {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar onToggleSidebar={handleToggle} />
+        <JvScopeBanner />
         <main className="flex-1 overflow-auto p-4 md:p-6 dark:bg-gray-900 dark:text-gray-100">
           <Outlet />
         </main>

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, HardHat, Archive,
-  Globe, Landmark,
+  Globe, Landmark, Building2,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -35,6 +35,7 @@ const BASE_NAV_SECTIONS = [
       { icon: Map,         label: 'Market Research',        to: '/intelligence'    },
       { icon: Home,        label: 'Order Home',             to: '/homes'           },
       { icon: Landmark,    label: 'Capital & Partnerships', to: '/lending'         },
+      { icon: Building2,   label: 'Joint Ventures',         to: '/settings/joint-ventures' },
       { icon: Calculator,  label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,    label: 'Home Models',            to: '/home-models'     },
       { icon: HardHat,     label: 'Contractor Database',    to: '/contractors'     },

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { JvProvider } from './lib/JvContext';
 import { usePermissions } from './hooks/usePermissions';
 import Landing from './pages/marketing/Landing';
 import Features from './pages/marketing/Features';
@@ -44,6 +45,7 @@ import ArchivedDeals from './pages/ArchivedDeals';
 import FloodMap from './pages/FloodMap';
 import Homes from './pages/Homes';
 import Settings from './pages/Settings';
+import JointVentures from './pages/JointVentures';
 import Lending from './pages/Lending';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
@@ -155,6 +157,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <JvProvider>
         <DealsProvider>
           <Routes>
             {/* Public marketing routes */}
@@ -222,7 +225,8 @@ export default function App() {
               <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
               <Route path="lending"     element={<AgentRoute path="lending"><Lending /></AgentRoute>} />
               <Route path="builder-network" element={<AgentRoute path="builder-network"><BuilderNetwork /></AgentRoute>} />
-              <Route path="settings"    element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
+              <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
+              <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}
               <Route
                 path="admin/users"
@@ -257,6 +261,7 @@ export default function App() {
             </Route>
           </Routes>
         </DealsProvider>
+        </JvProvider>
       </AuthProvider>
     </BrowserRouter>
   );

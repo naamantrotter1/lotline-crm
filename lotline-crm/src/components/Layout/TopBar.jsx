@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
 import { getStoredNotifs, markAllNotifsRead, clearAllNotifs } from '../../lib/notify';
+import JvScopeSwitcher from '../JV/JvScopeSwitcher';
 
 function GlobalSearch() {
   const [query, setQuery]     = useState('');
@@ -229,6 +230,8 @@ export default function TopBar({ onToggleSidebar }) {
       <GlobalSearch />
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        <JvScopeSwitcher />
+
         <button
           onClick={toggleDarkMode}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"

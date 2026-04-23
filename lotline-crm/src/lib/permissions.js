@@ -65,6 +65,15 @@ export const CAPABILITIES = {
   // ── Audit & exports ────────────────────────────────────
   'audit_log.view':         ['owner','admin'],
   'data.export':            ['owner','admin'],
+
+  // ── Joint Ventures ──────────────────────────────────────
+  // Hub org (LotLine Homes): propose, configure, suspend, terminate
+  'joint_venture.manage':   ['owner','admin'],
+  // Partner org: accept or revoke consent
+  'joint_venture.accept':   ['owner','admin'],
+  'joint_venture.revoke':   ['owner','admin'],
+  // All org members can view the JV settings page (read-only for non-admins)
+  'joint_venture.view':     ['owner','admin','operator','viewer'],
 };
 
 /**
