@@ -25,15 +25,38 @@ export default async function handler(req, res) {
   let membersWithProfiles = members || [];
   if (membersWithProfiles.length > 0) {
     const userIds = membersWithProfiles.map(m => m.user_id);
-    const { data: profiles } = await adminClient
-      .from('profiles')
-      .select('id, name, first_name, last_name, email, avatar_url')
-      .in('id', userIds);
+
+    // Fetch profile rows (name fields) and auth users (email) in parallel
+    const [{ data: profiles }, { data: authData }] = await Promise.all([
+      adminClient
+        .from('profiles')
+        .select('id, name, first_name, last_name, avatar_url')
+        .in('id', userIds),
+      adminClient.auth.admin.listUsers({ perPage: 1000 }),
+    ]);
+
     const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-    membersWithProfiles = membersWithProfiles.map(m => ({
-      ...m,
-      profiles: profileMap[m.user_id] || null,
-    }));
+    // authData is { users: [...] } from the auth admin API
+    const authMap = Object.fromEntries(
+      ((authData?.users) || []).filter(u => userIds.includes(u.id)).map(u => [u.id, u])
+    );
+
+    membersWithProfiles = membersWithProfiles.map(m => {
+      const prof = profileMap[m.user_id] || {};
+      const authUser = authMap[m.user_id] || {};
+      return {
+        ...m,
+        profiles: {
+          ...prof,
+          // Prefer profile name fields; fall back to auth user metadata
+          name:       prof.name       || authUser.user_metadata?.name || null,
+          first_name: prof.first_name || authUser.user_metadata?.first_name || null,
+          last_name:  prof.last_name  || authUser.user_metadata?.last_name  || null,
+          // Email always from auth.users (profiles table may not have it)
+          email:      authUser.email  || null,
+        },
+      };
+    });
   }
 
   // Pending (non-expired, non-canceled) invitations
