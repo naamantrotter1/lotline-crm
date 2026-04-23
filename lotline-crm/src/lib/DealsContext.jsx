@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey } from './dealsSync';
 import { useAuth } from './AuthContext';
+import { useJv } from './JvContext';
 
 const DealsContext = createContext(null);
 
@@ -12,13 +13,17 @@ export function DealsProvider({ children }) {
   const [dealsLoading, setDealsLoading] = useState(true);
 
   const { session, activeOrgId, orgSlug } = useAuth();
+  const { jvScopeOrgIds, jvLoaded } = useJv();
+
+  // The org IDs to query — uses JV scope when hub has partners selected, else own org only
+  const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
   useEffect(() => {
-    // Clear deals and restart whenever session or org changes (handles org-switch + logout)
+    // Clear deals and restart whenever session, org, or JV scope changes
     setDeals([]);
     setArchivedDeals([]);
 
-    if (!session || !activeOrgId) {
+    if (!session || !activeOrgId || !jvLoaded) {
       setDealsLoading(false);
       return;
     }
@@ -38,9 +43,9 @@ export function DealsProvider({ children }) {
     } catch {}
 
     setDealsLoading(true);
-    // Load active deals from Supabase (RLS already scopes to current org)
-    loadAllDeals(activeOrgId).then(d => { setDeals(d); setDealsLoading(false); });
-    // Load archived deals
+    // Load active deals — pass all scoped org IDs so JV partner deals are included
+    loadAllDeals(scopeIds).then(d => { setDeals(d); setDealsLoading(false); });
+    // Load archived deals (own org only)
     loadArchivedDeals(activeOrgId).then(setArchivedDeals);
 
     // ONE real-time subscription for the whole app
@@ -69,7 +74,7 @@ export function DealsProvider({ children }) {
     );
 
     return unsub;
-  }, [session, activeOrgId]);
+  }, [session, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
 
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);

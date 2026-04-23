@@ -216,15 +216,19 @@ const SEEDED_CONTRACT_SIGNED_DATES = {
 };
 
 /** Load all deals: Supabase first, localStorage fallback.
- *  orgId scopes the localStorage cache — each org gets its own key. */
-export async function loadAllDeals(orgId) {
+ *  orgIds can be a single string or array (for JV multi-org scope).
+ *  localStorage cache is always keyed to the primary (first) orgId. */
+export async function loadAllDeals(orgIds) {
+  const ids = Array.isArray(orgIds) ? orgIds : [orgIds];
+  const orgId = ids[0]; // primary org for LS cache key
   if (!supabase) return lsGet(orgId);
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('deals')
       .select('*')
-      .eq('organization_id', orgId)
       .eq('is_archived', false);
+    q = ids.length === 1 ? q.eq('organization_id', ids[0]) : q.in('organization_id', ids);
+    const { data, error } = await q;
     if (error) throw error;
     // Merge Supabase rows with any locally-stored fields not yet synced to DB
     // (e.g. contractSignedAt, listingUrl before those columns exist in Supabase)
