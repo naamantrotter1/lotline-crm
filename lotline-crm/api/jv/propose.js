@@ -43,10 +43,10 @@ export default async function handler(req, res) {
     .from('organizations')
     .select('id, name, slug, status, owner_user_id')
     .eq('id', partnerOrgId)
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
     .single();
 
-  if (!partnerOrg) return res.status(404).json({ error: 'Partner organization not found or inactive.' });
+  if (!partnerOrg) return res.status(404).json({ error: 'Partner organization not found.' });
 
   // Block if a non-terminated JV already exists with this partner
   const { data: existing } = await adminClient

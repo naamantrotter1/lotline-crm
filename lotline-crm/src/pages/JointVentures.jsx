@@ -344,8 +344,8 @@ function ProposeModal({ onClose, onProposed }) {
     setErr('');
     try {
       await apiPost('/api/jv/propose', {
-        partner_org_id: selected.id,
-        message: message.trim() || undefined,
+        partnerOrgId: selected.id,
+        notes: message.trim() || undefined,
       });
       onProposed();
     } catch (e) {
