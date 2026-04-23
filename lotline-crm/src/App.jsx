@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
+import Landing from './pages/marketing/Landing';
 import InvestorLayout from './components/InvestorLayout';
 import InvestorHome from './pages/investor/InvestorHome';
 import InvestorDeals from './pages/investor/InvestorDeals';
@@ -41,9 +42,11 @@ import Lending from './pages/Lending';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
 
-/** Redirects to /login if not authenticated; shows spinner while loading */
+/** Redirects to /login if not authenticated; shows spinner while loading.
+ *  Special case: unauthenticated users hitting exactly "/" see the marketing landing page. */
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
@@ -51,7 +54,10 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) {
+    if (location.pathname === '/') return <Landing />;
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
 
