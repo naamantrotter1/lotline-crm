@@ -101,8 +101,8 @@ function dealToRow(deal) {
     contract_signed_at:      deal.contractSignedAt || null,
     scenario_data:           deal.scenarioData ? JSON.stringify(deal.scenarioData) : null,
     total_capital_required:  deal.totalCapitalRequired ?? null,
-    funded_to_date:          deal.fundedToDate ?? null,
-    scheduled_to_date:       deal.scheduledToDate ?? null,
+    funded_to_date:          deal.fundedToDate ?? 0,
+    scheduled_to_date:       deal.scheduledToDate ?? 0,
     financing_scenario_type: deal.financingScenarioType || null,
   };
 }
