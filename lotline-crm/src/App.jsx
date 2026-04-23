@@ -3,6 +3,12 @@ import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
 import Landing from './pages/marketing/Landing';
+import Features from './pages/marketing/Features';
+import Pricing from './pages/marketing/Pricing';
+import About from './pages/marketing/About';
+import Contact from './pages/marketing/Contact';
+import Terms from './pages/marketing/Terms';
+import Privacy from './pages/marketing/Privacy';
 import InvestorLayout from './components/InvestorLayout';
 import InvestorHome from './pages/investor/InvestorHome';
 import InvestorDeals from './pages/investor/InvestorDeals';
@@ -147,7 +153,15 @@ export default function App() {
       <AuthProvider>
         <DealsProvider>
           <Routes>
-            {/* Public routes */}
+            {/* Public marketing routes */}
+            <Route path="/features" element={<Features />} />
+            <Route path="/pricing"  element={<Pricing />} />
+            <Route path="/about"    element={<About />} />
+            <Route path="/contact"  element={<Contact />} />
+            <Route path="/terms"    element={<Terms />} />
+            <Route path="/privacy"  element={<Privacy />} />
+
+            {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
