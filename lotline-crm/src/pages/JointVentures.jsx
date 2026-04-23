@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import {
   Building2, Plus, CheckCircle, XCircle, AlertTriangle, Clock,
   ChevronRight, Loader2, Search, X, RefreshCw, Shield, Activity,
-  AlertCircle,
+  AlertCircle, Trash2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useJv } from '../lib/JvContext';
@@ -175,10 +175,12 @@ function JvCard({ jv, isHub, onRefresh, showToast }) {
   const [expanded, setExpanded]     = useState(false);
   const [modal, setModal]           = useState(null); // 'suspend'|'terminate'
   const [actioning, setActioning]   = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving]     = useState(false);
   const [localPerms, setLocalPerms] = useState(jv.permissions_on_partner || {});
 
   const partnerName = jv.partner_org?.name || jv.host_org?.name || 'Partner';
-  const isPartner   = !isHub; // this session is the partner org
+  const isPartner   = !isHub;
 
   const action = async (endpoint, reason) => {
     setActioning(true);
@@ -191,6 +193,26 @@ function JvCard({ jv, isHub, onRefresh, showToast }) {
       showToast(e.message, 'error');
     }
     setActioning(false);
+  };
+
+  const remove = async () => {
+    setRemoving(true);
+    try {
+      const h = await authHeader();
+      const res = await fetch('/api/jv/remove', {
+        method: 'DELETE',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jv_id: jv.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `${res.status}`);
+      showToast(`${partnerName} removed.`);
+      onRefresh();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+    setRemoving(false);
+    setConfirmRemove(false);
   };
 
   return (
@@ -207,29 +229,63 @@ function JvCard({ jv, isHub, onRefresh, showToast }) {
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {/* Card header */}
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-            <Building2 size={18} className="text-accent" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-800 truncate">{partnerName}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {jv.status === 'active'
-                ? `Active since ${fmtDate(jv.accepted_at)}`
-                : jv.status === 'proposed'
-                ? `Proposed ${fmtDate(jv.proposed_at)}`
-                : `${jv.status.charAt(0).toUpperCase() + jv.status.slice(1)} ${fmtDate(jv.terminated_at || jv.updated_at)}`}
-            </p>
-          </div>
-          {statusBadge(jv.status)}
-          <ChevronRight
-            size={16}
-            className={`text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
-          />
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="flex-1 flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <Building2 size={18} className="text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-800 truncate">{partnerName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {jv.status === 'active'
+                  ? `Active since ${fmtDate(jv.accepted_at)}`
+                  : jv.status === 'proposed'
+                  ? `Proposed ${fmtDate(jv.proposed_at)}`
+                  : `${jv.status.charAt(0).toUpperCase() + jv.status.slice(1)} ${fmtDate(jv.terminated_at || jv.updated_at)}`}
+              </p>
+            </div>
+            {statusBadge(jv.status)}
+            <ChevronRight
+              size={16}
+              className={`text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            />
+          </button>
+
+          {/* Remove button — hub only */}
+          {isHub && (
+            <div className="pr-4 flex-shrink-0">
+              {confirmRemove ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Remove?</span>
+                  <button
+                    onClick={remove}
+                    disabled={removing}
+                    className="text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {removing ? <Loader2 size={12} className="animate-spin" /> : 'Yes'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmRemove(false)}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
+                  className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                  title="Remove partner"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Expanded body */}
         {expanded && (
