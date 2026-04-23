@@ -11,9 +11,9 @@ const DEFAULT_PERMISSIONS = {
   'document.view':      true,
   'distribution.view':  true,
   'draw_schedule.view': true,
-  'deal.edit':          false,
-  'investor.edit':      false,
-  'capital_stack.edit': false,
+  'deal.edit':          true,
+  'investor.edit':      true,
+  'capital_stack.edit': true,
 };
 
 export default async function handler(req, res) {
