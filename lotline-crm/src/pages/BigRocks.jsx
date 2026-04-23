@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BIG_ROCKS_HISTORY, CURRENT_WEEK_ROCKS } from '../data/bigRocks';
 import { StatusBadge } from '../components/UI/Badge';
 import { Target, CheckCircle, RefreshCw, Clock } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
 
 const TEAM = ['All', 'Alex', 'Benson', 'Naaman', 'Zach'];
 
@@ -14,13 +15,18 @@ function rockStats(rocks) {
 }
 
 export default function BigRocks() {
+  const { orgSlug } = useAuth();
+  const isLotLine = orgSlug === 'lotline-homes';
   const [filter, setFilter] = useState('All');
   const [tab, setTab] = useState('current');
 
-  const currentStats = rockStats(CURRENT_WEEK_ROCKS);
-  const lastStats = rockStats(BIG_ROCKS_HISTORY);
+  const currentRocks = isLotLine ? CURRENT_WEEK_ROCKS : [];
+  const historyRocks = isLotLine ? BIG_ROCKS_HISTORY : [];
 
-  const displayRocks = tab === 'current' ? CURRENT_WEEK_ROCKS : BIG_ROCKS_HISTORY;
+  const currentStats = rockStats(currentRocks);
+  const lastStats = rockStats(historyRocks);
+
+  const displayRocks = tab === 'current' ? currentRocks : historyRocks;
   const filtered = filter === 'All' ? displayRocks : displayRocks.filter((r) => r.assignedTo === filter);
 
   return (

@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, ReferenceLine, Cell,
@@ -838,6 +839,8 @@ function pointInFeature([px, py], feature) {
 
 function HeatMap() {
   const { deals: contextDeals } = useDeals();
+  const { orgSlug } = useAuth();
+  const isLotLine = orgSlug === 'lotline-homes';
   const mapRef       = useRef(null);
   const leafletMap   = useRef(null);
   const choropleth   = useRef(null);
@@ -1260,7 +1263,7 @@ function HeatMap() {
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const allDealOverview = [...DEAL_OVERVIEW_DEALS, ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
+    const allDealOverview = [...(isLotLine ? DEAL_OVERVIEW_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
     if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
     if (showDealOverview) {
       dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
@@ -1272,7 +1275,7 @@ function HeatMap() {
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const allLandAcq = [...LAND_DEALS, ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
+    const allLandAcq = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
     if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
     if (showLandAcq) {
       landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',

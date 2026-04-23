@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
 import { TrendingUp } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
 
 const monthlyData = [
   { month: 'Jan 2026', revenue: 0, costs: 0, profit: 0 },
@@ -9,22 +10,25 @@ const monthlyData = [
   { month: 'Apr 2026', revenue: 0, costs: 0, profit: 0 },
 ];
 
-const totalBuildCosts = DEAL_OVERVIEW_DEALS.reduce((s, d) => {
-  const c = (d.land || 0) + (d.mobileHome || 0) + (d.hudEngineer || 0) +
-    (d.percTest || 0) + (d.survey || 0) + (d.footers || 0) + (d.setup || 0);
-  return s + c;
-}, 0);
-
-const costBreakdown = [
-  { category: 'Land', total: DEAL_OVERVIEW_DEALS.reduce((s, d) => s + (d.land || 0), 0) },
-  { category: 'Mobile Homes', total: DEAL_OVERVIEW_DEALS.reduce((s, d) => s + (d.mobileHome || 0), 0) },
-  { category: 'Perc Tests', total: DEAL_OVERVIEW_DEALS.reduce((s, d) => s + (d.percTest || 0), 0) },
-  { category: 'Setup', total: DEAL_OVERVIEW_DEALS.reduce((s, d) => s + (d.setup || 0), 0) },
-  { category: 'Other', total: 0 },
-];
-
 export default function PnlDashboard() {
-  const pipelineProfit = DEAL_OVERVIEW_DEALS.reduce((s, d) => s + calcNetProfit(d), 0);
+  const { orgSlug } = useAuth();
+  const deals = orgSlug === 'lotline-homes' ? DEAL_OVERVIEW_DEALS : [];
+
+  const totalBuildCosts = deals.reduce((s, d) => {
+    const c = (d.land || 0) + (d.mobileHome || 0) + (d.hudEngineer || 0) +
+      (d.percTest || 0) + (d.survey || 0) + (d.footers || 0) + (d.setup || 0);
+    return s + c;
+  }, 0);
+
+  const costBreakdown = [
+    { category: 'Land', total: deals.reduce((s, d) => s + (d.land || 0), 0) },
+    { category: 'Mobile Homes', total: deals.reduce((s, d) => s + (d.mobileHome || 0), 0) },
+    { category: 'Perc Tests', total: deals.reduce((s, d) => s + (d.percTest || 0), 0) },
+    { category: 'Setup', total: deals.reduce((s, d) => s + (d.setup || 0), 0) },
+    { category: 'Other', total: 0 },
+  ];
+
+  const pipelineProfit = deals.reduce((s, d) => s + calcNetProfit(d), 0);
 
   return (
     <div className="space-y-6">
