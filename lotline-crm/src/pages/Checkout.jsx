@@ -83,11 +83,15 @@ export default function Checkout() {
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSubmitting(true);
-    // Simulate a brief "processing" state, then redirect to signup with plan
     setTimeout(() => {
       setSubmitting(false);
-      // Navigate to signup so they can create their account
-      navigate(`/signup?plan=${planKey}`);
+      const params = new URLSearchParams({
+        plan:      planKey,
+        email:     email.trim(),
+        firstName: firstName.trim(),
+        lastName:  lastName.trim(),
+      });
+      navigate(`/create-account?${params.toString()}`);
     }, 800);
   }
 
