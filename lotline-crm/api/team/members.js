@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const userIds = membersWithProfiles.map(m => m.user_id);
     const { data: profiles } = await adminClient
       .from('profiles')
-      .select('id, name, email, avatar_url')
+      .select('id, name, first_name, last_name, email, avatar_url')
       .in('id', userIds);
     const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
     membersWithProfiles = membersWithProfiles.map(m => ({

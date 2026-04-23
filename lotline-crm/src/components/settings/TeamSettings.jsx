@@ -425,10 +425,10 @@ export default function TeamSettings() {
                   <tr key={member.id} className={`hover:bg-gray-50/50 transition-colors ${member.status === 'disabled' ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <Avatar name={prof.name} avatarUrl={prof.avatar_url} />
+                        <Avatar name={prof.name || prof.first_name} avatarUrl={prof.avatar_url} />
                         <div>
                           <p className="text-xs font-semibold text-gray-800">
-                            {prof.name || '—'}
+                            {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
                             {isMe && <span className="ml-1.5 text-[10px] text-accent">(you)</span>}
                           </p>
                           <p className="text-xs text-gray-400">{prof.email}</p>
