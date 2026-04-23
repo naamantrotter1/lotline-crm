@@ -34,12 +34,14 @@ function guard(data, error, fallback = []) {
 /**
  * Fetch all investors ordered by name.
  */
-export async function fetchInvestors() {
+export async function fetchInvestors(orgId) {
   if (!supabase) return [];
-  const { data, error } = await supabase
+  let q = supabase
     .from('investors')
     .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes')
     .order('name');
+  if (orgId) q = q.eq('organization_id', orgId);
+  const { data, error } = await q;
   return guard(data, error);
 }
 

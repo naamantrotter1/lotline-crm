@@ -21,7 +21,7 @@ const NAV = [
 ];
 
 export default function InvestorLayout() {
-  const { profile, investorRecord, signOut } = useAuth();
+  const { profile, investorRecord, signOut, activeOrgId } = useAuth();
   const { impersonating, setImpersonating }  = useImpersonation();
   const { canEdit, canAdmin }                = usePermissions();
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export default function InvestorLayout() {
   // Operators: fetch investor list for the picker — try investors table first, fall back to deal data
   useEffect(() => {
     if (!isOperator || investorRecord) return;
-    fetchAllInvestors().then(({ investors: list }) => {
+    fetchAllInvestors(activeOrgId).then(({ investors: list }) => {
       if (list.length > 0) {
         setInvestors(list);
       } else {

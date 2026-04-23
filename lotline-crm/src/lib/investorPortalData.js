@@ -362,11 +362,10 @@ export async function logImpersonationEnd(logId) {
 // Operators: manage investors table
 // ─────────────────────────────────────────────────────────────
 
-export async function fetchAllInvestors() {
-  const { data, error } = await supabase
-    .from('investors')
-    .select('*')
-    .order('name');
+export async function fetchAllInvestors(orgId) {
+  let q = supabase.from('investors').select('*').order('name');
+  if (orgId) q = q.eq('organization_id', orgId);
+  const { data, error } = await q;
   return { investors: data ?? [], error };
 }
 

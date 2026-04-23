@@ -33,6 +33,7 @@ import {
 } from '../lib/capitalStackData';
 import { flushToSupabase } from '../lib/dealsSync';
 import { INVESTORS as STATIC_INVESTORS } from '../data/investors';
+import { useAuth } from '../lib/AuthContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -424,17 +425,28 @@ function AllocationRow({ alloc, onEdit, onReturn, onRemove, onFix, readOnly, tot
   const isOverAllocated = dealRemainingForSlot != null && Number(alloc.amount) > dealRemainingForSlot;
   const noCapacityRemains = dealRemainingForSlot != null && dealRemainingForSlot <= 0;
 
+  const isOrphaned = alloc.status === 'orphaned_scenario_change';
+
   const statusColor = {
-    planned:   'bg-gray-100 text-gray-500',
-    committed: 'bg-blue-100 text-blue-700',
-    funded:    'bg-green-100 text-green-700',
-    returned:  'bg-purple-100 text-purple-600',
+    planned:                  'bg-gray-100 text-gray-500',
+    committed:                'bg-blue-100 text-blue-700',
+    funded:                   'bg-green-100 text-green-700',
+    returned:                 'bg-purple-100 text-purple-600',
+    orphaned_scenario_change: 'bg-amber-100 text-amber-700',
   }[alloc.status] ?? 'bg-gray-100 text-gray-500';
+
+  const statusLabel = {
+    planned:                  'planned',
+    committed:                'committed',
+    funded:                   'funded',
+    returned:                 'returned',
+    orphaned_scenario_change: 'orphaned',
+  }[alloc.status] ?? alloc.status;
 
   return (
     <>
       <tr
-        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+        className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${isOrphaned ? 'opacity-60' : ''}`}
         onClick={() => setExpanded(e => !e)}
       >
         <td className="px-4 py-3 text-sm font-medium text-gray-800">{alloc.investor_name}</td>
@@ -452,7 +464,7 @@ function AllocationRow({ alloc, onEdit, onReturn, onRemove, onFix, readOnly, tot
         </td>
         <td className="px-4 py-3 text-right">
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
-            {alloc.status}
+            {statusLabel}
           </span>
         </td>
         <td className="px-4 py-3 text-right">
@@ -506,7 +518,21 @@ function AllocationRow({ alloc, onEdit, onReturn, onRemove, onFix, readOnly, tot
             )}
 
             {!readOnly && (
-              alloc.source_scenario === 'committed_capital_partner' ? (
+              isOrphaned ? (
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-lg border border-amber-100 mb-2">
+                  <AlertTriangle size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs text-amber-800 font-medium">Orphaned — financing scenario changed</p>
+                    <p className="text-[11px] text-amber-700 mt-0.5">This allocation was created by a financing scenario that is no longer active.</p>
+                    <button
+                      onClick={e => { e.stopPropagation(); onRemove(alloc.allocation_id); }}
+                      className="mt-1.5 text-[11px] font-medium text-red-600 underline hover:text-red-700"
+                    >
+                      Remove allocation
+                    </button>
+                  </div>
+                </div>
+              ) : alloc.source_scenario === 'committed_capital_partner' ? (
                 <p className="text-xs text-gray-500 italic flex items-center gap-1">
                   Managed by Financing Scenario — edit in the Deal Evaluation panel.
                 </p>
@@ -549,6 +575,7 @@ function AllocationRow({ alloc, onEdit, onReturn, onRemove, onFix, readOnly, tot
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CapitalStackModule({ deal, readOnly = false }) {
+  const { activeOrgId } = useAuth();
   const [allocations, setAllocations] = useState([]);
   const [allCommitments, setAllCommitments] = useState([]);      // all types — for health badge
   const [modalCommitments, setModalCommitments] = useState([]);  // non-legacy active — for modal
@@ -565,7 +592,7 @@ export default function CapitalStackModule({ deal, readOnly = false }) {
       fetchDealStack(deal.id),
       fetchCommitmentSummaries(),
       fetchActiveCommitmentsForModal(),
-      fetchInvestors(),
+      fetchInvestors(activeOrgId),
     ]);
     setAllocations(stack);
     setAllCommitments(allSummaries);
