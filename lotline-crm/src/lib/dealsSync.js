@@ -223,6 +223,7 @@ export async function loadAllDeals(orgId) {
     const { data, error } = await supabase
       .from('deals')
       .select('*')
+      .eq('organization_id', orgId)
       .eq('is_archived', false);
     if (error) throw error;
     // Merge Supabase rows with any locally-stored fields not yet synced to DB
@@ -265,6 +266,7 @@ export async function loadArchivedDeals(orgId) {
     const { data, error } = await supabase
       .from('deals')
       .select('*')
+      .eq('organization_id', orgId)
       .eq('is_archived', true);
     if (error) throw error;
     return data.map(rowToDeal);
