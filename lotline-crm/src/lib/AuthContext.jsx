@@ -31,30 +31,32 @@ export function AuthProvider({ children }) {
         localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
 
         // Resolve active org: slug, plan, seat_limit + membership role
+        // Both queries are awaited in parallel so setLoading(false) only fires
+        // after orgRole is known — prevents permission checks running with null role.
         if (data.active_organization_id) {
           const orgId = data.active_organization_id;
 
-          // Fetch org metadata
-          supabase
-            .from('organizations')
-            .select('slug, plan, seat_limit')
-            .eq('id', orgId)
-            .single()
-            .then(({ data: org }) => {
-              setOrgSlug(org?.slug ?? null);
-              setOrgPlan(org?.plan ?? null);
-              setOrgSeatLimit(org?.seat_limit ?? null);
-            });
+          const [orgResult, memResult] = await Promise.all([
+            supabase
+              .from('organizations')
+              .select('slug, plan, seat_limit')
+              .eq('id', orgId)
+              .single(),
+            supabase
+              .from('memberships')
+              .select('role')
+              .eq('user_id', userId)
+              .eq('organization_id', orgId)
+              .eq('status', 'active')
+              .maybeSingle(),
+          ]);
 
-          // Fetch per-org role from memberships
-          supabase
-            .from('memberships')
-            .select('role')
-            .eq('user_id', userId)
-            .eq('organization_id', orgId)
-            .eq('status', 'active')
-            .maybeSingle()
-            .then(({ data: mem }) => setOrgRole(mem?.role ?? null));
+          const org = orgResult.data;
+          const mem = memResult.data;
+          setOrgSlug(org?.slug ?? null);
+          setOrgPlan(org?.plan ?? null);
+          setOrgSeatLimit(org?.seat_limit ?? null);
+          setOrgRole(mem?.role ?? null);
         } else {
           setOrgSlug(null);
           setOrgRole(null);
