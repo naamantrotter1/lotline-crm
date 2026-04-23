@@ -261,7 +261,7 @@ function Hero() {
             <p className="text-lg text-white/60 leading-relaxed mb-8 max-w-lg">{hero.subhead}</p>
             <div className="flex flex-wrap gap-3">
               <Link
-                to="/signup"
+                to="/pricing"
                 className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-6 py-3 rounded-xl hover:bg-accent/90 transition-colors"
               >
                 {hero.cta1}
@@ -461,7 +461,7 @@ function PricingPreview() {
                 ))}
               </ul>
               <Link
-                to="/signup"
+                to={p.name === 'Scale' ? '/contact' : `/signup?plan=${p.name.toLowerCase()}`}
                 className={`text-center text-sm font-semibold py-2.5 rounded-xl transition-colors ${
                   p.highlighted
                     ? 'bg-white text-accent hover:bg-white/95'
@@ -557,7 +557,7 @@ function FinalCTA() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            to="/signup"
+            to="/pricing"
             className="inline-flex items-center justify-center gap-2 bg-accent text-white font-semibold px-8 py-4 rounded-xl hover:bg-accent/90 transition-colors text-base"
           >
             Start free trial

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { PLAN_SEAT_LIMITS } from '../lib/permissions';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -60,9 +61,20 @@ function Steps({ current, total }) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+const PLAN_CONFIG = {
+  starter: { label: 'Starter', color: 'bg-gray-100 text-gray-700',  seats: PLAN_SEAT_LIMITS.starter },
+  pro:     { label: 'Pro',     color: 'bg-blue-100 text-blue-700',   seats: PLAN_SEAT_LIMITS.pro     },
+};
+
 export default function SignUp() {
   const { refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Plan selected from pricing page (?plan=starter|pro); default to pro
+  const rawPlan = searchParams.get('plan');
+  const selectedPlan = PLAN_CONFIG[rawPlan] ? rawPlan : 'pro';
+  const planCfg = PLAN_CONFIG[selectedPlan];
 
   // step: 1 = credentials, 2 = profile + workspace, 3 = done
   const [step, setStep] = useState(1);
@@ -182,7 +194,18 @@ export default function SignUp() {
       return;
     }
 
-    // 5. Refresh profile so AuthContext has activeOrgId + orgSlug
+    // 5. Set plan + seat_limit on the new org based on the selected trial plan
+    if (orgId) {
+      await supabase
+        .from('organizations')
+        .update({
+          plan:       selectedPlan,
+          seat_limit: PLAN_SEAT_LIMITS[selectedPlan] ?? 1,
+        })
+        .eq('id', orgId);
+    }
+
+    // 6. Refresh profile so AuthContext has activeOrgId + orgSlug + orgPlan
     if (userId) {
       await refreshProfile(userId);
     }
@@ -215,8 +238,13 @@ export default function SignUp() {
         {step === 1 && (
           <>
             <Steps current={1} total={2} />
-            <h1 className="text-2xl font-bold text-[#1a2332] mb-1">Create your account</h1>
-            <p className="text-sm text-gray-400 mb-8">Set up your LotLine login</p>
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-2xl font-bold text-[#1a2332]">Create your account</h1>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${planCfg.color}`}>
+                {planCfg.label} trial
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 mb-8">14 days free · No credit card required</p>
 
             <form onSubmit={handleStep1} className="space-y-4">
               <div>
@@ -312,7 +340,12 @@ export default function SignUp() {
         {step === 2 && (
           <>
             <Steps current={2} total={2} />
-            <h1 className="text-2xl font-bold text-[#1a2332] mb-1">Set up your workspace</h1>
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-2xl font-bold text-[#1a2332]">Set up your workspace</h1>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${planCfg.color}`}>
+                {planCfg.label} trial
+              </span>
+            </div>
             <p className="text-sm text-gray-400 mb-8">Tell us about you and your company</p>
 
             <form onSubmit={handleStep2} className="space-y-4">
@@ -449,7 +482,7 @@ export default function SignUp() {
             </h1>
             <p className="text-sm text-gray-500 text-center mb-8">
               <span className="font-semibold text-gray-700">{orgName}</span> is ready.
-              You're on a 14-day Pro trial — no credit card needed.
+              You're on a 14-day <span className="font-semibold text-gray-700">{planCfg.label}</span> trial — no credit card needed.
             </p>
             <button
               onClick={() => navigate('/', { replace: true })}

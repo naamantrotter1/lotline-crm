@@ -162,7 +162,7 @@ export default function Pricing() {
                     ))}
                   </ul>
                   <Link
-                    to={p.name === 'Scale' ? '/contact' : '/signup'}
+                    to={p.name === 'Scale' ? '/contact' : `/signup?plan=${p.name.toLowerCase()}`}
                     className={`text-center text-sm font-semibold py-3 rounded-xl transition-colors ${
                       p.highlighted
                         ? 'bg-accent text-white hover:bg-accent/90'
@@ -232,7 +232,7 @@ export default function Pricing() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Start your free trial today</h2>
           <p className="text-white/50 mb-8">No credit card. Full access for 14 days. Cancel anytime.</p>
-          <Link to="/signup" className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-8 py-4 rounded-xl hover:bg-accent/90 transition-colors">
+          <Link to="/signup?plan=pro" className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-8 py-4 rounded-xl hover:bg-accent/90 transition-colors">
             Get started free <ArrowRight size={16} />
           </Link>
         </div>
