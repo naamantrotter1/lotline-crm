@@ -1,5 +1,5 @@
 // POST /api/jv/propose
-// Hub-only. Creates a new JV proposal (status = proposed).
+// Hub-only. Adds a JV partner (status = active immediately, no acceptance required).
 // Body: { partnerOrgId, ownershipPct, permissionsOnPartner, agreementDocumentUrl, notes }
 import { requireJvHubAuth, isAdmin } from '../_lib/teamAuth.js';
 import { sendJvProposalEmail } from '../_lib/sendJvEmail.js';
