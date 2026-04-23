@@ -461,7 +461,7 @@ function PricingPreview() {
                 ))}
               </ul>
               <Link
-                to={p.name === 'Scale' ? '/contact' : `/signup?plan=${p.name.toLowerCase()}`}
+                to={p.name === 'Scale' ? '/contact' : `/cart?plan=${p.name.toLowerCase()}`}
                 className={`text-center text-sm font-semibold py-2.5 rounded-xl transition-colors ${
                   p.highlighted
                     ? 'bg-white text-accent hover:bg-white/95'

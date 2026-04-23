@@ -48,6 +48,8 @@ import Lending from './pages/Lending';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
 import AcceptInvite from './pages/AcceptInvite';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
  *  Special case: unauthenticated users hitting exactly "/" see the marketing landing page. */
@@ -169,6 +171,10 @@ export default function App() {
 
             {/* Invitation acceptance — public but session-aware */}
             <Route path="/invite/:token" element={<AcceptInvite />} />
+
+            {/* Purchasing flow */}
+            <Route path="/cart"     element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
 
             {/* Onboarding — authenticated but no org yet */}
             <Route
