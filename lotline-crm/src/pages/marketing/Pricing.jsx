@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import {
   User, Users, Trophy, Check, Minus, ArrowRight,
   Kanban, LayoutDashboard, DollarSign, Map, Mail,
   Building2, BarChart2, Database, TrendingUp, Zap,
   Settings, Code, Globe, Infinity, HeadphonesIcon,
-  Fragment,
 } from 'lucide-react';
 import MarketingLayout from '../../components/marketing/MarketingLayout';
 import { marketing } from '../../content/marketing';
