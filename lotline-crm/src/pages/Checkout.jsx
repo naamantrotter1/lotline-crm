@@ -103,13 +103,12 @@ export default function Checkout() {
           <div className="grid lg:grid-cols-[1fr_380px] gap-8 items-start">
             {/* ── Left: form ── */}
             <div className="space-y-5">
-              {/* Billing information */}
+              {/* Email address */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <button className="w-full flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                  <h2 className="font-bold text-sidebar">Billing information</h2>
-                  <ChevronDown size={16} className="text-gray-400" />
-                </button>
-                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4" id="checkout-form">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h2 className="font-bold text-sidebar">Email address</h2>
+                </div>
+                <div className="px-6 py-5">
                   <Field label="Email address" required>
                     <input
                       type="email"
@@ -120,7 +119,15 @@ export default function Checkout() {
                     />
                     {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                   </Field>
+                </div>
+              </div>
 
+              {/* Billing information */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h2 className="font-bold text-sidebar">Billing information</h2>
+                </div>
+                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4" id="checkout-form">
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="First name" required>
                       <input
