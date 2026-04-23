@@ -149,8 +149,8 @@ export default function Login() {
                 </button>
               </form>
               <p className="text-center text-xs text-gray-400 mt-6">
-                No account yet?{' '}
-                <button onClick={switchToSignup} className="text-accent hover:underline font-medium">Create one</button>
+                Don't have an account?{' '}
+                <a href="/signup" className="text-accent hover:underline font-medium">Sign up free →</a>
               </p>
             </>
           )}

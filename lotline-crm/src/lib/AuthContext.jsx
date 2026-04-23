@@ -9,6 +9,7 @@ export const ImpersonationContext = createContext({ impersonating: null, setImpe
 export function AuthProvider({ children }) {
   const [session, setSession]         = useState(null);
   const [profile, setProfile]         = useState(null);
+  const [orgSlug, setOrgSlug]         = useState(null); // slug of the active org (e.g. 'lotline-homes')
   const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
   const [loading, setLoading]         = useState(true);
   // Operator impersonation: { investor, logId }
@@ -24,6 +25,19 @@ export function AuthProvider({ children }) {
       if (!error && data) {
         setProfile(data);
         localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
+
+        // Resolve the active org's slug (needed for org-scoped seeding + display)
+        if (data.active_organization_id) {
+          supabase
+            .from('organizations')
+            .select('slug')
+            .eq('id', data.active_organization_id)
+            .single()
+            .then(({ data: org }) => setOrgSlug(org?.slug ?? null));
+        } else {
+          setOrgSlug(null);
+        }
+
         // If investor role, resolve their linked investor record
         if (data.role === 'investor') {
           const { data: link } = await supabase
@@ -66,11 +80,10 @@ export function AuthProvider({ children }) {
           fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setOrgSlug(null);
           setInvestorRecord(null);
           setImpersonating(null);
           localStorage.removeItem('crm_user');
-          // Clear cached deals on logout so next user starts fresh
-          localStorage.removeItem('lotline_custom_deals');
           setLoading(false);
         }
       }
@@ -109,6 +122,8 @@ export function AuthProvider({ children }) {
         session,
         profile,
         role: profile?.role ?? null,
+        activeOrgId: profile?.active_organization_id ?? null,
+        orgSlug,          // slug of the active org, e.g. 'lotline-homes'
         investorRecord,   // { id, name, ... } — only non-null for investor-role users
         loading,
         signIn,

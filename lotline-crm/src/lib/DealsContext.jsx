@@ -1,33 +1,47 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, subscribeToDeals } from './dealsSync';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey } from './dealsSync';
 import { useAuth } from './AuthContext';
 
 const DealsContext = createContext(null);
 
 export function DealsProvider({ children }) {
-  // Instantly populate from localStorage cache (will refresh from Supabase once authed)
-  const [deals, setDeals] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; }
-  });
+  // No LS hydration at render time — we need orgId first to pick the right key.
+  // The org-specific LS data is loaded once orgId is available (see effect below).
+  const [deals, setDeals] = useState([]);
   const [archivedDeals, setArchivedDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(true);
 
-  const { session } = useAuth();
+  const { session, activeOrgId, orgSlug } = useAuth();
 
   useEffect(() => {
-    // Only load from Supabase (and subscribe) when authenticated
-    if (!session) {
-      setDeals([]);
-      setArchivedDeals([]);
+    // Clear deals and restart whenever session or org changes (handles org-switch + logout)
+    setDeals([]);
+    setArchivedDeals([]);
+
+    if (!session || !activeOrgId) {
       setDealsLoading(false);
       return;
     }
 
+    // Seed static deals into localStorage for LotLine only (never for other tenants)
+    if (orgSlug === 'lotline-homes') {
+      import('../utils/seedDeals').then(({ seedDeals, migrateContractSignedAt }) => {
+        seedDeals(activeOrgId);
+        migrateContractSignedAt(activeOrgId);
+      });
+    }
+
+    // Hydrate from org-specific localStorage immediately for zero-flash rendering
+    try {
+      const cached = JSON.parse(localStorage.getItem(lsKey(activeOrgId)) || '[]');
+      if (cached.length > 0) setDeals(cached);
+    } catch {}
+
     setDealsLoading(true);
-    // Load active deals from Supabase
-    loadAllDeals().then(d => { setDeals(d); setDealsLoading(false); });
+    // Load active deals from Supabase (RLS already scopes to current org)
+    loadAllDeals(activeOrgId).then(d => { setDeals(d); setDealsLoading(false); });
     // Load archived deals
-    loadArchivedDeals().then(setArchivedDeals);
+    loadArchivedDeals(activeOrgId).then(setArchivedDeals);
 
     // ONE real-time subscription for the whole app
     const unsub = subscribeToDeals(
@@ -55,10 +69,15 @@ export function DealsProvider({ children }) {
     );
 
     return unsub;
-  }, [session]);
+  }, [session, activeOrgId]);
+
+  // Bind orgId so callers don't need to pass it
+  const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
+  const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
+  const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
 
   return (
-    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, saveDeal: syncSaveDeal, deleteDeal: syncDeleteDeal }}>
+    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, saveDeal, deleteDeal, archiveDeal }}>
       {children}
     </DealsContext.Provider>
   );

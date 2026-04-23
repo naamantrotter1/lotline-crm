@@ -1,15 +1,21 @@
 import { supabase } from './supabase';
 
-const LS_KEY = 'lotline_custom_deals';
+// ── org-scoped localStorage keys ──────────────────────────────────────────────
+// Each organization gets its own cache key so data from different tenants can
+// never bleed across sessions in the same browser.
+
+export function lsKey(orgId) {
+  return orgId ? `lotline_deals_${orgId}` : 'lotline_custom_deals';
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function lsGet() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+function lsGet(orgId) {
+  try { return JSON.parse(localStorage.getItem(lsKey(orgId)) || '[]'); } catch { return []; }
 }
 
-function lsSet(deals) {
-  localStorage.setItem(LS_KEY, JSON.stringify(deals));
+function lsSet(deals, orgId) {
+  localStorage.setItem(lsKey(orgId), JSON.stringify(deals));
 }
 
 // Map camelCase deal object → snake_case DB row
@@ -98,6 +104,7 @@ function dealToRow(deal) {
     total_capital_required:  deal.totalCapitalRequired ?? null,
     funded_to_date:          deal.fundedToDate ?? null,
     scheduled_to_date:       deal.scheduledToDate ?? null,
+    financing_scenario_type: deal.financingScenarioType || null,
   };
 }
 
@@ -183,9 +190,10 @@ function rowToDeal(row) {
     contractSignedAt:      row.contract_signed_at,
     dealOwner:             row.deal_owner,
     scenarioData:          row.scenario_data ? (typeof row.scenario_data === 'string' ? JSON.parse(row.scenario_data) : row.scenario_data) : null,
-    totalCapitalRequired:  row.total_capital_required ?? null,
-    fundedToDate:          row.funded_to_date ?? 0,
-    scheduledToDate:       row.scheduled_to_date ?? 0,
+    totalCapitalRequired:   row.total_capital_required ?? null,
+    fundedToDate:           row.funded_to_date ?? 0,
+    scheduledToDate:        row.scheduled_to_date ?? 0,
+    financingScenarioType:  row.financing_scenario_type ?? null,
   };
 }
 
@@ -207,9 +215,10 @@ const SEEDED_CONTRACT_SIGNED_DATES = {
   'deal-020': MAR, 'deal-021': MAR,
 };
 
-/** Load all deals: Supabase first, localStorage fallback */
-export async function loadAllDeals() {
-  if (!supabase) return lsGet();
+/** Load all deals: Supabase first, localStorage fallback.
+ *  orgId scopes the localStorage cache — each org gets its own key. */
+export async function loadAllDeals(orgId) {
+  if (!supabase) return lsGet(orgId);
   try {
     const { data, error } = await supabase
       .from('deals')
@@ -218,7 +227,7 @@ export async function loadAllDeals() {
     if (error) throw error;
     // Merge Supabase rows with any locally-stored fields not yet synced to DB
     // (e.g. contractSignedAt, listingUrl before those columns exist in Supabase)
-    const lsDeals = lsGet();
+    const lsDeals = lsGet(orgId);
     const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
@@ -238,18 +247,19 @@ export async function loadAllDeals() {
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
       };
     });
-    lsSet(deals);
+    lsSet(deals, orgId);
     return deals;
   } catch (e) {
     console.warn('[dealsSync] Supabase unavailable, using localStorage:', e.message);
-    return lsGet();
+    return lsGet(orgId);
   }
 }
 
 /** Load archived deals */
-export async function loadArchivedDeals() {
+export async function loadArchivedDeals(orgId) {
+  const archivedKey = orgId ? `lotline_archived_deals_${orgId}` : 'lotline_archived_deals';
   if (!supabase) {
-    try { return JSON.parse(localStorage.getItem('lotline_archived_deals') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(archivedKey) || '[]'); } catch { return []; }
   }
   try {
     const { data, error } = await supabase
@@ -259,54 +269,63 @@ export async function loadArchivedDeals() {
     if (error) throw error;
     return data.map(rowToDeal);
   } catch {
-    try { return JSON.parse(localStorage.getItem('lotline_archived_deals') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(archivedKey) || '[]'); } catch { return []; }
   }
 }
 
 /** Write a single deal to localStorage only (synchronous, no network). */
-export function saveToLS(deal) {
-  const all = lsGet();
+export function saveToLS(deal, orgId) {
+  const all = lsGet(orgId);
   const idx = all.findIndex(d => String(d.id) === String(deal.id));
   if (idx >= 0) all[idx] = deal; else all.push(deal);
-  lsSet(all);
+  lsSet(all, orgId);
 }
 
 /** Flush a single deal to Supabase only (async, no localStorage touch).
- *  Tries UPDATE first; falls back to INSERT for new deals. */
+ *  Tries UPDATE first; falls back to INSERT only for genuinely new deals.
+ *  Skips entirely when there is no authenticated session. */
 export function flushToSupabase(deal) {
   if (!supabase) return;
-  const row = dealToRow(deal);
-  supabase.from('deals').update(row).eq('id', row.id).select()
-    .then(({ error, data }) => {
-      if (error) {
-        console.error('[dealsSync] flushToSupabase update error:', error.code, error.message, error.hint);
-        return;
-      }
-      if (!data || data.length === 0) {
-        console.warn('[dealsSync] flushToSupabase: 0 rows updated, attempting insert for id:', row.id);
-        supabase.from('deals').insert(row)
-          .then(({ error: insertError }) => {
-            if (insertError) console.error('[dealsSync] flushToSupabase insert error:', insertError.message);
-            else console.log('[dealsSync] flushToSupabase: inserted new deal', row.id);
-          });
-      } else {
-        console.log('[dealsSync] flushToSupabase: updated deal', row.id);
-      }
-    });
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return; // No auth — skip DB write silently
+    const row = dealToRow(deal);
+    supabase.from('deals').update(row).eq('id', row.id).select()
+      .then(({ error, data }) => {
+        if (error) {
+          console.error('[dealsSync] flushToSupabase update error:', error.code, error.message, error.hint);
+          return;
+        }
+        if (!data || data.length === 0) {
+          // UPDATE returned 0 rows. Verify the deal truly doesn't exist before inserting
+          // (UPDATE can return 0 rows silently when RLS blocks a write on an existing row).
+          supabase.from('deals').select('id').eq('id', row.id).maybeSingle()
+            .then(({ data: existing }) => {
+              if (existing) return; // Exists in DB — RLS blocked update, skip insert
+              supabase.from('deals').insert(row)
+                .then(({ error: insertError }) => {
+                  if (insertError) console.error('[dealsSync] flushToSupabase insert error:', insertError.message);
+                  else console.log('[dealsSync] flushToSupabase: inserted new deal', row.id);
+                });
+            });
+        } else {
+          console.log('[dealsSync] flushToSupabase: updated deal', row.id);
+        }
+      });
+  });
 }
 
 /** Save a single deal — updates localStorage immediately, Supabase async.
  *  Tries UPDATE first (works for all roles incl. agent); falls back to
  *  INSERT for brand-new deals that don't yet exist in the DB. */
-export function saveDeal(deal) {
-  saveToLS(deal);
+export function saveDeal(deal, orgId) {
+  saveToLS(deal, orgId);
   flushToSupabase(deal);
 }
 
 /** Delete a deal from both localStorage and Supabase */
-export function deleteDeal(dealId) {
-  const all = lsGet().filter(d => String(d.id) !== String(dealId));
-  lsSet(all);
+export function deleteDeal(dealId, orgId) {
+  const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
+  lsSet(all, orgId);
   if (supabase) {
     supabase.from('deals').delete().eq('id', String(dealId))
       .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
@@ -314,12 +333,12 @@ export function deleteDeal(dealId) {
 }
 
 /** Archive a deal */
-export function archiveDeal(deal) {
+export function archiveDeal(deal, orgId) {
   const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString() };
-  saveDeal(archived);
+  saveDeal(archived, orgId);
   // Remove from active localStorage list
-  const all = lsGet().filter(d => String(d.id) !== String(deal.id));
-  lsSet(all);
+  const all = lsGet(orgId).filter(d => String(d.id) !== String(deal.id));
+  lsSet(all, orgId);
 }
 
 // ── County Data ───────────────────────────────────────────────────────────────
