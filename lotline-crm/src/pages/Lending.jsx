@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../lib/AuthContext';
 import {
   Landmark, Handshake, Clock, CheckCircle, XCircle,
   AlertCircle, MessageSquare, Send, X, ChevronRight,
@@ -7,8 +8,8 @@ import {
 import Button from '../components/UI/Button';
 
 // ── Storage ────────────────────────────────────────────────────────────────
-const LOAN_KEY    = 'lending_requests';
-const PARTNER_KEY = 'partnership_submissions';
+const loanKey    = (orgId) => orgId ? `lending_requests_${orgId}`        : 'lending_requests';
+const partnerKey = (orgId) => orgId ? `partnership_submissions_${orgId}` : 'partnership_submissions';
 
 // ── Dummy seed data ────────────────────────────────────────────────────────
 const DUMMY_LOANS = [
@@ -137,11 +138,30 @@ function Drawer({ open, onClose, title, children }) {
 // ══════════════════════════════════════════════════════════════════════════
 export default function Lending() {
   const location = useLocation();
+  const { activeOrgId, orgSlug } = useAuth();
   const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership'
   const [activeTab, setActiveTab] = useState('loans');
 
   // Loan request state
   const [loanForm, setLoanForm]     = useState(EMPTY_LOAN);
+  const [loanConfirm, setLoanConfirm] = useState(null);
+  const [loanRequests, setLoanRequests] = useState([]);
+
+  // Partnership state
+  const [partnerForm, setPartnerForm]       = useState(EMPTY_PARTNER);
+  const [partnerConfirm, setPartnerConfirm] = useState(null);
+  const [partnerships, setPartnerships]     = useState([]);
+
+  // Load from org-scoped localStorage once orgId is available
+  useEffect(() => {
+    if (!activeOrgId) return;
+    const defaultLoans = orgSlug === 'lotline-homes' ? DUMMY_LOANS : [];
+    const defaultPartnerships = orgSlug === 'lotline-homes' ? DUMMY_PARTNERSHIPS : [];
+    try { const s = localStorage.getItem(loanKey(activeOrgId)); setLoanRequests(s ? JSON.parse(s) : defaultLoans); }
+    catch { setLoanRequests(defaultLoans); }
+    try { const s = localStorage.getItem(partnerKey(activeOrgId)); setPartnerships(s ? JSON.parse(s) : defaultPartnerships); }
+    catch { setPartnerships(defaultPartnerships); }
+  }, [activeOrgId, orgSlug]);
 
   // Pre-populate form if navigated from Land Acquisition
   useEffect(() => {
@@ -155,19 +175,6 @@ export default function Lending() {
       window.history.replaceState({}, '');
     }
   }, []);
-  const [loanConfirm, setLoanConfirm] = useState(null);
-  const [loanRequests, setLoanRequests] = useState(() => {
-    try { const s = localStorage.getItem(LOAN_KEY); return s ? JSON.parse(s) : DUMMY_LOANS; }
-    catch { return DUMMY_LOANS; }
-  });
-
-  // Partnership state
-  const [partnerForm, setPartnerForm]       = useState(EMPTY_PARTNER);
-  const [partnerConfirm, setPartnerConfirm] = useState(null);
-  const [partnerships, setPartnerships]     = useState(() => {
-    try { const s = localStorage.getItem(PARTNER_KEY); return s ? JSON.parse(s) : DUMMY_PARTNERSHIPS; }
-    catch { return DUMMY_PARTNERSHIPS; }
-  });
 
   // ── Loan form handlers ───────────────────────────────────────────────────
   const handleLoanChange = (e) => {
@@ -191,7 +198,7 @@ export default function Lending() {
     console.log('💰 Loan Request:', { ref, ...loanForm, dateSubmitted: row.dateSubmitted });
     const updated = [row, ...loanRequests];
     setLoanRequests(updated);
-    localStorage.setItem(LOAN_KEY, JSON.stringify(updated));
+    localStorage.setItem(loanKey(activeOrgId), JSON.stringify(updated));
     setLoanConfirm(ref);
     setLoanForm(EMPTY_LOAN);
   };
@@ -230,7 +237,7 @@ export default function Lending() {
     console.log('🤝 Partnership Submission:', { ref, ...partnerForm, dateSubmitted: row.dateSubmitted });
     const updated = [row, ...partnerships];
     setPartnerships(updated);
-    localStorage.setItem(PARTNER_KEY, JSON.stringify(updated));
+    localStorage.setItem(partnerKey(activeOrgId), JSON.stringify(updated));
     setPartnerConfirm(ref);
     setPartnerForm(EMPTY_PARTNER);
   };
