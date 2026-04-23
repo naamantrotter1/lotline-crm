@@ -19,6 +19,7 @@ import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 import FloodMap from './FloodMap';
+import CapitalStackModule from '../components/CapitalStackModule';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -1663,6 +1664,7 @@ function DealDetailContent({ deal }) {
 
   const ALL_TABS = [
     { key: 'overview', label: 'Overview' },
+    { key: 'capital', label: 'Capital Stack' },
     { key: 'dd', label: `Due Diligence (${ddCompleteCount}/${DD_COLS.length})` },
     { key: 'dev', label: `Development (${devComplete}/${devTotal})` },
     { key: 'realized', label: 'Realized Expenses' },
@@ -1945,6 +1947,9 @@ function DealDetailContent({ deal }) {
             isAgent={isAgent}
             saveNow={saveNow}
           />
+        )}
+        {activeTab === 'capital' && (
+          <CapitalStackModule deal={deal} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'dd' && (
           <DDTab deal={deal} readOnly={fromInvestorPortal || !canEdit} onStatusChange={setDdCompleteCount} />
