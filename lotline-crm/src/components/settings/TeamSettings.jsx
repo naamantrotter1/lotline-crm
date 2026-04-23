@@ -112,8 +112,17 @@ function InviteModal({ onClose, onInvited, orgPlan, orgSeatLimit, currentSeats }
         ) : (
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
             {atLimit && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
-                {seatLimitMessage(orgPlan, currentSeats, orgSeatLimit)}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 space-y-2">
+                <p>{seatLimitMessage(orgPlan, currentSeats, orgSeatLimit)}</p>
+                {orgPlan === 'starter' && (
+                  <a
+                    href="/cart?plan=pro"
+                    className="inline-flex items-center gap-1.5 bg-accent text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-accent/90 transition-colors"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    Upgrade to Pro
+                  </a>
+                )}
               </div>
             )}
             <div>

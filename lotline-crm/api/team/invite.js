@@ -4,6 +4,7 @@
 // Returns: { inviteUrl, invitation }
 // Requires: owner | admin membership.
 import { requireOrgMember, isAdmin } from '../_lib/teamAuth.js';
+import { sendInviteEmail } from '../_lib/sendInviteEmail.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -84,11 +85,24 @@ export default async function handler(req, res) {
 
   if (invErr) return res.status(500).json({ error: invErr.message });
 
-  const origin = req.headers.origin || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://lotline-crm.vercel.app';
+  const origin = req.headers.origin ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://lotline-crm.vercel.app');
 
   const inviteUrl = `${origin}/invite/${invitation.token}`;
+
+  // Fetch org name + inviter name for the email
+  const [{ data: orgData }, { data: inviterProfile }] = await Promise.all([
+    adminClient.from('organizations').select('name').eq('id', orgId).single(),
+    adminClient.from('profiles').select('name').eq('id', userId).single(),
+  ]);
+
+  await sendInviteEmail({
+    to:          invitation.email,
+    inviteUrl,
+    orgName:     orgData?.name || 'your team',
+    role,
+    inviterName: inviterProfile?.name,
+  });
 
   return res.status(200).json({ inviteUrl, invitation });
 }

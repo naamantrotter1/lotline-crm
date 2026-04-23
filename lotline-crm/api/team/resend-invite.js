@@ -4,6 +4,7 @@
 // Returns: { inviteUrl, invitation }
 // Requires: owner | admin.
 import { requireOrgMember, isAdmin } from '../_lib/teamAuth.js';
+import { sendInviteEmail } from '../_lib/sendInviteEmail.js';
 import { randomBytes } from 'crypto';
 
 export default async function handler(req, res) {
@@ -12,7 +13,7 @@ export default async function handler(req, res) {
   const auth = await requireOrgMember(req, res);
   if (!auth) return;
 
-  const { adminClient, orgId, orgRole } = auth;
+  const { adminClient, userId, orgId, orgRole } = auth;
 
   if (!isAdmin(orgRole)) {
     return res.status(403).json({ error: 'Only owners and admins can resend invitations.' });
@@ -51,8 +52,21 @@ export default async function handler(req, res) {
   const origin = req.headers.origin ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://lotline-crm.vercel.app');
 
-  return res.status(200).json({
-    inviteUrl: `${origin}/invite/${invitation.token}`,
-    invitation,
+  const inviteUrl = `${origin}/invite/${invitation.token}`;
+
+  // Fetch org name + inviter name for the email
+  const [{ data: orgData }, { data: inviterProfile }] = await Promise.all([
+    adminClient.from('organizations').select('name').eq('id', orgId).single(),
+    adminClient.from('profiles').select('name').eq('id', userId).single(),
+  ]);
+
+  await sendInviteEmail({
+    to:          invitation.email,
+    inviteUrl,
+    orgName:     orgData?.name || 'your team',
+    role:        invitation.role,
+    inviterName: inviterProfile?.name,
   });
+
+  return res.status(200).json({ inviteUrl, invitation });
 }

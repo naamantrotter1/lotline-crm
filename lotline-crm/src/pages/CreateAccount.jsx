@@ -135,10 +135,12 @@ export default function CreateAccount() {
       }).eq('id', userId);
     }
 
-    // 4. Create organization
+    // 4. Create organization (plan set atomically inside the RPC)
     const { data: orgId, error: rpcError } = await supabase.rpc('create_organization', {
-      p_name: orgName.trim(),
-      p_slug: slug,
+      p_name:       orgName.trim(),
+      p_slug:       slug,
+      p_plan:       planKey,
+      p_seat_limit: PLAN_SEAT_LIMITS[planKey] ?? 1,
     });
 
     if (rpcError) {
@@ -151,17 +153,6 @@ export default function CreateAccount() {
       setError(msg);
       setLoading(false);
       return;
-    }
-
-    // 5. Set plan + seat_limit
-    if (orgId) {
-      await supabase
-        .from('organizations')
-        .update({
-          plan:       planKey,
-          seat_limit: PLAN_SEAT_LIMITS[planKey] ?? 1,
-        })
-        .eq('id', orgId);
     }
 
     // 6. Refresh auth context

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
 import TeamSettings from '../components/settings/TeamSettings';
 
@@ -70,6 +71,104 @@ function NotificationsTab({ showToast }) {
             onChange={() => handleToggle('stageMove', !stageMove, setStageMove)}
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BillingTab() {
+  const { profile, signOut } = useAuth();
+  const [confirming, setConfirming] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleCancel() {
+    setCancelling(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/account/cancel', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Cancellation failed');
+      await signOut();
+    } catch (e) {
+      setError(e.message);
+      setCancelling(false);
+      setConfirming(false);
+    }
+  }
+
+  const planLabel = profile?.org?.plan
+    ? profile.org.plan.charAt(0).toUpperCase() + profile.org.plan.slice(1)
+    : 'Pro';
+
+  return (
+    <div className="max-w-md space-y-4">
+      {/* Current plan card */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+            <CreditCard size={18} className="text-accent" />
+          </div>
+          <div>
+            <p className="font-semibold text-sidebar">Subscription</p>
+            <p className="text-xs text-gray-400">Manage your plan</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-600">Current plan</span>
+          <span className="text-sm font-semibold text-sidebar capitalize">{planLabel}</span>
+        </div>
+        <div className="flex items-center justify-between py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-600">Status</span>
+          <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">Active</span>
+        </div>
+      </div>
+
+      {/* Danger zone */}
+      <div className="bg-white rounded-xl border border-red-100 p-6">
+        <h3 className="font-semibold text-red-600 mb-1">Cancel Subscription</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Cancelling will permanently delete your account and all associated data. This cannot be undone.
+        </p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-3">
+            {error}
+          </div>
+        )}
+
+        {!confirming ? (
+          <button
+            onClick={() => setConfirming(true)}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+          >
+            Cancel my subscription
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-red-700">Are you absolutely sure? Your account will be deleted immediately.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={cancelling}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Keep my account
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cancelling ? <><Loader2 size={14} className="animate-spin" /> Deleting…</> : 'Yes, delete my account'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -177,7 +276,7 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['profile', 'team', 'notifications'].map((t) => (
+        {['profile', 'team', 'notifications', 'billing'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -290,6 +389,8 @@ export default function Settings() {
       {tab === 'notifications' && (
         <NotificationsTab showToast={showToast} />
       )}
+
+      {tab === 'billing' && <BillingTab />}
 
       {toast && (
         <div className={`fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-50 ${
