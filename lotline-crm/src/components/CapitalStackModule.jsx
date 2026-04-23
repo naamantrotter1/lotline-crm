@@ -205,8 +205,17 @@ function AllocationModal({ deal, commitments, investors, existing, onClose, onSa
         <div className="grid grid-cols-2 gap-3">
           {/* Amount */}
           <div>
-            <p className={labelCls}>Amount ($)</p>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" className={inputCls} />
+            <p className={labelCls}>Amount</p>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
+              <input
+                type="number"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0"
+                className={`${inputCls} pl-6`}
+              />
+            </div>
           </div>
           {/* Position */}
           <div>
