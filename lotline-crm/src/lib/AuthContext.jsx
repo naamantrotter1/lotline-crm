@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { canUser } from './permissions';
 
 const AuthContext = createContext(null);
 
@@ -7,11 +8,14 @@ const AuthContext = createContext(null);
 export const ImpersonationContext = createContext({ impersonating: null, setImpersonating: () => {} });
 
 export function AuthProvider({ children }) {
-  const [session, setSession]         = useState(null);
-  const [profile, setProfile]         = useState(null);
-  const [orgSlug, setOrgSlug]         = useState(null); // slug of the active org (e.g. 'lotline-homes')
+  const [session, setSession]             = useState(null);
+  const [profile, setProfile]             = useState(null);
+  const [orgSlug, setOrgSlug]             = useState(null);   // slug of the active org
+  const [orgRole, setOrgRole]             = useState(null);   // memberships.role for active org
+  const [orgPlan, setOrgPlan]             = useState(null);   // organizations.plan
+  const [orgSeatLimit, setOrgSeatLimit]   = useState(null);   // organizations.seat_limit
   const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading]             = useState(true);
   // Operator impersonation: { investor, logId }
   const [impersonating, setImpersonating] = useState(null);
 
@@ -26,16 +30,36 @@ export function AuthProvider({ children }) {
         setProfile(data);
         localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
 
-        // Resolve the active org's slug (needed for org-scoped seeding + display)
+        // Resolve active org: slug, plan, seat_limit + membership role
         if (data.active_organization_id) {
+          const orgId = data.active_organization_id;
+
+          // Fetch org metadata
           supabase
             .from('organizations')
-            .select('slug')
-            .eq('id', data.active_organization_id)
+            .select('slug, plan, seat_limit')
+            .eq('id', orgId)
             .single()
-            .then(({ data: org }) => setOrgSlug(org?.slug ?? null));
+            .then(({ data: org }) => {
+              setOrgSlug(org?.slug ?? null);
+              setOrgPlan(org?.plan ?? null);
+              setOrgSeatLimit(org?.seat_limit ?? null);
+            });
+
+          // Fetch per-org role from memberships
+          supabase
+            .from('memberships')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('organization_id', orgId)
+            .eq('status', 'active')
+            .maybeSingle()
+            .then(({ data: mem }) => setOrgRole(mem?.role ?? null));
         } else {
           setOrgSlug(null);
+          setOrgRole(null);
+          setOrgPlan(null);
+          setOrgSeatLimit(null);
         }
 
         // If investor role, resolve their linked investor record
@@ -81,6 +105,9 @@ export function AuthProvider({ children }) {
         } else {
           setProfile(null);
           setOrgSlug(null);
+          setOrgRole(null);
+          setOrgPlan(null);
+          setOrgSeatLimit(null);
           setInvestorRecord(null);
           setImpersonating(null);
           localStorage.removeItem('crm_user');
@@ -121,9 +148,17 @@ export function AuthProvider({ children }) {
       <AuthContext.Provider value={{
         session,
         profile,
+        // profile.role — used for investor / realtor detection (NOT org-level permissions)
         role: profile?.role ?? null,
         activeOrgId: profile?.active_organization_id ?? null,
         orgSlug,          // slug of the active org, e.g. 'lotline-homes'
+        // ── Org-level permission fields ──────────────────────────────────────
+        orgRole,          // memberships.role: 'owner'|'admin'|'operator'|'viewer'|null
+        orgPlan,          // organizations.plan: 'starter'|'pro'|'scale'|null
+        orgSeatLimit,     // organizations.seat_limit: number|null
+        /** capability check: can(cap) → boolean */
+        can: (capability) => canUser(orgRole, capability),
+        // ─────────────────────────────────────────────────────────────────────
         investorRecord,   // { id, name, ... } — only non-null for investor-role users
         loading,
         signIn,

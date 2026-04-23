@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
-import UserManagement from './UserManagement';
+import TeamSettings from '../components/settings/TeamSettings';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -285,7 +285,7 @@ export default function Settings() {
         </div>
       )}
 
-      {tab === 'team' && <UserManagement />}
+      {tab === 'team' && <TeamSettings />}
 
       {tab === 'notifications' && (
         <NotificationsTab showToast={showToast} />

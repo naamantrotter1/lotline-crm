@@ -1,22 +1,37 @@
 import { useAuth } from '../lib/AuthContext';
 
 /**
- * Returns permission flags derived from the current user's role.
- *   admin  → canEdit + canAdmin (full access + user management)
- *   editor → canEdit only (create/edit deals, no user management)
- *   viewer → read-only (default for new signups)
- *   agent  → Deal Overview + Sales only; can move stages; cannot edit fields
+ * Returns permission flags derived from the user's org-level role (memberships.role)
+ * and profile-level role (profiles.role — for investor/agent detection only).
+ *
+ * ROLE HIERARCHY (orgRole, from memberships):
+ *   owner    → full access including billing/org deletion
+ *   admin    → full data + team management; no billing/deletion
+ *   operator → create/edit/delete deals & investor data; no team/billing
+ *   viewer   → read-only; no mutations
+ *
+ * profiles.role ('realtor', 'investor') is kept separately for routing guards.
  */
 export function usePermissions() {
-  const { role } = useAuth();
+  const { role, orgRole, can } = useAuth();
+
   const isAgent    = role === 'realtor';
   const isInvestor = role === 'investor';
+
   return {
-    canEdit:  role === 'admin' || role === 'user',
-    canAdmin: role === 'admin',
-    isViewer: role === 'viewer' || role === null,
+    // Fine-grained capability check (preferred for new code)
+    can,
+
+    // Current org-level role string
+    orgRole,
+
+    // Role-type flags (profiles.role — routing/portal detection only)
     isAgent,
     isInvestor,
-    role,
+
+    // Legacy aliases (kept for existing callers — prefer can() for new code)
+    canEdit:  can('deal.create'),
+    canAdmin: can('team.view'),
+    isViewer: orgRole === 'viewer' || !orgRole,
   };
 }

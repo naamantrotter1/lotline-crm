@@ -47,6 +47,7 @@ import Settings from './pages/Settings';
 import Lending from './pages/Lending';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
+import AcceptInvite from './pages/AcceptInvite';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
  *  Special case: unauthenticated users hitting exactly "/" see the marketing landing page. */
@@ -84,12 +85,12 @@ function OnboardingGuard({ children }) {
   return children;
 }
 
-/** Redirects non-admins to / */
+/** Redirects non-admins (owner/admin) to / */
 function AdminRoute({ children }) {
-  const { canAdmin } = usePermissions();
+  const { can } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (!canAdmin) return <Navigate to="/" replace />;
+  if (!can('team.view')) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -165,6 +166,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Invitation acceptance — public but session-aware */}
+            <Route path="/invite/:token" element={<AcceptInvite />} />
 
             {/* Onboarding — authenticated but no org yet */}
             <Route
