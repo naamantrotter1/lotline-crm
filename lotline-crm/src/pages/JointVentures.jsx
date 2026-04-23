@@ -359,7 +359,7 @@ function ProposeModal({ onClose, onProposed }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-800">Propose JV Partnership</h2>
+          <h2 className="font-semibold text-gray-800">Add JV Partner</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
@@ -449,7 +449,7 @@ function ProposeModal({ onClose, onProposed }) {
                 className="w-full py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {proposing && <Loader2 size={14} className="animate-spin" />}
-                Send proposal
+                Add partner
               </button>
             </>
           )}
@@ -600,7 +600,7 @@ export default function JointVentures() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
           >
             <Plus size={15} />
-            Propose partnership
+            Add partner
           </button>
         )}
       </div>
@@ -661,7 +661,7 @@ export default function JointVentures() {
                   onClick={() => setShowPropose(true)}
                   className="mt-4 text-sm font-semibold text-accent hover:underline"
                 >
-                  Propose your first partnership
+                  Add your first partner
                 </button>
               )}
             </div>
@@ -685,9 +685,9 @@ export default function JointVentures() {
           onClose={() => setShowPropose(false)}
           onProposed={() => {
             setShowPropose(false);
-            showToastFn('Partnership proposal sent!');
+            showToastFn('Partner added successfully!');
             refresh();
-            setTab('pending');
+            setTab('active');
           }}
         />
       )}

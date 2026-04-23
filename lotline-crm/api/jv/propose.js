@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     .select('id, status')
     .eq('host_organization_id', orgId)
     .eq('partner_organization_id', partnerOrgId)
-    .in('status', ['proposed', 'active', 'suspended'])
+    .in('status', ['active', 'suspended'])
     .maybeSingle();
 
   if (existing) {
@@ -74,9 +74,11 @@ export default async function handler(req, res) {
       permissions_on_partner:  permissions,
       agreement_document_url:  agreementDocumentUrl ?? null,
       notes:                   notes ?? null,
-      status:                  'proposed',
+      status:                  'active',
       proposed_by_user_id:     userId,
       proposed_at:             new Date().toISOString(),
+      accepted_by_user_id:     userId,
+      accepted_at:             new Date().toISOString(),
     })
     .select()
     .single();
