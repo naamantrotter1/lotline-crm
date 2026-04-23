@@ -232,6 +232,7 @@ export async function loadAllDeals(orgIds) {
     // Merge Supabase rows with any locally-stored fields not yet synced to DB
     // (e.g. contractSignedAt, listingUrl before those columns exist in Supabase)
     const lsDeals = lsGet(orgId);
+    console.log('[dealsSync] loadAllDeals: orgId =', orgId, '| supabase rows =', data.length, '| ls deals =', lsDeals.length);
     const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
@@ -257,6 +258,7 @@ export async function loadAllDeals(orgIds) {
     const supabaseIds = new Set(deals.map(d => String(d.id)));
     const unsynced = lsDeals.filter(d => !supabaseIds.has(String(d.id)) && !d.isArchived);
     if (unsynced.length > 0) {
+      console.log('[dealsSync] loadAllDeals: re-flushing', unsynced.length, 'unsynced deals to Supabase');
       unsynced.forEach(d => flushToSupabase(d, orgId));
     }
     const merged = [...deals, ...unsynced];
@@ -289,6 +291,7 @@ export async function loadArchivedDeals(orgId) {
 
 /** Write a single deal to localStorage only (synchronous, no network). */
 export function saveToLS(deal, orgId) {
+  console.log('[dealsSync] saveToLS: deal', deal.id, '→ key', lsKey(orgId), '(orgId:', orgId, ')');
   const all = lsGet(orgId);
   const idx = all.findIndex(d => String(d.id) === String(deal.id));
   if (idx >= 0) all[idx] = deal; else all.push(deal);
