@@ -5,8 +5,13 @@
  * Tables:  capital_commitments, deal_allocations, commitment_ledger_entries
  * Views:   investor_commitment_summary, deal_capital_stack_view
  *
- * All writes go through Supabase (no localStorage mirror — capital data must
- * always be authoritative). Reads fall back gracefully to empty arrays.
+ * Guardrails enforced on every write:
+ *   1. Commitment-level: amount ≤ commitment.remaining_headroom (investor-global cap)
+ *   2. Deal-level: SUM(allocations on deal) + new_amount ≤ deal.total_capital_required
+ *      Both can be overridden with an explicit overrideReason (logged in ledger).
+ *
+ * Legacy commitments (commitment_type = 'legacy') are excluded from the Add
+ * Allocation modal and from Auto-Fund — they are historical and fully deployed.
  */
 import { supabase } from './supabase';
 
@@ -28,7 +33,6 @@ function guard(data, error, fallback = []) {
 
 /**
  * Fetch all investors ordered by name.
- * Returns [{ id, name, contact, email, phone, type, preferred_financing, notes }]
  */
 export async function fetchInvestors() {
   if (!supabase) return [];
@@ -44,8 +48,9 @@ export async function fetchInvestors() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all capital commitments joined with the summary view.
- * Returns the investor_commitment_summary view rows, ordered by priority_rank.
+ * Fetch all capital commitment summaries (all types, all statuses).
+ * Used for the deal-page health check (CommitmentHealthBadge) and global views.
+ * Includes commitment_type (added by migration 008).
  */
 export async function fetchCommitmentSummaries() {
   if (!supabase) return [];
@@ -57,7 +62,44 @@ export async function fetchCommitmentSummaries() {
 }
 
 /**
- * Fetch all active commitments for a given investor.
+ * Fetch commitments eligible for the Add Allocation modal and Auto-Fund:
+ *   - commitment_type != 'legacy'  (legacy = historical, closed)
+ *   - status = 'active'
+ *
+ * Falls back to fetchCommitmentSummaries() if the commitment_type column
+ * doesn't exist yet (i.e., migration 008 hasn't run).
+ */
+export async function fetchActiveCommitmentsForModal() {
+  if (!supabase) return [];
+  try {
+    const { data: activeCcs, error: ccErr } = await supabase
+      .from('capital_commitments')
+      .select('id')
+      .eq('status', 'active')
+      .neq('commitment_type', 'legacy');
+
+    if (ccErr) {
+      // commitment_type column not yet available — fall back to all active
+      return fetchCommitmentSummaries();
+    }
+
+    if (!activeCcs?.length) return [];
+    const ids = activeCcs.map(c => c.id);
+
+    const { data, error } = await supabase
+      .from('investor_commitment_summary')
+      .select('*')
+      .in('commitment_id', ids)
+      .order('priority_rank');
+
+    return guard(data, error);
+  } catch {
+    return fetchCommitmentSummaries();
+  }
+}
+
+/**
+ * Fetch all commitments for a given investor (all types).
  */
 export async function fetchCommitmentsForInvestor(investorId) {
   if (!supabase) return [];
@@ -71,9 +113,6 @@ export async function fetchCommitmentsForInvestor(investorId) {
 
 /**
  * Create a new capital commitment.
- * @param {object} fields — { investor_id, name, committed_amount, commitment_date,
- *                            expiration_date, priority_rank, notes, revolving }
- * Returns { commitment, error }
  */
 export async function createCommitment(fields) {
   if (!supabase) return { commitment: null, error: new Error('No Supabase client') };
@@ -103,9 +142,7 @@ export async function updateCommitment(id, fields) {
 
 /**
  * Fetch the full capital stack for a single deal (via view).
- * Returns [{ allocation_id, investor_id, investor_name, commitment_name,
- *             amount, percent_of_deal, position, preferred_return_pct,
- *             profit_share_pct, status, running_total, notes }]
+ * Includes commitment_id so the health badge can cross-reference commitments.
  */
 export async function fetchDealStack(dealId) {
   if (!supabase) return [];
@@ -131,29 +168,65 @@ export async function fetchAllocationsByCommitment(commitmentId) {
 }
 
 /**
+ * How much deal capacity remains (excluding a specific allocation if editing).
+ * Returns null if deal has no total_capital_required set.
+ *
+ * @param {string} dealId
+ * @param {string|null} excludeAllocationId — pass when editing an existing allocation
+ * @returns {number|null}
+ */
+async function _dealCapacityRemaining(dealId, excludeAllocationId = null) {
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('total_capital_required')
+    .eq('id', dealId)
+    .single();
+
+  const required = deal?.total_capital_required;
+  if (!required) return null; // no cap set — unconstrained
+
+  const { data: allocs } = await supabase
+    .from('deal_allocations')
+    .select('id, amount')
+    .eq('deal_id', dealId)
+    .neq('status', 'returned');
+
+  const currentTotal = (allocs ?? [])
+    .filter(a => a.id !== excludeAllocationId)
+    .reduce((s, a) => s + Number(a.amount), 0);
+
+  return required - currentTotal;
+}
+
+/**
  * Add a new allocation to a deal.
  *
- * Guardrail: checks that amount ≤ remaining headroom on the commitment.
- * Pass `overrideReason` to bypass (logs it in the ledger).
+ * Guardrails (in order):
+ *   1. Commitment-level: amount ≤ commitment.remaining_headroom
+ *   2. Deal-level: amount ≤ deal.total_capital_required - sum(existing allocs)
  *
- * Returns { allocation, error, blocked, headroom }
- *   blocked=true means the headroom check failed and no overrideReason was given.
+ * Either guardrail can be bypassed with an explicit overrideReason (logged).
+ *
+ * Returns { allocation, error, blocked, headroom, dealCapacityExceeded, dealRemaining }
+ *   blocked=true means a guardrail failed and no overrideReason was given.
  */
 export async function addAllocation({
   dealId,
   commitmentId,
   investorId,
   amount,
-  position = 'pari_passu',
+  position = '1st Position',
   preferredReturnPct = null,
   profitSharePct = null,
+  prefPaymentTiming = 'at_exit',
+  sourceScenario = null,
   status = 'planned',
   notes = '',
   overrideReason = null,
 }) {
   if (!supabase) return { allocation: null, error: new Error('No Supabase client') };
 
-  // ── Headroom check ──────────────────────────────────────────────────────────
+  // ── 1. Commitment-level headroom check ─────────────────────────────────────
   const { data: summary } = await supabase
     .from('investor_commitment_summary')
     .select('remaining_headroom, committed_amount')
@@ -161,14 +234,19 @@ export async function addAllocation({
     .single();
 
   const headroom = summary?.remaining_headroom;
-  const isUnlimited = summary?.committed_amount == null; // Cash / NULL cap
+  const isUnlimited = summary?.committed_amount == null;
 
   if (!isUnlimited && headroom != null && amount > headroom && !overrideReason) {
+    return { allocation: null, error: null, blocked: true, headroom, dealCapacityExceeded: false };
+  }
+
+  // ── 2. Deal-level capacity check ────────────────────────────────────────────
+  const dealRemaining = await _dealCapacityRemaining(dealId);
+  if (dealRemaining != null && amount > dealRemaining && !overrideReason) {
     return {
-      allocation: null,
-      error: null,
-      blocked: true,
-      headroom,
+      allocation: null, error: null,
+      blocked: true, headroom,
+      dealCapacityExceeded: true, dealRemaining,
     };
   }
 
@@ -183,6 +261,8 @@ export async function addAllocation({
       position,
       preferred_return_pct: preferredReturnPct,
       profit_share_pct: profitSharePct,
+      pref_payment_timing: prefPaymentTiming,
+      source_scenario: sourceScenario,
       status,
       notes,
     })
@@ -191,10 +271,9 @@ export async function addAllocation({
 
   if (error) return { allocation: null, error, blocked: false };
 
-  // Recompute percent_of_deal for all allocations on this deal
   await _recomputePercentOfDeal(dealId);
 
-  // ── Ledger entry ────────────────────────────────────────────────────────────
+  // ── Ledger entry ─────────────────────────────────────────────────────────────
   await supabase.from('commitment_ledger_entries').insert({
     commitment_id: commitmentId,
     delta_amount: amount,
@@ -209,17 +288,29 @@ export async function addAllocation({
 
 /**
  * Update an existing allocation (amount, status, notes, etc.).
- * When amount changes, logs an allocation_reduced/added entry and recomputes percents.
+ * Applies the same deal-level and commitment-level guardrails when amount increases.
  */
-export async function updateAllocation(allocationId, fields) {
+export async function updateAllocation(allocationId, fields, overrideReason = null) {
   if (!supabase) return { error: new Error('No Supabase client') };
 
-  // Fetch current to detect amount delta
   const { data: current } = await supabase
     .from('deal_allocations')
     .select('amount, deal_id, commitment_id')
     .eq('id', allocationId)
     .single();
+
+  const amountChanging = current && fields.amount != null && fields.amount !== Number(current.amount);
+
+  if (amountChanging && fields.amount > Number(current.amount) && !overrideReason) {
+    // ── Deal-level capacity check on increase ──────────────────────────────
+    const dealRemaining = await _dealCapacityRemaining(current.deal_id, allocationId);
+    if (dealRemaining != null && fields.amount > dealRemaining) {
+      return {
+        error: null, blocked: true,
+        dealCapacityExceeded: true, dealRemaining,
+      };
+    }
+  }
 
   const { error } = await supabase
     .from('deal_allocations')
@@ -228,24 +319,24 @@ export async function updateAllocation(allocationId, fields) {
 
   if (error) return { error };
 
-  if (current && fields.amount != null && fields.amount !== current.amount) {
-    const delta = fields.amount - current.amount;
+  if (current && amountChanging) {
+    const delta = fields.amount - Number(current.amount);
     await supabase.from('commitment_ledger_entries').insert({
       commitment_id: current.commitment_id,
       delta_amount: delta,
       reason: delta > 0 ? 'allocation_added' : 'allocation_reduced',
       deal_id: current.deal_id,
       allocation_id: allocationId,
+      override_reason: overrideReason ?? null,
     });
     await _recomputePercentOfDeal(current.deal_id);
   }
 
-  return { error: null };
+  return { error: null, blocked: false };
 }
 
 /**
  * Mark an allocation as "returned" (capital back to investor).
- * For revolving commitments, this restores headroom automatically via the view.
  */
 export async function returnAllocation(allocationId, { notes = '' } = {}) {
   if (!supabase) return { error: new Error('No Supabase client') };
@@ -319,16 +410,17 @@ export async function removeAllocation(allocationId) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Auto-fund a deal: walk active commitments by priority_rank and fill each
- * up to its remaining headroom until the deal's total_capital_required is met.
+ * Auto-fund a deal: walk active non-legacy commitments by priority_rank and fill
+ * each up to min(commitment headroom, deal remaining capacity) until the deal's
+ * total_capital_required is met.
+ *
+ * Legacy commitments are excluded — they are historical and fully deployed.
  *
  * Returns { allocations: [...], totalFunded, gap }
- *   gap > 0 means not enough headroom across all commitments.
  */
 export async function autoFundDeal(dealId, totalCapitalRequired) {
   if (!supabase) return { allocations: [], totalFunded: 0, gap: totalCapitalRequired };
 
-  // Fetch existing funded amount
   const { data: existing } = await supabase
     .from('deal_allocations')
     .select('amount')
@@ -339,8 +431,8 @@ export async function autoFundDeal(dealId, totalCapitalRequired) {
   let remaining = totalCapitalRequired - alreadyFunded;
   if (remaining <= 0) return { allocations: [], totalFunded: alreadyFunded, gap: 0 };
 
-  // Walk commitments by priority
-  const summaries = await fetchCommitmentSummaries();
+  // Only active, non-legacy commitments participate in auto-fund
+  const summaries = await fetchActiveCommitmentsForModal();
   const active = summaries.filter(s => s.commitment_status === 'active');
 
   const created = [];
@@ -348,7 +440,9 @@ export async function autoFundDeal(dealId, totalCapitalRequired) {
     if (remaining <= 0) break;
 
     const headroom = s.remaining_headroom; // null = unlimited
-    const slice = headroom == null ? remaining : Math.min(remaining, headroom);
+    const slice = headroom == null
+      ? remaining
+      : Math.min(remaining, headroom);
     if (slice <= 0) continue;
 
     const { allocation, error } = await addAllocation({
@@ -377,9 +471,6 @@ export async function autoFundDeal(dealId, totalCapitalRequired) {
 // Ledger
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Fetch ledger entries for a commitment (most recent first).
- */
 export async function fetchLedger(commitmentId, limit = 50) {
   if (!supabase) return [];
   const { data, error } = await supabase
@@ -391,9 +482,6 @@ export async function fetchLedger(commitmentId, limit = 50) {
   return guard(data, error);
 }
 
-/**
- * Fetch all ledger entries across all commitments for an investor.
- */
 export async function fetchLedgerForInvestor(investorId, limit = 100) {
   if (!supabase) return [];
   const { data: commitments } = await supabase
@@ -413,41 +501,12 @@ export async function fetchLedgerForInvestor(investorId, limit = 100) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Deal capital_stack_status helper
+// Deal funding status — computed client-side by DealFundingBadge; no DB write
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Recompute and persist capital_stack_status for a deal.
- * Called internally after every allocation mutation.
- */
-export async function refreshDealStackStatus(dealId) {
-  if (!supabase) return;
-  const { data: deal } = await supabase
-    .from('deals')
-    .select('total_capital_required')
-    .eq('id', dealId)
-    .single();
-
-  const required = deal?.total_capital_required;
-  if (!required) return;
-
-  const { data: allocs } = await supabase
-    .from('deal_allocations')
-    .select('amount')
-    .eq('deal_id', dealId)
-    .neq('status', 'returned');
-
-  const total = (allocs ?? []).reduce((s, r) => s + Number(r.amount), 0);
-
-  let status = 'draft';
-  if (total > 0 && total < required) status = 'partially_funded';
-  else if (total >= required) status = 'fully_funded';
-  if (total > required) status = 'over_committed';
-
-  await supabase
-    .from('deals')
-    .update({ capital_stack_status: status })
-    .eq('id', dealId);
+// Kept as a no-op so callers don't break while we finish removing references.
+export async function refreshDealStackStatus(_dealId) {
+  // Status is now derived in CapitalStackModule from allocation totals.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

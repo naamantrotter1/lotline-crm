@@ -96,7 +96,8 @@ function dealToRow(deal) {
     contract_signed_at:      deal.contractSignedAt || null,
     scenario_data:           deal.scenarioData ? JSON.stringify(deal.scenarioData) : null,
     total_capital_required:  deal.totalCapitalRequired ?? null,
-    capital_stack_status:    deal.capitalStackStatus || null,
+    funded_to_date:          deal.fundedToDate ?? null,
+    scheduled_to_date:       deal.scheduledToDate ?? null,
   };
 }
 
@@ -183,7 +184,8 @@ function rowToDeal(row) {
     dealOwner:             row.deal_owner,
     scenarioData:          row.scenario_data ? (typeof row.scenario_data === 'string' ? JSON.parse(row.scenario_data) : row.scenario_data) : null,
     totalCapitalRequired:  row.total_capital_required ?? null,
-    capitalStackStatus:    row.capital_stack_status ?? 'draft',
+    fundedToDate:          row.funded_to_date ?? 0,
+    scheduledToDate:       row.scheduled_to_date ?? 0,
   };
 }
 

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase } from '../lib/dealsSync';
+import { fetchActiveCommitmentsForModal } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -245,6 +246,14 @@ function OverviewTab({
   readOnly,
   isAgent,
   saveNow,
+  ccpInvestorId, setCcpInvestorId,
+  ccpCommitmentId, setCcpCommitmentId,
+  ccpAllocationAmount, setCcpAllocationAmount,
+  ccpPrefReturnPct, setCcpPrefReturnPct,
+  ccpProfitSharePct, setCcpProfitSharePct,
+  ccpPrefPaymentTiming, setCcpPrefPaymentTiming,
+  ccpPosition, setCcpPosition,
+  ccpTranches, setCcpTranches,
 }) {
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -830,6 +839,22 @@ function OverviewTab({
             </div>
           )}
 
+          {/* ── Committed Capital Partner ────────────────────── */}
+          {!!selectedScenario && activeFinancing === 'Committed Capital Partner' && (
+            <CommittedCapitalPartnerPanel
+              deal={deal}
+              netProfit={netProfit}
+              ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
+              ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
+              ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
+              ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
+              ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
+              ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
+              ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
+              ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+            />
+          )}
+
           {/* ── Capital Stack ─────────────────────────────────── */}
           <CapitalStackModule deal={deal} readOnly={readOnly} />
 
@@ -865,6 +890,28 @@ function OverviewTab({
                     </tr>
                   );
                 })}
+                {/* Committed Capital Partner row — only when amount is set */}
+                {ccpAllocationAmount > 0 && (() => {
+                  const holdMo = (deal?.holdingMonths || 6);
+                  const ccpPref = ccpAllocationAmount * ((ccpPrefReturnPct || 0) / 100) * (holdMo / 12);
+                  const ccpShare = (ccpProfitSharePct != null && ccpProfitSharePct > 0)
+                    ? netProfit * (ccpProfitSharePct / 100)
+                    : 0;
+                  const ccpCost = ccpPref + ccpShare;
+                  const ccpProfit = netProfit - ccpCost;
+                  const ccpRoi = ccpAllocationAmount > 0 ? ((ccpProfit / ccpAllocationAmount) * 100).toFixed(1) : '0.0';
+                  return (
+                    <tr className="hover:bg-gray-50 bg-accent/5">
+                      <td className="px-4 py-2 font-medium text-gray-700">
+                        Committed Capital Partner
+                        <span className="ml-1 text-[10px] text-accent font-semibold">★ active</span>
+                      </td>
+                      <td className="px-4 py-2 text-right text-gray-600">${Math.round(ccpAllocationAmount).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-semibold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${Math.round(ccpProfit).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-bold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{ccpRoi}%</td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -1292,6 +1339,375 @@ function RealizedTab({ realized, setRealized, readOnly }) {
   );
 }
 
+// ── Committed Capital Partner Panel ──────────────────────────────────────────
+const CCP_TRIGGER_LABELS = { date: 'Date', milestone: 'Milestone', manual_call: 'Manual Call' };
+const CCP_POSITION_OPTIONS = [
+  { value: 'senior',      label: 'Senior' },
+  { value: 'pari_passu',  label: 'Pari-passu' },
+  { value: 'subordinate', label: 'Subordinate' },
+];
+const CCP_TIMING_OPTIONS = [
+  { value: 'at_exit', label: 'At Exit' },
+  { value: 'monthly', label: 'Monthly Current-Pay' },
+  { value: 'deferred', label: 'Deferred' },
+];
+const CONSTRUCTION_PRESET = (total) => [
+  { sequence: 1, pct: 0.25, notes: 'Contract / Closing',  triggerType: 'manual_call' },
+  { sequence: 2, pct: 0.25, notes: 'Foundation / Permits', triggerType: 'milestone' },
+  { sequence: 3, pct: 0.30, notes: 'Framing / Set-up',    triggerType: 'milestone' },
+  { sequence: 4, pct: 0.20, notes: 'Drywall / Finishing',  triggerType: 'manual_call' },
+].map(t => ({ ...t, amount: Math.round(total * t.pct), triggerDate: null, triggerMilestoneKey: null, dueDate: null }));
+
+function newTranche(sequence) {
+  return { sequence, amount: 0, triggerType: 'manual_call', triggerDate: null, triggerMilestoneKey: null, dueDate: null, notes: '' };
+}
+
+function CommittedCapitalPartnerPanel({
+  deal,
+  netProfit,
+  ccpInvestorId, setCcpInvestorId,
+  ccpCommitmentId, setCcpCommitmentId,
+  ccpAllocationAmount, setCcpAllocationAmount,
+  ccpPrefReturnPct, setCcpPrefReturnPct,
+  ccpProfitSharePct, setCcpProfitSharePct,
+  ccpPrefPaymentTiming, setCcpPrefPaymentTiming,
+  ccpPosition, setCcpPosition,
+  ccpTranches, setCcpTranches,
+}) {
+  const [commitments, setCommitments] = useState([]);
+  const [amountInput, setAmountInput] = useState(ccpAllocationAmount > 0 ? String(ccpAllocationAmount) : '');
+  const [evenMonthsN, setEvenMonthsN] = useState(4);
+
+  useEffect(() => {
+    fetchActiveCommitmentsForModal().then(data => setCommitments(data ?? []));
+  }, []);
+
+  // Derive investor list from commitment summaries
+  const investorMap = {};
+  commitments.forEach(c => { investorMap[c.investor_id] = c.investor_name; });
+  const investors = Object.entries(investorMap).map(([id, name]) => ({ id, name }));
+
+  const investorCommitments = commitments.filter(c => c.investor_id === ccpInvestorId);
+  const selectedCommitment = commitments.find(c => c.commitment_id === ccpCommitmentId);
+
+  const amountNum = parseFloat(amountInput.replace(/,/g, '')) || 0;
+  const headroom = selectedCommitment?.remaining_headroom ?? null;
+  const dealRequired = deal?.totalCapitalRequired ?? null;
+  const exceedsHeadroom = headroom != null && amountNum > headroom;
+  const exceedsDealCap = dealRequired != null && amountNum > dealRequired;
+
+  const handleAmountBlur = () => {
+    const n = parseFloat(amountInput.replace(/,/g, '')) || 0;
+    setCcpAllocationAmount(n);
+    setAmountInput(n > 0 ? n.toLocaleString() : '');
+  };
+
+  const fmt = n => `$${Number(n || 0).toLocaleString()}`;
+
+  // Tranche helpers
+  const trancheSum = ccpTranches.reduce((s, t) => s + Number(t.amount || 0), 0);
+  const trancheGap = amountNum - trancheSum;
+  const tranchesOk = amountNum > 0 && Math.abs(trancheGap) < 0.01;
+
+  const setTranche = (idx, field, value) => {
+    setCcpTranches(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+  const addTrancheRow = () => setCcpTranches(prev => [...prev, newTranche(prev.length + 1)]);
+  const removeTranche = (idx) => setCcpTranches(prev => prev.filter((_, i) => i !== idx).map((t, i) => ({ ...t, sequence: i + 1 })));
+
+  const loadPreset = (preset) => setCcpTranches(preset(amountNum));
+  const loadEvenMonthly = () => {
+    const n = Math.max(1, evenMonthsN);
+    const baseAmt = Math.floor(amountNum / n);
+    const remainder = amountNum - baseAmt * n;
+    setCcpTranches(Array.from({ length: n }, (_, i) => ({
+      sequence: i + 1,
+      amount: i === n - 1 ? baseAmt + remainder : baseAmt,
+      triggerType: 'date',
+      triggerDate: null, triggerMilestoneKey: null, dueDate: null,
+      notes: `Month ${i + 1}`,
+    })));
+  };
+
+  // Projected cost of capital (simplified: full amount × pref rate × hold period)
+  const holdMonths = deal?.holdingMonths || 6;
+  const projectedPref = amountNum * (ccpPrefReturnPct / 100) * (holdMonths / 12);
+  const projectedShare = ccpProfitSharePct != null && ccpProfitSharePct > 0
+    ? netProfit * (ccpProfitSharePct / 100)
+    : 0;
+  const projectedTotalCost = projectedPref + projectedShare;
+  const projectedPayout = amountNum + projectedTotalCost;
+
+  const inputCls = 'text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full';
+  const labelCls = 'text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium';
+
+  return (
+    <div className="space-y-4">
+
+      {/* ── Section 1: Commitment Link ── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Link to Commitment</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+
+          {/* Investor selector */}
+          <div className="py-2">
+            <p className={labelCls}>Investor</p>
+            <select
+              value={ccpInvestorId}
+              onChange={e => { setCcpInvestorId(e.target.value); setCcpCommitmentId(''); }}
+              className={inputCls}
+            >
+              <option value="">— Select investor —</option>
+              {investors.map(inv => <option key={inv.id} value={inv.id}>{inv.name}</option>)}
+            </select>
+            {investors.length === 0 && (
+              <p className="text-[10px] text-amber-600 mt-1">No investors with active commitments. Run migration 008 or add commitments.</p>
+            )}
+          </div>
+
+          {/* Commitment selector */}
+          <div className="py-2">
+            <p className={labelCls}>Commitment</p>
+            <select
+              value={ccpCommitmentId}
+              onChange={e => setCcpCommitmentId(e.target.value)}
+              disabled={!ccpInvestorId}
+              className={inputCls}
+            >
+              <option value="">— Select commitment —</option>
+              {investorCommitments.map(c => (
+                <option key={c.commitment_id} value={c.commitment_id}>
+                  {c.commitment_name}
+                  {c.remaining_headroom != null ? ` — ${fmt(c.remaining_headroom)} remaining` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Allocation amount */}
+          <div className="py-2 col-span-2">
+            <p className={labelCls}>Allocation Amount ($)</p>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={amountInput}
+              onChange={e => setAmountInput(e.target.value)}
+              onFocus={e => { setAmountInput(String(amountNum || '')); e.target.select(); }}
+              onBlur={handleAmountBlur}
+              placeholder="e.g. 173,450"
+              className={`${inputCls} ${exceedsHeadroom || exceedsDealCap ? 'border-red-400 focus:ring-red-300' : ''}`}
+            />
+            {exceedsHeadroom && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> Exceeds commitment headroom ({fmt(headroom)} remaining)
+              </p>
+            )}
+            {!exceedsHeadroom && exceedsDealCap && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> Exceeds deal capital requirement ({fmt(dealRequired)})
+              </p>
+            )}
+            {ccpCommitmentId && amountNum > 0 && !exceedsHeadroom && !exceedsDealCap && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                Allocating {fmt(amountNum)} from {selectedCommitment?.commitment_name}
+                {headroom != null ? ` — ${fmt(headroom - amountNum)} will remain on the commitment` : ''}.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2: Capital Terms ── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Capital Terms</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+          <div className="py-2">
+            <p className={labelCls}>Preferred Return % (annualized)</p>
+            <input type="number" min="0" step="0.1" value={ccpPrefReturnPct}
+              onChange={e => setCcpPrefReturnPct(parseFloat(e.target.value) || 0)}
+              className={inputCls} />
+          </div>
+          <div className="py-2">
+            <p className={labelCls}>Profit Share % (blank = pro-rata)</p>
+            <input type="number" min="0" step="0.1"
+              value={ccpProfitSharePct ?? ''}
+              onChange={e => setCcpProfitSharePct(e.target.value === '' ? null : parseFloat(e.target.value) || 0)}
+              placeholder="Pro-rata by allocation %"
+              className={inputCls} />
+          </div>
+          <div className="py-2">
+            <p className={labelCls}>Pref Payment Timing</p>
+            <select value={ccpPrefPaymentTiming} onChange={e => setCcpPrefPaymentTiming(e.target.value)} className={inputCls}>
+              {CCP_TIMING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="py-2">
+            <p className={labelCls}>Position</p>
+            <select value={ccpPosition} onChange={e => setCcpPosition(e.target.value)} className={inputCls}>
+              {CCP_POSITION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 3: Draw Schedule ── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Draw Schedule</p>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              onClick={() => loadPreset(CONSTRUCTION_PRESET)}
+              disabled={amountNum <= 0}
+              className="text-[10px] font-medium px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              4-tranche construction
+            </button>
+            <button
+              onClick={() => setCcpTranches([{ sequence: 1, amount: amountNum, triggerType: 'manual_call', triggerDate: null, triggerMilestoneKey: null, dueDate: null, notes: 'Single upfront fund' }])}
+              disabled={amountNum <= 0}
+              className="text-[10px] font-medium px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              Single upfront
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={loadEvenMonthly}
+                disabled={amountNum <= 0}
+                className="text-[10px] font-medium px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                Even monthly over
+              </button>
+              <input
+                type="number" min="1" max="24" value={evenMonthsN}
+                onChange={e => setEvenMonthsN(Number(e.target.value) || 1)}
+                className="w-12 text-xs text-center border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+              />
+              <span className="text-[10px] text-gray-400">mo</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tranche table */}
+        {ccpTranches.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs mb-2">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left pb-1.5 font-medium w-8">#</th>
+                  <th className="text-right pb-1.5 font-medium">Amount</th>
+                  <th className="text-left pb-1.5 font-medium px-2">Trigger</th>
+                  <th className="text-left pb-1.5 font-medium px-2">Date / Key</th>
+                  <th className="text-left pb-1.5 font-medium px-2">Due Date</th>
+                  <th className="text-left pb-1.5 font-medium px-2">Notes</th>
+                  <th className="w-6"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {ccpTranches.map((t, i) => (
+                  <tr key={i}>
+                    <td className="py-1.5 text-gray-500">{t.sequence}</td>
+                    <td className="py-1.5 text-right">
+                      <input
+                        type="number" value={t.amount || ''}
+                        onChange={e => setTranche(i, 'amount', parseFloat(e.target.value) || 0)}
+                        className="w-24 text-right border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                      />
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <select value={t.triggerType} onChange={e => setTranche(i, 'triggerType', e.target.value)}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent/30">
+                        {Object.entries(CCP_TRIGGER_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td className="py-1.5 px-2">
+                      {t.triggerType === 'date' ? (
+                        <input type="date" value={t.triggerDate || ''} onChange={e => setTranche(i, 'triggerDate', e.target.value)}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent/30" />
+                      ) : t.triggerType === 'milestone' ? (
+                        <input type="text" value={t.triggerMilestoneKey || ''} placeholder="milestone key"
+                          onChange={e => setTranche(i, 'triggerMilestoneKey', e.target.value)}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent/30 w-28" />
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <input type="date" value={t.dueDate || ''} onChange={e => setTranche(i, 'dueDate', e.target.value)}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent/30" />
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <input type="text" value={t.notes || ''} placeholder="notes"
+                        onChange={e => setTranche(i, 'notes', e.target.value)}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent/30 w-28" />
+                    </td>
+                    <td className="py-1.5">
+                      <button onClick={() => removeTranche(i)} className="text-gray-300 hover:text-red-500 transition-colors">
+                        <XIcon size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 mb-2">No tranches yet. Use a preset or add rows manually.</p>
+        )}
+
+        {/* Tranche validation bar */}
+        {ccpTranches.length > 0 && (
+          <div className={`text-xs px-3 py-2 rounded-lg mb-2 ${tranchesOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+            {tranchesOk
+              ? `✓ Tranches total ${fmt(trancheSum)} — matches allocation`
+              : `Tranches total ${fmt(trancheSum)} of ${fmt(amountNum)} — ${trancheGap > 0 ? `${fmt(trancheGap)} unscheduled` : `${fmt(-trancheGap)} over allocation`}`}
+          </div>
+        )}
+
+        <button onClick={addTrancheRow} className="text-xs text-accent font-medium hover:underline">+ Add tranche</button>
+      </div>
+
+      {/* ── Section 4: Committed Capital Cost Summary ── */}
+      {amountNum > 0 && (
+        <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Committed Capital Cost Summary</p>
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">Allocation on this deal</span>
+              <span className="font-medium">{fmt(amountNum)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">Projected hold period</span>
+              <span className="font-medium">{holdMonths} mo</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">
+                Projected pref return ({ccpPrefReturnPct}% × {holdMonths} mo)
+                {ccpTranches.length > 0 && <span className="ml-1 text-gray-500" title="Simplified: full allocation × rate × hold period. Tranche-by-tranche accrual in PR 2.">*</span>}
+              </span>
+              <span className="font-medium">{fmt(Math.round(projectedPref))}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">
+                Projected profit share
+                {ccpProfitSharePct == null ? ' (pro-rata — set % above to override)' : ` (${ccpProfitSharePct}% of projected profit)`}
+              </span>
+              <span className="font-medium">{fmt(Math.round(projectedShare))}</span>
+            </div>
+            <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+              <span className="text-gray-400">Total projected investor payout</span>
+              <span className="font-medium">{fmt(Math.round(projectedPayout))}</span>
+            </div>
+            <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+              <span className="font-semibold text-white">Total cost of capital to deal</span>
+              <span className="font-bold text-accent">{fmt(Math.round(projectedTotalCost))}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Financing scenario types (matching Lovable CRM) ──────────────────────────
 const FINANCING_SCENARIOS = [
   { id: 'cash',                label: 'Cash',                    financingType: 'Cash' },
@@ -1299,6 +1715,7 @@ const FINANCING_SCENARIOS = [
   { id: 'hard-money-land-home',label: 'Hard Money (Land + Home)',financingType: 'Hard Money (Land + Home)' },
   { id: 'loc',                 label: 'Line of Credit',          financingType: 'Line of Credit' },
   { id: 'profit-split',        label: 'Profit Split',            financingType: 'Profit Split' },
+  { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner' },
 ];
 
 // ── Per-investor default terms ────────────────────────────────────────────────
@@ -1556,6 +1973,18 @@ function DealDetailContent({ deal }) {
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
   const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? 0);
 
+  // Committed Capital Partner specific
+  const [ccpInvestorId, setCcpInvestorId] = useState(sd.ccpInvestorId ?? '');
+  const [ccpCommitmentId, setCcpCommitmentId] = useState(sd.ccpCommitmentId ?? '');
+  const [ccpAllocationAmount, setCcpAllocationAmount] = useState(sd.ccpAllocationAmount ?? 0);
+  const [ccpPrefReturnPct, setCcpPrefReturnPct] = useState(sd.ccpPrefReturnPct ?? 0);
+  const [ccpProfitSharePct, setCcpProfitSharePct] = useState(sd.ccpProfitSharePct ?? null);
+  const [ccpPrefPaymentTiming, setCcpPrefPaymentTiming] = useState(sd.ccpPrefPaymentTiming ?? 'at_exit');
+  const [ccpPosition, setCcpPosition] = useState(sd.ccpPosition ?? 'pari_passu');
+  const [ccpTranches, setCcpTranches] = useState(sd.ccpTranches ?? []);
+  const [ccpAllocationId, setCcpAllocationId] = useState(sd.ccpAllocationId ?? null);
+  const [ccpScheduleId, setCcpScheduleId] = useState(sd.ccpScheduleId ?? null);
+
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -1628,6 +2057,10 @@ function DealDetailContent({ deal }) {
         servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
         holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
         loanAmountOverride, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+        // Committed Capital Partner
+        ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
+        ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
+        ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
       },
       ...costs,
     };
@@ -1656,6 +2089,9 @@ function DealDetailContent({ deal }) {
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
     profitSharePct, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+    ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
+    ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
+    ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
   ]);
 
   const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
@@ -1948,6 +2384,14 @@ function DealDetailContent({ deal }) {
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             isAgent={isAgent}
             saveNow={saveNow}
+            ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
+            ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
+            ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
+            ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
+            ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
+            ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
+            ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
+            ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
           />
         )}
         {activeTab === 'dd' && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
@@ -7,6 +7,7 @@ import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investors
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
+import { fetchCommitmentSummaries } from '../lib/capitalStackData';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -740,6 +741,124 @@ function AvailableInvestmentsTab({ onDealClick }) {
   );
 }
 
+// ── Tab: Commitments (headroom overview) ─────────────────────────────────────
+function CommitmentsTab() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCommitmentSummaries().then(data => {
+      setRows(data ?? []);
+      setLoading(false);
+    });
+  }, []);
+
+  const fmt = v => v == null ? '—' : `$${Number(v).toLocaleString()}`;
+
+  // Group by investor
+  const byInvestor = rows.reduce((acc, r) => {
+    (acc[r.investor_name] = acc[r.investor_name] || []).push(r);
+    return acc;
+  }, {});
+
+  if (loading) {
+    return <div className="text-xs text-gray-400 text-center py-10">Loading commitments…</div>;
+  }
+
+  if (!rows.length) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+        <p className="text-sm font-semibold text-gray-700 mb-1">No commitments found</p>
+        <p className="text-xs text-gray-400">Run migration 008 to populate commitment data.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {Object.entries(byInvestor).map(([investorName, commitments]) => {
+        const totalCommitted = commitments.reduce((s, c) => s + Number(c.committed_amount ?? 0), 0);
+        const totalDeployed = commitments.reduce((s, c) => s + Number(c.total_allocated ?? 0), 0);
+        const totalHeadroom = commitments.reduce((s, c) => s + Number(c.remaining_headroom ?? 0), 0);
+        const anyOver = commitments.some(c => Number(c.remaining_headroom ?? 0) < 0);
+
+        return (
+          <div key={investorName} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            {/* Investor header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Users size={12} className="text-accent" />
+                </div>
+                <span className="text-sm font-semibold text-[#1a2332]">{investorName}</span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span>Committed: <span className="font-semibold text-gray-800">{fmt(totalCommitted)}</span></span>
+                <span>Deployed: <span className="font-semibold text-gray-800">{fmt(totalDeployed)}</span></span>
+                <span className={anyOver ? 'text-red-600 font-semibold' : 'text-gray-800 font-semibold'}>
+                  Headroom: {fmt(totalHeadroom)}
+                </span>
+                {anyOver && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">Over limit</span>
+                )}
+              </div>
+            </div>
+
+            {/* Commitment rows */}
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="text-left px-5 py-2 text-gray-400 font-medium">Commitment</th>
+                  <th className="text-left px-4 py-2 text-gray-400 font-medium">Type</th>
+                  <th className="text-right px-4 py-2 text-gray-400 font-medium">Committed</th>
+                  <th className="text-right px-4 py-2 text-gray-400 font-medium">Deployed</th>
+                  <th className="text-right px-4 py-2 text-gray-400 font-medium">Remaining</th>
+                  <th className="text-left px-4 py-2 text-gray-400 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {commitments.map(c => {
+                  const headroom = c.remaining_headroom;
+                  const isOver = headroom != null && Number(headroom) < 0;
+                  return (
+                    <tr key={c.commitment_id} className="hover:bg-gray-50/50">
+                      <td className="px-5 py-2.5 font-medium text-gray-800">{c.commitment_name}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          c.commitment_type === 'legacy'
+                            ? 'bg-gray-100 text-gray-500'
+                            : 'bg-blue-50 text-blue-600'
+                        }`}>
+                          {c.commitment_type ?? 'active'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{fmt(c.committed_amount)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{fmt(c.total_allocated)}</td>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${isOver ? 'text-red-600' : 'text-green-700'}`}>
+                        {headroom == null ? '∞' : fmt(headroom)}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          c.commitment_status === 'active'       ? 'bg-green-100 text-green-700' :
+                          c.commitment_status === 'fully_deployed' ? 'bg-gray-100 text-gray-500' :
+                          c.commitment_status === 'expired'     ? 'bg-red-100 text-red-600' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {c.commitment_status ?? '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main Investor Portal ──────────────────────────────────────────────────────
 export default function InvestorPortal() {
   const { deals: customDeals } = useDeals();
@@ -772,6 +891,7 @@ export default function InvestorPortal() {
         { key: 'all-deals',            label: 'All Deals'            },
         { key: 'needs-funding',        label: 'Needs Funding'         },
         { key: 'by-investor',          label: 'By Investor'          },
+        { key: 'commitments',          label: 'Commitments'          },
         { key: 'directory',            label: 'Directory'            },
         { key: 'available-investments',label: 'Available Investments' },
       ];
@@ -838,6 +958,7 @@ export default function InvestorPortal() {
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
+        {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
