@@ -823,7 +823,7 @@ function loadCustomDeals() {
 export default function LandAcquisition() {
   const navigate = useNavigate();
   const { deals: customDeals, setDeals: setCustomDeals } = useDeals();
-  const { profile } = useAuth();
+  const { profile, activeOrgId } = useAuth();
 
   const allDeals = customDeals
     .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived && d.stage !== 'Contract Signed');
@@ -843,7 +843,7 @@ export default function LandAcquisition() {
       state: '',
       dealOwner: profile?.name || '',
     };
-    saveDeal(newDeal);
+    saveDeal(newDeal, activeOrgId);
     setCustomDeals(prev => [...prev, newDeal]);
     navigate(`/deal/${newDeal.id}`);
   };

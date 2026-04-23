@@ -11,6 +11,7 @@ const OWNER_TYPE_OPTIONS  = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_OPTIONS     = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
 
 function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, currentUserName }) {
+  const { activeOrgId } = useAuth();
   const [address,     setAddress]     = useState('');
   const [county,      setCounty]      = useState('');
   const [dealState,   setDealState]   = useState('NC');
@@ -80,7 +81,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
       staging:      0,
     };
 
-    saveDeal(deal);
+    saveDeal(deal, activeOrgId);
     onDealSaved(deal);
     setSaved(true);
     setTimeout(onClose, 1200);
@@ -257,7 +258,7 @@ export default function DealCalculator() {
   const [showImport, setShowImport] = useState(false);
   const { canEdit } = usePermissions();
   const { setDeals } = useDeals();
-  const { profile } = useAuth();
+  const { profile, activeOrgId } = useAuth();
 
   const set = (key, val) => setVals((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }));
 

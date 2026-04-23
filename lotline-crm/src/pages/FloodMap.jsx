@@ -5,9 +5,11 @@ import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
 import { Layers, Droplets, Waves, AlertTriangle, ZoomIn, MapPin, X, TreePine, Mountain, SlidersHorizontal, Search, ChevronDown, PlusCircle, ExternalLink, Home, Filter } from 'lucide-react';
 import { saveDeal } from '../lib/dealsSync';
+import { useAuth } from '../lib/AuthContext';
 import { MARKET_COUNTY_DATA } from '../data/counties';
 
 function AddToPipelineModal({ parcelData, onClose }) {
+  const { activeOrgId } = useAuth();
   const [address,    setAddress]    = useState(parcelData.siteAddr || '');
   const [county,     setCounty]     = useState(parcelData.county || '');
   const [dealState,  setDealState]  = useState(parcelData.state || 'NC');
@@ -41,7 +43,7 @@ function AddToPipelineModal({ parcelData, onClose }) {
       underpinning: 6000, decks: 3500, driveway: 1200, landscaping: 0, waterSewer: 0,
       mailbox: 170, gutters: 0, photos: 0, mobileTax: 300, staging: 0,
     };
-    saveDeal(deal);
+    saveDeal(deal, activeOrgId);
     setSaved(true);
     setTimeout(onClose, 1100);
   };

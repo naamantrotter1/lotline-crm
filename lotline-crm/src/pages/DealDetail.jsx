@@ -1800,7 +1800,7 @@ function DealDetailContent({ deal }) {
       ...overrides,
     };
     // Save to localStorage + context immediately, and fire Supabase write
-    saveDeal(d);
+    saveDeal(d, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(d.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = d; return next; }
@@ -1901,7 +1901,7 @@ function DealDetailContent({ deal }) {
       contractSignedAt: null,
     };
     localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
-    saveDeal(updated);
+    saveDeal(updated, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updated.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
@@ -1936,7 +1936,7 @@ function DealDetailContent({ deal }) {
           ? { contractSignedAt: null }
           : {}),
       };
-      saveDeal(updated);
+      saveDeal(updated, activeOrgId);
       notifyPipelineChange(deal, val);
       notifyStageChange(deal, val);
       setDeals(prev => {
@@ -2137,7 +2137,7 @@ function DealDetailContent({ deal }) {
     };
 
     // Save immediately — localStorage, context, and Supabase all at once
-    saveDeal(updatedDeal);
+    saveDeal(updatedDeal, activeOrgId);
     setSaveStatus('saved');
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updatedDeal.id));
@@ -2277,11 +2277,12 @@ function DealDetailContent({ deal }) {
               {canEdit && (
                 <button
                   onClick={() => {
-                    saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage });
-                    // Remove from active localStorage list
+                    saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage }, activeOrgId);
+                    // Remove from active localStorage list (org-scoped key)
                     try {
-                      const all = JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]');
-                      localStorage.setItem('lotline_custom_deals', JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
+                      const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
+                      const all = JSON.parse(localStorage.getItem(lsKey) || '[]');
+                      localStorage.setItem(lsKey, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
                     } catch {}
                     // Navigate back
                     if (fromInvestorPortal) navigate('/investor-portal');
