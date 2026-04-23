@@ -96,7 +96,6 @@ function dealToRow(deal) {
     investor_capital_contributed:  deal.investorCapitalContributed ?? null,
     investor_equity_pct:           deal.investorEquityPct ?? null,
     projected_payout_date:         deal.projectedPayoutDate || null,
-    dd_deadline2:            deal.ddDeadline || null,
     deal_owner:              deal.dealOwner || null,
     listing_url:             deal.listingUrl || null,
     contract_signed_at:      deal.contractSignedAt || null,
@@ -306,6 +305,7 @@ export function flushToSupabase(deal, orgId) {
     const row = dealToRow(deal);
     // Always stamp organization_id — required for INSERT and keeps UPDATE consistent
     if (orgId) row.organization_id = orgId;
+    else console.warn('[dealsSync] flushToSupabase: no orgId for deal', row.id, '— organization_id will be auto-set by trigger');
     supabase.from('deals').update(row).eq('id', row.id).select()
       .then(({ error, data }) => {
         if (error) {
@@ -320,7 +320,7 @@ export function flushToSupabase(deal, orgId) {
               if (existing) return; // Exists in DB — RLS blocked update, skip insert
               supabase.from('deals').insert(row)
                 .then(({ error: insertError }) => {
-                  if (insertError) console.error('[dealsSync] flushToSupabase insert error:', insertError.message);
+                  if (insertError) console.error('[dealsSync] flushToSupabase insert error:', insertError.code, insertError.message, insertError.details, insertError.hint);
                   else console.log('[dealsSync] flushToSupabase: inserted new deal', row.id);
                 });
             });
