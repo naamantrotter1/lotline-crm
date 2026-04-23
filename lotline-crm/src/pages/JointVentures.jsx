@@ -4,7 +4,7 @@
  * Hub view (LotLine Homes):  propose, manage permissions, suspend, terminate
  * Partner view:              accept/decline pending proposals, view active/terminated
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2, Plus, CheckCircle, XCircle, AlertTriangle, Clock,
   ChevronRight, Loader2, Search, X, RefreshCw, Shield, Activity,
@@ -312,28 +312,31 @@ function JvCard({ jv, isHub, onRefresh, showToast }) {
 
 function ProposeModal({ onClose, onProposed }) {
   const [query,    setQuery]    = useState('');
-  const [results,  setResults]  = useState([]);
+  const [allOrgs,  setAllOrgs]  = useState([]);
   const [selected, setSelected] = useState(null);
   const [message,  setMessage]  = useState('');
-  const [searching, setSearching] = useState(false);
+  const [loading,  setLoading]  = useState(true);
   const [proposing, setProposing] = useState(false);
   const [err, setErr]             = useState('');
-  const debounce = useRef(null);
 
+  // Load all eligible orgs on mount
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
-    clearTimeout(debounce.current);
-    debounce.current = setTimeout(async () => {
-      setSearching(true);
+    (async () => {
       try {
         const h = await authHeader();
-        const res = await fetch(`/api/jv/search-orgs?q=${encodeURIComponent(query.trim())}`, { headers: h });
+        const res = await fetch('/api/jv/search-orgs', { headers: h });
         const json = await res.json();
-        setResults(json.orgs || []);
-      } catch { setResults([]); }
-      setSearching(false);
-    }, 300);
-  }, [query]);
+        setAllOrgs(json.orgs || []);
+      } catch { setAllOrgs([]); }
+      setLoading(false);
+    })();
+  }, []);
+
+  // Client-side filter
+  const q = query.trim().toLowerCase();
+  const results = q.length === 0
+    ? allOrgs
+    : allOrgs.filter(o => o.name.toLowerCase().includes(q) || o.slug.toLowerCase().includes(q));
 
   const propose = async () => {
     if (!selected) return;
@@ -367,25 +370,30 @@ function ProposeModal({ onClose, onProposed }) {
           {!selected ? (
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                Search for a subscriber org
+                Select a subscriber org
               </label>
               <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
-                {searching
-                  ? <Loader2 size={14} className="text-gray-400 animate-spin flex-shrink-0" />
-                  : <Search size={14} className="text-gray-400 flex-shrink-0" />
-                }
+                <Search size={14} className="text-gray-400 flex-shrink-0" />
                 <input
                   autoFocus
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Type org name or slug…"
+                  placeholder="Filter by name…"
                   className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400"
                 />
               </div>
 
-              {results.length > 0 && (
-                <div className="mt-2 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                  {results.map(org => (
+              <div className="mt-2 border border-gray-100 rounded-xl overflow-hidden shadow-sm max-h-64 overflow-y-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={18} className="animate-spin text-gray-300" />
+                  </div>
+                ) : results.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    {allOrgs.length === 0 ? 'No eligible subscriber orgs found' : 'No orgs match your filter'}
+                  </p>
+                ) : (
+                  results.map(org => (
                     <button
                       key={org.id}
                       onClick={() => setSelected(org)}
@@ -399,13 +407,9 @@ function ProposeModal({ onClose, onProposed }) {
                         <p className="text-xs text-gray-400">{org.slug}</p>
                       </div>
                     </button>
-                  ))}
-                </div>
-              )}
-
-              {query.length >= 2 && !searching && results.length === 0 && (
-                <p className="text-sm text-gray-400 mt-2 text-center py-2">No matching orgs found</p>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           ) : (
             <>

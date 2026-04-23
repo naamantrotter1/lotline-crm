@@ -16,19 +16,21 @@ export default async function handler(req, res) {
   }
 
   const q = (req.query.q || '').trim().toLowerCase();
-  if (!q || q.length < 2) {
-    return res.status(200).json({ orgs: [] });
-  }
 
-  // Search orgs by name or slug (case-insensitive)
-  const { data: orgs, error } = await adminClient
+  // Build query — if q is empty, return all eligible orgs
+  let query = adminClient
     .from('organizations')
     .select('id, name, slug, status')
     .eq('status', 'active')
     .neq('id', orgId)          // exclude self
     .neq('is_jv_hub', true)    // exclude other hub orgs (only one anyway)
-    .or(`name.ilike.%${q}%,slug.ilike.%${q}%`)
-    .limit(10);
+    .limit(50);
+
+  if (q.length >= 2) {
+    query = query.or(`name.ilike.%${q}%,slug.ilike.%${q}%`);
+  }
+
+  const { data: orgs, error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
 
