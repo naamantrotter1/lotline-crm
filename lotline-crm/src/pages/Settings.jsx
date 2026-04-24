@@ -127,7 +127,7 @@ function IntegrationsTab({ showToast }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('connected') === 'google') {
-      showToast('Gmail connected successfully.');
+      showToast('Google connected successfully.');
       window.history.replaceState({}, '', '/settings?tab=integrations');
       // Reload integration row
       supabase?.from('user_integrations').select('*').eq('provider','google').maybeSingle()
@@ -146,7 +146,7 @@ function IntegrationsTab({ showToast }) {
   };
 
   const handleDisconnect = async () => {
-    if (!window.confirm('Disconnect Gmail? You will no longer be able to send emails from the CRM.')) return;
+    if (!window.confirm('Disconnect Google? You will no longer be able to send emails or sync your calendar from the CRM.')) return;
     setDisconnecting(true);
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch('/api/google/disconnect', {
@@ -155,7 +155,7 @@ function IntegrationsTab({ showToast }) {
     });
     if (res.ok) {
       setIntegration(null);
-      showToast('Gmail disconnected.');
+      showToast('Google disconnected.');
     } else {
       showToast('Failed to disconnect.', 'error');
     }
@@ -184,8 +184,8 @@ function IntegrationsTab({ showToast }) {
               <GoogleIcon />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">Gmail</p>
-              <p className="text-xs text-gray-400">Send emails directly from contact records</p>
+              <p className="text-sm font-semibold text-gray-800">Google (Gmail + Calendar)</p>
+              <p className="text-xs text-gray-400">Send emails and sync your Google Calendar</p>
             </div>
             {isConnected && (
               <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -210,21 +210,20 @@ function IntegrationsTab({ showToast }) {
                 disabled={disconnecting}
                 className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
               >
-                {disconnecting ? 'Disconnecting…' : 'Disconnect Gmail'}
+                {disconnecting ? 'Disconnecting…' : 'Disconnect Google'}
               </button>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-gray-400">
-                Connect your Gmail account to send emails directly from any contact page.
-                Your emails will appear in your Gmail Sent folder.
+                Connect your Google account to send emails from contact records and sync your Google Calendar.
               </p>
               <button
                 onClick={handleConnect}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
               >
                 <GoogleIcon />
-                Connect Gmail
+                Connect Google
               </button>
             </div>
           )}

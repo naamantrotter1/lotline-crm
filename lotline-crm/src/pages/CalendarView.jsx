@@ -6,14 +6,14 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ChevronRight, Plus, Loader2,
-  Video, Phone, Users, MapPin, Calendar,
+  Video, Phone, Users, MapPin,
   RefreshCw, Link2, Trash2, Check, X, Copy,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   fetchMeetings, createMeeting, updateMeeting, deleteMeeting,
-  fetchCalendarConnection, syncGoogleCalendar, getGoogleAuthUrl,
+  fetchCalendarConnection, syncGoogleCalendar,
   fetchSchedulerLinks, createSchedulerLink, deleteSchedulerLink,
   MEETING_TYPES, MEETING_STATUS, fmtMeetingTime,
 } from '../lib/calendarData';
@@ -225,21 +225,6 @@ export default function CalendarView() {
     });
   }, [activeOrgId, year, month]);
 
-  // Handle Google OAuth redirect
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    if (code && state === 'calendar') {
-      window.history.replaceState({}, '', window.location.pathname);
-      // Exchange code via edge function
-      import('../lib/calendarData').then(({ exchangeGoogleCode }) => {
-        exchangeGoogleCode(code, window.location.origin + '/calendar').then(() => {
-          fetchCalendarConnection(profile?.id).then(setConn);
-        });
-      });
-    }
-  }, []);
 
   const prevMonth = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
   const nextMonth = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
@@ -296,19 +281,17 @@ export default function CalendarView() {
     <div className="max-w-7xl mx-auto flex gap-6">
       {/* Left: Calendar + Google connect */}
       <div className="flex-1 min-w-0 space-y-4">
-        {/* Google Calendar connect banner */}
         {!connection && (
           <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-blue-800">Connect Google Calendar</p>
-              <p className="text-xs text-blue-600 mt-0.5">Sync meetings automatically and send invites.</p>
+              <p className="text-sm font-semibold text-blue-800">Google Calendar not connected</p>
+              <p className="text-xs text-blue-600 mt-0.5">Connect your Google account in Settings → Integrations to sync meetings.</p>
             </div>
-            <a
-              href={getGoogleAuthUrl(window.location.origin + '/calendar') || '#'}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-xl"
+            <a href="/settings?tab=integrations"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-xl whitespace-nowrap"
               style={{ backgroundColor: '#4285f4' }}
             >
-              <Calendar size={13} /> Connect
+              Go to Settings
             </a>
           </div>
         )}
@@ -316,7 +299,7 @@ export default function CalendarView() {
           <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full" />
-              <p className="text-xs font-medium text-green-700">Google Calendar connected — {connection.email}</p>
+              <p className="text-xs font-medium text-green-700">Google Calendar connected — {connection.gmail_email}</p>
             </div>
             <button onClick={handleSync} disabled={syncing}
               className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 disabled:opacity-50">

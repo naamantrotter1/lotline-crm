@@ -52,7 +52,7 @@ export async function exchangeGoogleCode(code, redirectUri) {
 export async function fetchCalendarConnection(userId) {
   if (!supabase || !userId) return null;
   const { data } = await supabase
-    .from('calendar_connections')
+    .from('user_integrations')
     .select('*')
     .eq('user_id', userId)
     .eq('provider', 'google')
