@@ -31,7 +31,8 @@ function LenderBadge({ name }) {
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
 function AllDealsTab({ onDealClick }) {
   const { orgSlug } = useAuth();
-  const staticDealsTable = orgSlug === 'lotline-homes' ? ALL_DEALS_TABLE : [];
+  const { jvScope } = useJv();
+  const staticDealsTable = (orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : [];
   return (
     <div>
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -77,11 +78,12 @@ function AllDealsTab({ onDealClick }) {
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
 function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const { orgSlug } = useAuth();
+  const { jvScope } = useJv();
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
 
   // Merge static + context deals, deduplicating by address (static wins)
-  const staticDeals = (orgSlug === 'lotline-homes' ? ALL_DEALS_TABLE : []).filter(d => d.lender === investor.name);
+  const staticDeals = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => d.lender === investor.name);
   const staticAddresses = new Set(staticDeals.map(d => (d.address || '').trim().toLowerCase()));
   const liveDeals = contextDeals
     .filter(d => (d.investor || '').trim() === investor.name.trim() && !staticAddresses.has((d.address || '').trim().toLowerCase()))
@@ -408,8 +410,9 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
+  const { jvScope } = useJv();
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
-  const allUnfunded = (orgSlug === 'lotline-homes' ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
+  const allUnfunded = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
   // Also include live context deals with no investor not already covered by a static unfunded entry
