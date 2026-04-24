@@ -51,6 +51,7 @@ function mapGoogleEvent(event, orgId, userId) {
     all_day:          !!event.start?.date && !event.start?.dateTime,
     google_event_id:  event.id,
     google_meet_link: event.hangoutLink || null,
+    google_color_id:  event.colorId || null,
     attendee_emails:  (event.attendees || []).map(a => a.email).filter(Boolean),
     updated_at:       new Date().toISOString(),
   };

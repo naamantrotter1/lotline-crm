@@ -22,6 +22,35 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
 
+// Google Calendar color palette (colorId 1–11)
+const GCAL_COLORS = {
+  '1':  { bg: '#7986CB', text: '#fff' }, // Lavender
+  '2':  { bg: '#33B679', text: '#fff' }, // Sage
+  '3':  { bg: '#8E24AA', text: '#fff' }, // Grape
+  '4':  { bg: '#E67C73', text: '#fff' }, // Flamingo
+  '5':  { bg: '#F6BF26', text: '#3d2e00' }, // Banana
+  '6':  { bg: '#F4511E', text: '#fff' }, // Tangerine
+  '7':  { bg: '#039BE5', text: '#fff' }, // Peacock
+  '8':  { bg: '#616161', text: '#fff' }, // Graphite
+  '9':  { bg: '#3F51B5', text: '#fff' }, // Blueberry
+  '10': { bg: '#0B8043', text: '#fff' }, // Basil
+  '11': { bg: '#D50000', text: '#fff' }, // Tomato
+};
+
+function meetingChipStyle(meeting) {
+  const c = meeting.google_color_id && GCAL_COLORS[meeting.google_color_id];
+  if (c) return { backgroundColor: c.bg, color: c.text };
+  return null; // fall back to Tailwind accent classes
+}
+
+function creatorInitials(meeting) {
+  const name = meeting.profiles?.full_name || '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
+  return '?';
+}
+
 function typeIcon(type) {
   return MEETING_TYPES.find(t => t.value === type)?.icon || '📅';
 }
@@ -138,7 +167,7 @@ function MeetingModal({ orgId, userId, meeting, onSaved, onClose }) {
 }
 
 // ── Month grid ────────────────────────────────────────────────────────────────
-function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick }) {
+function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick, currentUserId }) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
@@ -172,12 +201,22 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick }) {
                 {day}
               </div>
               <div className="space-y-1">
-                {dayMeetings.slice(0, 4).map(m => (
-                  <div key={m.id} onClick={e => { e.stopPropagation(); onMeetingClick(m); }}
-                    className="text-xs px-2 py-1 rounded bg-accent/10 text-accent font-medium truncate hover:bg-accent/20 transition-colors">
-                    {m.title}
-                  </div>
-                ))}
+                {dayMeetings.slice(0, 4).map(m => {
+                  const chipStyle = meetingChipStyle(m);
+                  const isOther = m.created_by && m.created_by !== currentUserId;
+                  return (
+                    <div key={m.id} onClick={e => { e.stopPropagation(); onMeetingClick(m); }}
+                      className={`text-xs px-2 py-1 rounded font-medium truncate transition-colors flex items-center gap-1 ${chipStyle ? 'opacity-90 hover:opacity-100' : 'bg-accent/10 text-accent hover:bg-accent/20'}`}
+                      style={chipStyle || undefined}>
+                      {isOther && (
+                        <span className="flex-shrink-0 w-4 h-4 rounded-full bg-black/20 text-[9px] font-bold flex items-center justify-center leading-none">
+                          {creatorInitials(m)}
+                        </span>
+                      )}
+                      <span className="truncate">{m.title}</span>
+                    </div>
+                  );
+                })}
                 {dayMeetings.length > 4 && (
                   <div className="text-xs text-gray-400 px-1">+{dayMeetings.length - 4} more</div>
                 )}
@@ -337,6 +376,7 @@ export default function CalendarView() {
               year={year} month={month} meetings={meetings}
               onDayClick={(day) => { if (canManage) setShowNew(true); }}
               onMeetingClick={setEditing}
+              currentUserId={profile?.id}
             />
           )}
         </div>
@@ -455,6 +495,14 @@ export default function CalendarView() {
                     <div className="flex items-start gap-2 text-sm text-gray-600">
                       <Users size={14} className="text-gray-400 flex-shrink-0 mt-0.5" />
                       <span className="text-xs">{editing.attendee_emails.join(', ')}</span>
+                    </div>
+                  )}
+                  {editing.profiles?.full_name && editing.created_by !== profile?.id && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-5 h-5 rounded-full bg-accent/20 text-accent text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        {creatorInitials(editing)}
+                      </div>
+                      <span className="text-xs">{editing.profiles.full_name}'s calendar</span>
                     </div>
                   )}
                   {editing.description && <p className="text-sm text-gray-600 leading-relaxed">{editing.description}</p>}

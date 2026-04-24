@@ -87,7 +87,7 @@ export async function fetchMeetings(orgId, { from, to, contactId, dealId } = {})
   if (!supabase || !orgId) return [];
   let q = supabase
     .from('meetings')
-    .select('*, contacts(id, first_name, last_name)')
+    .select('*, contacts(id, first_name, last_name), profiles!created_by(id, full_name, avatar_url)')
     .eq('organization_id', orgId)
     .order('starts_at', { ascending: true });
 
