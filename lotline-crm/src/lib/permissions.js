@@ -91,6 +91,10 @@ export const CAPABILITIES = {
   'voice.call':             ['owner','admin','operator'],
   'voice.manage':           ['owner','admin'],
 
+  // ── Calendar ───────────────────────────────────────────────────────────────
+  'calendar.view':          ['owner','admin','operator','viewer'],
+  'calendar.manage':        ['owner','admin','operator'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],

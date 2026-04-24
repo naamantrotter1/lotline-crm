@@ -59,6 +59,8 @@ import Workflows from './pages/Workflows';
 import WorkflowBuilder from './pages/WorkflowBuilder';
 import SmsInbox from './pages/SmsInbox';
 import SmsCampaigns from './pages/SmsCampaigns';
+import CalendarView from './pages/CalendarView';
+import SchedulerPage from './pages/SchedulerPage';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -188,6 +190,9 @@ export default function App() {
             {/* JV partner invitation signup — fully public */}
             <Route path="/join/:token" element={<JvJoinPage />} />
 
+            {/* Public scheduler booking page */}
+            <Route path="/schedule/:slug" element={<SchedulerPage />} />
+
             {/* Purchasing flow */}
             <Route path="/cart"           element={<Cart />} />
             <Route path="/checkout"       element={<Checkout />} />
@@ -245,6 +250,7 @@ export default function App() {
               <Route path="workflows/:id"       element={<AgentRoute path="workflows"><WorkflowBuilder /></AgentRoute>} />
               <Route path="sms"                 element={<AgentRoute path="sms"><SmsInbox /></AgentRoute>} />
               <Route path="sms/campaigns"       element={<AgentRoute path="sms"><SmsCampaigns /></AgentRoute>} />
+              <Route path="calendar"            element={<AgentRoute path="calendar"><CalendarView /></AgentRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}

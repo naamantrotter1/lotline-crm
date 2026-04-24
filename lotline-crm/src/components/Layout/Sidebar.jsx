@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users, Zap,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, HardHat, Archive,
-  Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare,
+  Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare, Calendar,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useJv } from '../../lib/JvContext';
@@ -23,6 +23,7 @@ const BASE_NAV_SECTIONS = [
       { icon: PieChart,        label: 'Reports',         to: '/reports'    },
       { icon: Zap,             label: 'Workflows',       to: '/workflows',  flag: 'WORKFLOWS' },
       { icon: MessageSquare,   label: 'SMS',             to: '/sms',        flag: 'SMS' },
+      { icon: Calendar,        label: 'Calendar',        to: '/calendar',   flag: 'CALENDAR' },
     ],
   },
   {
