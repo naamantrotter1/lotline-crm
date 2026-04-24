@@ -66,6 +66,15 @@ export const CAPABILITIES = {
   'audit_log.view':         ['owner','admin'],
   'data.export':            ['owner','admin'],
 
+  // ── Contacts ──────────────────────────────────────────────
+  'contact.view':      ['owner','admin','operator','viewer'],
+  'contact.create':    ['owner','admin','operator'],
+  'contact.update':    ['owner','admin','operator'],
+  'contact.delete':    ['owner','admin'],
+  'contact.bulk_edit': ['owner','admin','operator'],
+  'contact.export':    ['owner','admin'],
+  'contact.merge':     ['owner','admin'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus } from 'lucide-react';
+import CreateContactModal from '../Contacts/CreateContactModal';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
@@ -173,6 +174,7 @@ export default function TopBar({ onToggleSidebar }) {
 
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const [showCreateContact, setShowCreateContact] = useState(false);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
@@ -219,6 +221,7 @@ export default function TopBar({ onToggleSidebar }) {
   const avatarUrl = profile?.avatar_url;
 
   return (
+    <>
     <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 gap-3 flex-shrink-0">
       <button
         onClick={onToggleSidebar}
@@ -231,6 +234,15 @@ export default function TopBar({ onToggleSidebar }) {
 
       <div className="flex items-center gap-1 flex-shrink-0">
         <JvScopeSwitcher />
+
+        {/* Quick-add contact */}
+        <button
+          onClick={() => setShowCreateContact(true)}
+          title="New Contact (C)"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+        >
+          <UserPlus size={16} />
+        </button>
 
         <button
           onClick={toggleDarkMode}
@@ -286,5 +298,13 @@ export default function TopBar({ onToggleSidebar }) {
         </div>
       </div>
     </header>
+
+    {showCreateContact && (
+      <CreateContactModal
+        onClose={() => setShowCreateContact(false)}
+        onCreated={(c) => { setShowCreateContact(false); navigate(`/contacts/${c.id}`); }}
+      />
+    )}
+  </>
   );
 }

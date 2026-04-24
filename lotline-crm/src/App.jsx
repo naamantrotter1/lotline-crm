@@ -51,6 +51,8 @@ import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
 import AcceptInvite from './pages/AcceptInvite';
 import JvJoinPage from './pages/JvJoinPage';
+import Contacts from './pages/Contacts';
+import ContactDetail from './pages/ContactDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -229,6 +231,8 @@ export default function App() {
               <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
               <Route path="lending"     element={<AgentRoute path="lending"><Lending /></AgentRoute>} />
               <Route path="builder-network" element={<AgentRoute path="builder-network"><BuilderNetwork /></AgentRoute>} />
+              <Route path="contacts"             element={<AgentRoute path="contacts"><Contacts /></AgentRoute>} />
+              <Route path="contacts/:id"        element={<AgentRoute path="contacts"><ContactDetail /></AgentRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}
