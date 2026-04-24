@@ -75,6 +75,12 @@ export const CAPABILITIES = {
   'contact.export':    ['owner','admin'],
   'contact.merge':     ['owner','admin'],
 
+  // ── Workflows ──────────────────────────────────────────────────────────────
+  'workflow.view':          ['owner','admin','operator','viewer'],
+  'workflow.manage':        ['owner','admin','operator'],
+  'workflow.publish':       ['owner','admin'],
+  'workflow.run':           ['owner','admin','operator'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],

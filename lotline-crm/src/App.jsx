@@ -55,6 +55,8 @@ import Contacts from './pages/Contacts';
 import ContactDetail from './pages/ContactDetail';
 import Tasks from './pages/Tasks';
 import Reports from './pages/Reports';
+import Workflows from './pages/Workflows';
+import WorkflowBuilder from './pages/WorkflowBuilder';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -237,6 +239,8 @@ export default function App() {
               <Route path="contacts/:id"        element={<AgentRoute path="contacts"><ContactDetail /></AgentRoute>} />
               <Route path="tasks"               element={<AgentRoute path="tasks"><Tasks /></AgentRoute>} />
               <Route path="reports"             element={<AgentRoute path="reports"><Reports /></AgentRoute>} />
+              <Route path="workflows"           element={<AgentRoute path="workflows"><Workflows /></AgentRoute>} />
+              <Route path="workflows/:id"       element={<AgentRoute path="workflows"><WorkflowBuilder /></AgentRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}
