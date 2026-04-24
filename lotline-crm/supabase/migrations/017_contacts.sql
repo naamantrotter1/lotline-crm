@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS contact_relationships (
 CREATE TABLE IF NOT EXISTS contact_deals (
   id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   contact_id uuid        NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
-  deal_id    uuid        NOT NULL REFERENCES deals(id)    ON DELETE CASCADE,
+  deal_id    text        NOT NULL,
   role       text        NOT NULL DEFAULT 'other'
              CHECK (role IN ('seller','buyer','investor','attorney','contractor','primary','other')),
   created_at timestamptz NOT NULL DEFAULT now(),
