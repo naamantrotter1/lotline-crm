@@ -12,9 +12,11 @@
     }
   ],
   "routes": [
-    { "src": "/api/proxy/(.*)",  "dest": "/api/proxy/$1.js" },
-    { "src": "/api/createUser",  "dest": "/api/createUser.js" },
-    { "src": "/api/team/(.*)",   "dest": "/api/team/$1.js" },
+    { "src": "/api/proxy/(.*)",      "dest": "/api/proxy/$1.js" },
+    { "src": "/api/createUser",      "dest": "/api/createUser.js" },
+    { "src": "/api/team/(.*)",       "dest": "/api/team/$1.js" },
+    { "src": "/api/google/auth",     "dest": "/api/google/auth.js" },
+    { "src": "/api/google/callback", "dest": "/api/google/callback.js" },
     { "src": "/homes$", "dest": "/index.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
