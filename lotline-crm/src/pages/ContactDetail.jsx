@@ -16,8 +16,10 @@ import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIOR
 import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
+import SmsThread from '../components/Sms/SmsThread';
 import { supabase } from '../lib/supabase';
 import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
+import { isEnabled } from '../lib/featureFlags';
 
 const LIFECYCLE_COLORS = {
   new:       'bg-blue-50 text-blue-700 border-blue-200',
@@ -466,6 +468,18 @@ export default function ContactDetail() {
               {tasks.length > 8 && <p className="text-xs text-gray-400 mt-1">+{tasks.length - 8} more</p>}
             </div>
           </div>
+
+          {/* SMS Thread */}
+          {isEnabled('SMS') && (contact.phone || contact.secondary_phone) && (
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">SMS</p>
+              <SmsThread
+                contactId={id}
+                contactPhone={contact.phone || contact.secondary_phone}
+                contactName={contact.fullName}
+              />
+            </div>
+          )}
 
           {/* Metadata */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3 text-xs text-gray-400">

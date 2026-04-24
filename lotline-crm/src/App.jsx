@@ -57,6 +57,8 @@ import Tasks from './pages/Tasks';
 import Reports from './pages/Reports';
 import Workflows from './pages/Workflows';
 import WorkflowBuilder from './pages/WorkflowBuilder';
+import SmsInbox from './pages/SmsInbox';
+import SmsCampaigns from './pages/SmsCampaigns';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -241,6 +243,8 @@ export default function App() {
               <Route path="reports"             element={<AgentRoute path="reports"><Reports /></AgentRoute>} />
               <Route path="workflows"           element={<AgentRoute path="workflows"><Workflows /></AgentRoute>} />
               <Route path="workflows/:id"       element={<AgentRoute path="workflows"><WorkflowBuilder /></AgentRoute>} />
+              <Route path="sms"                 element={<AgentRoute path="sms"><SmsInbox /></AgentRoute>} />
+              <Route path="sms/campaigns"       element={<AgentRoute path="sms"><SmsCampaigns /></AgentRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}

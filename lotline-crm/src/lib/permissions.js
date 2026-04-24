@@ -81,6 +81,11 @@ export const CAPABILITIES = {
   'workflow.publish':       ['owner','admin'],
   'workflow.run':           ['owner','admin','operator'],
 
+  // ── SMS ────────────────────────────────────────────────────────────────────
+  'sms.view':               ['owner','admin','operator','viewer'],
+  'sms.send':               ['owner','admin','operator'],
+  'sms.manage':             ['owner','admin'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],
