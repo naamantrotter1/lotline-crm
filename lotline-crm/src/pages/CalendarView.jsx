@@ -175,7 +175,7 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick }) {
                 {dayMeetings.slice(0, 4).map(m => (
                   <div key={m.id} onClick={e => { e.stopPropagation(); onMeetingClick(m); }}
                     className="text-xs px-2 py-1 rounded bg-accent/10 text-accent font-medium truncate hover:bg-accent/20 transition-colors">
-                    {typeIcon(m.meeting_type)} {m.title}
+                    {m.title}
                   </div>
                 ))}
                 {dayMeetings.length > 4 && (
