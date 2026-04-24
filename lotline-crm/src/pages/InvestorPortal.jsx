@@ -887,35 +887,40 @@ export default function InvestorPortal() {
   const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
 
   // Reload investor list whenever JV scope changes.
-  // Multi-org: fetch from Supabase so partner investors appear.
-  // Own-org:   use org-scoped localStorage (has pre-computed stats).
+  // Own-org investors always come from localStorage (pre-computed stats).
+  // Partner investors are fetched from Supabase and merged in.
   useEffect(() => {
-    if (jvScope.mode !== 'own_only') {
-      fetchInvestors(scopeIds).then(rows => {
-        setInvestors(rows.map(r => ({
-          id: r.id,
-          name: r.name,
-          contact: r.contact || '',
-          email: r.email || '',
-          phone: r.phone || '',
-          type: r.type || 'Private Lender',
-          preferredFinancing: r.preferred_financing || '',
-          standardTerms: r.standard_terms || '',
-          notes: r.notes || '',
-          // Summary stats are 0 for cross-org view; InvestorCard derives
-          // the live deal list from contextDeals (which is already JV-scoped).
-          activeDeals: 0,
-          capitalInvested: 0,
-          totalReturns: 0,
-          roiPct: 0,
-          roiDollars: 0,
-          avgAnnualizedRoi: 0,
-          deals: [],
-        })));
-      });
-    } else {
+    if (jvScope.mode === 'own_only') {
       setInvestors(loadInvestors(activeOrgId, orgSlug));
+      return;
     }
+    const ownInvestors = jvScope.includeOwn !== false ? loadInvestors(activeOrgId, orgSlug) : [];
+    const partnerIds = scopeIds.filter(id => id !== activeOrgId);
+    if (partnerIds.length === 0) {
+      setInvestors(ownInvestors);
+      return;
+    }
+    fetchInvestors(partnerIds).then(rows => {
+      const partnerInvestors = rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        contact: r.contact || '',
+        email: r.email || '',
+        phone: r.phone || '',
+        type: r.type || 'Private Lender',
+        preferredFinancing: r.preferred_financing || '',
+        standardTerms: r.standard_terms || '',
+        notes: r.notes || '',
+        activeDeals: 0,
+        capitalInvested: 0,
+        totalReturns: 0,
+        roiPct: 0,
+        roiDollars: 0,
+        avgAnnualizedRoi: 0,
+        deals: [],
+      }));
+      setInvestors([...ownInvestors, ...partnerInvestors]);
+    });
   }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
