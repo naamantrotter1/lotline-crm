@@ -185,6 +185,7 @@ function rowToDeal(row) {
     investorCapitalContributed:   row.investor_capital_contributed,
     investorEquityPct:            row.investor_equity_pct,
     projectedPayoutDate:          row.projected_payout_date,
+    organizationId:        row.organization_id,
     listingUrl:            row.listing_url,
     contractSignedAt:      row.contract_signed_at,
     dealOwner:             row.deal_owner,
@@ -256,13 +257,25 @@ export async function loadAllDeals(orgIds) {
     // Keep any LS-only deals (created locally but not yet synced to Supabase)
     // and re-flush them so they eventually land in the DB.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
-    const unsynced = lsDeals.filter(d => !supabaseIds.has(String(d.id)) && !d.isArchived);
+    // Exclude stale partner deals that were cached from a previous broader scope
+    const unsynced = lsDeals.filter(d =>
+      !supabaseIds.has(String(d.id)) &&
+      !d.isArchived &&
+      (!d.organizationId || String(d.organizationId) === String(orgId))
+    );
     if (unsynced.length > 0) {
       console.log('[dealsSync] loadAllDeals: re-flushing', unsynced.length, 'unsynced deals to Supabase');
       unsynced.forEach(d => flushToSupabase(d, orgId));
     }
     const merged = [...deals, ...unsynced];
-    lsSet(merged, orgId);
+    // Only cache the primary org's own deals + unsynced in LS.
+    // Partner deals must NOT bleed into the hub's LS key — otherwise they
+    // show up as "unsynced" when scope narrows to own_only.
+    const toCache = [
+      ...deals.filter(d => !d.organizationId || String(d.organizationId) === String(orgId)),
+      ...unsynced,
+    ];
+    lsSet(toCache, orgId);
     return merged;
   } catch (e) {
     console.warn('[dealsSync] Supabase unavailable, using localStorage:', e.message);
