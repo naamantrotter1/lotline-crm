@@ -160,26 +160,26 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick }) {
       </div>
       <div className="grid grid-cols-7 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white min-h-[80px]" />;
+          if (!day) return <div key={`empty-${i}`} className="bg-white min-h-[120px]" />;
           const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
           const dayMeetings = meetingsForDay(day);
           return (
             <div key={day} onClick={() => onDayClick(day)}
-              className="bg-white min-h-[80px] p-1.5 cursor-pointer hover:bg-orange-50/50 transition-colors group">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold mb-1 ${
+              className="bg-white min-h-[120px] p-2 cursor-pointer hover:bg-orange-50/50 transition-colors group">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold mb-1.5 ${
                 isToday ? 'bg-accent text-white' : 'text-gray-600 group-hover:bg-accent/10'
               }`}>
                 {day}
               </div>
-              <div className="space-y-0.5">
-                {dayMeetings.slice(0, 3).map(m => (
+              <div className="space-y-1">
+                {dayMeetings.slice(0, 4).map(m => (
                   <div key={m.id} onClick={e => { e.stopPropagation(); onMeetingClick(m); }}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium truncate hover:bg-accent/20 transition-colors">
+                    className="text-xs px-2 py-1 rounded bg-accent/10 text-accent font-medium truncate hover:bg-accent/20 transition-colors">
                     {typeIcon(m.meeting_type)} {m.title}
                   </div>
                 ))}
-                {dayMeetings.length > 3 && (
-                  <div className="text-[10px] text-gray-400 px-1">+{dayMeetings.length - 3} more</div>
+                {dayMeetings.length > 4 && (
+                  <div className="text-xs text-gray-400 px-1">+{dayMeetings.length - 4} more</div>
                 )}
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function CalendarView() {
     .slice(0, 10);
 
   return (
-    <div className="max-w-7xl mx-auto flex gap-6">
+    <div className="w-full flex gap-6">
       {/* Left: Calendar + Google connect */}
       <div className="flex-1 min-w-0 space-y-4">
         {!connection && (
