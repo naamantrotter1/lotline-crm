@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
 import TeamSettings from '../components/settings/TeamSettings';
+import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -539,7 +540,9 @@ function BillingTab() {
 }
 
 export default function Settings() {
-  const initialTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
+  const VALID_TABS = ['profile','team','notifications','integrations','security','custom-fields','billing'];
+  const rawTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
+  const initialTab = VALID_TABS.includes(rawTab) ? rawTab : 'profile';
   const [tab, setTab] = useState(initialTab);
   const { profile, updateProfile } = useAuth();
 
@@ -641,13 +644,13 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['profile', 'team', 'notifications', 'integrations', 'security', 'billing'].map((t) => (
+        {['profile', 'team', 'notifications', 'integrations', 'security', 'custom-fields', 'billing'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors ${tab === t ? 'bg-white text-sidebar shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            {t}
+            {t.replace(/-/g, ' ')}
           </button>
         ))}
       </div>
@@ -758,6 +761,8 @@ export default function Settings() {
       {tab === 'integrations' && <IntegrationsTab showToast={showToast} />}
 
       {tab === 'security' && <SecurityTab showToast={showToast} />}
+
+      {tab === 'custom-fields' && <CustomFieldsSettings />}
 
       {tab === 'billing' && <BillingTab />}
 

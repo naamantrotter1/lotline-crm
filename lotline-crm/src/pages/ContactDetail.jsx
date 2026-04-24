@@ -17,6 +17,7 @@ import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { supabase } from '../lib/supabase';
+import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
 
 const LIFECYCLE_COLORS = {
   new:       'bg-blue-50 text-blue-700 border-blue-200',
@@ -364,6 +365,15 @@ export default function ContactDetail() {
               {(contact.tags || []).length === 0 && <span className="text-xs text-gray-300 italic">No tags</span>}
             </div>
           </div>
+
+          {/* Custom Fields */}
+          <CustomFieldsSection
+            orgId={activeOrgId}
+            entityType="contact"
+            values={contact.custom_fields || {}}
+            onSave={save}
+            canEdit={canEdit}
+          />
         </div>
 
         {/* CENTER — Timeline / Notes */}
