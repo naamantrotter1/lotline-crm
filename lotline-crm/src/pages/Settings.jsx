@@ -245,6 +245,11 @@ function SecurityTab({ showToast }) {
   const [unenrolling, setUnenrolling] = useState(false);
   const [copied,      setCopied]      = useState(false);
 
+  // Google SSO toggle
+  const [ssoEnabled,   setSsoEnabled]   = useState(true);
+  const [ssoLoading,   setSsoLoading]   = useState(true);
+  const [ssoSaving,    setSsoSaving]    = useState(false);
+
   const loadFactors = async () => {
     if (!supabase) { setLoading(false); return; }
     setLoading(true);
@@ -254,6 +259,39 @@ function SecurityTab({ showToast }) {
   };
 
   useEffect(() => { loadFactors(); }, []);
+
+  useEffect(() => {
+    supabase?.auth.getSession().then(({ data: { session } }) => {
+      fetch('/api/google/sso-config', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) setSsoEnabled(d.enabled); })
+        .finally(() => setSsoLoading(false));
+    });
+  }, []);
+
+  const handleSsoToggle = async () => {
+    setSsoSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const next = !ssoEnabled;
+    const res = await fetch('/api/google/sso-config', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ enabled: next }),
+    });
+    if (res.ok) {
+      setSsoEnabled(next);
+      showToast(`Google Sign-In ${next ? 'enabled' : 'disabled'}.`);
+    } else {
+      const { error } = await res.json();
+      showToast(error || 'Failed to update SSO setting.', 'error');
+    }
+    setSsoSaving(false);
+  };
 
   const handleEnroll = async () => {
     setEnrolling(true);
@@ -430,13 +468,24 @@ function SecurityTab({ showToast }) {
             <p className="font-semibold text-sidebar">Google Sign-In (SSO)</p>
             <p className="text-xs text-gray-400">Sign in with your Google account</p>
           </div>
-          <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-            <CheckCircle size={10} />Enabled
-          </span>
+          {!ssoLoading && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${ssoEnabled ? 'text-green-600 bg-green-50 border border-green-100' : 'text-gray-500 bg-gray-50 border border-gray-200'}`}>
+              {ssoEnabled ? <><CheckCircle size={10} />Enabled</> : 'Disabled'}
+            </span>
+          )}
         </div>
-        <p className="text-sm text-gray-500">
-          Team members can sign in using their Google account on the login page.
+        <p className="text-sm text-gray-500 mb-4">
+          {ssoEnabled
+            ? 'Team members can sign in using their Google account on the login page.'
+            : 'Google Sign-In is currently disabled. Team members must sign in with email and password.'}
         </p>
+        <button
+          onClick={handleSsoToggle}
+          disabled={ssoSaving || ssoLoading}
+          className={`w-full py-2 text-sm font-medium rounded-xl border transition-colors disabled:opacity-50 ${ssoEnabled ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-green-700 border-green-200 hover:bg-green-50'}`}
+        >
+          {ssoSaving ? 'Saving…' : ssoEnabled ? 'Disable Google Sign-In' : 'Enable Google Sign-In'}
+        </button>
       </div>
     </div>
   );
