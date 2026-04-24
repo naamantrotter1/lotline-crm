@@ -595,7 +595,7 @@ function OverviewTab({
                       type="number"
                       value={loanAmountOverride || totalLent}
                       onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
-                      onFocus={e => e.target.select()} type="number"
+                      onFocus={e => e.target.select()}
                       className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                     />
                   </div>

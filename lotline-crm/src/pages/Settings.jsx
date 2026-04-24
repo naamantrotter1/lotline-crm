@@ -6,7 +6,7 @@ import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/not
 import TeamSettings from '../components/settings/TeamSettings';
 import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
 import ApiWebhooksSettings from '../components/settings/ApiWebhooksSettings';
-import PushNotificationSettings from '../components/Settings/PushNotificationSettings';
+import PushNotificationSettings from '../components/settings/PushNotificationSettings';
 
 function Toggle({ checked, onChange }) {
   return (
