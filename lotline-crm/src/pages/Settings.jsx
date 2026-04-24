@@ -6,6 +6,7 @@ import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/not
 import TeamSettings from '../components/settings/TeamSettings';
 import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
 import ApiWebhooksSettings from '../components/settings/ApiWebhooksSettings';
+import PushNotificationSettings from '../components/Settings/PushNotificationSettings';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -73,6 +74,10 @@ function NotificationsTab({ showToast }) {
             onChange={() => handleToggle('stageMove', !stageMove, setStageMove)}
           />
         </div>
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-gray-100">
+        <PushNotificationSettings />
       </div>
     </div>
   );
