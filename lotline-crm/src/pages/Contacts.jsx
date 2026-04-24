@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, Search, List, Columns, Phone, Mail,
-  Tag, User, ChevronDown, X, MoreHorizontal, Trash2,
+  Tag, User, ChevronDown, X, MoreHorizontal, Trash2, Upload,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -11,6 +11,7 @@ import {
   LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS,
 } from '../lib/contactsData';
 import CreateContactModal from '../components/Contacts/CreateContactModal';
+import ImportModal from '../components/Import/ImportModal';
 
 const LIFECYCLE_COLORS = {
   new:       'bg-blue-50 text-blue-700 border-blue-200',
@@ -187,6 +188,7 @@ export default function Contacts() {
   const [filterType, setFilterType] = useState('');
   const [filterStage, setFilterStage] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const canCreate = can('contact.create');
   const canDelete = can('contact.delete');
@@ -267,6 +269,12 @@ export default function Contacts() {
                 <Columns size={13} />Kanban
               </button>
             </div>
+            {canCreate && (
+              <button onClick={() => setShowImport(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <Upload size={14} />Import
+              </button>
+            )}
             {canCreate && (
               <button onClick={() => setShowCreate(true)}
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg"
@@ -378,6 +386,13 @@ export default function Contacts() {
         <CreateContactModal
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
+        />
+      )}
+      {showImport && (
+        <ImportModal
+          defaultEntityType="contacts"
+          onClose={() => setShowImport(false)}
+          onDone={load}
         />
       )}
     </div>
