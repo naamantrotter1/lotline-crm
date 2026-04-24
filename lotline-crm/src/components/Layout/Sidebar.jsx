@@ -6,6 +6,7 @@ import {
   Globe, Landmark, Building2,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useJv } from '../../lib/JvContext';
 
 const BASE_NAV_SECTIONS = [
   {
@@ -35,7 +36,7 @@ const BASE_NAV_SECTIONS = [
       { icon: Map,         label: 'Market Research',        to: '/intelligence'    },
       { icon: Home,        label: 'Order Home',             to: '/homes'           },
       { icon: Landmark,    label: 'Capital & Partnerships', to: '/lending'         },
-      { icon: Building2,   label: 'Joint Ventures',         to: '/settings/joint-ventures' },
+      { icon: Building2,   label: 'Joint Ventures',         to: '/settings/joint-ventures', hubOnly: true },
       { icon: Calculator,  label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,    label: 'Home Models',            to: '/home-models'     },
       { icon: HardHat,     label: 'Contractor Database',    to: '/contractors'     },
@@ -51,6 +52,7 @@ const INVESTOR_ALLOWED = new Set(['/investors']);
 
 export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
   const { isAgent, isInvestor } = usePermissions();
+  const { isJvHub } = useJv();
 
   const filterItems = (allowed) =>
     BASE_NAV_SECTIONS
@@ -61,7 +63,10 @@ export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose
     ? filterItems(AGENT_ALLOWED)
     : isInvestor
     ? filterItems(INVESTOR_ALLOWED)
-    : BASE_NAV_SECTIONS;
+    : BASE_NAV_SECTIONS.map(section => ({
+        ...section,
+        items: section.items.filter(item => !item.hubOnly || isJvHub),
+      }));
 
   const handleNavClick = () => {
     if (isMobile) onMobileClose?.();
