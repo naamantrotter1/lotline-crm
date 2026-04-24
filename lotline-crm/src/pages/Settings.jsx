@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard, Mail, PlugZap } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard, Mail, PlugZap, Shield, ShieldCheck, ShieldOff, Smartphone, Copy } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
@@ -216,6 +216,230 @@ function IntegrationsTab({ showToast }) {
   );
 }
 
+// ── Google SVG (reused) ────────────────────────────────────────────────────────
+function GoogleSignInIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+function SecurityTab({ showToast }) {
+  const [factors,     setFactors]     = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [enrolling,   setEnrolling]   = useState(false);
+  const [enrollData,  setEnrollData]  = useState(null); // { id, qrCode, secret }
+  const [verifyCode,  setVerifyCode]  = useState('');
+  const [verifying,   setVerifying]   = useState(false);
+  const [unenrolling, setUnenrolling] = useState(false);
+  const [copied,      setCopied]      = useState(false);
+
+  const loadFactors = async () => {
+    if (!supabase) { setLoading(false); return; }
+    setLoading(true);
+    const { data } = await supabase.auth.mfa.listFactors();
+    setFactors((data?.totp || []).filter(f => f.status === 'verified'));
+    setLoading(false);
+  };
+
+  useEffect(() => { loadFactors(); }, []);
+
+  const handleEnroll = async () => {
+    setEnrolling(true);
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      issuer: 'LotLine CRM',
+    });
+    setEnrolling(false);
+    if (error) { showToast(error.message, 'error'); return; }
+    setEnrollData({ id: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
+    setVerifyCode('');
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (!enrollData || verifyCode.trim().length !== 6) return;
+    setVerifying(true);
+    const { error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId: enrollData.id,
+      code: verifyCode.trim(),
+    });
+    setVerifying(false);
+    if (error) {
+      showToast('Invalid code — please check your authenticator and try again.', 'error');
+      setVerifyCode('');
+      return;
+    }
+    showToast('Two-factor authentication enabled.');
+    setEnrollData(null);
+    setVerifyCode('');
+    loadFactors();
+  };
+
+  const handleCancelEnroll = async () => {
+    // Unenroll the pending (unverified) factor so it doesn't litter the factor list
+    if (enrollData?.id) {
+      await supabase.auth.mfa.unenroll({ factorId: enrollData.id }).catch(() => {});
+    }
+    setEnrollData(null);
+    setVerifyCode('');
+  };
+
+  const handleUnenroll = async (factorId) => {
+    if (!window.confirm('Disable two-factor authentication? Your account will be less secure.')) return;
+    setUnenrolling(true);
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    setUnenrolling(false);
+    if (error) { showToast(error.message, 'error'); return; }
+    showToast('Two-factor authentication disabled.');
+    loadFactors();
+  };
+
+  const copySecret = () => {
+    navigator.clipboard.writeText(enrollData.secret);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const isEnabled = factors.length > 0;
+
+  return (
+    <div className="max-w-md space-y-4">
+      {/* 2FA card */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isEnabled ? 'bg-green-50' : 'bg-gray-50'} border border-gray-100`}>
+            {isEnabled ? <ShieldCheck size={18} className="text-green-600" /> : <Shield size={18} className="text-gray-500" />}
+          </div>
+          <div>
+            <p className="font-semibold text-sidebar">Two-Factor Authentication</p>
+            <p className="text-xs text-gray-400">Require a one-time code on every sign-in</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 size={18} className="animate-spin text-gray-400" /></div>
+        ) : isEnabled && !enrollData ? (
+          /* ── Enabled state ── */
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-100">
+              <ShieldCheck size={14} className="text-green-600" />
+              <span className="text-sm text-green-800 font-medium">2FA is active on your account</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              You'll be asked for a 6-digit code from your authenticator app each time you sign in.
+            </p>
+            <button
+              onClick={() => handleUnenroll(factors[0].id)}
+              disabled={unenrolling}
+              className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {unenrolling ? <Loader2 size={14} className="animate-spin" /> : <ShieldOff size={14} />}
+              {unenrolling ? 'Disabling…' : 'Disable 2FA'}
+            </button>
+          </div>
+        ) : enrollData ? (
+          /* ── Enrollment flow ── */
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Scan the QR code below with <strong>Google Authenticator</strong>, <strong>Authy</strong>, or any TOTP app.
+            </p>
+            <div className="flex justify-center">
+              <img src={enrollData.qrCode} alt="QR code" className="w-44 h-44 rounded-lg border border-gray-100" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Or enter the secret manually:</p>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                <code className="text-xs text-gray-700 flex-1 break-all font-mono">{enrollData.secret}</code>
+                <button onClick={copySecret} className="flex-shrink-0 text-gray-400 hover:text-gray-700 transition-colors">
+                  {copied ? <CheckCircle size={14} className="text-green-500" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleVerify} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                  Enter the 6-digit code to verify
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={verifyCode}
+                  onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelEnroll}
+                  className="flex-1 py-2 text-sm font-medium text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifyCode.length !== 6 || verifying}
+                  className="flex-1 py-2 text-sm font-semibold text-white rounded-xl transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#c9703a' }}
+                >
+                  {verifying ? <><Loader2 size={14} className="animate-spin" />Verifying…</> : 'Enable 2FA'}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          /* ── Disabled state ── */
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">
+              Add an extra layer of security. After enabling, you'll need your authenticator app every time you sign in.
+            </p>
+            <button
+              onClick={handleEnroll}
+              disabled={enrolling}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white rounded-xl transition-colors disabled:opacity-50"
+              style={{ backgroundColor: '#c9703a' }}
+            >
+              {enrolling ? <><Loader2 size={14} className="animate-spin" />Setting up…</> : <><Smartphone size={14} />Set Up Authenticator App</>}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Google SSO info card */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center">
+            <GoogleSignInIcon />
+          </div>
+          <div>
+            <p className="font-semibold text-sidebar">Google Sign-In (SSO)</p>
+            <p className="text-xs text-gray-400">Sign in with your Google account</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-3">
+          Google Sign-In is available on the login page. To enable it for your organization,
+          turn on the Google provider in your Supabase Dashboard under{' '}
+          <strong className="text-gray-700">Authentication → Providers → Google</strong>.
+        </p>
+        <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+          <p className="text-xs text-amber-700">
+            Add <code className="font-mono bg-amber-100 px-1 rounded">https://[project-ref].supabase.co/auth/v1/callback</code> to your
+            Google OAuth client's authorized redirect URIs.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BillingTab() {
   const { profile, signOut } = useAuth();
   const [confirming, setConfirming] = useState(false);
@@ -417,7 +641,7 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['profile', 'team', 'notifications', 'integrations', 'billing'].map((t) => (
+        {['profile', 'team', 'notifications', 'integrations', 'security', 'billing'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -532,6 +756,8 @@ export default function Settings() {
       )}
 
       {tab === 'integrations' && <IntegrationsTab showToast={showToast} />}
+
+      {tab === 'security' && <SecurityTab showToast={showToast} />}
 
       {tab === 'billing' && <BillingTab />}
 
