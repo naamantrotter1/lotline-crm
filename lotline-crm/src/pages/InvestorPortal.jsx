@@ -874,7 +874,7 @@ export default function InvestorPortal() {
   const navigate = useNavigate();
   const { isInvestor } = usePermissions();
   const { profile, activeOrgId, orgSlug } = useAuth();
-  const { jvScopeOrgIds, jvScopeIsMultiOrg } = useJv();
+  const { jvScopeOrgIds, jvScope } = useJv();
   // For investor-role users, their linked investor name is stored in profile.company
   const linkedInvestor = isInvestor ? (profile?.company || null) : null;
 
@@ -887,7 +887,7 @@ export default function InvestorPortal() {
   // Multi-org: fetch from Supabase so partner investors appear.
   // Own-org:   use org-scoped localStorage (has pre-computed stats).
   useEffect(() => {
-    if (jvScopeIsMultiOrg) {
+    if (jvScope.mode !== 'own_only') {
       fetchInvestors(scopeIds).then(rows => {
         setInvestors(rows.map(r => ({
           id: r.id,
