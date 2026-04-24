@@ -95,6 +95,26 @@ export const CAPABILITIES = {
   'calendar.view':          ['owner','admin','operator','viewer'],
   'calendar.manage':        ['owner','admin','operator'],
 
+  // ── E-sign ─────────────────────────────────────────────────────────────────
+  'esign.view':             ['owner','admin','operator','viewer'],
+  'esign.send':             ['owner','admin','operator'],
+  'esign.manage':           ['owner','admin'],
+
+  // ── Lead Forms ─────────────────────────────────────────────────────────────
+  'lead_form.view':         ['owner','admin','operator','viewer'],
+  'lead_form.manage':       ['owner','admin','operator'],
+
+  // ── Dedupe ─────────────────────────────────────────────────────────────────
+  'dedupe.view':            ['owner','admin','operator'],
+  'dedupe.merge':           ['owner','admin'],
+
+  // ── AI ─────────────────────────────────────────────────────────────────────
+  'ai.use':                 ['owner','admin','operator'],
+
+  // ── Property Data ──────────────────────────────────────────────────────────
+  'property_data.view':     ['owner','admin','operator','viewer'],
+  'property_data.pull':     ['owner','admin','operator'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],

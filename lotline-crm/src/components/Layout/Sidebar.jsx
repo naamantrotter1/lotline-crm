@@ -4,6 +4,7 @@ import {
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, HardHat, Archive,
   Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare, Calendar,
+  FileSignature, ClipboardList, GitMerge, Sparkles, Database,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useJv } from '../../lib/JvContext';
@@ -22,8 +23,13 @@ const BASE_NAV_SECTIONS = [
       { icon: CheckSquare,     label: 'Tasks',           to: '/tasks'      },
       { icon: PieChart,        label: 'Reports',         to: '/reports'    },
       { icon: Zap,             label: 'Workflows',       to: '/workflows',  flag: 'WORKFLOWS' },
-      { icon: MessageSquare,   label: 'SMS',             to: '/sms',        flag: 'SMS' },
-      { icon: Calendar,        label: 'Calendar',        to: '/calendar',   flag: 'CALENDAR' },
+      { icon: MessageSquare,   label: 'SMS',             to: '/sms',          flag: 'SMS' },
+      { icon: Calendar,        label: 'Calendar',        to: '/calendar',     flag: 'CALENDAR' },
+      { icon: FileSignature,   label: 'E-Sign',          to: '/esign',        flag: 'ESIGN' },
+      { icon: ClipboardList,   label: 'Lead Forms',      to: '/lead-forms',   flag: 'LEAD_FORMS' },
+      { icon: GitMerge,        label: 'Dedupe',          to: '/dedupe',       flag: 'DEDUPE' },
+      { icon: Sparkles,        label: 'AI Assistant',    to: '/ai',           flag: 'AI' },
+      { icon: Database,        label: 'Property Data',   to: '/property-data',flag: 'PROPERTY_DATA' },
     ],
   },
   {

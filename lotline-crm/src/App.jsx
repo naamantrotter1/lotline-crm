@@ -61,6 +61,12 @@ import SmsInbox from './pages/SmsInbox';
 import SmsCampaigns from './pages/SmsCampaigns';
 import CalendarView from './pages/CalendarView';
 import SchedulerPage from './pages/SchedulerPage';
+import ESign from './pages/ESign';
+import LeadForms from './pages/LeadForms';
+import LeadFormPublic from './pages/LeadFormPublic';
+import Dedupe from './pages/Dedupe';
+import AiAssistant from './pages/AiAssistant';
+import PropertyData from './pages/PropertyData';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -193,6 +199,9 @@ export default function App() {
             {/* Public scheduler booking page */}
             <Route path="/schedule/:slug" element={<SchedulerPage />} />
 
+            {/* Public lead form */}
+            <Route path="/f/:slug" element={<LeadFormPublic />} />
+
             {/* Purchasing flow */}
             <Route path="/cart"           element={<Cart />} />
             <Route path="/checkout"       element={<Checkout />} />
@@ -251,6 +260,11 @@ export default function App() {
               <Route path="sms"                 element={<AgentRoute path="sms"><SmsInbox /></AgentRoute>} />
               <Route path="sms/campaigns"       element={<AgentRoute path="sms"><SmsCampaigns /></AgentRoute>} />
               <Route path="calendar"            element={<AgentRoute path="calendar"><CalendarView /></AgentRoute>} />
+              <Route path="esign"               element={<AgentRoute path="esign"><ESign /></AgentRoute>} />
+              <Route path="lead-forms"          element={<AgentRoute path="lead-forms"><LeadForms /></AgentRoute>} />
+              <Route path="dedupe"              element={<AgentRoute path="dedupe"><Dedupe /></AgentRoute>} />
+              <Route path="ai"                  element={<AgentRoute path="ai"><AiAssistant /></AgentRoute>} />
+              <Route path="property-data"       element={<AgentRoute path="property-data"><PropertyData /></AgentRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}
