@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus, CheckSquare } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus, CheckSquare, HelpCircle } from 'lucide-react';
+import HelpModal from '../Help/HelpModal';
 import CreateContactModal from '../Contacts/CreateContactModal';
 import CreateTaskModal from '../Tasks/CreateTaskModal';
 import { useNavigate } from 'react-router-dom';
@@ -185,9 +186,21 @@ export default function TopBar({ onToggleSidebar }) {
   );
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const bellRef = useRef(null);
   const userMenuRef = useRef(null);
+
+  // '?' shortcut to open help modal
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === '?' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        setShowHelp(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Load initial unread count and subscribe to realtime inserts
   useEffect(() => {
@@ -267,6 +280,14 @@ export default function TopBar({ onToggleSidebar }) {
         </button>
 
         <button
+          onClick={() => setShowHelp(v => !v)}
+          title="Help & Shortcuts (?)"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+        >
+          <HelpCircle size={16} />
+        </button>
+
+        <button
           onClick={toggleDarkMode}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
         >
@@ -338,6 +359,7 @@ export default function TopBar({ onToggleSidebar }) {
         onCreated={() => { setShowCreateTask(false); navigate('/tasks'); }}
       />
     )}
+    {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
   </>
   );
 }
