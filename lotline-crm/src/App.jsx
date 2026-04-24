@@ -50,6 +50,7 @@ import Lending from './pages/Lending';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
 import AcceptInvite from './pages/AcceptInvite';
+import JvJoinPage from './pages/JvJoinPage';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
@@ -175,6 +176,9 @@ export default function App() {
 
             {/* Invitation acceptance — public but session-aware */}
             <Route path="/invite/:token" element={<AcceptInvite />} />
+
+            {/* JV partner invitation signup — fully public */}
+            <Route path="/join/:token" element={<JvJoinPage />} />
 
             {/* Purchasing flow */}
             <Route path="/cart"           element={<Cart />} />

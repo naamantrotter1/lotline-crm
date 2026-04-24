@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import {
   Building2, Plus, CheckCircle, XCircle, AlertTriangle, Clock,
   ChevronRight, Loader2, Search, X, RefreshCw, Shield, Activity,
-  AlertCircle, Trash2,
+  AlertCircle, Trash2, Link2, Send, Copy, Mail,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useJv } from '../lib/JvContext';
@@ -586,6 +586,192 @@ function ActivityFeed() {
   );
 }
 
+// ─── Invite section (hub-only) ────────────────────────────────────────────────
+
+function InviteSection() {
+  const [email,       setEmail]       = useState('');
+  const [notes,       setNotes]       = useState('');
+  const [sending,     setSending]     = useState(false);
+  const [result,      setResult]      = useState(null); // { inviteUrl } on success
+  const [err,         setErr]         = useState('');
+  const [invitations, setInvitations] = useState([]);
+  const [loadingInvs, setLoadingInvs] = useState(true);
+  const [copied,      setCopied]      = useState(false);
+
+  // Load pending invitations from Supabase directly (RLS-scoped to org)
+  useEffect(() => {
+    supabase
+      .from('jv_partner_invitations')
+      .select('id, invitee_email, status, created_at, expires_at, notes')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setInvitations(data || []))
+      .finally(() => setLoadingInvs(false));
+  }, [result]); // re-fetch after sending a new invite
+
+  async function handleSend(e) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSending(true);
+    setErr('');
+    setResult(null);
+    try {
+      const json = await apiPost('/api/jv/invite', { inviteeEmail: email.trim(), notes: notes.trim() || null });
+      setResult(json);
+      setEmail('');
+      setNotes('');
+    } catch (ex) {
+      setErr(ex.message || 'Failed to send invitation');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function copyLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  async function revokeInv(id) {
+    await supabase.from('jv_partner_invitations').update({ status: 'revoked' }).eq('id', id);
+    setInvitations(prev => prev.map(i => i.id === id ? { ...i, status: 'revoked' } : i));
+  }
+
+  const pending = invitations.filter(i => i.status === 'pending');
+  const past    = invitations.filter(i => i.status !== 'pending');
+
+  return (
+    <div className="space-y-4">
+      {/* Send invite card */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Link2 size={15} className="text-accent" />
+          <h3 className="text-sm font-bold text-[#1a2332]">Invite a New Partner</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Send a signup link. When they accept, their new CRM org is automatically connected as a JV partner with you.
+        </p>
+        <form onSubmit={handleSend} className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Email address *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="partner@example.com"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Personal message (optional)</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Hey, let's connect our pipelines…"
+              rows={2}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+            />
+          </div>
+          {err && (
+            <p className="text-xs text-red-600 flex items-center gap-1">
+              <AlertCircle size={12} /> {err}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={sending}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-60"
+          >
+            {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            {sending ? 'Sending…' : 'Send Invitation'}
+          </button>
+        </form>
+
+        {/* Success: show the link */}
+        {result?.inviteUrl && (
+          <div className="mt-4 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+            <p className="text-xs font-semibold text-green-700 mb-1 flex items-center gap-1">
+              <CheckCircle size={12} /> Invitation sent!
+            </p>
+            <p className="text-xs text-gray-600 mb-2">Share this link directly if the email doesn't arrive:</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-[11px] bg-white border border-green-200 rounded-lg px-2 py-1.5 truncate text-gray-700">
+                {result.inviteUrl}
+              </code>
+              <button
+                onClick={() => copyLink(result.inviteUrl)}
+                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-green-200 text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors"
+              >
+                <Copy size={11} />
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Pending invitations */}
+      {!loadingInvs && pending.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+            <Mail size={13} className="text-amber-500" />
+            <span className="text-sm font-semibold text-[#1a2332]">Pending Invitations</span>
+            <span className="ml-auto text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">{pending.length}</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {pending.map(inv => (
+              <div key={inv.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{inv.invitee_email}</p>
+                  <p className="text-xs text-gray-400">
+                    Sent {fmtDate(inv.created_at)} · Expires {fmtDate(inv.expires_at)}
+                  </p>
+                  {inv.notes && <p className="text-xs text-gray-400 italic mt-0.5">"{inv.notes}"</p>}
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-100">Pending</span>
+                <button
+                  onClick={() => revokeInv(inv.id)}
+                  className="text-gray-300 hover:text-red-400 transition-colors"
+                  title="Revoke invitation"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Past invitations (accepted/revoked) */}
+      {!loadingInvs && past.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <span className="text-sm font-semibold text-[#1a2332]">Past Invitations</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {past.map(inv => (
+              <div key={inv.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{inv.invitee_email}</p>
+                  <p className="text-xs text-gray-400">Sent {fmtDate(inv.created_at)}</p>
+                </div>
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                  inv.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100'
+                }`}>
+                  {inv.status === 'accepted' ? 'Accepted' : 'Revoked'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function JointVentures() {
@@ -684,6 +870,17 @@ export default function JointVentures() {
               showToast={showToastFn}
             />
           ))}
+        </div>
+      )}
+
+      {/* Invite new partner via link (hub-only) */}
+      {isJvHub && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 size={14} className="text-gray-400" />
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Invite via Link</h2>
+          </div>
+          <InviteSection />
         </div>
       )}
 
