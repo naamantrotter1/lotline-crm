@@ -44,11 +44,11 @@ function meetingChipStyle(meeting) {
 }
 
 function creatorInitials(meeting) {
-  const name = meeting.profiles?.full_name || '';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
-  return '?';
+  const p = meeting.profiles;
+  if (!p) return '?';
+  const first = p.first_name?.[0] || '';
+  const last = p.last_name?.[0] || '';
+  return (first + last).toUpperCase() || '?';
 }
 
 function typeIcon(type) {
@@ -497,12 +497,12 @@ export default function CalendarView() {
                       <span className="text-xs">{editing.attendee_emails.join(', ')}</span>
                     </div>
                   )}
-                  {editing.profiles?.full_name && editing.created_by !== profile?.id && (
+                  {editing.profiles && editing.created_by !== profile?.id && (
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <div className="w-5 h-5 rounded-full bg-accent/20 text-accent text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                         {creatorInitials(editing)}
                       </div>
-                      <span className="text-xs">{editing.profiles.full_name}'s calendar</span>
+                      <span className="text-xs">{[editing.profiles.first_name, editing.profiles.last_name].filter(Boolean).join(' ')}'s calendar</span>
                     </div>
                   )}
                   {editing.description && <p className="text-sm text-gray-600 leading-relaxed">{editing.description}</p>}
