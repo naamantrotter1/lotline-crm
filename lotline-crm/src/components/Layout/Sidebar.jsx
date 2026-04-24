@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, HardHat, Archive,
-  Globe, Landmark, Building2, BookUser, CheckSquare,
+  Globe, Landmark, Building2, BookUser, CheckSquare, PieChart,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useJv } from '../../lib/JvContext';
@@ -19,6 +19,7 @@ const BASE_NAV_SECTIONS = [
       { icon: Users,           label: 'Investor Portal', to: '/investors'  },
       { icon: BookUser,        label: 'Contacts',        to: '/contacts'   },
       { icon: CheckSquare,     label: 'Tasks',           to: '/tasks'      },
+      { icon: PieChart,        label: 'Reports',         to: '/reports'    },
     ],
   },
   {
