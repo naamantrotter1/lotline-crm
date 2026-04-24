@@ -34,13 +34,17 @@ function guard(data, error, fallback = []) {
 /**
  * Fetch all investors ordered by name.
  */
-export async function fetchInvestors(orgId) {
+export async function fetchInvestors(orgIds) {
   if (!supabase) return [];
   let q = supabase
     .from('investors')
     .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes')
     .order('name');
-  if (orgId) q = q.eq('organization_id', orgId);
+  if (orgIds) {
+    const ids = Array.isArray(orgIds) ? orgIds.filter(Boolean) : [orgIds].filter(Boolean);
+    if (ids.length === 1) q = q.eq('organization_id', ids[0]);
+    else if (ids.length > 1) q = q.in('organization_id', ids);
+  }
   const { data, error } = await q;
   return guard(data, error);
 }
@@ -54,10 +58,14 @@ export async function fetchInvestors(orgId) {
  * Used for the deal-page health check (CommitmentHealthBadge) and global views.
  * Includes commitment_type (added by migration 008).
  */
-export async function fetchCommitmentSummaries(orgId) {
+export async function fetchCommitmentSummaries(orgIds) {
   if (!supabase) return [];
   let q = supabase.from('investor_commitment_summary').select('*').order('priority_rank');
-  if (orgId) q = q.eq('organization_id', orgId);
+  if (orgIds) {
+    const ids = Array.isArray(orgIds) ? orgIds.filter(Boolean) : [orgIds].filter(Boolean);
+    if (ids.length === 1) q = q.eq('organization_id', ids[0]);
+    else if (ids.length > 1) q = q.in('organization_id', ids);
+  }
   const { data, error } = await q;
   return guard(data, error);
 }

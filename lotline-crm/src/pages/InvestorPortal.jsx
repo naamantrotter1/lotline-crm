@@ -7,6 +7,7 @@ import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investors
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
+import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries } from '../lib/capitalStackData';
 
 const INVESTOR_COLORS = {
@@ -747,15 +748,18 @@ function AvailableInvestmentsTab({ onDealClick }) {
 // ── Tab: Commitments (headroom overview) ─────────────────────────────────────
 function CommitmentsTab() {
   const { activeOrgId } = useAuth();
+  const { jvScopeOrgIds } = useJv();
+  const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCommitmentSummaries(activeOrgId).then(data => {
+    setLoading(true);
+    fetchCommitmentSummaries(scopeIds).then(data => {
       setRows(data ?? []);
       setLoading(false);
     });
-  }, [activeOrgId]);
+  }, [JSON.stringify(scopeIds)]);
 
   const fmt = v => v == null ? '—' : `$${Number(v).toLocaleString()}`;
 
