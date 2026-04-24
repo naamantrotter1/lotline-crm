@@ -28,12 +28,12 @@ export default function JvScopeSwitcher() {
   }));
 
   function label() {
-    const { mode, selectedPartnerIds } = jvScope;
+    const { mode, selectedPartnerIds, includeOwn } = jvScope;
     if (mode === 'own_only') return 'My org only';
-    if (mode === 'all_partners_combined')  return 'All partners';
+    if (mode === 'all_partners_combined') return 'All partners';
     if (mode === 'single_partner' && selectedPartnerIds.length === 1) {
       const p = partnerOrgs.find(o => o.id === selectedPartnerIds[0]);
-      return p?.name || 'Partner';
+      return includeOwn ? `My org + ${p?.name || 'partner'}` : (p?.name || 'Partner');
     }
     return 'My org only';
   }
@@ -75,14 +75,21 @@ export default function JvScopeSwitcher() {
               JV Partners
             </p>
             {partnerOrgs.map(p => {
-              const isActive = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id;
+              const isCombActive   = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id && jvScope.includeOwn;
+              const isOnlyActive   = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id && !jvScope.includeOwn;
               return (
-                <Option
-                  key={p.id}
-                  active={isActive}
-                  onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: true }); setOpen(false); }}
-                  label={p.name}
-                />
+                <div key={p.id}>
+                  <Option
+                    active={isCombActive}
+                    onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: true }); setOpen(false); }}
+                    label={`My org + ${p.name}`}
+                  />
+                  <Option
+                    active={isOnlyActive}
+                    onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: false }); setOpen(false); }}
+                    label={p.name}
+                  />
+                </div>
               );
             })}
             {partnerOrgs.length > 1 && (
