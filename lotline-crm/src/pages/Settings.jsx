@@ -420,28 +420,23 @@ function SecurityTab({ showToast }) {
         )}
       </div>
 
-      {/* Google SSO info card */}
+      {/* Google SSO card */}
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center">
             <GoogleSignInIcon />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-semibold text-sidebar">Google Sign-In (SSO)</p>
             <p className="text-xs text-gray-400">Sign in with your Google account</p>
           </div>
+          <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <CheckCircle size={10} />Enabled
+          </span>
         </div>
-        <p className="text-sm text-gray-500 mb-3">
-          Google Sign-In is available on the login page. To enable it for your organization,
-          turn on the Google provider in your Supabase Dashboard under{' '}
-          <strong className="text-gray-700">Authentication → Providers → Google</strong>.
+        <p className="text-sm text-gray-500">
+          Team members can sign in using their Google account on the login page.
         </p>
-        <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-          <p className="text-xs text-amber-700">
-            Add <code className="font-mono bg-amber-100 px-1 rounded">https://[project-ref].supabase.co/auth/v1/callback</code> to your
-            Google OAuth client's authorized redirect URIs.
-          </p>
-        </div>
       </div>
     </div>
   );
