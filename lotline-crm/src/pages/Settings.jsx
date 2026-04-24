@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard, Mail, PlugZap } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
@@ -70,6 +70,146 @@ function NotificationsTab({ showToast }) {
             checked={stageMove}
             onChange={() => handleToggle('stageMove', !stageMove, setStageMove)}
           />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Google SVG logo ────────────────────────────────────────────────────────────
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+function IntegrationsTab({ showToast }) {
+  const { profile } = useAuth();
+  const [integration, setIntegration] = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  // Load existing integration
+  useEffect(() => {
+    if (!supabase) { setLoading(false); return; }
+    supabase
+      .from('user_integrations')
+      .select('*')
+      .eq('provider', 'google')
+      .maybeSingle()
+      .then(({ data }) => { setIntegration(data); setLoading(false); });
+  }, []);
+
+  // Handle redirect back from OAuth with ?connected=google or ?error=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'google') {
+      showToast('Gmail connected successfully.');
+      window.history.replaceState({}, '', '/settings?tab=integrations');
+      // Reload integration row
+      supabase?.from('user_integrations').select('*').eq('provider','google').maybeSingle()
+        .then(({ data }) => setIntegration(data));
+    }
+    if (params.get('error')) {
+      showToast('Google connection failed: ' + params.get('error'), 'error');
+      window.history.replaceState({}, '', '/settings?tab=integrations');
+    }
+  }, []);
+
+  const handleConnect = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const state = session?.access_token || '';
+    window.location.href = `/api/google/auth?state=${encodeURIComponent(state)}`;
+  };
+
+  const handleDisconnect = async () => {
+    if (!window.confirm('Disconnect Gmail? You will no longer be able to send emails from the CRM.')) return;
+    setDisconnecting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/google/disconnect', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (res.ok) {
+      setIntegration(null);
+      showToast('Gmail disconnected.');
+    } else {
+      showToast('Failed to disconnect.', 'error');
+    }
+    setDisconnecting(false);
+  };
+
+  const isConnected = !!integration?.gmail_email;
+
+  return (
+    <div className="max-w-md space-y-4">
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center">
+            <PlugZap size={18} className="text-gray-500" />
+          </div>
+          <div>
+            <p className="font-semibold text-sidebar">Integrations</p>
+            <p className="text-xs text-gray-400">Connect your accounts</p>
+          </div>
+        </div>
+
+        {/* Gmail card */}
+        <div className="border border-gray-100 rounded-xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+              <GoogleIcon />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800">Gmail</p>
+              <p className="text-xs text-gray-400">Send emails directly from contact records</p>
+            </div>
+            {isConnected && (
+              <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle size={10} />Connected
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
+          ) : isConnected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
+                <Mail size={13} className="text-green-600" />
+                <span className="text-sm text-green-800 font-medium">{integration.gmail_email}</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Emails sent from contact records will be delivered from this Gmail account.
+              </p>
+              <button
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                {disconnecting ? 'Disconnecting…' : 'Disconnect Gmail'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-400">
+                Connect your Gmail account to send emails directly from any contact page.
+                Your emails will appear in your Gmail Sent folder.
+              </p>
+              <button
+                onClick={handleConnect}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <GoogleIcon />
+                Connect Gmail
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -175,7 +315,8 @@ function BillingTab() {
 }
 
 export default function Settings() {
-  const [tab, setTab] = useState('profile');
+  const initialTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
+  const [tab, setTab] = useState(initialTab);
   const { profile, updateProfile } = useAuth();
 
   // Profile tab state
@@ -276,7 +417,7 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['profile', 'team', 'notifications', 'billing'].map((t) => (
+        {['profile', 'team', 'notifications', 'integrations', 'billing'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -389,6 +530,8 @@ export default function Settings() {
       {tab === 'notifications' && (
         <NotificationsTab showToast={showToast} />
       )}
+
+      {tab === 'integrations' && <IntegrationsTab showToast={showToast} />}
 
       {tab === 'billing' && <BillingTab />}
 

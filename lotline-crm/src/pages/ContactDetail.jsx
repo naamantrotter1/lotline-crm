@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Mail, Phone, Building, MapPin, Tag, User,
   Edit2, Trash2, Check, X, Clock, Link, ExternalLink,
-  DollarSign, Plus, CheckSquare, Circle, CircleDot, Ban,
+  DollarSign, Plus, CheckSquare, Circle, CircleDot, Ban, Send,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -13,7 +13,9 @@ import {
   LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS, LEAD_SOURCES,
 } from '../lib/contactsData';
 import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/tasksData';
+import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
+import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { supabase } from '../lib/supabase';
 
 const LIFECYCLE_COLORS = {
@@ -130,6 +132,8 @@ export default function ContactDetail() {
   const [savingTypes, setSavingTypes] = useState(false);
   const [tasks, setTasks]           = useState([]);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [emailLogs, setEmailLogs]   = useState([]);
+  const [showCompose, setShowCompose] = useState(false);
 
   const canEdit   = can('contact.update');
   const canDelete = can('contact.delete');
@@ -149,6 +153,7 @@ export default function ContactDetail() {
       setLoading(false);
     });
     fetchTasks({ contactId: id }).then(setTasks);
+    fetchEmailLogs({ contactId: id }).then(setEmailLogs);
   }, [id]);
 
   const save = async (fields) => {
@@ -193,10 +198,19 @@ export default function ContactDetail() {
 
   if (!contact) return null;
 
+  const emailTimeline = emailLogs.map(e => ({
+    icon: Mail,
+    color: e.status === 'sent' ? 'bg-blue-500' : 'bg-red-400',
+    title: `Email: ${e.subject}`,
+    sub: `To: ${e.to_email}${e.status === 'failed' ? ' · Failed' : ''}`,
+    time: new Date(e.sent_at).toLocaleString(),
+  }));
+
   const timeline = [
     { icon: User, color: 'bg-accent', title: 'Contact created', sub: null, time: new Date(contact.created_at).toLocaleString() },
     ...(contact.last_contacted_at ? [{ icon: Clock, color: 'bg-green-500', title: 'Last contacted', sub: null, time: new Date(contact.last_contacted_at).toLocaleString() }] : []),
-  ];
+    ...emailTimeline,
+  ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
   return (
     <>
@@ -211,6 +225,16 @@ export default function ContactDetail() {
           {contact.company && <p className="text-xs text-gray-400">{contact.title ? `${contact.title} · ` : ''}{contact.company}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {contact.email && can('contact.update') && (
+            <button
+              onClick={() => setShowCompose(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition-colors"
+              style={{ backgroundColor: '#c9703a' }}
+              title="Send email"
+            >
+              <Send size={12} />Send Email
+            </button>
+          )}
           {/* Lifecycle stage selector */}
           <select value={contact.lifecycle_stage} onChange={e => handleStageChange(e.target.value)}
             disabled={!canEdit}
@@ -448,6 +472,15 @@ export default function ContactDetail() {
         defaultContactId={id}
         onClose={() => setShowCreateTask(false)}
         onCreated={(t) => { setShowCreateTask(false); setTasks(prev => [t, ...prev]); }}
+      />
+    )}
+    {showCompose && (
+      <ComposeEmailModal
+        contact={contact}
+        onClose={() => setShowCompose(false)}
+        onSent={(log) => {
+          if (log) setEmailLogs(prev => [log, ...prev]);
+        }}
       />
     )}
     </>
