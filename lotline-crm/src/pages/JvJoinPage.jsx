@@ -74,13 +74,16 @@ export default function JvJoinPage() {
   }
 
   // ── Shared input style ────────────────────────────────────────────────────
-  const inp = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent';
-  const lbl = 'block text-xs font-semibold text-gray-600 mb-1';
+  const inp = 'w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors placeholder:text-gray-300';
+  const lbl = 'block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide';
+
+  const shell = 'min-h-screen w-full flex items-center justify-center px-4 py-12';
+  const shellStyle = { background: '#f5f3ee' };
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (!lookupDone) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
+      <div className={shell} style={shellStyle}>
         <Loader2 size={28} className="animate-spin text-accent" />
       </div>
     );
@@ -89,8 +92,8 @@ export default function JvJoinPage() {
   // ── Invalid / expired invitation ──────────────────────────────────────────
   if (lookupErr) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#f5f3ee' }}>
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-10 text-center">
+      <div className={shell} style={shellStyle}>
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
           <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={26} className="text-red-400" />
           </div>
@@ -107,9 +110,9 @@ export default function JvJoinPage() {
   // ── Success ───────────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#f5f3ee' }}>
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-10 text-center">
-          <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+      <div className={shell} style={shellStyle}>
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+          <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
             <CheckCircle size={26} className="text-green-500" />
           </div>
           <h1 className="text-xl font-bold text-[#1a2332] mb-2">Account Created!</h1>
@@ -122,7 +125,7 @@ export default function JvJoinPage() {
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="w-full py-2.5 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors"
+            className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors"
           >
             Go to Login →
           </button>
@@ -133,32 +136,33 @@ export default function JvJoinPage() {
 
   // ── Signup form ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: '#f5f3ee' }}>
-      <div className="max-w-md w-full">
+    <div className={shell} style={shellStyle}>
+      <div className="w-full max-w-lg">
+
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[#1a2332] flex items-center justify-center mx-auto mb-4">
-            <Building2 size={26} className="text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-[#1a2332] flex items-center justify-center mx-auto mb-4">
+            <Building2 size={22} className="text-white" />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">LotLine Homes</p>
-          <h1 className="text-2xl font-bold text-[#1a2332]">Partner Invitation</h1>
-          <p className="text-sm text-gray-500 mt-2">
-            <strong>{invite?.hubOrgName}</strong> has invited you to join as a Joint Venture partner.
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">LotLine Homes</p>
+          <h1 className="text-2xl font-bold text-[#1a2332] mb-2">Partner Invitation</h1>
+          <p className="text-sm text-gray-500">
+            <strong className="text-gray-700">{invite?.hubOrgName}</strong> has invited you to join as a Joint Venture partner.
           </p>
           {invite?.notes && (
-            <p className="mt-3 text-sm text-gray-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 italic">
+            <p className="mt-3 text-sm text-gray-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 italic">
               &ldquo;{invite.notes}&rdquo;
             </p>
           )}
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl px-8 py-8">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">
+        {/* Form card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-8">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6">
             Create your account
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -173,10 +177,10 @@ export default function JvJoinPage() {
               </div>
             </div>
 
-            {/* Email (locked to invitation) */}
+            {/* Email (locked) */}
             <div>
               <label className={lbl}>Email</label>
-              <input className={inp + ' opacity-60 cursor-not-allowed'} value={invite?.inviteeEmail || ''} readOnly />
+              <input className={inp + ' opacity-50 cursor-not-allowed bg-gray-50'} value={invite?.inviteeEmail || ''} readOnly />
             </div>
 
             {/* Org name */}
@@ -184,7 +188,7 @@ export default function JvJoinPage() {
               <label className={lbl}>Company / organization name *</label>
               <input className={inp} value={orgName} onChange={e => setOrgName(e.target.value)}
                 placeholder="Smith Land Partners LLC" />
-              <p className="text-[10px] text-gray-400 mt-1">This will be the name of your CRM workspace.</p>
+              <p className="text-[11px] text-gray-400 mt-1.5">This will be the name of your CRM workspace.</p>
             </div>
 
             {/* Password */}
@@ -199,7 +203,7 @@ export default function JvJoinPage() {
                   placeholder="Min. 8 characters"
                 />
                 <button type="button" onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
                   {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -218,7 +222,7 @@ export default function JvJoinPage() {
             </div>
 
             {formErr && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
                 <AlertCircle size={14} className="flex-shrink-0" />
                 {formErr}
               </div>
@@ -227,28 +231,23 @@ export default function JvJoinPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
               {submitting ? 'Creating your account…' : 'Create Account & Accept Partnership'}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-4">
+          <p className="text-center text-xs text-gray-400 mt-5">
             Already have an account?{' '}
             <Link to="/login" className="text-accent font-semibold hover:underline">Sign in</Link>
           </p>
         </div>
 
-        {/* JV info footer */}
-        <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-start gap-2">
-          <Building2 size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-700">
-            By accepting this invitation your organization will automatically become a Joint Venture partner
-            with <strong>{invite?.hubOrgName}</strong>. You will get your own full CRM workspace and
-            selectively share deal data per the agreed permissions.
-          </p>
-        </div>
+        <p className="text-center text-[11px] text-gray-400 mt-5 leading-relaxed">
+          By creating an account you agree to become a Joint Venture partner with{' '}
+          <strong className="text-gray-500">{invite?.hubOrgName}</strong>.
+        </p>
       </div>
     </div>
   );
