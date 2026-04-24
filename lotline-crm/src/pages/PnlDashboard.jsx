@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { DEAL_OVERVIEW_DEALS, calcNetProfit } from '../data/deals';
+import { calcNetProfit } from '../data/deals';
 import { TrendingUp } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext';
+import { useDeals } from '../lib/DealsContext';
 
 const monthlyData = [
   { month: 'Jan 2026', revenue: 0, costs: 0, profit: 0 },
@@ -11,8 +11,9 @@ const monthlyData = [
 ];
 
 export default function PnlDashboard() {
-  const { orgSlug } = useAuth();
-  const deals = orgSlug === 'lotline-homes' ? DEAL_OVERVIEW_DEALS : [];
+  const { deals: allDeals } = useDeals();
+  // Only active (non-archived) deals; already filtered by JV scope in DealsContext
+  const deals = allDeals.filter(d => !d.isArchived);
 
   const totalBuildCosts = deals.reduce((s, d) => {
     const c = (d.land || 0) + (d.mobileHome || 0) + (d.hudEngineer || 0) +
