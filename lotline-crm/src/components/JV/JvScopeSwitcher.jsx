@@ -28,13 +28,13 @@ export default function JvScopeSwitcher() {
   }));
 
   function label() {
-    const { mode, selectedPartnerIds } = jvScope;
+    const { mode, selectedPartnerIds, includeOwn } = jvScope;
     if (mode === 'own_only') return 'My org only';
     if (mode === 'all_partners_combined')  return 'My org + all partners';
     if (mode === 'all_partners_excluding_own') return 'All partners only';
     if (mode === 'single_partner' && selectedPartnerIds.length === 1) {
       const p = partnerOrgs.find(o => o.id === selectedPartnerIds[0]);
-      return `With ${p?.name || 'partner'}`;
+      return includeOwn ? `With ${p?.name || 'partner'}` : `${p?.name || 'partner'} only`;
     }
     return 'Custom scope';
   }
@@ -57,7 +57,7 @@ export default function JvScopeSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50">
+        <div className="absolute right-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50">
           <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
             Data scope
           </p>
@@ -67,41 +67,56 @@ export default function JvScopeSwitcher() {
             active={jvScope.mode === 'own_only'}
             onClick={() => { setJvScope({ mode: 'own_only', selectedPartnerIds: [], includeOwn: true }); setOpen(false); }}
             label="My org only"
-            sub="Current behavior — no partner data"
+            sub="No partner data"
           />
 
-          {/* Individual partners */}
-          {partnerOrgs.map(p => {
-            const isSel = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id;
-            return (
-              <Option
-                key={p.id}
-                active={isSel}
-                onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: true }); setOpen(false); }}
-                label={`My org + ${p.name}`}
-                sub="Combined view with one partner"
-              />
-            );
-          })}
-
-          {/* All partners */}
-          {partnerOrgs.length > 1 && (
-            <Option
-              active={jvScope.mode === 'all_partners_combined'}
-              onClick={() => { setJvScope({ mode: 'all_partners_combined', selectedPartnerIds: [], includeOwn: true }); setOpen(false); }}
-              label="My org + all partners"
-              sub={`Combined view across ${partnerOrgs.length + 1} orgs`}
-            />
-          )}
-
+          {/* Per-partner options */}
           <div className="border-t border-gray-100 mt-1 pt-1">
-            <Option
-              active={jvScope.mode === 'all_partners_excluding_own'}
-              onClick={() => { setJvScope({ mode: 'all_partners_excluding_own', selectedPartnerIds: [], includeOwn: false }); setOpen(false); }}
-              label="All partners only"
-              sub="Hide my org — show only JV partners"
-            />
+            <p className="px-3 pt-0.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+              JV Partners
+            </p>
+            {partnerOrgs.map(p => {
+              const isOnlyActive  = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id && !jvScope.includeOwn;
+              const isCombActive  = jvScope.mode === 'single_partner' && jvScope.selectedPartnerIds[0] === p.id && jvScope.includeOwn;
+              return (
+                <div key={p.id}>
+                  <Option
+                    active={isOnlyActive}
+                    onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: false }); setOpen(false); }}
+                    label={`${p.name} only`}
+                    sub="View only their data"
+                  />
+                  <Option
+                    active={isCombActive}
+                    onClick={() => { setJvScope({ mode: 'single_partner', selectedPartnerIds: [p.id], includeOwn: true }); setOpen(false); }}
+                    label={`My org + ${p.name}`}
+                    sub="Combined view"
+                  />
+                </div>
+              );
+            })}
           </div>
+
+          {/* All-partner options (only meaningful when >1 partner) */}
+          {partnerOrgs.length > 1 && (
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              <p className="px-3 pt-0.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                All Partners
+              </p>
+              <Option
+                active={jvScope.mode === 'all_partners_combined'}
+                onClick={() => { setJvScope({ mode: 'all_partners_combined', selectedPartnerIds: [], includeOwn: true }); setOpen(false); }}
+                label="My org + all partners"
+                sub={`${partnerOrgs.length + 1} orgs combined`}
+              />
+              <Option
+                active={jvScope.mode === 'all_partners_excluding_own'}
+                onClick={() => { setJvScope({ mode: 'all_partners_excluding_own', selectedPartnerIds: [], includeOwn: false }); setOpen(false); }}
+                label="All partners only"
+                sub="Hide my org"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
