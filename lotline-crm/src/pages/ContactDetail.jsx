@@ -17,6 +17,7 @@ import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import SmsThread from '../components/Sms/SmsThread';
+import CallHistory from '../components/Voice/CallHistory';
 import { supabase } from '../lib/supabase';
 import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
 import { isEnabled } from '../lib/featureFlags';
@@ -468,6 +469,17 @@ export default function ContactDetail() {
               {tasks.length > 8 && <p className="text-xs text-gray-400 mt-1">+{tasks.length - 8} more</p>}
             </div>
           </div>
+
+          {/* Call History */}
+          {isEnabled('VOICE') && (contact.phone || contact.secondary_phone) && (
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <CallHistory
+                contactId={id}
+                contactPhone={contact.phone || contact.secondary_phone}
+                contactName={contact.fullName}
+              />
+            </div>
+          )}
 
           {/* SMS Thread */}
           {isEnabled('SMS') && (contact.phone || contact.secondary_phone) && (

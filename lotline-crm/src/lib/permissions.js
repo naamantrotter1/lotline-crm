@@ -86,6 +86,11 @@ export const CAPABILITIES = {
   'sms.send':               ['owner','admin','operator'],
   'sms.manage':             ['owner','admin'],
 
+  // ── Voice ──────────────────────────────────────────────────────────────────
+  'voice.view':             ['owner','admin','operator','viewer'],
+  'voice.call':             ['owner','admin','operator'],
+  'voice.manage':           ['owner','admin'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],
