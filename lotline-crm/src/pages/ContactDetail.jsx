@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Mail, Phone, Building, MapPin, Tag, User,
   Edit2, Trash2, Check, X, Clock, Link, ExternalLink,
-  DollarSign, Plus,
+  DollarSign, Plus, CheckSquare, Circle, CircleDot, Ban,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -12,6 +12,8 @@ import {
   fetchContact, updateContact, deleteContact,
   LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS, LEAD_SOURCES,
 } from '../lib/contactsData';
+import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/tasksData';
+import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import { supabase } from '../lib/supabase';
 
 const LIFECYCLE_COLORS = {
@@ -126,6 +128,8 @@ export default function ContactDetail() {
   const [editTypes, setEditTypes]   = useState(false);
   const [draftTypes, setDraftTypes] = useState([]);
   const [savingTypes, setSavingTypes] = useState(false);
+  const [tasks, setTasks]           = useState([]);
+  const [showCreateTask, setShowCreateTask] = useState(false);
 
   const canEdit   = can('contact.update');
   const canDelete = can('contact.delete');
@@ -144,6 +148,7 @@ export default function ContactDetail() {
       setLinkedDeals(linked);
       setLoading(false);
     });
+    fetchTasks({ contactId: id }).then(setTasks);
   }, [id]);
 
   const save = async (fields) => {
@@ -194,6 +199,7 @@ export default function ContactDetail() {
   ];
 
   return (
+    <>
     <div className="flex flex-col h-full overflow-hidden" style={{ background: '#f5f3ee' }}>
       {/* Top bar */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
@@ -384,6 +390,49 @@ export default function ContactDetail() {
             </div>
           </div>
 
+          {/* Tasks */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Tasks</p>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-bold text-gray-500">{tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length}</span>
+                {canEdit && (
+                  <button onClick={() => setShowCreateTask(true)}
+                    className="ml-1 p-1 rounded hover:bg-accent/10 text-gray-400 hover:text-accent transition-colors">
+                    <Plus size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {tasks.slice(0, 8).map(t => {
+                const StatusIcon = t.status === 'done' ? Check : t.status === 'in_progress' ? CircleDot : t.status === 'cancelled' ? Ban : Circle;
+                return (
+                  <div key={t.id} className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!canEdit) return;
+                        const next = t.status === 'done' ? 'todo' : t.status === 'todo' ? 'in_progress' : t.status === 'in_progress' ? 'done' : 'todo';
+                        setTasks(prev => prev.map(x => x.id === t.id ? { ...x, status: next } : x));
+                        await updateTask(t.id, { status: next });
+                      }}
+                      className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        t.status === 'done' ? 'bg-green-500 border-green-500 text-white' :
+                        t.status === 'in_progress' ? 'border-blue-400 text-blue-400' : 'border-gray-300 text-gray-300'
+                      } ${canEdit ? 'cursor-pointer hover:border-accent' : 'cursor-default'}`}
+                    >
+                      <StatusIcon size={8} />
+                    </button>
+                    <p className={`text-xs text-gray-700 truncate flex-1 ${t.status === 'done' ? 'line-through text-gray-300' : ''}`}>{t.title}</p>
+                    {t.due_date && <span className="text-[10px] text-gray-400 flex-shrink-0">{new Date(t.due_date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>}
+                  </div>
+                );
+              })}
+              {tasks.length === 0 && <p className="text-xs text-gray-300 italic py-1">No tasks</p>}
+              {tasks.length > 8 && <p className="text-xs text-gray-400 mt-1">+{tasks.length - 8} more</p>}
+            </div>
+          </div>
+
           {/* Metadata */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3 text-xs text-gray-400">
             <p className="font-semibold text-gray-500 uppercase tracking-widest">Record Info</p>
@@ -394,6 +443,14 @@ export default function ContactDetail() {
         </div>
       </div>
     </div>
+    {showCreateTask && (
+      <CreateTaskModal
+        defaultContactId={id}
+        onClose={() => setShowCreateTask(false)}
+        onCreated={(t) => { setShowCreateTask(false); setTasks(prev => [t, ...prev]); }}
+      />
+    )}
+    </>
   );
 }
 

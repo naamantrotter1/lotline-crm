@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus, CheckSquare } from 'lucide-react';
 import CreateContactModal from '../Contacts/CreateContactModal';
+import CreateTaskModal from '../Tasks/CreateTaskModal';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
@@ -175,6 +176,7 @@ export default function TopBar({ onToggleSidebar }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [showCreateContact, setShowCreateContact] = useState(false);
+  const [showCreateTask, setShowCreateTask]       = useState(false);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
@@ -244,6 +246,15 @@ export default function TopBar({ onToggleSidebar }) {
           <UserPlus size={16} />
         </button>
 
+        {/* Quick-add task */}
+        <button
+          onClick={() => setShowCreateTask(true)}
+          title="New Task (T)"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+        >
+          <CheckSquare size={16} />
+        </button>
+
         <button
           onClick={toggleDarkMode}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
@@ -303,6 +314,12 @@ export default function TopBar({ onToggleSidebar }) {
       <CreateContactModal
         onClose={() => setShowCreateContact(false)}
         onCreated={(c) => { setShowCreateContact(false); navigate(`/contacts/${c.id}`); }}
+      />
+    )}
+    {showCreateTask && (
+      <CreateTaskModal
+        onClose={() => setShowCreateTask(false)}
+        onCreated={() => { setShowCreateTask(false); navigate('/tasks'); }}
       />
     )}
   </>
