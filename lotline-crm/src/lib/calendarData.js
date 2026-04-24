@@ -65,13 +65,17 @@ export async function disconnectCalendar(connectionId) {
   await supabase.from('calendar_connections').delete().eq('id', connectionId);
 }
 
-export async function syncGoogleCalendar(userId) {
+export async function syncGoogleCalendar() {
   if (!supabase) return { error: 'no supabase' };
   try {
-    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
-      body: { userId },
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch('/api/google/calendar-sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session?.access_token}` },
     });
-    return { data, error };
+    const data = await r.json();
+    if (!r.ok) return { error: data.error || 'Sync failed' };
+    return { data };
   } catch (e) {
     return { error: e.message };
   }

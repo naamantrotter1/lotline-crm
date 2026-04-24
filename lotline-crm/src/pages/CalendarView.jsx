@@ -249,7 +249,8 @@ export default function CalendarView() {
   const handleSync = async () => {
     if (!connection) return;
     setSyncing(true);
-    await syncGoogleCalendar(profile?.id);
+    const { error: syncErr } = await syncGoogleCalendar();
+    if (syncErr) { alert('Sync failed: ' + syncErr); setSyncing(false); return; }
     setSyncing(false);
     const from = new Date(year, month, 1).toISOString();
     const to   = new Date(year, month + 1, 0, 23, 59).toISOString();
