@@ -8,7 +8,7 @@ import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
-import { fetchCommitmentSummaries } from '../lib/capitalStackData';
+import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -407,7 +407,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 }
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
-function NeedsFundingTab({ onDealClick, orgId, orgSlug }) {
+function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
   const allUnfunded = (orgSlug === 'lotline-homes' ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
@@ -449,9 +449,10 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug }) {
   ];
   const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
+  const baseInvestors = investorsProp ?? loadInvestors(orgId, orgSlug);
   const allInvestors = [
-    ...loadInvestors(orgId, orgSlug).filter(i => i.name !== 'Cash' && i.name !== 'None'),
-    ...extraInvestors.filter(e => !loadInvestors(orgId, orgSlug).find(i => i.name === e.name)),
+    ...baseInvestors.filter(i => i.name !== 'Cash' && i.name !== 'None'),
+    ...extraInvestors.filter(e => !baseInvestors.find(i => i.name === e.name)),
   ];
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
@@ -873,11 +874,46 @@ export default function InvestorPortal() {
   const navigate = useNavigate();
   const { isInvestor } = usePermissions();
   const { profile, activeOrgId, orgSlug } = useAuth();
+  const { jvScopeOrgIds, jvScopeIsMultiOrg } = useJv();
   // For investor-role users, their linked investor name is stored in profile.company
   const linkedInvestor = isInvestor ? (profile?.company || null) : null;
 
+  const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
+
   const [activeTab, setActiveTab] = useState('by-investor');
   const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
+
+  // Reload investor list whenever JV scope changes.
+  // Multi-org: fetch from Supabase so partner investors appear.
+  // Own-org:   use org-scoped localStorage (has pre-computed stats).
+  useEffect(() => {
+    if (jvScopeIsMultiOrg) {
+      fetchInvestors(scopeIds).then(rows => {
+        setInvestors(rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          contact: r.contact || '',
+          email: r.email || '',
+          phone: r.phone || '',
+          type: r.type || 'Private Lender',
+          preferredFinancing: r.preferred_financing || '',
+          standardTerms: r.standard_terms || '',
+          notes: r.notes || '',
+          // Summary stats are 0 for cross-org view; InvestorCard derives
+          // the live deal list from contextDeals (which is already JV-scoped).
+          activeDeals: 0,
+          capitalInvested: 0,
+          totalReturns: 0,
+          roiPct: 0,
+          roiDollars: 0,
+          avgAnnualizedRoi: 0,
+          deals: [],
+        })));
+      });
+    } else {
+      setInvestors(loadInvestors(activeOrgId, orgSlug));
+    }
+  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
@@ -964,7 +1000,7 @@ export default function InvestorPortal() {
 
         {/* Tab content */}
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
-        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} />}
+        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} />}
