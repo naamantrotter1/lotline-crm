@@ -24,6 +24,8 @@ export default function handler(req, res) {
       'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/calendar.events',
     ].join(' '),
     access_type:   'offline',   // get refresh_token
     prompt:        'consent',   // always show consent so we get refresh_token every time
