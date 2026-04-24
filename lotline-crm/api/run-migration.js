@@ -91,13 +91,13 @@ DO $$ BEGIN
     CREATE POLICY "users can manage own calendar_connections" ON calendar_connections FOR ALL USING (user_id = auth.uid());
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='meetings' AND policyname='org members view meetings') THEN
-    CREATE POLICY "org members view meetings" ON meetings FOR SELECT USING (organization_id IN (SELECT organization_id FROM org_members WHERE user_id = auth.uid() AND status = 'active'));
+    CREATE POLICY "org members view meetings" ON meetings FOR SELECT USING (organization_id IN (SELECT organization_id FROM memberships WHERE user_id = auth.uid() AND status = 'active'));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='meetings' AND policyname='operators can manage meetings') THEN
-    CREATE POLICY "operators can manage meetings" ON meetings FOR ALL USING (organization_id IN (SELECT organization_id FROM org_members WHERE user_id = auth.uid() AND role IN ('owner','admin','operator') AND status = 'active'));
+    CREATE POLICY "operators can manage meetings" ON meetings FOR ALL USING (organization_id IN (SELECT organization_id FROM memberships WHERE user_id = auth.uid() AND role IN ('owner','admin','operator') AND status = 'active'));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='scheduler_links' AND policyname='org members view scheduler_links') THEN
-    CREATE POLICY "org members view scheduler_links" ON scheduler_links FOR SELECT USING (organization_id IN (SELECT organization_id FROM org_members WHERE user_id = auth.uid() AND status = 'active'));
+    CREATE POLICY "org members view scheduler_links" ON scheduler_links FOR SELECT USING (organization_id IN (SELECT organization_id FROM memberships WHERE user_id = auth.uid() AND status = 'active'));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='scheduler_links' AND policyname='users can manage own scheduler_links') THEN
     CREATE POLICY "users can manage own scheduler_links" ON scheduler_links FOR ALL USING (user_id = auth.uid());
