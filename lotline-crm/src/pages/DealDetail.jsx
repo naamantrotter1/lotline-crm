@@ -1937,8 +1937,8 @@ function DealDetailContent({ deal }) {
           : {}),
       };
       saveDeal(updated, activeOrgId);
-      notifyPipelineChange(deal, val);
-      notifyStageChange(deal, val);
+      notifyPipelineChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
+      notifyStageChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
       setDeals(prev => {
         const idx = prev.findIndex(x => String(x.id) === String(updated.id));
         if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }

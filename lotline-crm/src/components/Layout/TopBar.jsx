@@ -5,7 +5,12 @@ import CreateTaskModal from '../Tasks/CreateTaskModal';
 import { useNavigate } from 'react-router-dom';
 import { ALL_DEALS } from '../../data/deals';
 import { useAuth } from '../../lib/AuthContext';
-import { getStoredNotifs, markAllNotifsRead, clearAllNotifs } from '../../lib/notify';
+import {
+  fetchNotifications,
+  markAllNotifsRead,
+  clearAllNotifs,
+  subscribeToNotifications,
+} from '../../lib/notificationsData';
 import JvScopeSwitcher from '../JV/JvScopeSwitcher';
 
 function GlobalSearch() {
@@ -116,17 +121,13 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function NotifPanel({ onClose }) {
-  const [notifs, setNotifs] = useState(getStoredNotifs);
+function NotifPanel({ onClose, onRead }) {
+  const [notifs, setNotifs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const refresh = () => setNotifs(getStoredNotifs());
-    window.addEventListener('lotline_notifs_updated', refresh);
-    return () => window.removeEventListener('lotline_notifs_updated', refresh);
-  }, []);
-
-  useEffect(() => {
-    markAllNotifsRead();
+    fetchNotifications().then(data => { setNotifs(data); setLoading(false); });
+    markAllNotifsRead().then(() => onRead && onRead());
   }, []);
 
   return (
@@ -136,7 +137,7 @@ function NotifPanel({ onClose }) {
         <div className="flex items-center gap-2">
           {notifs.length > 0 && (
             <button
-              onClick={() => { clearAllNotifs(); setNotifs([]); }}
+              onClick={() => { clearAllNotifs(); setNotifs([]); onRead && onRead(); }}
               className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
               title="Clear all"
             >
@@ -149,7 +150,9 @@ function NotifPanel({ onClose }) {
         </div>
       </div>
       <div className="max-h-96 overflow-y-auto">
-        {notifs.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-gray-400 text-center py-10">Loading…</p>
+        ) : notifs.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
         ) : (
           <ul className="divide-y divide-gray-50 dark:divide-gray-700">
@@ -182,15 +185,23 @@ export default function TopBar({ onToggleSidebar }) {
   );
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(() => getStoredNotifs().filter(n => !n.read).length);
+  const [unreadCount, setUnreadCount] = useState(0);
   const bellRef = useRef(null);
   const userMenuRef = useRef(null);
 
+  // Load initial unread count and subscribe to realtime inserts
   useEffect(() => {
-    const refresh = () => setUnreadCount(getStoredNotifs().filter(n => !n.read).length);
-    window.addEventListener('lotline_notifs_updated', refresh);
-    return () => window.removeEventListener('lotline_notifs_updated', refresh);
-  }, []);
+    if (!profile?.id) return;
+    // Initial count via query
+    import('../../lib/notificationsData').then(({ fetchUnreadCount }) => {
+      fetchUnreadCount().then(setUnreadCount);
+    });
+    // Realtime: increment badge when a new notification arrives
+    const channel = subscribeToNotifications(profile.id, () => {
+      setUnreadCount(c => c + 1);
+    });
+    return () => { channel?.unsubscribe(); };
+  }, [profile?.id]);
 
   // Close panels on outside click
   useEffect(() => {
@@ -274,7 +285,12 @@ export default function TopBar({ onToggleSidebar }) {
               </span>
             )}
           </button>
-          {showNotifs && <NotifPanel onClose={() => setShowNotifs(false)} />}
+          {showNotifs && (
+            <NotifPanel
+              onClose={() => setShowNotifs(false)}
+              onRead={() => setUnreadCount(0)}
+            />
+          )}
         </div>
 
         <div className="relative ml-1" ref={userMenuRef}>

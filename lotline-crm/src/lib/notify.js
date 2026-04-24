@@ -1,6 +1,6 @@
+import { createNotification } from './notificationsData';
+
 const PREFS_KEY  = 'lotline_notification_prefs';
-const STORE_KEY  = 'lotline_notifications';
-const MAX_STORED = 50;
 
 export function getNotifPrefs() {
   try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
@@ -17,38 +17,27 @@ export async function requestNotifPermission() {
   return await Notification.requestPermission();
 }
 
-// ── Stored notifications (shown in the bell dropdown) ──────────────────────
-
-export function getStoredNotifs() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; }
-}
-
-export function markAllNotifsRead() {
-  const notifs = getStoredNotifs().map(n => ({ ...n, read: true }));
-  localStorage.setItem(STORE_KEY, JSON.stringify(notifs));
-  window.dispatchEvent(new Event('lotline_notifs_updated'));
-}
-
-export function clearAllNotifs() {
-  localStorage.setItem(STORE_KEY, '[]');
-  window.dispatchEvent(new Event('lotline_notifs_updated'));
-}
-
-function storeNotif(title, body) {
-  const notifs = getStoredNotifs();
-  notifs.unshift({ id: Date.now(), title, body, timestamp: new Date().toISOString(), read: false });
-  localStorage.setItem(STORE_KEY, JSON.stringify(notifs.slice(0, MAX_STORED)));
-  window.dispatchEvent(new Event('lotline_notifs_updated'));
-}
-
-function fire(title, body) {
-  storeNotif(title, body);
+function fireBrowser(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   new Notification(title, { body, icon: '/favicon.ico' });
 }
 
-/** Call when a deal moves to a different pipeline */
-export function notifyPipelineChange(deal, newStage) {
+/**
+ * Internal helper: write a notification to the DB (for all org members of
+ * the relevant context) and optionally fire a browser native notification.
+ * orgId / userId are optional — if absent the DB write is skipped.
+ */
+async function fire(title, body, { orgId, userId, type, entityType, entityId } = {}) {
+  fireBrowser(title, body);
+  if (orgId && userId) {
+    await createNotification({ orgId, userId, type: type || 'general', title, body, entityType, entityId });
+  }
+}
+
+/** Call when a deal moves to a different pipeline.
+ *  Pass { orgId, userId } so the notification is stored in the DB.
+ */
+export function notifyPipelineChange(deal, newStage, { orgId, userId } = {}) {
   const prefs = getNotifPrefs();
   if (!prefs.pipelineMove) return;
   const oldPipeline = deal.pipeline === 'land-acquisition' ? 'Land Acquisition' : 'Deal Overview';
@@ -57,11 +46,14 @@ export function notifyPipelineChange(deal, newStage) {
   fire(
     `Deal moved to ${newPipeline}`,
     deal.address || 'Untitled deal',
+    { orgId, userId, type: 'deal_pipeline', entityType: 'deal', entityId: String(deal.id) },
   );
 }
 
-/** Call when a deal moves stages within Deal Overview */
-export function notifyStageChange(deal, newStage) {
+/** Call when a deal moves stages within Deal Overview.
+ *  Pass { orgId, userId } so the notification is stored in the DB.
+ */
+export function notifyStageChange(deal, newStage, { orgId, userId } = {}) {
   const prefs = getNotifPrefs();
   if (!prefs.stageMove) return;
   const dealOverviewStages = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
@@ -69,5 +61,6 @@ export function notifyStageChange(deal, newStage) {
   fire(
     `Stage → ${newStage}`,
     deal.address || 'Untitled deal',
+    { orgId, userId, type: 'deal_stage', entityType: 'deal', entityId: String(deal.id) },
   );
 }
