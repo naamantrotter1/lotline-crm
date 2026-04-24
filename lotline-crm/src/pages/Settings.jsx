@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
 import TeamSettings from '../components/settings/TeamSettings';
 import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
+import ApiWebhooksSettings from '../components/settings/ApiWebhooksSettings';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -540,7 +541,7 @@ function BillingTab() {
 }
 
 export default function Settings() {
-  const VALID_TABS = ['profile','team','notifications','integrations','security','custom-fields','billing'];
+  const VALID_TABS = ['profile','team','notifications','integrations','security','custom-fields','api','billing'];
   const rawTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
   const initialTab = VALID_TABS.includes(rawTab) ? rawTab : 'profile';
   const [tab, setTab] = useState(initialTab);
@@ -644,7 +645,7 @@ export default function Settings() {
       </div>
 
       <div className="flex bg-card rounded-lg p-1 w-fit">
-        {['profile', 'team', 'notifications', 'integrations', 'security', 'custom-fields', 'billing'].map((t) => (
+        {['profile', 'team', 'notifications', 'integrations', 'security', 'custom-fields', 'api', 'billing'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -763,6 +764,8 @@ export default function Settings() {
       {tab === 'security' && <SecurityTab showToast={showToast} />}
 
       {tab === 'custom-fields' && <CustomFieldsSettings />}
+
+      {tab === 'api' && <ApiWebhooksSettings />}
 
       {tab === 'billing' && <BillingTab />}
 
