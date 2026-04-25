@@ -9,7 +9,7 @@
  * Behind feature flag "cost_breakdown.three_column" per org.
  * On mobile (<1024px): stacks vertically.
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle2, Filter, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -245,111 +245,91 @@ export default function CostBreakdownTab({ dealId }) {
       {/* ── Desktop 3-column grid / Mobile stacked ───────────────────────── */}
       <div className="flex-1 overflow-y-auto">
 
-        {/* ── Desktop (≥ 1024px): side-by-side ─────────────────────────── */}
-        <div className="hidden lg:flex gap-0 h-full">
+        {/* ── Desktop (≥ 1024px): single scroll, 3-column grid ──────────── */}
+        <div className="hidden lg:flex flex-col h-full">
 
-          {/* Actual */}
-          <div className="flex-1 min-w-0 border-r border-gray-100 overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
-              <ColHeader label="Actual Expenses" />
+          {/* Column headers — outside the scroll so they stay fixed */}
+          <div className="flex-shrink-0 grid border-b border-gray-100" style={{ gridTemplateColumns: '1fr 1fr 9rem' }}>
+            <div className="border-r border-gray-100 px-2 pt-3 pb-2"><ColHeader label="Actual Expenses" /></div>
+            <div className="border-r border-gray-100 px-2 pt-3 pb-2"><ColHeader label="Estimated Expenses" /></div>
+            <div className="px-2 pt-3 pb-2"><ColHeader label="Difference" /></div>
+          </div>
+
+          {/* All rows in ONE scroll container — keeps all 3 columns in sync */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 9rem' }}>
+              {grouped.map(({ group, lines: gl }) => (
+                <React.Fragment key={group}>
+                  {/* Group header spans all 3 columns */}
+                  <div className="col-span-3 bg-gray-50 border-y border-gray-100 px-3 py-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+                  </div>
+                  {gl.map(l => {
+                    const resolvedVal = resolveActual(l);
+                    return (
+                      <React.Fragment key={l.line_id}>
+                        {/* Actual cell */}
+                        <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center gap-1.5">
+                          <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                          <div className="w-28 flex-shrink-0">
+                            <NumCell
+                              value={resolvedVal}
+                              muted={!l.actual_overridden}
+                              onCommit={v => handleActual(l.line_id, v)}
+                              disabled={!canEditAct}
+                            />
+                          </div>
+                          {l.actual_overridden && canEditAct ? (
+                            <button
+                              onClick={() => handleReset(l.line_id)}
+                              title="Click to reset to estimated"
+                              className="flex-shrink-0 p-0.5 rounded text-green-500 hover:text-red-400 transition-colors"
+                            >
+                              <CheckCircle2 size={13} />
+                            </button>
+                          ) : l.actual_overridden ? (
+                            <CheckCircle2
+                              size={13}
+                              className="flex-shrink-0 text-green-500"
+                              title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
+                            />
+                          ) : (
+                            <span className="w-[17px] flex-shrink-0" />
+                          )}
+                        </div>
+                        {/* Estimated cell */}
+                        <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center justify-end gap-2">
+                          <div className="w-28 flex-shrink-0">
+                            <NumCell
+                              value={Number(l.estimated_amount ?? 0)}
+                              onCommit={v => handleEstimated(l.line_id, v)}
+                              disabled={!canEditEst}
+                            />
+                          </div>
+                        </div>
+                        {/* Difference cell */}
+                        <div className="border-b border-gray-50 px-1 py-1.5 flex items-center justify-end">
+                          <DiffCell line={l} />
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
             </div>
-            {grouped.map(({ group, lines: gl }) => (
-              <div key={group}>
-                <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
-                </div>
-                {gl.map(l => {
-                  const resolvedVal = resolveActual(l);
-                  return (
-                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
-                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
-                      <div className="w-28 flex-shrink-0">
-                        <NumCell
-                          value={resolvedVal}
-                          muted={!l.actual_overridden}
-                          onCommit={v => handleActual(l.line_id, v)}
-                          disabled={!canEditAct}
-                        />
-                      </div>
-                      {/* Clickable green checkmark — click to reset to mirror */}
-                      {l.actual_overridden && canEditAct ? (
-                        <button
-                          onClick={() => handleReset(l.line_id)}
-                          title="Click to reset to estimated"
-                          className="flex-shrink-0 p-0.5 rounded text-green-500 hover:text-red-400 transition-colors"
-                        >
-                          <CheckCircle2 size={13} />
-                        </button>
-                      ) : l.actual_overridden ? (
-                        <CheckCircle2
-                          size={13}
-                          className="flex-shrink-0 text-green-500"
-                          title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
-                        />
-                      ) : (
-                        <span className="w-[17px] flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-            {/* Footer */}
-            <div className="sticky bottom-0 bg-[#1a2332] text-white px-3 py-2 flex justify-between">
+          </div>
+
+          {/* Footer — outside the scroll, always visible at bottom */}
+          <div className="flex-shrink-0 grid" style={{ gridTemplateColumns: '1fr 1fr 9rem' }}>
+            <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
               <span className="text-[12px] font-semibold">Total Actual</span>
               <span className="text-[12px] font-bold">{fmt(totalAct)}</span>
             </div>
-          </div>
-
-          {/* Estimated */}
-          <div className="flex-1 min-w-0 border-r border-gray-100 overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
-              <ColHeader label="Estimated Expenses" />
-            </div>
-            {grouped.map(({ group, lines: gl }) => (
-              <div key={group}>
-                <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">&nbsp;</span>
-                </div>
-                {gl.map(l => (
-                  <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-end gap-2">
-                    <div className="w-28 flex-shrink-0">
-                      <NumCell
-                        value={Number(l.estimated_amount ?? 0)}
-                        onCommit={v => handleEstimated(l.line_id, v)}
-                        disabled={!canEditEst}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-            {/* Footer */}
-            <div className="sticky bottom-0 bg-[#1a2332] text-white px-3 py-2 flex justify-between">
+            <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
               <span className="text-[12px] font-semibold">Total Estimated</span>
               <span className="text-[12px] font-bold">{fmt(totalEst)}</span>
             </div>
-          </div>
-
-          {/* Difference (narrow) */}
-          <div className="w-36 flex-shrink-0 overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
-              <ColHeader label="Difference" />
-            </div>
-            {grouped.map(({ group, lines: gl }) => (
-              <div key={group}>
-                <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">&nbsp;</span>
-                </div>
-                {gl.map(l => (
-                  <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-1 py-1.5 flex items-center justify-end">
-                    <DiffCell line={l} />
-                  </div>
-                ))}
-              </div>
-            ))}
-            {/* Footer */}
-            <div className={`sticky bottom-0 px-3 py-2 flex justify-end text-[12px] font-bold ${
+            <div className={`px-3 py-2 flex justify-end text-[12px] font-bold ${
               totalDiff < 0 ? 'bg-green-600 text-white' : totalDiff > 0 ? 'bg-red-600 text-white' : 'bg-[#1a2332] text-white'
             }`}>
               {fmtD(totalDiff)}
