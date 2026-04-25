@@ -959,41 +959,6 @@ function OverviewTab({
           </div>
         )}
 
-        {/* Financing Scenario — hidden for agents */}
-        {!isAgent && <FinancingScenarioPanel
-          deal={deal} costs={costs} arv={arv}
-          selectedScenario={selectedScenario} applyScenario={applyScenario}
-          interestRate={interestRate} setInterestRate={setInterestRate}
-          originationFeeType={originationFeeType} setOriginationFeeType={setOriginationFeeType}
-          originationFeePct={originationFeePct} setOriginationFeePct={setOriginationFeePct}
-          originationFeeFlat={originationFeeFlat} setOriginationFeeFlat={setOriginationFeeFlat}
-          servicingFeeType={servicingFeeType} setServicingFeeType={setServicingFeeType}
-          servicingFeeFlat={servicingFeeFlat} setServicingFeeFlat={setServicingFeeFlat}
-          servicingFeePct={servicingFeePct} setServicingFeePct={setServicingFeePct}
-          balloonTerm={balloonTerm} setBalloonTerm={setBalloonTerm}
-          holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
-          monthlyHoldCost={monthlyHoldCost} setMonthlyHoldCost={setMonthlyHoldCost}
-          profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
-          capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
-          capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
-          investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
-          investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
-          projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
-          creditLimit={creditLimit} setCreditLimit={setCreditLimit}
-          drawPct={drawPct} setDrawPct={setDrawPct}
-          annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
-          investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
-          loanAmountOverride={loanAmountOverride} setLoanAmountOverride={setLoanAmountOverride}
-          ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
-          ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
-          ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
-          ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
-          ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
-          ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
-          ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
-          ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
-          readOnly={readOnly}
-        />}
       </div>
 
       {/* Right sidebar — documents — hidden for agents */}
