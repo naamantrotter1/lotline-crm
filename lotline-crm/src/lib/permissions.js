@@ -99,6 +99,9 @@ export const CAPABILITIES = {
   'esign.view':             ['owner','admin','operator','viewer'],
   'esign.send':             ['owner','admin','operator'],
   'esign.manage':           ['owner','admin'],
+  'esign.template_manage':  ['owner','admin'],
+  'esign.provider_connect': ['owner'],
+  'esign.void_envelope':    ['owner','admin'],
 
   // ── Lead Forms ─────────────────────────────────────────────────────────────
   'lead_form.view':         ['owner','admin','operator','viewer'],

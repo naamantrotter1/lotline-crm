@@ -1,67 +1,89 @@
 /**
  * esignData.js
- * Phase 16: E-sign / PandaDoc data layer.
- *
- * PandaDoc OAuth flow:
- *   1. User clicks "Connect PandaDoc" → redirected to PandaDoc OAuth
- *   2. PandaDoc redirects back with ?code=... to /settings?pandadoc=connected
- *   3. Front-end calls exchangePandaDocCode() → pandadoc-auth edge function
- *   4. Tokens stored in esign_connections
- *
- * Env vars needed:
- *   VITE_PANDADOC_CLIENT_ID   — for building auth URL
- *   PANDADOC_CLIENT_SECRET    — edge function secret
+ * E-sign / PandaDoc data layer.
+ * All mutations go through our Vercel API routes (/api/pandadoc/*).
+ * Read-only queries go directly to Supabase.
  */
 import { supabase } from './supabase';
 
-const PANDADOC_API = 'https://api.pandadoc.com';
+// ── Auth helpers ────────────────────────────────────────────────────────────
 
-// ── OAuth ──────────────────────────────────────────────────────────────────
-
-export function getPandaDocAuthUrl(redirectUri) {
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: import.meta.env.VITE_PANDADOC_CLIENT_ID ?? '',
-    redirect_uri: redirectUri,
-    scope: 'read+write',
-  });
-  return `https://app.pandadoc.com/oauth2/authorize?${params}`;
+async function authHeaders() {
+  if (!supabase) return {};
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function exchangePandaDocCode(code, redirectUri, orgId, userId) {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.functions.invoke('pandadoc-auth', {
-    body: { code, redirectUri, orgId, userId },
+async function apiPost(path, body) {
+  const headers = await authHeaders();
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
   });
-  if (error) throw new Error(error.message);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
   return data;
 }
 
-export async function fetchEsignConnection(orgId, userId) {
+async function apiDelete(path) {
+  const headers = await authHeaders();
+  const res = await fetch(path, { method: 'DELETE', headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
+  return data;
+}
+
+// ── OAuth ───────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches the PandaDoc OAuth authorization URL from our API.
+ * The caller should then redirect: window.location.href = url
+ */
+export async function getPandaDocAuthUrl() {
+  const headers = await authHeaders();
+  const res = await fetch('/api/pandadoc/auth', { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to get auth URL');
+  return data.url;
+}
+
+/**
+ * Exchanges the OAuth code received in the callback URL.
+ * @param {string} code
+ */
+export async function exchangePandaDocCode(code) {
+  return apiPost('/api/pandadoc/callback', { code });
+}
+
+export async function fetchEsignConnection(orgId) {
   if (!supabase) return null;
   const { data } = await supabase
     .from('esign_connections')
-    .select('*')
+    .select('id, provider, auth_method, connected_at, last_sync_at, pandadoc_workspace_id')
     .eq('organization_id', orgId)
-    .eq('user_id', userId)
+    .eq('provider', 'pandadoc')
     .maybeSingle();
   return data;
 }
 
-export async function disconnectEsign(connectionId) {
-  if (!supabase) return;
-  await supabase.from('esign_connections').delete().eq('id', connectionId);
+export async function disconnectEsign() {
+  return apiDelete('/api/pandadoc/disconnect');
 }
 
-// ── Templates ──────────────────────────────────────────────────────────────
+/**
+ * Save a PandaDoc API key (alternative to OAuth).
+ * @param {string} apiKey
+ */
+export async function savePandaDocApiKey(apiKey) {
+  return apiPost('/api/pandadoc/save-api-key', { apiKey });
+}
 
-export async function syncEsignTemplates(orgId, userId) {
-  if (!supabase) return [];
-  const { data, error } = await supabase.functions.invoke('pandadoc-sync-templates', {
-    body: { orgId, userId },
-  });
-  if (error) throw new Error(error.message);
-  return data?.templates ?? [];
+// ── Templates ───────────────────────────────────────────────────────────────
+
+export async function syncEsignTemplates() {
+  return apiPost('/api/pandadoc/sync-templates', {});
 }
 
 export async function fetchEsignTemplates(orgId) {
@@ -74,7 +96,7 @@ export async function fetchEsignTemplates(orgId) {
   return data ?? [];
 }
 
-// ── Envelopes ──────────────────────────────────────────────────────────────
+// ── Envelopes ───────────────────────────────────────────────────────────────
 
 export async function fetchEnvelopes(orgId, { contactId, dealId, status } = {}) {
   if (!supabase) return [];
@@ -108,75 +130,22 @@ export async function fetchEnvelope(id) {
 }
 
 /**
- * Create and send a document from a PandaDoc template.
- * Calls edge function which creates the doc in PandaDoc and updates DB.
+ * Send a document via PandaDoc.
+ * @param {{ templateId, name, contactId?, dealId?, recipients, tokens? }} params
  */
-export async function sendEnvelope({ orgId, userId, templateId, pandadocTemplateId, name, contactId, dealId, recipients, fieldsData }) {
-  if (!supabase) throw new Error('Supabase not configured');
-
-  // Insert draft envelope first
-  const { data: envelope, error: insertErr } = await supabase
-    .from('esign_envelopes')
-    .insert({
-      organization_id: orgId,
-      created_by: userId,
-      contact_id: contactId ?? null,
-      deal_id: dealId ?? null,
-      template_id: templateId ?? null,
-      name,
-      status: 'draft',
-      fields_data: fieldsData ?? {},
-    })
-    .select()
-    .single();
-  if (insertErr) throw new Error(insertErr.message);
-
-  // Insert recipients
-  if (recipients?.length) {
-    await supabase.from('esign_recipients').insert(
-      recipients.map(r => ({
-        envelope_id: envelope.id,
-        name: r.name,
-        email: r.email,
-        role: r.role ?? 'signer',
-      }))
-    );
-  }
-
-  // Call edge function to send via PandaDoc
-  const { data, error } = await supabase.functions.invoke('pandadoc-send', {
-    body: {
-      envelopeId: envelope.id,
-      orgId,
-      userId,
-      pandadocTemplateId,
-      recipients,
-      fieldsData,
-    },
-  });
-  if (error) throw new Error(error.message);
-  return data;
+export async function sendEnvelope(params) {
+  return apiPost('/api/pandadoc/send-envelope', params);
 }
 
-export async function voidEnvelope(id) {
-  if (!supabase) return;
-  await supabase.from('esign_envelopes').update({
-    status: 'voided',
-    voided_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', id);
+export async function voidEnvelope(envelopeId, reason) {
+  return apiPost('/api/pandadoc/void-envelope', { envelopeId, reason });
 }
 
-export async function refreshEnvelopeStatus(envelopeId, orgId, userId) {
-  if (!supabase) return;
-  const { data, error } = await supabase.functions.invoke('pandadoc-status', {
-    body: { envelopeId, orgId, userId },
-  });
-  if (error) throw new Error(error.message);
-  return data;
+export async function sendReminder(envelopeId) {
+  return apiPost('/api/pandadoc/send-reminder', { envelopeId });
 }
 
-// ── Display helpers ────────────────────────────────────────────────────────
+// ── Display helpers ─────────────────────────────────────────────────────────
 
 export const ENVELOPE_STATUS = {
   draft:            { label: 'Draft',            color: 'gray' },
