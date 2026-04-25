@@ -169,10 +169,11 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   const allMembersRef = useRef([]); // cached full list — filtered client-side
   const sessionRef   = useRef(null); // cached session for save
 
-  // On open: pre-fetch all active org members from Supabase directly.
-  // Filtering is done client-side on every keystroke — no per-keystroke API calls.
+  // Pre-fetch all active org members as soon as orgId is known.
+  // Runs once per orgId (not gated on open) so the list is ready the moment
+  // the user clicks into the composer and types @.
   useEffect(() => {
-    if (!open || !orgId || !supabase) return;
+    if (!orgId || !supabase) return;
 
     (async () => {
       // Cache session for save
@@ -209,7 +210,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     })();
-  }, [open, orgId]);
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter the cached member list client-side — instant, no debounce needed
   const searchTeammates = useCallback((q) => {
@@ -228,8 +229,6 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
     const cursor = e.target.selectionStart;
     setText(val);
     setError(null);
-
-    if (!mentionsEnabled) return;
 
     // Look backwards from cursor for an @ that started a mention token
     const before = val.slice(0, cursor);
@@ -405,17 +404,13 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           value={text}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={
-            mentionsEnabled
-              ? 'Write a note… type @ to mention a teammate'
-              : 'Write a note about this deal…'
-          }
+          placeholder="Write a note… type @ to mention a teammate"
           rows={3}
           className="w-full px-4 pt-3 pb-1 text-sm text-gray-800 resize-none focus:outline-none"
         />
 
         {/* Mention autocomplete popover */}
-        {mentionsEnabled && mentionQuery !== null && (
+        {mentionQuery !== null && (
           <div className="relative">
             <MentionAutocomplete
               results={mentionResults}
@@ -432,12 +427,10 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100">
         <div className="flex items-center gap-2">
-          {mentionsEnabled && (
-            <span className="text-[11px] text-gray-400 flex items-center gap-1">
-              <AtSign size={11} />
-              mention
-            </span>
-          )}
+          <span className="text-[11px] text-gray-400 flex items-center gap-1">
+            <AtSign size={11} />
+            mention
+          </span>
           <span className="text-[11px] text-gray-400">Shift+Enter for new line</span>
         </div>
         <div className="flex gap-2">
