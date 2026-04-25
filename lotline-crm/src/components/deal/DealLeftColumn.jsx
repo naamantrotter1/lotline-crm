@@ -478,7 +478,7 @@ export default function DealLeftColumn({
                 <EditableField label="Atty Phone"    value={closingAttorneyPhone}   onChange={v => { setClosingAttorneyPhone(v);   saveNow({ closingAttorneyPhone: v });   }} type="tel" readOnly={readOnly} />
                 <EditableField label="Atty Address"  value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
                 <EditableField label="Close Date"    value={closeDate}              onChange={v => { setCloseDate(v);              saveNow({ closeDate: v });              }} type="date" readOnly={readOnly} />
-                <EditableField label="Contract Date" value={contractDate}           onChange={v => { setContractDate(v);           saveNow({ contractDate: v });           }} type="date" readOnly={readOnly} />
+                <EditableField label="Contract Signed" value={contractDate}         onChange={v => { setContractDate(v);           saveNow({ contractDate: v });           }} type="date" readOnly={readOnly} />
               </Section>
             );
             return null;
