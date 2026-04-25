@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const auth = await requireOrgMember(req, res);
   if (!auth) return;
 
-  const redirectUri = `${process.env.VITE_APP_URL}/esign`;
+    const redirectUri = `${process.env.VITE_APP_URL}/settings?tab=integrations`;
 
   const params = new URLSearchParams({
     response_type: 'code',
