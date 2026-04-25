@@ -3,15 +3,15 @@
  * "Activity" — wraps existing tab content with a clean tab bar.
  * Full unified feed + inline composer + month-grouped timeline land in PR 3.
  */
-import { LayoutGrid, FileText, Hammer, TrendingUp, Layers, MessageSquare } from 'lucide-react';
+import { LayoutGrid, FileText, Hammer, DollarSign, Layers, MessageSquare } from 'lucide-react';
 
 const ALL_TABS = [
-  { key: 'overview',  label: 'Activity',      icon: LayoutGrid  },
-  { key: 'threads',   label: 'Threads',       icon: MessageSquare },
-  { key: 'details',   label: 'Deal Details',  icon: Layers      },
-  { key: 'dd',        label: 'Due Diligence', icon: FileText    },
-  { key: 'dev',       label: 'Development',   icon: Hammer      },
-  { key: 'realized',  label: 'Realized',      icon: TrendingUp  },
+  { key: 'overview',  label: 'Activity',        icon: LayoutGrid  },
+  { key: 'threads',   label: 'Threads',         icon: MessageSquare },
+  { key: 'details',   label: 'Deal Details',    icon: Layers      },
+  { key: 'dd',        label: 'Due Diligence',   icon: FileText    },
+  { key: 'dev',       label: 'Development',     icon: Hammer      },
+  { key: 'realized',  label: 'Cost Breakdown',  icon: DollarSign  },
 ];
 
 // Tabs that manage their own internal scroll (no outer padding/scroll wrapper)
@@ -27,6 +27,8 @@ export default function DealMiddleColumn({
   ddTotal,
   devCount,
   devTotal,
+  costOverrideCount,
+  costLineCount,
 }) {
   const selfScroll = SELF_SCROLL_TABS.has(activeTab);
   const visibleTabs = tabsToShow
@@ -34,9 +36,19 @@ export default function DealMiddleColumn({
     : ALL_TABS;
 
   const getLabel = (tab) => {
-    if (tab.key === 'dd'  && ddCount  != null) return `DD (${ddCount}/${ddTotal})`;
-    if (tab.key === 'dev' && devCount != null) return `Dev (${devCount}/${devTotal})`;
+    if (tab.key === 'dd'       && ddCount  != null) return `DD (${ddCount}/${ddTotal})`;
+    if (tab.key === 'dev'      && devCount != null) return `Dev (${devCount}/${devTotal})`;
+    if (tab.key === 'realized' && costOverrideCount != null) {
+      return `Cost Breakdown${costOverrideCount > 0 ? ` (${costOverrideCount})` : ''}`;
+    }
     return tab.label;
+  };
+
+  const getTitle = (tab) => {
+    if (tab.key === 'realized' && costOverrideCount != null && costLineCount != null) {
+      return `${costOverrideCount} manually-entered actuals out of ${costLineCount} line items`;
+    }
+    return undefined;
   };
 
   return (
@@ -60,6 +72,7 @@ export default function DealMiddleColumn({
                 aria-selected={active}
                 aria-controls={`deal-panel-${tab.key}`}
                 onClick={() => setActiveTab(tab.key)}
+                title={getTitle(tab)}
                 className={`flex items-center gap-1.5 px-4 py-3 text-[12px] font-semibold border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
                   active
                     ? 'border-accent text-accent'

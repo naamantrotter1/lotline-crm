@@ -27,7 +27,9 @@ import DealMiddleColumn from '../components/deal/DealMiddleColumn';
 import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
+import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
+import { fetchCostSummary } from '../lib/costBreakdownData';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -1837,6 +1839,9 @@ function DealDetailContent({ deal }) {
   const [listingUrl, setListingUrl] = useState(deal?.listingUrl || '');
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
+  const [costSummary, setCostSummary] = useState(null);
+  const { hasFlag } = useAuth();
+  const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const [starred, setStarred] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
@@ -2177,7 +2182,24 @@ function DealDetailContent({ deal }) {
     financingScenarioType,
   ]);
 
-  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+  // ── Load cost summary when feature flag is on ─────────────────────────────
+  useEffect(() => {
+    if (!costBreakdownV2 || !deal?.id) return;
+    fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
+  }, [costBreakdownV2, deal?.id]);
+
+  // Refresh summary whenever user switches to the cost breakdown tab
+  useEffect(() => {
+    if (activeTab === 'realized' && costBreakdownV2 && deal?.id) {
+      fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
+    }
+  }, [activeTab, costBreakdownV2, deal?.id]);
+
+  // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
+  const allIn = costBreakdownV2 && costSummary
+    ? Number(costSummary.total_actual ?? 0)
+    : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+
   const sellingCosts = (arv || 0) * 0.045 + 4000;
   const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
   const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
@@ -2427,6 +2449,8 @@ function DealDetailContent({ deal }) {
             netProfit={netProfit}
             allIn={allIn}
             roi={allIn > 0 ? ((netProfit / allIn) * 100) : 0}
+            costSummary={costBreakdownV2 ? costSummary : null}
+            onViewCostBreakdown={costBreakdownV2 ? () => setActiveTab('realized') : null}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             canEdit={canEdit}
             stageOptions={STAGE_OPTIONS}
@@ -2454,6 +2478,8 @@ function DealDetailContent({ deal }) {
             ddTotal={DD_COLS.length}
             devCount={devComplete}
             devTotal={devTotal}
+            costOverrideCount={costBreakdownV2 && costSummary ? Number(costSummary.override_count ?? 0) : null}
+            costLineCount={costBreakdownV2 && costSummary ? Number(costSummary.line_count ?? 0) : null}
           >
             <div className={fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
       {/* Tab content */}
@@ -2556,7 +2582,9 @@ function DealDetailContent({ deal }) {
           <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'realized' && (
-          <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
+          costBreakdownV2
+            ? <CostBreakdownTab dealId={deal.id} />
+            : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
 
               {/* Capital & Partnerships — now inside middle column */}

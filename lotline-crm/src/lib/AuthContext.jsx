@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   const [orgRole, setOrgRole]             = useState(null);   // memberships.role for active org
   const [orgPlan, setOrgPlan]             = useState(null);   // organizations.plan
   const [orgSeatLimit, setOrgSeatLimit]   = useState(null);   // organizations.seat_limit
+  const [orgFeatureFlags, setOrgFeatureFlags] = useState({}); // organizations.feature_flags
   const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
   const [loading, setLoading]             = useState(true);
   // Operator impersonation: { investor, logId }
@@ -39,7 +40,7 @@ export function AuthProvider({ children }) {
           const [orgResult, memResult] = await Promise.all([
             supabase
               .from('organizations')
-              .select('slug, plan, seat_limit')
+              .select('slug, plan, seat_limit, feature_flags')
               .eq('id', orgId)
               .single(),
             supabase
@@ -56,6 +57,7 @@ export function AuthProvider({ children }) {
           setOrgSlug(org?.slug ?? null);
           setOrgPlan(org?.plan ?? null);
           setOrgSeatLimit(org?.seat_limit ?? null);
+          setOrgFeatureFlags(org?.feature_flags ?? {});
           setOrgRole(mem?.role ?? null);
         } else {
           setOrgSlug(null);
@@ -158,6 +160,9 @@ export function AuthProvider({ children }) {
         orgRole,          // memberships.role: 'owner'|'admin'|'operator'|'viewer'|null
         orgPlan,          // organizations.plan: 'starter'|'pro'|'scale'|null
         orgSeatLimit,     // organizations.seat_limit: number|null
+        orgFeatureFlags,  // organizations.feature_flags JSONB: { 'cost_breakdown.three_column': bool }
+        /** feature flag check: hasFlag('cost_breakdown.three_column') → boolean */
+        hasFlag: (key) => !!(orgFeatureFlags?.[key]),
         /** capability check: can(cap) → boolean */
         can: (capability) => canUser(orgRole, capability),
         // ─────────────────────────────────────────────────────────────────────
