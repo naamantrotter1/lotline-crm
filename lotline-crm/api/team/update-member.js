@@ -17,9 +17,11 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Only owners and admins can change member roles.' });
   }
 
-  const { memberId, role, status } = req.body || {};
+  const { memberId, role, status, firstName, lastName } = req.body || {};
   if (!memberId) return res.status(400).json({ error: 'memberId is required' });
-  if (!role && !status) return res.status(400).json({ error: 'role or status is required' });
+  if (!role && !status && firstName === undefined && lastName === undefined) {
+    return res.status(400).json({ error: 'role, status, firstName, or lastName is required' });
+  }
 
   // Fetch the target membership
   const { data: target } = await adminClient
@@ -46,18 +48,37 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Use the transfer ownership flow to assign the owner role.' });
   }
 
-  const updates = {};
-  if (role   && ['admin', 'operator', 'viewer'].includes(role)) updates.role   = role;
-  if (status && ['active', 'disabled'].includes(status))        updates.status = status;
+  const membershipUpdates = {};
+  if (role   && ['admin', 'operator', 'viewer'].includes(role)) membershipUpdates.role   = role;
+  if (status && ['active', 'disabled'].includes(status))        membershipUpdates.status = status;
 
-  const { data: membership, error: updateErr } = await adminClient
-    .from('memberships')
-    .update(updates)
-    .eq('id', memberId)
-    .select()
-    .single();
+  let membership = null;
+  if (Object.keys(membershipUpdates).length > 0) {
+    const { data, error: updateErr } = await adminClient
+      .from('memberships')
+      .update(membershipUpdates)
+      .eq('id', memberId)
+      .select()
+      .single();
+    if (updateErr) return res.status(500).json({ error: updateErr.message });
+    membership = data;
+  }
 
-  if (updateErr) return res.status(500).json({ error: updateErr.message });
+  // Update name fields on the profile if provided
+  if (firstName !== undefined || lastName !== undefined) {
+    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+    const profileUpdates = {};
+    if (firstName !== undefined) profileUpdates.first_name = firstName.trim();
+    if (lastName  !== undefined) profileUpdates.last_name  = lastName.trim();
+    if (fullName)                profileUpdates.name       = fullName;
+
+    const { error: profErr } = await adminClient
+      .from('profiles')
+      .update(profileUpdates)
+      .eq('id', target.user_id);
+
+    if (profErr) return res.status(500).json({ error: profErr.message });
+  }
 
   return res.status(200).json({ membership });
 }

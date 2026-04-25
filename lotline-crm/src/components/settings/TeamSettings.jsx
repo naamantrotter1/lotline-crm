@@ -237,6 +237,7 @@ export default function TeamSettings() {
   const [showInvite,  setShowInvite]  = useState(false);
   const [saving,      setSaving]      = useState(null); // memberId being updated
   const [toast,       setToast]       = useState(null);
+  const [editingName, setEditingName] = useState(null); // { memberId, firstName, lastName }
 
   const myId = profile?.id || session?.user?.id;
 
@@ -326,6 +327,25 @@ export default function TeamSettings() {
       showToast(e.message, 'error');
     }
     setSaving(null);
+  };
+
+  const handleSaveName = async () => {
+    if (!editingName) return;
+    const { memberId, firstName, lastName } = editingName;
+    setSaving(memberId);
+    try {
+      await callTeamApi('/api/team/update-member', 'PATCH', { memberId, firstName, lastName });
+      const fullName = [firstName, lastName].filter(Boolean).join(' ');
+      setMembers(prev => prev.map(m => m.id === memberId ? {
+        ...m,
+        profiles: { ...m.profiles, first_name: firstName, last_name: lastName, name: fullName || m.profiles?.name },
+      } : m));
+      showToast('Name updated.');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+    setSaving(null);
+    setEditingName(null);
   };
 
   const totalSeats = members.filter(m => m.status === 'active').length + invitations.length;
@@ -426,13 +446,48 @@ export default function TeamSettings() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <Avatar name={prof.name || prof.first_name} avatarUrl={prof.avatar_url} />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">
-                            {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
-                            {isMe && <span className="ml-1.5 text-[10px] text-accent">(you)</span>}
-                          </p>
-                          <p className="text-xs text-gray-400">{prof.email}</p>
-                        </div>
+                        {editingName?.memberId === member.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              autoFocus
+                              value={editingName.firstName}
+                              onChange={e => setEditingName(n => ({ ...n, firstName: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(null); }}
+                              placeholder="First"
+                              className="w-24 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                            />
+                            <input
+                              value={editingName.lastName}
+                              onChange={e => setEditingName(n => ({ ...n, lastName: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(null); }}
+                              placeholder="Last"
+                              className="w-24 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                            />
+                            <button onClick={handleSaveName} disabled={saving === member.id} className="text-xs font-semibold text-accent hover:text-accent/80 disabled:opacity-40">
+                              {saving === member.id ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+                            </button>
+                            <button onClick={() => setEditingName(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-800">
+                                {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
+                                {isMe && <span className="ml-1.5 text-[10px] text-accent">(you)</span>}
+                              </p>
+                              <p className="text-xs text-gray-400">{prof.email}</p>
+                            </div>
+                            {canManage && !isMe && (
+                              <button
+                                title="Edit name"
+                                onClick={() => setEditingName({ memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' })}
+                                className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
