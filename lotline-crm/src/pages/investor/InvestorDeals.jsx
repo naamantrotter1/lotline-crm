@@ -82,9 +82,11 @@ export default function InvestorDeals() {
             const stageIdx = STAGE_ORDER.indexOf(deal.stage);
             const pct = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
             const { bg, text } = STAGE_COLORS[deal.stage] ?? { bg: 'bg-gray-100', text: 'text-gray-500' };
-            const totalCost = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
-              (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
-              (deal.hvac ?? 0) + (deal.clear_land ?? 0);
+            const totalCost = deal.total_actual != null
+              ? Number(deal.total_actual)
+              : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
+                (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
+                (deal.hvac ?? 0) + (deal.clear_land ?? 0);
             return (
               <Link
                 key={deal.id}

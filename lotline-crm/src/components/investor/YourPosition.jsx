@@ -55,8 +55,11 @@ export default function YourPosition({ deal, totalDistributed }) {
     const months = sd.holdPeriod ?? 6;
     projReturn = deal.investor_capital_contributed * (rate / 100 / 12) * months;
   } else if (isProfitSplit && deal.investor_equity_pct) {
-    const totalCost = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.setup ?? 0) +
-      (deal.septic ?? 0) + (deal.electric ?? 0) + (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
+    // Prefer canonical cost total; fall back to partial legacy sum
+    const totalCost = deal.total_actual != null
+      ? Number(deal.total_actual)
+      : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.setup ?? 0) +
+        (deal.septic ?? 0) + (deal.electric ?? 0) + (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
     const sellCost = (deal.arv ?? 0) * 0.045;
     const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
     projReturn = projProfit * (deal.investor_equity_pct / 100);

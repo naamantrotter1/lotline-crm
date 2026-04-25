@@ -112,9 +112,11 @@ function DealCard({ deal, investor, myInterestIds }) {
   const [showModal, setShowModal] = useState(false);
   const [submitted, setSubmitted] = useState(myInterestIds.has(deal.id));
 
-  const totalCost  = (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
-    (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
-    (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
+  const totalCost  = deal.total_actual != null
+    ? Number(deal.total_actual)
+    : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
+      (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
+      (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
   const sellCosts  = (deal.arv ?? 0) * 0.045;
   const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCosts);
 

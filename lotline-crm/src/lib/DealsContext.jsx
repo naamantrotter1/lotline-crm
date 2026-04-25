@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey } from './dealsSync';
+import { fetchCostSummary } from './costBreakdownData';
+import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 import { useJv } from './JvContext';
 
@@ -48,7 +50,7 @@ export function DealsProvider({ children }) {
     // Load archived deals (own org only)
     loadArchivedDeals(activeOrgId).then(setArchivedDeals);
 
-    // ONE real-time subscription for the whole app
+    // ONE real-time subscription for deal row changes
     const unsub = subscribeToDeals(
       (updated) => {
         if (updated.isArchived) {
@@ -73,7 +75,34 @@ export function DealsProvider({ children }) {
       }
     );
 
-    return unsub;
+    // Subscribe to deal_cost_lines changes so every page always reflects the
+    // current canonical cost total without a full page reload.
+    // On any INSERT/UPDATE/DELETE to deal_cost_lines, re-fetch the cost summary
+    // for that deal and update deal.totalActual in state.
+    let costChannel = null;
+    if (supabase) {
+      costChannel = supabase
+        .channel('deal-cost-lines-totals')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines' }, async (payload) => {
+          const dealId = payload.new?.deal_id ?? payload.old?.deal_id;
+          if (!dealId) return;
+          const summary = await fetchCostSummary(dealId);
+          if (!summary) return;
+          const totalActual    = Number(summary.total_actual    ?? 0);
+          const totalEstimated = Number(summary.total_estimated ?? 0);
+          setDeals(prev => prev.map(d =>
+            String(d.id) === String(dealId)
+              ? { ...d, totalActual, totalEstimated }
+              : d
+          ));
+        })
+        .subscribe();
+    }
+
+    return () => {
+      unsub();
+      if (costChannel) supabase.removeChannel(costChannel);
+    };
   }, [session, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
 
   // Bind orgId so callers don't need to pass it

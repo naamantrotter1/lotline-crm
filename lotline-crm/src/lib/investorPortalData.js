@@ -39,14 +39,42 @@ export async function fetchMyDeals(investorName) {
     .eq('investor', investorName)
     .eq('is_archived', false)
     .order('close_date', { ascending: true, nullsFirst: false });
-  return { deals: data ?? [], error };
+  if (error || !data?.length) return { deals: data ?? [], error };
+
+  // Enrich with canonical cost totals from deal_cost_summary_view so that
+  // DealMetrics, YourPosition, and computePortfolioMetrics use live cost data.
+  const dealIds = data.map(d => d.id);
+  const { data: summaries } = await supabase
+    .from('deal_cost_summary_view')
+    .select('deal_id, total_actual, total_estimated')
+    .in('deal_id', dealIds);
+  const byId = Object.fromEntries((summaries ?? []).map(s => [s.deal_id, s]));
+  const deals = data.map(d => ({
+    ...d,
+    total_actual:    byId[d.id]?.total_actual    ?? null,
+    total_estimated: byId[d.id]?.total_estimated ?? null,
+  }));
+  return { deals, error: null };
 }
 
 export async function fetchMyDeal(dealId, investorName) {
   let query = supabase.from('deals').select('*').eq('id', dealId);
   if (investorName) query = query.eq('investor', investorName);
   const { data, error } = await query.single();
-  return { deal: data ?? null, error };
+  if (error || !data) return { deal: data ?? null, error };
+
+  // Enrich with canonical cost total
+  const { data: summary } = await supabase
+    .from('deal_cost_summary_view')
+    .select('deal_id, total_actual, total_estimated')
+    .eq('deal_id', dealId)
+    .maybeSingle();
+  const deal = {
+    ...data,
+    total_actual:    summary?.total_actual    ?? null,
+    total_estimated: summary?.total_estimated ?? null,
+  };
+  return { deal, error: null };
 }
 
 /**
@@ -396,17 +424,22 @@ export async function linkInvestorUser(userId, investorId) {
 export function computePortfolioMetrics(deals, distributions) {
   const committed   = deals.reduce((s, d) => s + (d.projected_irr ? (d.min_check_size ?? 0) : 0), 0);
   const deployed    = deals.reduce((s, d) => {
-    const land  = d.land  ?? 0;
-    const build = (d.mobile_home ?? 0) + (d.permits ?? 0) + (d.setup ?? 0) + (d.septic ?? 0) +
-                  (d.well ?? 0) + (d.electric ?? 0) + (d.hvac ?? 0) + (d.clear_land ?? 0) +
-                  (d.water_cost ?? 0) + (d.footers ?? 0) + (d.underpinning ?? 0) + (d.decks ?? 0) +
-                  (d.driveway ?? 0) + (d.landscaping ?? 0) + (d.water_sewer ?? 0);
-    return s + land + build;
+    // Use canonical cost total when available (set by fetchMyDeals enrichment).
+    // Falls back to legacy flat column sum for deals not yet enriched.
+    const total = d.total_actual != null
+      ? Number(d.total_actual)
+      : (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0) + (d.setup ?? 0) + (d.septic ?? 0) +
+        (d.well ?? 0) + (d.electric ?? 0) + (d.hvac ?? 0) + (d.clear_land ?? 0) +
+        (d.water_cost ?? 0) + (d.footers ?? 0) + (d.underpinning ?? 0) + (d.decks ?? 0) +
+        (d.driveway ?? 0) + (d.landscaping ?? 0) + (d.water_sewer ?? 0);
+    return s + total;
   }, 0);
   const returned    = distributions.reduce((s, d) => s + (d.amount ?? 0), 0);
   const unrealizedGain = deals.reduce((s, d) => {
     const arv = d.arv ?? 0;
-    const costs = (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0);
+    const costs = d.total_actual != null
+      ? Number(d.total_actual)
+      : (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0);
     const sellCost = arv * 0.045;
     return s + Math.max(0, arv - costs - sellCost);
   }, 0);

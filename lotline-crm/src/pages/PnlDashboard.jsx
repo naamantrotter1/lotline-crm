@@ -15,9 +15,13 @@ export default function PnlDashboard() {
   // Only active (non-archived) deals; already filtered by JV scope in DealsContext
   const deals = allDeals.filter(d => !d.isArchived);
 
+  // Use canonical cost total when available (set by DealsContext via deal_cost_summary_view).
+  // Falls back to partial legacy column sum for unenriched deals.
   const totalBuildCosts = deals.reduce((s, d) => {
-    const c = (d.land || 0) + (d.mobileHome || 0) + (d.hudEngineer || 0) +
-      (d.percTest || 0) + (d.survey || 0) + (d.footers || 0) + (d.setup || 0);
+    const c = d.totalActual != null
+      ? Number(d.totalActual)
+      : (d.land || 0) + (d.mobileHome || 0) + (d.hudEngineer || 0) +
+        (d.percTest || 0) + (d.survey || 0) + (d.footers || 0) + (d.setup || 0);
     return s + c;
   }, 0);
 

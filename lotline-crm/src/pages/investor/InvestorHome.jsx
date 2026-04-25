@@ -29,9 +29,11 @@ function exportPortfolioPdf(investor, deals, distributions, metrics) {
   const fmt  = n  => `$${Math.round(n ?? 0).toLocaleString()}`;
   const fmtD = d  => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
   const rows = deals.map(d => {
-    const cost = (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0) +
-      (d.setup ?? 0) + (d.septic ?? 0) + (d.well ?? 0) + (d.electric ?? 0) +
-      (d.hvac ?? 0) + (d.clear_land ?? 0);
+    const cost = d.total_actual != null
+      ? Number(d.total_actual)
+      : (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0) +
+        (d.setup ?? 0) + (d.septic ?? 0) + (d.well ?? 0) + (d.electric ?? 0) +
+        (d.hvac ?? 0) + (d.clear_land ?? 0);
     return `<tr>
       <td>${d.address}</td><td>${d.stage ?? '—'}</td>
       <td>${fmt(d.arv)}</td><td>${fmt(cost)}</td>

@@ -14,6 +14,19 @@
  */
 import { supabase } from './supabase';
 
+// ── Structured write-audit logger ─────────────────────────────────────────────
+// Emits a consistent JSON-structured log for every mutating operation so that
+// cost drift can be traced back to specific write events. Logs are visible in
+// browser DevTools > Console and can be forwarded to an external sink later.
+//
+// Format: [costBreakdown:write] { action, lineId, dealId?, userId?, ... }
+
+function logWrite(action, fields) {
+  try {
+    console.info('[costBreakdown:write]', JSON.stringify({ action, ts: new Date().toISOString(), ...fields }));
+  } catch (_) { /* never throw from logger */ }
+}
+
 // ── Fetch all resolved lines for a deal (ordered by sort_order) ───────────────
 
 export async function fetchCostLines(dealId) {
@@ -56,6 +69,7 @@ export async function fetchCostSummariesForOrg(orgId) {
 
 export async function updateEstimated(lineId, estimatedAmount, userId) {
   if (!supabase) return { error: 'No Supabase client' };
+  logWrite('updateEstimated', { lineId, estimatedAmount, userId: userId || null });
   const { error } = await supabase
     .from('deal_cost_lines')
     .update({
@@ -64,6 +78,7 @@ export async function updateEstimated(lineId, estimatedAmount, userId) {
       estimated_updated_by_user_id: userId || null,
     })
     .eq('id', lineId);
+  if (error) logWrite('updateEstimated:error', { lineId, error: error.message });
   return error ? { error: error.message } : { ok: true };
 }
 
@@ -71,6 +86,7 @@ export async function updateEstimated(lineId, estimatedAmount, userId) {
 
 export async function overrideActual(lineId, actualAmount, userId) {
   if (!supabase) return { error: 'No Supabase client' };
+  logWrite('overrideActual', { lineId, actualAmount, userId: userId || null });
   const { error } = await supabase
     .from('deal_cost_lines')
     .update({
@@ -80,6 +96,7 @@ export async function overrideActual(lineId, actualAmount, userId) {
       actual_overridden_by_user_id: userId || null,
     })
     .eq('id', lineId);
+  if (error) logWrite('overrideActual:error', { lineId, error: error.message });
   return error ? { error: error.message } : { ok: true };
 }
 
@@ -87,6 +104,7 @@ export async function overrideActual(lineId, actualAmount, userId) {
 
 export async function resetActualToMirror(lineId) {
   if (!supabase) return { error: 'No Supabase client' };
+  logWrite('resetActualToMirror', { lineId });
   const { error } = await supabase
     .from('deal_cost_lines')
     .update({
@@ -96,6 +114,7 @@ export async function resetActualToMirror(lineId) {
       actual_overridden_by_user_id: null,
     })
     .eq('id', lineId);
+  if (error) logWrite('resetActualToMirror:error', { lineId, error: error.message });
   return error ? { error: error.message } : { ok: true };
 }
 
@@ -104,6 +123,7 @@ export async function resetActualToMirror(lineId) {
 
 export async function bulkOverrideActuals(rows, userId) {
   if (!supabase || !rows.length) return { ok: true };
+  logWrite('bulkOverrideActuals', { rowCount: rows.length, userId: userId || null });
   const now = new Date().toISOString();
   const updates = rows.map(r => ({
     id: r.lineId,
@@ -115,6 +135,7 @@ export async function bulkOverrideActuals(rows, userId) {
   const { error } = await supabase
     .from('deal_cost_lines')
     .upsert(updates, { onConflict: 'id' });
+  if (error) logWrite('bulkOverrideActuals:error', { rowCount: rows.length, error: error.message });
   return error ? { error: error.message } : { ok: true };
 }
 
@@ -122,10 +143,12 @@ export async function bulkOverrideActuals(rows, userId) {
 
 export async function updateLineNotes(lineId, notes) {
   if (!supabase) return { error: 'No Supabase client' };
+  logWrite('updateLineNotes', { lineId, notesLength: (notes || '').length });
   const { error } = await supabase
     .from('deal_cost_lines')
     .update({ notes })
     .eq('id', lineId);
+  if (error) logWrite('updateLineNotes:error', { lineId, error: error.message });
   return error ? { error: error.message } : { ok: true };
 }
 

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { fetchCostSummariesForOrg } from './costBreakdownData';
 
 // ── org-scoped localStorage keys ──────────────────────────────────────────────
 // Each organization gets its own cache key so data from different tenants can
@@ -51,6 +52,19 @@ function dealToRow(deal) {
     general_notes:           deal.generalNotes || null,
     comps_notes:             deal.compsNotes || null,
     tags:                    deal.tags ? JSON.stringify(deal.tags) : null,
+    // ── DEPRECATED flat cost columns ─────────────────────────────────────────
+    // These columns are the legacy cost layer. The canonical source of truth is
+    // deal_cost_lines → deal_cost_summary_view.total_actual (loaded by loadAllDeals
+    // and kept live via the deal_cost_lines Realtime subscription in DealsContext).
+    //
+    // We still write these fields for two reasons:
+    //   1. LandAcquisition.jsx has an inline cost editor that reads them to
+    //      initialise its local `costs` state (pre-V2 editor, not yet migrated).
+    //   2. Backward compat: old cached LS deals may reference these values.
+    //
+    // TODO (PR 5 full): Once LandAcquisition.jsx's cost editor is migrated to
+    // write directly to deal_cost_lines, remove these writes and eventually
+    // drop the columns in a schema migration.
     land:                    deal.land ?? 0,
     mobile_home:             deal.mobileHome ?? 0,
     hud_engineer:            deal.hudEngineer ?? 0,
@@ -235,13 +249,24 @@ export async function loadAllDeals(orgIds) {
     const lsDeals = lsGet(orgId);
     console.log('[dealsSync] loadAllDeals: orgId =', orgId, '| supabase rows =', data.length, '| ls deals =', lsDeals.length);
     const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
+    // Batch-fetch cost summaries for all orgs in scope and build a lookup map.
+    // This is the canonical source of truth for total costs — always use
+    // deal.totalActual in downstream consumers instead of legacy flat columns.
+    const summaryRows = (await Promise.all(ids.map(id => fetchCostSummariesForOrg(id)))).flat();
+    const summaryByDealId = Object.fromEntries(summaryRows.map(s => [String(s.deal_id), s]));
+
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
       const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
+      const summary = summaryByDealId[id];
       return {
         ...fromSupabase,
+        // Canonical cost total from deal_cost_summary_view — used by calcNetProfit
+        // and all dashboard / analytics surfaces instead of legacy flat columns.
+        totalActual:     summary ? Number(summary.total_actual    ?? 0) : null,
+        totalEstimated:  summary ? Number(summary.total_estimated ?? 0) : null,
         // Seeded deals use the hardcoded date (overrides stale LS migration values)
         // User-created deals fall back to LS then null
         contractSignedAt: fromSupabase.contractSignedAt

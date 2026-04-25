@@ -91,9 +91,9 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
       address: d.address,
       stage: d.stage,
       lender: investor.name,
-      totalCapital: (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      totalCapital: d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
       landCost: d.land || 0,
-      construction: (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      construction: d.totalActual != null ? Math.max(0, Number(d.totalActual) - (d.land || 0)) : (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
       arv: d.arv || 0,
       closeDate: d.closeDate || null,
     }));
@@ -421,7 +421,7 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   const liveUnfunded = contextDeals
     .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticUnfundedAddrs.has((d.address || '').trim().toLowerCase()))
     .map(d => {
-      const totalCapital = (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
+      const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return {
         address: d.address,
         pipeline: d.stage,

@@ -9,6 +9,11 @@
 export function calcNetProfit(deal, totalActualOverride) {
   const totalCosts = totalActualOverride != null
     ? totalActualOverride
+    // Use cost-lines total when DealsContext has enriched the deal object.
+    // Falls back to legacy flat columns only for seeded/unsynced deals that
+    // have not yet been enriched (e.g. localStorage-only deals).
+    : deal.totalActual != null
+    ? Number(deal.totalActual)
     : (deal.land || 0) +
       (deal.mobileHome || 0) +
       (deal.hudEngineer || 0) +
