@@ -25,6 +25,8 @@ import DealPageLayout from '../components/deal/DealPageLayout';
 import DealLeftColumn from '../components/deal/DealLeftColumn';
 import DealMiddleColumn from '../components/deal/DealMiddleColumn';
 import DealRightColumn from '../components/deal/DealRightColumn';
+import DealActivityFeed from '../components/deal/DealActivityFeed';
+import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -1866,7 +1868,11 @@ function DealDetailContent({ deal }) {
   const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
   const [investorList, setInvestorList] = useState(() => loadInvestors(activeOrgId, orgSlug));
-  const [showAddInvestor, setShowAddInvestor] = useState(false);
+  const [showAddInvestor, setShowAddInvestor]         = useState(false);
+  const [showCreateTask, setShowCreateTask]           = useState(false);
+  const [showLogCall, setShowLogCall]                 = useState(false);
+  const [showSendEmail, setShowSendEmail]             = useState(false);
+  const [showScheduleMeeting, setShowScheduleMeeting] = useState(false);
   const [financing, setFinancing] = useState(deal?.financing || '');
 
   // Deal Evaluation
@@ -2417,6 +2423,10 @@ function DealDetailContent({ deal }) {
             saveNow={saveNow}
             onOpenMapSearch={() => setShowMapModal(true)}
             investorList={investorList}
+            onCreateTask={() => setShowCreateTask(true)}
+            onLogCall={() => setShowLogCall(true)}
+            onSendEmail={() => setShowSendEmail(true)}
+            onScheduleMeeting={() => setShowScheduleMeeting(true)}
           />
         }
         middle={
@@ -2424,11 +2434,22 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'dd', 'dev', 'realized']}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'details', 'dd', 'dev', 'realized']}
+            ddCount={ddCompleteCount}
+            ddTotal={DD_COLS.length}
+            devCount={devComplete}
+            devTotal={devTotal}
           >
             <div className={fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
-      {/* Tab content — keep original rendering */}
+      {/* Tab content */}
         {activeTab === 'overview' && (
+          <DealActivityFeed
+            deal={deal}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
+            currentUser={profile?.name}
+          />
+        )}
+        {activeTab === 'details' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
             arv={arv} setArv={setArv}
@@ -2567,6 +2588,15 @@ function DealDetailContent({ deal }) {
         }
       />
     </div>
+
+    {/* Create Task Modal */}
+    {showCreateTask && (
+      <CreateTaskModal
+        defaultDealId={deal.id}
+        onClose={() => setShowCreateTask(false)}
+        onCreated={() => setShowCreateTask(false)}
+      />
+    )}
 
     {/* Add Investor Modal */}
     {showAddInvestor && (
