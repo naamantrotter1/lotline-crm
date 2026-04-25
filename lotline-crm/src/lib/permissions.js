@@ -134,12 +134,16 @@ export const CAPABILITIES = {
   'thread.archive':     ['owner','admin'],
 
   // ── Cost Breakdown V2 ──────────────────────────────────────────────────────
-  'cost_breakdown.view_estimated':  ['owner','admin','operator','viewer'],
-  'cost_breakdown.view_actual':     ['owner','admin','operator','viewer'],
-  'cost_breakdown.edit_estimated':  ['owner','admin','operator'],
-  'cost_breakdown.edit_actual':     ['owner','admin','operator'],
-  'cost_breakdown.bulk_paste':      ['owner','admin','operator'],
-  'cost_breakdown.category_manage': ['owner','admin'],
+  'cost_breakdown.view_estimated':        ['owner','admin','operator','viewer'],
+  'cost_breakdown.view_actual':           ['owner','admin','operator','viewer'],
+  'cost_breakdown.edit_estimated':        ['owner','admin','operator'],
+  'cost_breakdown.edit_actual':           ['owner','admin','operator'],
+  'cost_breakdown.bulk_paste':            ['owner','admin','operator'],
+  'cost_breakdown.category_manage':       ['owner','admin'],
+
+  // ── Deal Calculator ─────────────────────────────────────────────────────────
+  'deal_calculator.save_scenario':        ['owner','admin','operator'],
+  'deal_calculator.apply_to_deal':        ['owner','admin','operator'],
 
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate

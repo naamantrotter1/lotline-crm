@@ -1,16 +1,16 @@
 /**
  * CostBreakdownTab — three-column estimated / actual / difference view.
  *
- * Column 1 (Estimated): editable inline, grouped by category group.
- * Column 2 (Actual):    mirrors estimated (muted) until manually overridden;
- *                       green checkmark when overridden; ↺ reset to mirror.
+ * Column 1 (Actual):    mirrors estimated (muted) until manually overridden;
+ *                       green checkmark when overridden — click to reset.
+ * Column 2 (Estimated): editable inline, grouped by category group.
  * Column 3 (Difference): actual_resolved − estimated, color-coded.
  *
  * Behind feature flag "cost_breakdown.three_column" per org.
  * On mobile (<1024px): stacks vertically.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CheckCircle2, RotateCcw, Filter, ClipboardList } from 'lucide-react';
+import { CheckCircle2, Filter, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import {
@@ -248,6 +248,59 @@ export default function CostBreakdownTab({ dealId }) {
         {/* ── Desktop (≥ 1024px): side-by-side ─────────────────────────── */}
         <div className="hidden lg:flex gap-0 h-full">
 
+          {/* Actual */}
+          <div className="flex-1 min-w-0 border-r border-gray-100 overflow-y-auto">
+            <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
+              <ColHeader label="Actual Expenses" />
+            </div>
+            {grouped.map(({ group, lines: gl }) => (
+              <div key={group}>
+                <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+                </div>
+                {gl.map(l => {
+                  const resolvedVal = resolveActual(l);
+                  return (
+                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
+                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                      <div className="w-28 flex-shrink-0">
+                        <NumCell
+                          value={resolvedVal}
+                          muted={!l.actual_overridden}
+                          onCommit={v => handleActual(l.line_id, v)}
+                          disabled={!canEditAct}
+                        />
+                      </div>
+                      {/* Clickable green checkmark — click to reset to mirror */}
+                      {l.actual_overridden && canEditAct ? (
+                        <button
+                          onClick={() => handleReset(l.line_id)}
+                          title="Click to reset to estimated"
+                          className="flex-shrink-0 p-0.5 rounded text-green-500 hover:text-red-400 transition-colors"
+                        >
+                          <CheckCircle2 size={13} />
+                        </button>
+                      ) : l.actual_overridden ? (
+                        <CheckCircle2
+                          size={13}
+                          className="flex-shrink-0 text-green-500"
+                          title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
+                        />
+                      ) : (
+                        <span className="w-[17px] flex-shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-[#1a2332] text-white px-3 py-2 flex justify-between">
+              <span className="text-[12px] font-semibold">Total Actual</span>
+              <span className="text-[12px] font-bold">{fmt(totalAct)}</span>
+            </div>
+          </div>
+
           {/* Estimated */}
           <div className="flex-1 min-w-0 border-r border-gray-100 overflow-y-auto">
             <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
@@ -256,11 +309,10 @@ export default function CostBreakdownTab({ dealId }) {
             {grouped.map(({ group, lines: gl }) => (
               <div key={group}>
                 <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">&nbsp;</span>
                 </div>
                 {gl.map(l => (
-                  <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-between gap-2">
-                    <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                  <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-end gap-2">
                     <div className="w-28 flex-shrink-0">
                       <NumCell
                         value={Number(l.estimated_amount ?? 0)}
@@ -276,58 +328,6 @@ export default function CostBreakdownTab({ dealId }) {
             <div className="sticky bottom-0 bg-[#1a2332] text-white px-3 py-2 flex justify-between">
               <span className="text-[12px] font-semibold">Total Estimated</span>
               <span className="text-[12px] font-bold">{fmt(totalEst)}</span>
-            </div>
-          </div>
-
-          {/* Actual */}
-          <div className="flex-1 min-w-0 border-r border-gray-100 overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 px-2 pt-3 pb-0 border-b border-gray-100">
-              <ColHeader label="Actual Expenses" />
-            </div>
-            {grouped.map(({ group, lines: gl }) => (
-              <div key={group}>
-                <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">&nbsp;</span>
-                </div>
-                {gl.map(l => {
-                  const resolvedVal = resolveActual(l);
-                  return (
-                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
-                      <div className="flex-1 min-w-0">
-                        <NumCell
-                          value={resolvedVal}
-                          muted={!l.actual_overridden}
-                          onCommit={v => handleActual(l.line_id, v)}
-                          disabled={!canEditAct}
-                        />
-                      </div>
-                      {/* Green checkmark when overridden */}
-                      {l.actual_overridden && (
-                        <CheckCircle2
-                          size={13}
-                          className="text-green-500 flex-shrink-0"
-                          title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
-                        />
-                      )}
-                      {/* Reset button — only when overridden and user can edit */}
-                      {l.actual_overridden && canEditAct && (
-                        <button
-                          onClick={() => handleReset(l.line_id)}
-                          title="Reset to mirror estimate"
-                          className="flex-shrink-0 p-0.5 rounded text-gray-300 hover:text-accent transition-colors"
-                        >
-                          <RotateCcw size={11} />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-            {/* Footer */}
-            <div className="sticky bottom-0 bg-[#1a2332] text-white px-3 py-2 flex justify-between">
-              <span className="text-[12px] font-semibold">Total Actual</span>
-              <span className="text-[12px] font-bold">{fmt(totalAct)}</span>
             </div>
           </div>
 
@@ -361,6 +361,46 @@ export default function CostBreakdownTab({ dealId }) {
         {/* ── Mobile (<1024px): stacked ──────────────────────────────────── */}
         <div className="lg:hidden space-y-6 p-4">
 
+          {/* Actual table */}
+          <div>
+            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Actual Expenses</h4>
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {grouped.map(({ group, lines: gl }) => (
+                <div key={group}>
+                  <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+                  </div>
+                  {gl.map(l => (
+                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
+                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                      <div className="w-24 flex-shrink-0">
+                        <NumCell
+                          value={resolveActual(l)}
+                          muted={!l.actual_overridden}
+                          onCommit={v => handleActual(l.line_id, v)}
+                          disabled={!canEditAct}
+                        />
+                      </div>
+                      {l.actual_overridden && canEditAct ? (
+                        <button onClick={() => handleReset(l.line_id)} title="Click to reset to estimated" className="p-0.5 rounded text-green-500 hover:text-red-400 transition-colors flex-shrink-0">
+                          <CheckCircle2 size={13} />
+                        </button>
+                      ) : l.actual_overridden ? (
+                        <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                      ) : (
+                        <span className="w-[17px] flex-shrink-0" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
+                <span className="text-[12px] font-semibold">Total Actual</span>
+                <span className="text-[12px] font-bold">{fmt(totalAct)}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Estimated table */}
           <div>
             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Estimated Expenses</h4>
@@ -383,42 +423,6 @@ export default function CostBreakdownTab({ dealId }) {
               <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
                 <span className="text-[12px] font-semibold">Total Estimated</span>
                 <span className="text-[12px] font-bold">{fmt(totalEst)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actual table */}
-          <div>
-            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Actual Expenses</h4>
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              {grouped.map(({ group, lines: gl }) => (
-                <div key={group}>
-                  <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
-                  </div>
-                  {gl.map(l => (
-                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
-                      <div className="flex-1 min-w-0">
-                        <NumCell
-                          value={resolveActual(l)}
-                          muted={!l.actual_overridden}
-                          onCommit={v => handleActual(l.line_id, v)}
-                          disabled={!canEditAct}
-                        />
-                      </div>
-                      {l.actual_overridden && <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />}
-                      {l.actual_overridden && canEditAct && (
-                        <button onClick={() => handleReset(l.line_id)} title="Reset to mirror" className="p-0.5 rounded text-gray-300 hover:text-accent">
-                          <RotateCcw size={11} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-              <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
-                <span className="text-[12px] font-semibold">Total Actual</span>
-                <span className="text-[12px] font-bold">{fmt(totalAct)}</span>
               </div>
             </div>
           </div>
