@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   const { code } = req.body ?? {};
   if (!code) return res.status(400).json({ error: 'Missing code' });
 
-  const redirectUri = `${process.env.VITE_APP_URL}/esign`;
+  const redirectUri = `${process.env.VITE_APP_URL}/settings?tab=integrations`;
 
   // Exchange code for tokens
   const body = new URLSearchParams({
