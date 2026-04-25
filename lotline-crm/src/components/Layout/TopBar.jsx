@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus, CheckSquare, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Menu, Bell, Moon, Sun, Search, X, Trash2, Settings, LogOut, UserPlus, CheckSquare, HelpCircle, AtSign } from 'lucide-react';
 import HelpModal from '../Help/HelpModal';
 import CreateContactModal from '../Contacts/CreateContactModal';
 import CreateTaskModal from '../Tasks/CreateTaskModal';
@@ -12,6 +12,7 @@ import {
   clearAllNotifs,
   subscribeToNotifications,
 } from '../../lib/notificationsData';
+import { supabase } from '../../lib/supabase';
 import JvScopeSwitcher from '../JV/JvScopeSwitcher';
 
 function GlobalSearch() {
@@ -122,9 +123,136 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function NotifPanel({ onClose, onRead }) {
-  const [notifs, setNotifs] = useState([]);
+// ── Mentions tab inside the NotifPanel ────────────────────────────────────────
+function MentionsTab({ onNavigate }) {
+  const [mentions, setMentions] = useState([]);
+  const [filter,   setFilter]   = useState('unread'); // 'unread' | 'all'
+  const [loading,  setLoading]  = useState(true);
+  const navigate = useNavigate();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`/api/mentions?status=${filter}&limit=30`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const { mentions: data } = await res.json();
+        setMentions(data || []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const markRead = async (id) => {
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
+    if (!token) return;
+    await fetch(`/api/mentions/read?id=${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setMentions(prev => prev.map(m => m.id === id ? { ...m, read_at: new Date().toISOString() } : m));
+  };
+
+  const markAllRead = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
+    if (!token) return;
+    await fetch('/api/mentions/read', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    setMentions(prev => prev.map(m => ({ ...m, read_at: m.read_at || new Date().toISOString() })));
+  };
+
+  const goToMention = (m) => {
+    markRead(m.id);
+    if (m.deal_id) {
+      navigate(`/deal/${m.deal_id}?activity=${m.target_id}`);
+    }
+    onNavigate && onNavigate();
+  };
+
+  const unreadCount = mentions.filter(m => !m.read_at).length;
+
+  return (
+    <div>
+      {/* Filter tabs + mark-all-read */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-50 dark:border-gray-700">
+        <div className="flex gap-2">
+          {['unread', 'all'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[11px] font-semibold px-2 py-1 rounded-lg capitalize transition-colors ${
+                filter === f ? 'bg-accent/10 text-accent' : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {unreadCount > 0 && (
+          <button
+            onClick={markAllRead}
+            className="text-[11px] text-accent hover:text-accent/80 font-medium transition-colors"
+          >
+            Mark all read
+          </button>
+        )}
+      </div>
+
+      <div className="max-h-72 overflow-y-auto">
+        {loading ? (
+          <p className="text-sm text-gray-400 text-center py-8">Loading…</p>
+        ) : mentions.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No mentions yet</p>
+        ) : (
+          <ul className="divide-y divide-gray-50 dark:divide-gray-700">
+            {mentions.map(m => (
+              <li key={m.id}>
+                <button
+                  onClick={() => goToMention(m)}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                    !m.read_at ? 'bg-accent/5' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-gray-800 dark:text-white leading-tight">
+                      {m.author_name} mentioned you
+                      {m.deal_address ? ` in ${m.deal_address}` : ''}
+                    </p>
+                    {!m.read_at && (
+                      <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />
+                    )}
+                  </div>
+                  {m.body_preview && (
+                    <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
+                      "{m.body_preview}"
+                    </p>
+                  )}
+                  <p className="text-[11px] text-gray-400 mt-1">{timeAgo(m.created_at)}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NotifPanel({ onClose, onRead, unreadMentions }) {
+  const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'mentions'
 
   useEffect(() => {
     fetchNotifications().then(data => { setNotifs(data); setLoading(false); });
@@ -133,10 +261,40 @@ function NotifPanel({ onClose, onRead }) {
 
   return (
     <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
+      {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-sidebar dark:text-white">Notifications</h3>
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`text-sm font-semibold px-2 py-1 rounded-lg transition-colors ${
+              activeTab === 'notifications'
+                ? 'text-sidebar dark:text-white bg-gray-100 dark:bg-gray-800'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Notifications
+          </button>
+          <button
+            onClick={() => setActiveTab('mentions')}
+            className={`relative flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-lg transition-colors ${
+              activeTab === 'mentions'
+                ? 'text-sidebar dark:text-white bg-gray-100 dark:bg-gray-800'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <AtSign size={13} />
+            Mentions
+            {unreadMentions > 0 && (
+              <span className="w-4 h-4 bg-accent text-white text-[9px] rounded-full flex items-center justify-center font-bold leading-none">
+                {unreadMentions > 9 ? '9+' : unreadMentions}
+              </span>
+            )}
+          </button>
+        </div>
+
         <div className="flex items-center gap-2">
-          {notifs.length > 0 && (
+          {activeTab === 'notifications' && notifs.length > 0 && (
             <button
               onClick={() => { clearAllNotifs(); setNotifs([]); onRead && onRead(); }}
               className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
@@ -150,23 +308,29 @@ function NotifPanel({ onClose, onRead }) {
           </button>
         </div>
       </div>
-      <div className="max-h-96 overflow-y-auto">
-        {loading ? (
-          <p className="text-sm text-gray-400 text-center py-10">Loading…</p>
-        ) : notifs.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
-        ) : (
-          <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-            {notifs.map(n => (
-              <li key={n.id} className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'}`}>
-                <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
-                <p className="text-xs text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+
+      {/* Tab content */}
+      {activeTab === 'notifications' ? (
+        <div className="max-h-96 overflow-y-auto">
+          {loading ? (
+            <p className="text-sm text-gray-400 text-center py-10">Loading…</p>
+          ) : notifs.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
+          ) : (
+            <ul className="divide-y divide-gray-50 dark:divide-gray-700">
+              {notifs.map(n => (
+                <li key={n.id} className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'}`}>
+                  <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                  <p className="text-xs text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <MentionsTab onNavigate={onClose} />
+      )}
     </div>
   );
 }
@@ -184,11 +348,12 @@ export default function TopBar({ onToggleSidebar }) {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('darkMode') === 'true'
   );
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const bellRef = useRef(null);
+  const [showNotifs,    setShowNotifs]    = useState(false);
+  const [showUserMenu,  setShowUserMenu]  = useState(false);
+  const [showHelp,      setShowHelp]      = useState(false);
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [unreadMentions, setUnreadMentions] = useState(0);
+  const bellRef     = useRef(null);
   const userMenuRef = useRef(null);
 
   // '?' shortcut to open help modal
@@ -202,19 +367,46 @@ export default function TopBar({ onToggleSidebar }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Load initial unread count and subscribe to realtime inserts
+  // Load initial unread counts and subscribe to realtime inserts
   useEffect(() => {
     if (!profile?.id) return;
-    // Initial count via query
+
+    // Initial notification count
     import('../../lib/notificationsData').then(({ fetchUnreadCount }) => {
       fetchUnreadCount().then(setUnreadCount);
     });
-    // Realtime: increment badge when a new notification arrives
-    const channel = subscribeToNotifications(profile.id, () => {
+
+    // Initial mentions unread count
+    supabase?.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) return;
+      fetch('/api/mentions?status=unread&limit=1', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.ok ? r.json() : null)
+        .then(j => { if (j?.unread_count != null) setUnreadMentions(j.unread_count); });
+    });
+
+    // Realtime: increment notification badge
+    const notifChannel = subscribeToNotifications(profile.id, () => {
       setUnreadCount(c => c + 1);
     });
-    return () => { channel?.unsubscribe(); };
-  }, [profile?.id]);
+
+    // Realtime: increment mention badge when a new mention row arrives
+    const mentionChannel = supabase
+      ?.channel(`mentions-bell-${profile.id}-${Date.now()}`)
+      .on('postgres_changes', {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'mentions',
+        filter: `mentioned_user_id=eq.${profile.id}`,
+      }, () => setUnreadMentions(c => c + 1))
+      .subscribe();
+
+    return () => {
+      notifChannel?.unsubscribe();
+      supabase?.removeChannel(mentionChannel);
+    };
+  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close panels on outside click
   useEffect(() => {
@@ -300,9 +492,9 @@ export default function TopBar({ onToggleSidebar }) {
             className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
           >
             <Bell size={16} />
-            {unreadCount > 0 && (
+            {(unreadCount + unreadMentions) > 0 && (
               <span className="absolute top-1 right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {(unreadCount + unreadMentions) > 9 ? '9+' : (unreadCount + unreadMentions)}
               </span>
             )}
           </button>
@@ -310,6 +502,7 @@ export default function TopBar({ onToggleSidebar }) {
             <NotifPanel
               onClose={() => setShowNotifs(false)}
               onRead={() => setUnreadCount(0)}
+              unreadMentions={unreadMentions}
             />
           )}
         </div>

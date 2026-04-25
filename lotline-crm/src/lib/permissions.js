@@ -153,6 +153,16 @@ export const CAPABILITIES = {
   'joint_venture.revoke':   ['owner','admin'],
   // All org members can view the JV settings page (read-only for non-admins)
   'joint_venture.view':     ['owner','admin','operator','viewer'],
+
+  // ── @Mentions ───────────────────────────────────────────────────────────────
+  // Viewers cannot post notes/comments so they cannot create mentions
+  'mention.create':         ['owner','admin','operator'],
+  // All roles can view their own mentions inbox
+  'mention.view_own':       ['owner','admin','operator','viewer'],
+  // All roles can mark their own mentions as read
+  'mention.mark_read':      ['owner','admin','operator','viewer'],
+  // All roles can mute/unmute mentions per deal (own setting only)
+  'mention.mute_per_deal':  ['owner','admin','operator','viewer'],
 };
 
 /**
