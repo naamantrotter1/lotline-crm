@@ -49,9 +49,14 @@ export default async function handler(req, res) {
         profiles: {
           ...prof,
           // Prefer profile name fields; fall back to auth user metadata
-          name:       prof.name       || authUser.user_metadata?.name || null,
-          first_name: prof.first_name || authUser.user_metadata?.first_name || null,
-          last_name:  prof.last_name  || authUser.user_metadata?.last_name  || null,
+          // Google OAuth stores full name as full_name or name; given/family for first/last
+          name:       prof.name
+                      || authUser.user_metadata?.full_name
+                      || authUser.user_metadata?.name
+                      || [authUser.user_metadata?.given_name, authUser.user_metadata?.family_name].filter(Boolean).join(' ')
+                      || null,
+          first_name: prof.first_name || authUser.user_metadata?.given_name  || authUser.user_metadata?.first_name || null,
+          last_name:  prof.last_name  || authUser.user_metadata?.family_name || authUser.user_metadata?.last_name  || null,
           // Email always from auth.users (profiles table may not have it)
           email:      authUser.email  || null,
         },

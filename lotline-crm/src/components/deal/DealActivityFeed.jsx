@@ -201,6 +201,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
                 id:            m.user_id,
                 name:          m.profiles?.name
                                || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ')
+                               || m.profiles?.email?.split('@')[0]
                                || 'Team member',
                 role:          m.role || 'member',
                 avatar_url:    m.profiles?.avatar_url || null,
