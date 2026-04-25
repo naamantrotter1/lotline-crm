@@ -739,7 +739,7 @@ export default function Settings() {
   const fileInputRef = useRef(null);
 
   // Populate fields from profile when available
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setFirstName(profile.first_name || (profile.name?.split(' ')[0] ?? ''));
       setLastName(profile.last_name  || (profile.name?.split(' ').slice(1).join(' ') ?? ''));
