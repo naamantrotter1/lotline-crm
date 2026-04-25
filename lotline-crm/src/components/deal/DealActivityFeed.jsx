@@ -17,6 +17,7 @@
  * DB-backed note save still works.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, Mail, Phone,
   FileEdit, X, AtSign, BellOff, Bell,
@@ -71,17 +72,26 @@ function getInitials(name) {
 }
 
 // ── MentionAutocomplete popover ────────────────────────────────────────────────
-// Positioned relative to the composer textarea.
-function MentionAutocomplete({ results, selectedIdx, onSelect }) {
+// Rendered into document.body via a portal with position:fixed so it escapes
+// any overflow:hidden ancestor in the deal page layout.
+function MentionAutocomplete({ results, selectedIdx, onSelect, anchorRef }) {
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 280 });
+
+  useEffect(() => {
+    if (!anchorRef?.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
+  });
+
   if (!results) return null;
-  return (
-    <div className="
-      absolute left-0 z-50 mt-1 w-72
-      bg-white rounded-xl shadow-xl border border-gray-100
-      overflow-hidden
-    " style={{ top: '100%' }}>
+
+  return createPortal(
+    <div
+      className="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden"
+      style={{ top: coords.top, left: coords.left, width: coords.width }}
+    >
       {results.length === 0 ? (
-        <p className="text-[12px] text-gray-400 px-3 py-2">No teammates found</p>
+        <p className="text-[12px] text-gray-400 px-3 py-2.5">No teammates found</p>
       ) : (
         <ul>
           {results.map((m, i) => (
@@ -94,25 +104,19 @@ function MentionAutocomplete({ results, selectedIdx, onSelect }) {
                   ${i === selectedIdx ? 'bg-accent/10' : 'hover:bg-gray-50'}
                 `}
               >
-                {/* Avatar */}
-                <div className="
-                  w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center
-                  text-[11px] font-bold text-accent flex-shrink-0
-                ">
+                <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-[11px] font-bold text-accent flex-shrink-0">
                   {getInitials(m.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-gray-800 truncate">{m.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="
-                      text-[10px] font-medium px-1.5 py-0.5 rounded-full
-                      bg-gray-100 text-gray-500 capitalize leading-none
-                    ">{m.role}</span>
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize leading-none">
+                      {m.role}
+                    </span>
                     {m.is_jv_partner && (
-                      <span className="
-                        text-[10px] font-medium px-1.5 py-0.5 rounded-full
-                        bg-orange-50 text-orange-500 leading-none
-                      ">JV partner</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-500 leading-none">
+                        JV partner
+                      </span>
                     )}
                   </div>
                 </div>
@@ -121,7 +125,8 @@ function MentionAutocomplete({ results, selectedIdx, onSelect }) {
           ))}
         </ul>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -170,8 +175,8 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   const sessionRef   = useRef(null); // cached session for save
 
   // Pre-fetch all active org members as soon as orgId is known.
-  // Runs once per orgId (not gated on open) so the list is ready the moment
-  // the user clicks into the composer and types @.
+  // profiles has no RLS, so query it directly by active_organization_id.
+  // memberships is queried separately for role info (best-effort).
   useEffect(() => {
     if (!orgId || !supabase) return;
 
@@ -181,30 +186,32 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       sessionRef.current = session;
       const currentUserId = session?.user?.id;
 
-      // Step 1: get active org members
+      // Step 1: profiles — no RLS, always readable by any auth'd user
+      const { data: profiles, error: profErr } = await supabase
+        .from('profiles')
+        .select('id, name, first_name, last_name, avatar_url')
+        .eq('active_organization_id', orgId);
+
+      if (profErr) {
+        console.warn('[mentions] profile fetch error:', profErr.message);
+        return;
+      }
+
+      // Step 2: memberships for role — may be restricted by RLS; silently degrade
+      let roleMap = {};
       const { data: mems } = await supabase
         .from('memberships')
         .select('user_id, role')
         .eq('organization_id', orgId)
         .eq('status', 'active');
-
-      if (!mems?.length) return;
-
-      const memberIds = mems.map(m => m.user_id);
-      const roleMap   = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
-
-      // Step 2: fetch profiles by user ID (not by active_organization_id)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, first_name, last_name, avatar_url')
-        .in('id', memberIds);
+      if (mems) roleMap = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
 
       allMembersRef.current = (profiles || [])
         .filter(p => p.id !== currentUserId)
         .map(p => ({
           id:            p.id,
-          name:          p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
-          role:          roleMap[p.id] || 'viewer',
+          name:          p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Team member',
+          role:          roleMap[p.id] || 'member',
           avatar_url:    p.avatar_url || null,
           is_jv_partner: false,
         }))
@@ -409,15 +416,14 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           className="w-full px-4 pt-3 pb-1 text-sm text-gray-800 resize-none focus:outline-none"
         />
 
-        {/* Mention autocomplete popover */}
+        {/* Mention autocomplete popover — rendered into body via portal */}
         {mentionQuery !== null && (
-          <div className="relative">
-            <MentionAutocomplete
-              results={mentionResults}
-              selectedIdx={mentionIdx}
-              onSelect={insertMention}
-            />
-          </div>
+          <MentionAutocomplete
+            results={mentionResults}
+            selectedIdx={mentionIdx}
+            onSelect={insertMention}
+            anchorRef={textRef}
+          />
         )}
       </div>
 
