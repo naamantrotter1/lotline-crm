@@ -26,6 +26,7 @@ import DealLeftColumn from '../components/deal/DealLeftColumn';
 import DealMiddleColumn from '../components/deal/DealMiddleColumn';
 import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
+import DealThreads from '../components/deal/DealThreads';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
@@ -2434,7 +2435,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'details', 'dd', 'dev', 'realized']}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'threads', 'details', 'dd', 'dev', 'realized']}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
@@ -2447,6 +2448,12 @@ function DealDetailContent({ deal }) {
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
+          />
+        )}
+        {activeTab === 'threads' && (
+          <DealThreads
+            deal={deal}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
           />
         )}
         {activeTab === 'details' && (

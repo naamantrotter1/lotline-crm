@@ -3,15 +3,19 @@
  * "Activity" — wraps existing tab content with a clean tab bar.
  * Full unified feed + inline composer + month-grouped timeline land in PR 3.
  */
-import { LayoutGrid, FileText, Hammer, TrendingUp, Layers } from 'lucide-react';
+import { LayoutGrid, FileText, Hammer, TrendingUp, Layers, MessageSquare } from 'lucide-react';
 
 const ALL_TABS = [
-  { key: 'overview',  label: 'Activity',      icon: LayoutGrid },
-  { key: 'details',   label: 'Deal Details',  icon: Layers     },
-  { key: 'dd',        label: 'Due Diligence', icon: FileText   },
-  { key: 'dev',       label: 'Development',   icon: Hammer     },
-  { key: 'realized',  label: 'Realized',      icon: TrendingUp },
+  { key: 'overview',  label: 'Activity',      icon: LayoutGrid  },
+  { key: 'threads',   label: 'Threads',       icon: MessageSquare },
+  { key: 'details',   label: 'Deal Details',  icon: Layers      },
+  { key: 'dd',        label: 'Due Diligence', icon: FileText    },
+  { key: 'dev',       label: 'Development',   icon: Hammer      },
+  { key: 'realized',  label: 'Realized',      icon: TrendingUp  },
 ];
+
+// Tabs that manage their own internal scroll (no outer padding/scroll wrapper)
+const SELF_SCROLL_TABS = new Set(['threads']);
 
 export default function DealMiddleColumn({
   deal,
@@ -24,6 +28,7 @@ export default function DealMiddleColumn({
   devCount,
   devTotal,
 }) {
+  const selfScroll = SELF_SCROLL_TABS.has(activeTab);
   const visibleTabs = tabsToShow
     ? ALL_TABS.filter(t => tabsToShow.includes(t.key))
     : ALL_TABS;
@@ -60,10 +65,11 @@ export default function DealMiddleColumn({
         </div>
       </div>
 
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-5">
-        {children}
-      </div>
+      {/* Content area — self-scrolling tabs get no outer scroll/padding */}
+      {selfScroll
+        ? <div className="flex-1 overflow-hidden">{children}</div>
+        : <div className="flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
+      }
     </div>
   );
 }
