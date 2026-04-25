@@ -32,9 +32,9 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
 
   if (readOnly) {
     return (
-      <div className="py-1.5 flex items-center justify-between border-b border-gray-50 last:border-0">
-        <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0">{label}</span>
-        <span className={`text-[13px] text-gray-800 font-medium text-right flex-1 ${mono ? 'font-mono' : ''}`}>
+      <div className="py-1.5 flex items-start justify-between border-b border-gray-50 last:border-0">
+        <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0 pt-0.5">{label}</span>
+        <span className={`text-[13px] text-gray-800 font-medium text-right flex-1 min-w-0 break-words ${mono ? 'font-mono' : ''}`}>
           {prefix && value ? prefix : ''}{value || <span className="text-gray-300">—</span>}
         </span>
       </div>
@@ -82,18 +82,18 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
 
   return (
     <div
-      className="py-1.5 flex items-center justify-between border-b border-gray-50 last:border-0 group cursor-pointer hover:bg-gray-50/80 rounded px-1 -mx-1 transition-colors"
+      className="py-1.5 flex items-start justify-between border-b border-gray-50 last:border-0 group cursor-pointer hover:bg-gray-50/80 rounded px-1 -mx-1 transition-colors"
       onClick={() => { setDraft(value || ''); setEditing(true); }}
     >
-      <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0">{label}</span>
-      <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
-        <span className={`text-[13px] text-gray-800 font-medium truncate ${mono ? 'font-mono' : ''}`}>
+      <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0 pt-0.5">{label}</span>
+      <div className="flex items-start gap-1.5 flex-1 justify-end min-w-0">
+        <span className={`text-[13px] text-gray-800 font-medium break-words text-right min-w-0 ${mono ? 'font-mono' : ''}`}>
           {value
             ? <>{prefix || ''}{value}</>
             : <span className="text-gray-300 italic text-[12px]">—</span>
           }
         </span>
-        <Edit3 size={11} className="text-gray-300 group-hover:text-accent opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+        <Edit3 size={11} className="text-gray-300 group-hover:text-accent opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity mt-0.5" />
       </div>
     </div>
   );

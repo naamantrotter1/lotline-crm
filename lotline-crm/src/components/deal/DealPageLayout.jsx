@@ -16,8 +16,8 @@ const MAX_L    = 40;
 const MIN_R    = 15;
 const MAX_R    = 40;
 const MIN_M    = 30;
-const DEF_L    = 22;   // default left %
-const DEF_R    = 26;   // default right %
+const DEF_L    = 17;   // default left %
+const DEF_R    = 16;   // default right %
 const LS_KEY   = 'deal-col-v2';  // versioned key — v2 avoids any old cache
 const TOPBAR_H = 56;
 
