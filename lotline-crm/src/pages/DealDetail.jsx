@@ -208,6 +208,433 @@ function DecimalInput({ value, onChange, className }) {
   );
 }
 
+// ── Financing Scenario Panel ──────────────────────────────────────────────────
+// All financing scenario UI extracted into one component so it can be rendered
+// from both the Deal Details tab (legacy, removed in PR 6) and the Financing tab.
+// All formulas, field bindings, and auto-save hooks are UNCHANGED — only location.
+function FinancingScenarioPanel({
+  deal, costs, arv,
+  selectedScenario, applyScenario,
+  interestRate, setInterestRate,
+  originationFeeType, setOriginationFeeType,
+  originationFeePct, setOriginationFeePct,
+  originationFeeFlat, setOriginationFeeFlat,
+  servicingFeeType, setServicingFeeType,
+  servicingFeeFlat, setServicingFeeFlat,
+  servicingFeePct, setServicingFeePct,
+  balloonTerm, setBalloonTerm,
+  holdPeriod, setHoldPeriod,
+  monthlyHoldCost, setMonthlyHoldCost,
+  profitSharePct, setProfitSharePct,
+  capitalDeployedDate, setCapitalDeployedDate,
+  capitalReturnedDate, setCapitalReturnedDate,
+  investorCapitalContributed, setInvestorCapitalContributed,
+  investorEquityPct, setInvestorEquityPct,
+  projectedPayoutDate, setProjectedPayoutDate,
+  creditLimit, setCreditLimit,
+  drawPct, setDrawPct,
+  annualFeePct, setAnnualFeePct,
+  investorProfitSplitPct, setInvestorProfitSplitPct,
+  loanAmountOverride, setLoanAmountOverride,
+  ccpInvestorId, setCcpInvestorId,
+  ccpCommitmentId, setCcpCommitmentId,
+  ccpAllocationAmount, setCcpAllocationAmount,
+  ccpPrefReturnPct, setCcpPrefReturnPct,
+  ccpProfitSharePct, setCcpProfitSharePct,
+  ccpPrefPaymentTiming, setCcpPrefPaymentTiming,
+  ccpPosition, setCcpPosition,
+  ccpTranches, setCcpTranches,
+  readOnly,
+}) {
+  // ── Derived values (same formulas as OverviewTab — must stay in sync) ────────
+  const activeFinancing = selectedScenario
+    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
+    : deal.financing;
+  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+  const arvVal = arv ?? deal.arv ?? 0;
+  const sellingCosts = arvVal * 0.045 + 4000;
+  const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
+  const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
+  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
+  const originationFee = originationFeeType === 'percentage'
+    ? effectiveLoanAmount * (originationFeePct / 100)
+    : originationFeeFlat;
+  const servicingFee = servicingFeeType === 'percentage'
+    ? effectiveLoanAmount * (servicingFeePct / 100)
+    : servicingFeeFlat;
+  const totalCostOfCapital = (monthlyInterest * holdPeriod) + originationFee + servicingFee;
+  const hasFinancing = !!selectedScenario && activeFinancing !== 'Cash';
+  const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts - (hasFinancing ? totalCostOfCapital : 0);
+  const profitShareAmount = hasFinancing ? profitBeforeShare * (profitSharePct / 100) : 0;
+  const netProfit = profitBeforeShare - profitShareAmount;
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader>Financing Scenario</SectionHeader>
+
+      {/* Scenario selector */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Select Scenario</p>
+        <select
+          value={selectedScenario}
+          onChange={e => applyScenario(e.target.value)}
+          className="w-full text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
+        >
+          <option value="">— Choose a financing scenario —</option>
+          {FINANCING_SCENARIOS.map(s => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── Hard Money Loan / Hard Money (Land + Home) ──── */}
+      {!!selectedScenario && (activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)') && (
+        <div className="space-y-4">
+
+          {/* Loan Amount */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loan Amount</p>
+            <div className="grid grid-cols-2 gap-x-6">
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Manufactured Home</p>
+                <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
+                <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Amount Lent</p>
+                <input
+                  type="number"
+                  value={loanAmountOverride || totalLent}
+                  onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
+                  onFocus={e => e.target.select()}
+                  className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Interest · Origination · Servicing · Profit Share · Terms — 2-col layout */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-0 divide-x divide-gray-100">
+
+              {/* Left column: Interest + Origination Fee + Servicing Fee */}
+              <div className="pr-6 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Interest</p>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+                    <DecimalInput value={interestRate} onChange={setInterestRate} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterest).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Origination Fee</p>
+                    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                      <button onClick={() => setOriginationFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${originationFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
+                      <button onClick={() => setOriginationFeeType('flat')} className={`px-2 py-0.5 transition-colors ${originationFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
+                    </div>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{originationFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
+                    <DecimalInput
+                      value={originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat}
+                      onChange={v => originationFeeType === 'percentage' ? setOriginationFeePct(v) : setOriginationFeeFlat(v)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Servicing Fee</p>
+                    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                      <button onClick={() => setServicingFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
+                      <button onClick={() => setServicingFeeType('flat')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
+                    </div>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
+                    <DecimalInput
+                      value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
+                      onChange={v => servicingFeeType === 'percentage' ? setServicingFeePct(v) : setServicingFeeFlat(v)}
+                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column: Profit Share & Terms */}
+              <div className="pl-6 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Profit Share &amp; Terms</p>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share (%)</p>
+                    <DecimalInput value={profitSharePct} onChange={setProfitSharePct} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share Amount</p>
+                    <span className="text-sm font-medium text-gray-800">${Math.round(profitShareAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Balloon Term (months)</p>
+                    <input type="text" inputMode="numeric" value={balloonTerm || ''} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
+                      onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
+                    <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)}
+                      onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Holding Costs ($)</p>
+                    <DecimalInput value={monthlyHoldCost} onChange={setMonthlyHoldCost} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Total Amount Lent</span>
+                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
+                <span className="font-medium">${Math.round(monthlyInterest * holdPeriod).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Origination Fee</span>
+                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Servicing Fee</span>
+                <span className="font-medium">${Math.round(servicingFee).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Profit Share</span>
+                <span className="font-medium">${Math.round(profitShareAmount).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                <span className="font-semibold text-white">Total Cost of Capital</span>
+                <span className="font-bold text-accent">${Math.round(totalCostOfCapital + profitShareAmount).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Capital Tracking */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Capital Tracking</p>
+            <div className="grid grid-cols-2 gap-x-6">
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
+                <input
+                  type="date"
+                  value={capitalDeployedDate}
+                  onChange={e => setCapitalDeployedDate(e.target.value)}
+                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
+                <input
+                  type="date"
+                  value={capitalReturnedDate}
+                  onChange={e => setCapitalReturnedDate(e.target.value)}
+                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Investor Portal Position (always visible) ────── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Investor Portal — Position Data</p>
+        <div className="grid grid-cols-2 gap-x-6">
+          <div className="py-2">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+            <input
+              type="number"
+              value={investorCapitalContributed ?? ''}
+              onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="e.g. 50000"
+              className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+            />
+          </div>
+          <div className="py-2">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
+            <input
+              type="number"
+              value={investorEquityPct ?? ''}
+              onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="e.g. 25"
+              className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
+            />
+          </div>
+          <div className="py-2 col-span-2">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
+            <input
+              type="date"
+              value={projectedPayoutDate ?? ''}
+              onChange={e => setProjectedPayoutDate(e.target.value || null)}
+              className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full md:w-1/2"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Line of Credit ──────────────────────────────── */}
+      {!!selectedScenario && activeFinancing === 'Line of Credit' && (
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line of Credit Terms</p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Limit ($)</p>
+              <input type="number" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value) || 0)}
+                className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw % (of Credit Limit)</p>
+              <input type="number" value={drawPct} onChange={e => setDrawPct(Number(e.target.value) || 0)}
+                className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Amount</p>
+              <span className="text-sm font-medium text-accent">${Math.round(creditLimit * drawPct / 100).toLocaleString()}</span>
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+              <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
+                className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
+              <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)}
+                className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Profit Split ─────────────────────────────────── */}
+      {!!selectedScenario && activeFinancing === 'Profit Split' && (
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Profit Split Terms</p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Profit Split (%)</p>
+              <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)}
+                className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split Amount</p>
+              <span className="text-sm font-medium text-accent">${Math.round(netProfit * investorProfitSplitPct / 100).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Committed Capital Partner ────────────────────── */}
+      {!!selectedScenario && activeFinancing === 'Committed Capital Partner' && (
+        <CommittedCapitalPartnerPanel
+          deal={deal}
+          netProfit={netProfit}
+          ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
+          ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
+          ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
+          ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
+          ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
+          ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
+          ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
+          ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+        />
+      )}
+
+      {/* ── Capital Stack ─────────────────────────────────── */}
+      <CapitalStackModule deal={deal} readOnly={readOnly} />
+
+      {/* ── Scenario Comparison ──────────────────────────── */}
+      {!!selectedScenario && (
+        <div>
+          <SectionHeader>Scenario Comparison</SectionHeader>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-2 text-gray-500 font-medium">Scenario</th>
+                  <th className="text-right px-4 py-2 text-gray-500 font-medium">Capital</th>
+                  <th className="text-right px-4 py-2 text-gray-500 font-medium">Profit</th>
+                  <th className="text-right px-4 py-2 text-gray-500 font-medium">ROI</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {[
+                  { label: 'Cash', capital: allIn, profit: netProfit, interest: 0 },
+                  { label: 'Hard Money', capital: allIn * 0.2, profit: netProfit - (allIn * 0.8 * 0.12 / 12 * 4), interest: allIn * 0.8 * 0.12 / 12 * 4 },
+                  { label: 'HM (Land + Home)', capital: allIn * 0.1, profit: netProfit - (allIn * 0.9 * 0.12 / 12 * 4), interest: allIn * 0.9 * 0.12 / 12 * 4 },
+                  { label: 'Line of Credit', capital: allIn * 0.1, profit: netProfit - (allIn * 0.9 * 0.08 / 12 * 4), interest: allIn * 0.9 * 0.08 / 12 * 4 },
+                ].map(row => {
+                  const roi = row.capital > 0 ? ((row.profit / row.capital) * 100).toFixed(1) : '0.0';
+                  return (
+                    <tr key={row.label} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium text-gray-700">{row.label}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">${Math.round(row.capital).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-semibold ${row.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${Math.round(row.profit).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-bold ${row.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</td>
+                    </tr>
+                  );
+                })}
+                {/* Committed Capital Partner row — only when amount is set */}
+                {ccpAllocationAmount > 0 && (() => {
+                  const holdMo = (deal?.holdingMonths || 6);
+                  const ccpPref = ccpAllocationAmount * ((ccpPrefReturnPct || 0) / 100) * (holdMo / 12);
+                  const ccpShare = (ccpProfitSharePct != null && ccpProfitSharePct > 0)
+                    ? netProfit * (ccpProfitSharePct / 100)
+                    : 0;
+                  const ccpCost = ccpPref + ccpShare;
+                  const ccpProfit = netProfit - ccpCost;
+                  const ccpRoi = ccpAllocationAmount > 0 ? ((ccpProfit / ccpAllocationAmount) * 100).toFixed(1) : '0.0';
+                  return (
+                    <tr className="hover:bg-gray-50 bg-accent/5">
+                      <td className="px-4 py-2 font-medium text-gray-700">
+                        Committed Capital Partner
+                        <span className="ml-1 text-[10px] text-accent font-semibold">★ active</span>
+                      </td>
+                      <td className="px-4 py-2 text-right text-gray-600">${Math.round(ccpAllocationAmount).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-semibold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${Math.round(ccpProfit).toLocaleString()}</td>
+                      <td className={`px-4 py-2 text-right font-bold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{ccpRoi}%</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
 function OverviewTab({
   deal, costs, setCosts, notes, setNotes,
@@ -533,367 +960,40 @@ function OverviewTab({
         )}
 
         {/* Financing Scenario — hidden for agents */}
-        {!isAgent && <div>
-          <SectionHeader>Financing Scenario</SectionHeader>
-
-          {/* Scenario selector */}
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 mb-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Select Scenario</p>
-            <select
-              value={selectedScenario}
-              onChange={e => applyScenario(e.target.value)}
-              className="w-full text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
-            >
-              <option value="">— Choose a financing scenario —</option>
-              {FINANCING_SCENARIOS.map(s => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* ── Hard Money Loan / Hard Money (Land + Home) ──── */}
-          {!!selectedScenario && (activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)') && (
-            <div className="space-y-4">
-
-              {/* Loan Amount */}
-              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loan Amount</p>
-                <div className="grid grid-cols-2 gap-x-6">
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Manufactured Home</p>
-                    <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
-                    <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Amount Lent</p>
-                    <input
-                      type="number"
-                      value={loanAmountOverride || totalLent}
-                      onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
-                      onFocus={e => e.target.select()}
-                      className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Interest · Origination · Servicing · Profit Share · Terms — 2-col layout */}
-              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-0 divide-x divide-gray-100">
-
-                  {/* Left column: Interest + Origination Fee + Servicing Fee */}
-                  <div className="pr-6 space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Interest</p>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                        <DecimalInput value={interestRate} onChange={setInterestRate} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest Payment</p>
-                        <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterest).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Origination Fee</p>
-                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-                          <button onClick={() => setOriginationFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${originationFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
-                          <button onClick={() => setOriginationFeeType('flat')} className={`px-2 py-0.5 transition-colors ${originationFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
-                        </div>
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{originationFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <DecimalInput
-                          value={originationFeeType === 'percentage' ? originationFeePct : originationFeeFlat}
-                          onChange={v => originationFeeType === 'percentage' ? setOriginationFeePct(v) : setOriginationFeeFlat(v)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
-                        <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Servicing Fee</p>
-                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-                          <button onClick={() => setServicingFeeType('percentage')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'percentage' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>%</button>
-                          <button onClick={() => setServicingFeeType('flat')} className={`px-2 py-0.5 transition-colors ${servicingFeeType === 'flat' ? 'bg-accent text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>$</button>
-                        </div>
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">{servicingFeeType === 'percentage' ? 'Fee Percentage (%)' : 'Flat Amount ($)'}</p>
-                        <DecimalInput
-                          value={servicingFeeType === 'percentage' ? servicingFeePct : servicingFeeFlat}
-                          onChange={v => servicingFeeType === 'percentage' ? setServicingFeePct(v) : setServicingFeeFlat(v)}
-                          className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Calculated Fee</p>
-                        <span className="text-sm font-medium text-gray-800">${Math.round(servicingFee).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right column: Profit Share & Terms */}
-                  <div className="pl-6 space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Profit Share & Terms</p>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share (%)</p>
-                        <DecimalInput value={profitSharePct} onChange={setProfitSharePct} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Share Amount</p>
-                        <span className="text-sm font-medium text-gray-800">${Math.round(profitShareAmount).toLocaleString()}</span>
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Balloon Term (months)</p>
-                        <input type="text" inputMode="numeric" value={balloonTerm || ''} onChange={e => setBalloonTerm(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
-                        <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)}
-                          onFocus={e => e.target.select()} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                      <div className="py-2">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Holding Costs ($)</p>
-                        <DecimalInput value={monthlyHoldCost} onChange={setMonthlyHoldCost} className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Total Amount Lent</span>
-                    <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
-                    <span className="font-medium">${Math.round(monthlyInterest * holdPeriod).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Origination Fee</span>
-                    <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Servicing Fee</span>
-                    <span className="font-medium">${Math.round(servicingFee).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Profit Share</span>
-                    <span className="font-medium">${Math.round(profitShareAmount).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                    <span className="font-semibold text-white">Total Cost of Capital</span>
-                    <span className="font-bold text-accent">${Math.round(totalCostOfCapital + profitShareAmount).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Capital Tracking */}
-              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Capital Tracking</p>
-                <div className="grid grid-cols-2 gap-x-6">
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
-                    <input
-                      type="date"
-                      value={capitalDeployedDate}
-                      onChange={e => setCapitalDeployedDate(e.target.value)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                    />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
-                    <input
-                      type="date"
-                      value={capitalReturnedDate}
-                      onChange={e => setCapitalReturnedDate(e.target.value)}
-                      className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* ── Investor Portal Position (always visible) ────── */}
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Investor Portal — Position Data</p>
-            <div className="grid grid-cols-2 gap-x-6">
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
-                <input
-                  type="number"
-                  value={investorCapitalContributed ?? ''}
-                  onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))}
-                  placeholder="e.g. 50000"
-                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
-                <input
-                  type="number"
-                  value={investorEquityPct ?? ''}
-                  onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))}
-                  placeholder="e.g. 25"
-                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                />
-              </div>
-              <div className="py-2 col-span-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
-                <input
-                  type="date"
-                  value={projectedPayoutDate ?? ''}
-                  onChange={e => setProjectedPayoutDate(e.target.value || null)}
-                  className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full md:w-1/2"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ── Line of Credit ──────────────────────────────── */}
-          {!!selectedScenario && activeFinancing === 'Line of Credit' && (
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line of Credit Terms</p>
-              <div className="grid grid-cols-2 gap-x-6">
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Limit ($)</p>
-                  <input type="number" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value) || 0)}
-                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw % (of Credit Limit)</p>
-                  <input type="number" value={drawPct} onChange={e => setDrawPct(Number(e.target.value) || 0)}
-                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Amount</p>
-                  <span className="text-sm font-medium text-accent">${Math.round(creditLimit * drawPct / 100).toLocaleString()}</span>
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                  <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value) || 0)}
-                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
-                  <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)}
-                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Profit Split ─────────────────────────────────── */}
-          {!!selectedScenario && activeFinancing === 'Profit Split' && (
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Profit Split Terms</p>
-              <div className="grid grid-cols-2 gap-x-6">
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Profit Split (%)</p>
-                  <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)}
-                    className="text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full" />
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split Amount</p>
-                  <span className="text-sm font-medium text-accent">${Math.round(netProfit * investorProfitSplitPct / 100).toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Committed Capital Partner ────────────────────── */}
-          {!!selectedScenario && activeFinancing === 'Committed Capital Partner' && (
-            <CommittedCapitalPartnerPanel
-              deal={deal}
-              netProfit={netProfit}
-              ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
-              ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
-              ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
-              ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
-              ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
-              ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
-              ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
-              ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
-            />
-          )}
-
-          {/* ── Capital Stack ─────────────────────────────────── */}
-          <CapitalStackModule deal={deal} readOnly={readOnly} />
-
-        </div>}
-
-        {/* Scenario Comparison — hidden for agents and when no scenario selected */}
-        {!isAgent && !!selectedScenario && <div>
-          <SectionHeader>Scenario Comparison</SectionHeader>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-2 text-gray-500 font-medium">Scenario</th>
-                  <th className="text-right px-4 py-2 text-gray-500 font-medium">Capital</th>
-                  <th className="text-right px-4 py-2 text-gray-500 font-medium">Profit</th>
-                  <th className="text-right px-4 py-2 text-gray-500 font-medium">ROI</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {[
-                  { label: 'Cash', capital: allIn, profit: netProfit, interest: 0 },
-                  { label: 'Hard Money', capital: allIn * 0.2, profit: netProfit - (allIn * 0.8 * 0.12 / 12 * 4), interest: allIn * 0.8 * 0.12 / 12 * 4 },
-                  { label: 'HM (Land + Home)', capital: allIn * 0.1, profit: netProfit - (allIn * 0.9 * 0.12 / 12 * 4), interest: allIn * 0.9 * 0.12 / 12 * 4 },
-                  { label: 'Line of Credit', capital: allIn * 0.1, profit: netProfit - (allIn * 0.9 * 0.08 / 12 * 4), interest: allIn * 0.9 * 0.08 / 12 * 4 },
-                ].map(row => {
-                  const roi = row.capital > 0 ? ((row.profit / row.capital) * 100).toFixed(1) : '0.0';
-                  return (
-                    <tr key={row.label} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 font-medium text-gray-700">{row.label}</td>
-                      <td className="px-4 py-2 text-right text-gray-600">${Math.round(row.capital).toLocaleString()}</td>
-                      <td className={`px-4 py-2 text-right font-semibold ${row.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${Math.round(row.profit).toLocaleString()}</td>
-                      <td className={`px-4 py-2 text-right font-bold ${row.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{roi}%</td>
-                    </tr>
-                  );
-                })}
-                {/* Committed Capital Partner row — only when amount is set */}
-                {ccpAllocationAmount > 0 && (() => {
-                  const holdMo = (deal?.holdingMonths || 6);
-                  const ccpPref = ccpAllocationAmount * ((ccpPrefReturnPct || 0) / 100) * (holdMo / 12);
-                  const ccpShare = (ccpProfitSharePct != null && ccpProfitSharePct > 0)
-                    ? netProfit * (ccpProfitSharePct / 100)
-                    : 0;
-                  const ccpCost = ccpPref + ccpShare;
-                  const ccpProfit = netProfit - ccpCost;
-                  const ccpRoi = ccpAllocationAmount > 0 ? ((ccpProfit / ccpAllocationAmount) * 100).toFixed(1) : '0.0';
-                  return (
-                    <tr className="hover:bg-gray-50 bg-accent/5">
-                      <td className="px-4 py-2 font-medium text-gray-700">
-                        Committed Capital Partner
-                        <span className="ml-1 text-[10px] text-accent font-semibold">★ active</span>
-                      </td>
-                      <td className="px-4 py-2 text-right text-gray-600">${Math.round(ccpAllocationAmount).toLocaleString()}</td>
-                      <td className={`px-4 py-2 text-right font-semibold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${Math.round(ccpProfit).toLocaleString()}</td>
-                      <td className={`px-4 py-2 text-right font-bold ${ccpProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{ccpRoi}%</td>
-                    </tr>
-                  );
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>}
+        {!isAgent && <FinancingScenarioPanel
+          deal={deal} costs={costs} arv={arv}
+          selectedScenario={selectedScenario} applyScenario={applyScenario}
+          interestRate={interestRate} setInterestRate={setInterestRate}
+          originationFeeType={originationFeeType} setOriginationFeeType={setOriginationFeeType}
+          originationFeePct={originationFeePct} setOriginationFeePct={setOriginationFeePct}
+          originationFeeFlat={originationFeeFlat} setOriginationFeeFlat={setOriginationFeeFlat}
+          servicingFeeType={servicingFeeType} setServicingFeeType={setServicingFeeType}
+          servicingFeeFlat={servicingFeeFlat} setServicingFeeFlat={setServicingFeeFlat}
+          servicingFeePct={servicingFeePct} setServicingFeePct={setServicingFeePct}
+          balloonTerm={balloonTerm} setBalloonTerm={setBalloonTerm}
+          holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
+          monthlyHoldCost={monthlyHoldCost} setMonthlyHoldCost={setMonthlyHoldCost}
+          profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
+          capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
+          capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+          investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
+          investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
+          projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
+          creditLimit={creditLimit} setCreditLimit={setCreditLimit}
+          drawPct={drawPct} setDrawPct={setDrawPct}
+          annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
+          investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
+          loanAmountOverride={loanAmountOverride} setLoanAmountOverride={setLoanAmountOverride}
+          ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
+          ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
+          ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
+          ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
+          ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
+          ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
+          ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
+          ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+          readOnly={readOnly}
+        />}
       </div>
 
       {/* Right sidebar — documents — hidden for agents */}
@@ -2569,11 +2669,40 @@ function DealDetailContent({ deal }) {
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-4 text-gray-300"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-            <p className="text-sm font-semibold text-gray-500">Financing tab coming soon</p>
-            <p className="text-xs mt-1">Financing scenario configuration will move here.</p>
-          </div>
+          <FinancingScenarioPanel
+            deal={deal} costs={costs} arv={arv}
+            selectedScenario={selectedScenario} applyScenario={applyScenario}
+            interestRate={interestRate} setInterestRate={setInterestRate}
+            originationFeeType={originationFeeType} setOriginationFeeType={setOriginationFeeType}
+            originationFeePct={originationFeePct} setOriginationFeePct={setOriginationFeePct}
+            originationFeeFlat={originationFeeFlat} setOriginationFeeFlat={setOriginationFeeFlat}
+            servicingFeeType={servicingFeeType} setServicingFeeType={setServicingFeeType}
+            servicingFeeFlat={servicingFeeFlat} setServicingFeeFlat={setServicingFeeFlat}
+            servicingFeePct={servicingFeePct} setServicingFeePct={setServicingFeePct}
+            balloonTerm={balloonTerm} setBalloonTerm={setBalloonTerm}
+            holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
+            monthlyHoldCost={monthlyHoldCost} setMonthlyHoldCost={setMonthlyHoldCost}
+            profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
+            capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
+            capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
+            investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
+            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
+            creditLimit={creditLimit} setCreditLimit={setCreditLimit}
+            drawPct={drawPct} setDrawPct={setDrawPct}
+            annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
+            investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
+            loanAmountOverride={loanAmountOverride} setLoanAmountOverride={setLoanAmountOverride}
+            ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
+            ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
+            ccpAllocationAmount={ccpAllocationAmount} setCcpAllocationAmount={setCcpAllocationAmount}
+            ccpPrefReturnPct={ccpPrefReturnPct} setCcpPrefReturnPct={setCcpPrefReturnPct}
+            ccpProfitSharePct={ccpProfitSharePct} setCcpProfitSharePct={setCcpProfitSharePct}
+            ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
+            ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
+            ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+            readOnly={fromInvestorPortal || !canEdit}
+          />
         )}
 
               {/* Capital & Partnerships — now inside middle column */}
