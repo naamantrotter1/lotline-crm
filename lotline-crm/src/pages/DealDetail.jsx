@@ -2489,10 +2489,13 @@ function DealDetailContent({ deal }) {
             utilityScenario={utilityScenario} setUtilityScenario={setUtilityScenario}
             homeModel={homeModel} setHomeModel={setHomeModel}
             closingAttorney={closingAttorney} setClosingAttorney={setClosingAttorney}
+            closingAttorneyPhone={closingAttorneyPhone} setClosingAttorneyPhone={setClosingAttorneyPhone}
+            closingAttorneyAddress={closingAttorneyAddress} setClosingAttorneyAddress={setClosingAttorneyAddress}
             closeDate={closeDate} setCloseDate={setCloseDate}
             contractDate={contractDate} setContractDate={setContractDate}
             financing={financing} setFinancing={setFinancing}
             investor={investor} setInvestor={setInvestor}
+            onAddInvestor={() => setShowAddInvestor(true)}
             netProfit={netProfit}
             allIn={allIn}
             roi={allIn > 0 ? ((netProfit / allIn) * 100) : 0}

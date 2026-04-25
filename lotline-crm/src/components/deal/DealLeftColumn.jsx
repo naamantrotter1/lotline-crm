@@ -241,10 +241,14 @@ export default function DealLeftColumn({
   utilityScenario, setUtilityScenario,
   homeModel, setHomeModel,
   closingAttorney, setClosingAttorney,
+  closingAttorneyPhone, setClosingAttorneyPhone,
+  closingAttorneyAddress, setClosingAttorneyAddress,
   closeDate, setCloseDate,
   contractDate, setContractDate,
   financing, setFinancing,
   investor, setInvestor,
+  investorList,
+  onAddInvestor,
   netProfit,
   allIn,
   roi,
@@ -447,9 +451,34 @@ export default function DealLeftColumn({
             );
             if (s.key === 'closing') return (
               <Section key="closing" title="Closing" defaultOpen={false}>
-                <EditableField label="Contract Date" value={contractDate}    onChange={v => { setContractDate(v);   saveNow({ contractDate: v });   }} type="date" readOnly={readOnly} />
-                <EditableField label="Close Date"    value={closeDate}       onChange={v => { setCloseDate(v);      saveNow({ closeDate: v });      }} type="date" readOnly={readOnly} />
-                <EditableField label="Attorney"      value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow({ closingAttorney: v }); }} readOnly={readOnly} />
+                {/* Investor — custom row with + Add Investor button */}
+                <div className="py-1.5 border-b border-gray-50">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[11px] text-gray-400 font-medium">Investor</span>
+                    {!readOnly && onAddInvestor && (
+                      <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-medium">+ Add</button>
+                    )}
+                  </div>
+                  {readOnly ? (
+                    <p className="text-[13px] font-medium text-gray-800">{investor || <span className="text-gray-300">—</span>}</p>
+                  ) : (
+                    <select
+                      value={investor}
+                      onChange={e => { setInvestor(e.target.value); saveNow({ investor: e.target.value }); }}
+                      className="w-full text-[13px] font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
+                    >
+                      <option value="">— Select investor —</option>
+                      {(investorList || []).map(inv => (
+                        <option key={inv.id} value={inv.name}>{inv.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <EditableField label="Attorney"      value={closingAttorney}        onChange={v => { setClosingAttorney(v);        saveNow({ closingAttorney: v });        }} readOnly={readOnly} />
+                <EditableField label="Atty Phone"    value={closingAttorneyPhone}   onChange={v => { setClosingAttorneyPhone(v);   saveNow({ closingAttorneyPhone: v });   }} type="tel" readOnly={readOnly} />
+                <EditableField label="Atty Address"  value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
+                <EditableField label="Close Date"    value={closeDate}              onChange={v => { setCloseDate(v);              saveNow({ closeDate: v });              }} type="date" readOnly={readOnly} />
+                <EditableField label="Contract Date" value={contractDate}           onChange={v => { setContractDate(v);           saveNow({ contractDate: v });           }} type="date" readOnly={readOnly} />
               </Section>
             );
             return null;
