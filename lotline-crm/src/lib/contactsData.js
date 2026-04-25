@@ -140,8 +140,8 @@ export async function fetchDealContacts(dealId) {
 
 export const LIFECYCLE_STAGES = ['new', 'working', 'qualified', 'customer', 'dormant'];
 export const CONTACT_TYPE_OPTIONS = [
-  'Wholesaler','Closing Attorney','Real Estate Agent','Land Surveyor','Soil Scientist',
-  'Investor','Home Manufacturer','Home Dealer','Set-up Contractor','Land Clearing Contractor',
-  'Buyer','Septic Installer','Well Installer','Contractor',
+  'Buyer','Closing Attorney','Contractor','Home Dealer','Home Manufacturer',
+  'Investor','Land Clearing Contractor','Land Surveyor','Real Estate Agent',
+  'Septic Installer','Set-up Contractor','Soil Scientist','Well Installer','Wholesaler',
 ];
 export const LEAD_SOURCES = ['Direct','Referral','Website','Cold Call','Social Media','Email Campaign','Conference','Driving for Dollars','MLS','Wholesaler','Other'];
