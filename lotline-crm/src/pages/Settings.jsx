@@ -108,11 +108,20 @@ function GoogleIcon() {
 
 function IntegrationsTab({ showToast }) {
   const { profile } = useAuth();
-  const [integration, setIntegration] = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const orgId = profile?.active_organization_id;
+
+  // Google state
+  const [integration, setIntegration]     = useState(null);
+  const [loading, setLoading]             = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  // Load existing integration
+  // PandaDoc state
+  const [pandaConn, setPandaConn]         = useState(null);
+  const [pandaLoading, setPandaLoading]   = useState(true);
+  const [pandaConnecting, setPandaConnecting] = useState(false);
+  const [pandaDisconnecting, setPandaDisconnecting] = useState(false);
+
+  // Load Google integration
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
     supabase
@@ -123,13 +132,26 @@ function IntegrationsTab({ showToast }) {
       .then(({ data }) => { setIntegration(data); setLoading(false); });
   }, []);
 
-  // Handle redirect back from OAuth with ?connected=google or ?error=...
+  // Load PandaDoc connection
+  useEffect(() => {
+    if (!supabase || !orgId) { setPandaLoading(false); return; }
+    supabase
+      .from('esign_connections')
+      .select('id, auth_method, connected_at')
+      .eq('organization_id', orgId)
+      .eq('provider', 'pandadoc')
+      .maybeSingle()
+      .then(({ data }) => { setPandaConn(data); setPandaLoading(false); });
+  }, [orgId]);
+
+  // Handle redirect back from OAuth
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    // Google callback
     if (params.get('connected') === 'google') {
       showToast('Google connected successfully.');
       window.history.replaceState({}, '', '/settings?tab=integrations');
-      // Reload integration row
       supabase?.from('user_integrations').select('*').eq('provider','google').maybeSingle()
         .then(({ data }) => setIntegration(data));
     }
@@ -137,15 +159,47 @@ function IntegrationsTab({ showToast }) {
       showToast('Google connection failed: ' + params.get('error'), 'error');
       window.history.replaceState({}, '', '/settings?tab=integrations');
     }
+
+    // PandaDoc OAuth callback: ?code=CODE
+    const code = params.get('code');
+    if (code && !params.get('connected')) {
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const res = await fetch('/api/pandadoc/callback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+            body: JSON.stringify({ code }),
+          });
+          if (res.ok) {
+            showToast('PandaDoc connected successfully.');
+            // Reload connection
+            const { data } = await supabase
+              .from('esign_connections')
+              .select('id, auth_method, connected_at')
+              .eq('organization_id', orgId)
+              .eq('provider', 'pandadoc')
+              .maybeSingle();
+            setPandaConn(data);
+          } else {
+            const d = await res.json();
+            showToast(d.error || 'PandaDoc connection failed.', 'error');
+          }
+        } catch (e) {
+          showToast('PandaDoc connection failed.', 'error');
+        }
+        window.history.replaceState({}, '', '/settings?tab=integrations');
+      })();
+    }
   }, []);
 
-  const handleConnect = async () => {
+  const handleGoogleConnect = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const state = session?.access_token || '';
     window.location.href = `/api/google/auth?state=${encodeURIComponent(state)}`;
   };
 
-  const handleDisconnect = async () => {
+  const handleGoogleDisconnect = async () => {
     if (!window.confirm('Disconnect Google? You will no longer be able to send emails or sync your calendar from the CRM.')) return;
     setDisconnecting(true);
     const { data: { session } } = await supabase.auth.getSession();
@@ -153,16 +207,37 @@ function IntegrationsTab({ showToast }) {
       method: 'POST',
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
-    if (res.ok) {
-      setIntegration(null);
-      showToast('Google disconnected.');
-    } else {
-      showToast('Failed to disconnect.', 'error');
-    }
+    if (res.ok) { setIntegration(null); showToast('Google disconnected.'); }
+    else showToast('Failed to disconnect.', 'error');
     setDisconnecting(false);
   };
 
-  const isConnected = !!integration?.gmail_email;
+  const handlePandaConnect = async () => {
+    setPandaConnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/pandadoc/auth', { headers: { Authorization: `Bearer ${session?.access_token}` } });
+      const { url, error } = await res.json();
+      if (error) { showToast(error, 'error'); setPandaConnecting(false); return; }
+      window.location.href = url;
+    } catch {
+      showToast('Failed to start PandaDoc connection.', 'error');
+      setPandaConnecting(false);
+    }
+  };
+
+  const handlePandaDisconnect = async () => {
+    if (!window.confirm('Disconnect PandaDoc? Existing envelopes will remain.')) return;
+    setPandaDisconnecting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/pandadoc/disconnect', { method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` } });
+    if (res.ok) { setPandaConn(null); showToast('PandaDoc disconnected.'); }
+    else showToast('Failed to disconnect PandaDoc.', 'error');
+    setPandaDisconnecting(false);
+  };
+
+  const isGoogleConnected = !!integration?.gmail_email;
+  const isPandaConnected  = !!pandaConn;
 
   return (
     <div className="max-w-md space-y-4">
@@ -177,56 +252,114 @@ function IntegrationsTab({ showToast }) {
           </div>
         </div>
 
-        {/* Gmail card */}
-        <div className="border border-gray-100 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-              <GoogleIcon />
+        <div className="space-y-3">
+          {/* Google card */}
+          <div className="border border-gray-100 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+                <GoogleIcon />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">Google (Gmail + Calendar)</p>
+                <p className="text-xs text-gray-400">Send emails and sync your Google Calendar</p>
+              </div>
+              {isGoogleConnected && (
+                <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle size={10} />Connected
+                </span>
+              )}
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">Google (Gmail + Calendar)</p>
-              <p className="text-xs text-gray-400">Send emails and sync your Google Calendar</p>
-            </div>
-            {isConnected && (
-              <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <CheckCircle size={10} />Connected
-              </span>
+
+            {loading ? (
+              <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
+            ) : isGoogleConnected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
+                  <Mail size={13} className="text-green-600" />
+                  <span className="text-sm text-green-800 font-medium">{integration.gmail_email}</span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Emails sent from contact records will be delivered from this Gmail account.
+                </p>
+                <button
+                  onClick={handleGoogleDisconnect}
+                  disabled={disconnecting}
+                  className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {disconnecting ? 'Disconnecting…' : 'Disconnect Google'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-400">
+                  Connect your Google account to send emails from contact records and sync your Google Calendar.
+                </p>
+                <button
+                  onClick={handleGoogleConnect}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  <GoogleIcon />
+                  Connect Google
+                </button>
+              </div>
             )}
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
-          ) : isConnected ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
-                <Mail size={13} className="text-green-600" />
-                <span className="text-sm text-green-800 font-medium">{integration.gmail_email}</span>
+          {/* PandaDoc card */}
+          <div className="border border-gray-100 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center shadow-sm overflow-hidden">
+                <img src="https://www.pandadoc.com/app/themes/pandadoc/img/favicons/favicon-32x32.png" alt="PandaDoc" className="w-5 h-5" onError={e => { e.target.style.display='none'; }} />
               </div>
-              <p className="text-xs text-gray-400">
-                Emails sent from contact records will be delivered from this Gmail account.
-              </p>
-              <button
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-                className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
-              >
-                {disconnecting ? 'Disconnecting…' : 'Disconnect Google'}
-              </button>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">PandaDoc</p>
+                <p className="text-xs text-gray-400">Send and track e-signature documents</p>
+              </div>
+              {isPandaConnected && (
+                <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle size={10} />Connected
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-xs text-gray-400">
-                Connect your Google account to send emails from contact records and sync your Google Calendar.
-              </p>
-              <button
-                onClick={handleConnect}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-              >
-                <GoogleIcon />
-                Connect Google
-              </button>
-            </div>
-          )}
+
+            {pandaLoading ? (
+              <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
+            ) : isPandaConnected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
+                  <CheckCircle size={13} className="text-green-600" />
+                  <span className="text-sm text-green-800 font-medium">
+                    Connected via {pandaConn.auth_method === 'api_key' ? 'API key' : 'OAuth'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Go to <a href="/esign" className="text-accent hover:underline">E-Sign</a> to sync templates and send documents.
+                </p>
+                <button
+                  onClick={handlePandaDisconnect}
+                  disabled={pandaDisconnecting}
+                  className="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {pandaDisconnecting ? 'Disconnecting…' : 'Disconnect PandaDoc'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-400">
+                  Connect PandaDoc to send contracts, purchase agreements, and other documents for e-signature directly from the CRM.
+                </p>
+                <button
+                  onClick={handlePandaConnect}
+                  disabled={pandaConnecting}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white rounded-xl transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: '#26d6a4' }}
+                >
+                  {pandaConnecting ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {pandaConnecting ? 'Connecting…' : 'Connect PandaDoc'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
