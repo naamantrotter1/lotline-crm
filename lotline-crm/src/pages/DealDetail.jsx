@@ -2195,6 +2195,18 @@ function DealDetailContent({ deal }) {
     }
   }, [activeTab, costBreakdownV2, deal?.id]);
 
+  // Realtime: re-fetch cost summary whenever any cost line for this deal changes
+  useEffect(() => {
+    if (!costBreakdownV2 || !deal?.id) return;
+    const ch = supabase
+      .channel(`deal-detail-cost-${deal.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines',
+          filter: `deal_id=eq.${deal.id}` },
+        () => { fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); }); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [costBreakdownV2, deal?.id]);
+
   // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
   const allIn = costBreakdownV2 && costSummary
     ? Number(costSummary.total_actual ?? 0)
