@@ -1,23 +1,39 @@
 import { useState } from 'react';
 import { X, User, Plus } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { createContact, LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS, LEAD_SOURCES } from '../../lib/contactsData';
+import { createContact, CONTACT_TYPE_OPTIONS } from '../../lib/contactsData';
+
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
+  'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
+  'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire',
+  'New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
+  'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota',
+  'Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia',
+  'Wisconsin','Wyoming',
+];
 
 export default function CreateContactModal({ onClose, onCreated }) {
   const { activeOrgId } = useAuth();
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
-    company: '', title: '', lifecycle_stage: 'new',
-    lead_source: '', notes: '',
+    company: '', title: '', notes: '',
   });
   const [types, setTypes] = useState([]);
+  const [states, setStates] = useState([]);
+  const [customTypeInput, setCustomTypeInput] = useState('');
+  const [showCustomType, setShowCustomType] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const toggleType = (t) =>
-    setTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  const addType = (t) => { if (t && !types.includes(t)) setTypes(prev => [...prev, t]); };
+  const removeType = (t) => setTypes(prev => prev.filter(x => x !== t));
+
+  const addState = (s) => { if (s && !states.includes(s)) setStates(prev => [...prev, s]); };
+  const removeState = (s) => setStates(prev => prev.filter(x => x !== s));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +43,9 @@ export default function CreateContactModal({ onClose, onCreated }) {
     }
     setSaving(true);
     setError('');
-    const { data, error: err } = await createContact({ orgId: activeOrgId, types, ...form });
+    const { data, error: err } = await createContact({
+      orgId: activeOrgId, types, states_serviced: states, ...form,
+    });
     setSaving(false);
     if (err) { setError(err); return; }
     onCreated(data);
@@ -51,6 +69,8 @@ export default function CreateContactModal({ onClose, onCreated }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* First / Last name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">First name</label>
@@ -64,61 +84,114 @@ export default function CreateContactModal({ onClose, onCreated }) {
             </div>
           </div>
 
+          {/* Company */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Company</label>
+            <input value={form.company} onChange={e => set('company', e.target.value)}
+              placeholder="Acme Corp" className={inputClass} />
+          </div>
+
+          {/* Email */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
             <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
               placeholder="jane@example.com" className={inputClass} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone</label>
-              <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
-                placeholder="(555) 000-0000" className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Company</label>
-              <input value={form.company} onChange={e => set('company', e.target.value)}
-                placeholder="Acme Corp" className={inputClass} />
-            </div>
-          </div>
-
+          {/* Phone */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Type(s)</label>
-            <div className="flex flex-wrap gap-1.5">
-              {CONTACT_TYPE_OPTIONS.map(t => (
-                <button key={t} type="button" onClick={() => toggleType(t)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
-                    types.includes(t)
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-accent'
-                  }`}>
-                  {t}
-                </button>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone</label>
+            <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
+              placeholder="(555) 000-0000" className={inputClass} />
+          </div>
+
+          {/* Type */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Type</label>
+            <select
+              value=""
+              onChange={e => {
+                const val = e.target.value;
+                e.target.value = '';
+                if (val === '__custom__') { setShowCustomType(true); }
+                else { addType(val); }
+              }}
+              className={inputClass}
+            >
+              <option value="">— Select a type —</option>
+              {CONTACT_TYPE_OPTIONS.filter(t => !types.includes(t)).map(t => (
+                <option key={t} value={t}>{t}</option>
               ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Lifecycle stage</label>
-              <select value={form.lifecycle_stage} onChange={e => set('lifecycle_stage', e.target.value)}
-                className={inputClass}>
-                {LIFECYCLE_STAGES.map(s => (
-                  <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+              <option value="__custom__">+ Add custom type…</option>
+            </select>
+            {types.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {types.map(t => (
+                  <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/20">
+                    {t}
+                    <button type="button" onClick={() => removeType(t)} className="hover:text-red-500 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </span>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Lead source</label>
-              <select value={form.lead_source} onChange={e => set('lead_source', e.target.value)}
-                className={inputClass}>
-                <option value="">— Select —</option>
-                {LEAD_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+              </div>
+            )}
+            {showCustomType && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  autoFocus
+                  value={customTypeInput}
+                  onChange={e => setCustomTypeInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (customTypeInput.trim()) { addType(customTypeInput.trim()); setCustomTypeInput(''); setShowCustomType(false); }
+                    }
+                    if (e.key === 'Escape') { setShowCustomType(false); setCustomTypeInput(''); }
+                  }}
+                  placeholder="Custom type name"
+                  className={inputClass + ' flex-1'}
+                />
+                <button
+                  type="button"
+                  onClick={() => { if (customTypeInput.trim()) { addType(customTypeInput.trim()); setCustomTypeInput(''); setShowCustomType(false); } }}
+                  className="px-3 py-2 text-xs font-semibold text-white rounded-lg"
+                  style={{ backgroundColor: '#c9703a' }}
+                >
+                  Add
+                </button>
+              </div>
+            )}
           </div>
 
+          {/* States serviced */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">States serviced</label>
+            <select
+              value=""
+              onChange={e => { addState(e.target.value); e.target.value = ''; }}
+              className={inputClass}
+            >
+              <option value="">— Select a state —</option>
+              {US_STATES.filter(s => !states.includes(s)).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {states.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {states.map(s => (
+                  <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                    {s}
+                    <button type="button" onClick={() => removeState(s)} className="hover:text-red-500 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notes</label>
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
