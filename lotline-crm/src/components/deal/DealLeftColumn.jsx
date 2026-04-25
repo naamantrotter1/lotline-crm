@@ -3,13 +3,24 @@
  * "Information" — deal header, quick action row, editable About fields,
  * property quick stats, capital position mini.
  */
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Home, DollarSign, TrendingUp,
-  MessageSquare,
+  CalendarPlus, Layers, Settings2,
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
+import CustomizeRecordDrawer from './CustomizeRecordDrawer';
+
+// ── Default section definitions ───────────────────────────────────────────────
+const DEFAULT_SECTIONS = [
+  { key: 'about',          label: 'About this deal', visible: true, order: 0 },
+  { key: 'seller',         label: 'Seller / Owner',  visible: true, order: 1 },
+  { key: 'financing',      label: 'Financing',       visible: true, order: 2 },
+  { key: 'closing',        label: 'Closing',         visible: true, order: 3 },
+  { key: 'cost_breakdown', label: 'Cost Breakdown',  visible: true, order: 4 },
+];
 
 // ── Inline editable field ─────────────────────────────────────────────────────
 function EditableField({ label, value, onChange, type = 'text', options, readOnly, mono, prefix }) {
@@ -180,6 +191,33 @@ function NoteComposer({ dealId, onClose }) {
   );
 }
 
+// ── Supabase persistence for section layout ───────────────────────────────────
+const ENTITY   = 'deal';
+const COL_KEY  = 'left';
+
+async function loadSectionPrefs(userId, orgId) {
+  if (!supabase || !userId || !orgId) return null;
+  const { data } = await supabase
+    .from('record_layout_preferences')
+    .select('sections')
+    .eq('user_id', userId)
+    .eq('organization_id', orgId)
+    .eq('entity', ENTITY)
+    .eq('column_key', COL_KEY)
+    .maybeSingle();
+  return data?.sections ?? null;
+}
+
+async function saveSectionPrefs(userId, orgId, sections) {
+  if (!supabase || !userId || !orgId) return;
+  await supabase
+    .from('record_layout_preferences')
+    .upsert(
+      { user_id: userId, organization_id: orgId, entity: ENTITY, column_key: COL_KEY, sections },
+      { onConflict: 'user_id,organization_id,entity,column_key' }
+    );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function DealLeftColumn({
   deal,
@@ -223,9 +261,40 @@ export default function DealLeftColumn({
   onSendEmail,
   onScheduleMeeting,
 }) {
+  const { profile, activeOrgId } = useAuth();
   const [showNote, setShowNote]         = useState(false);
   const [stageEditing, setStageEditing] = useState(false);
   const [stageProbability, setStageProbability] = useState(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [sections, setSections]         = useState(DEFAULT_SECTIONS);
+
+  // Load saved section order/visibility on mount
+  useEffect(() => {
+    if (!profile?.id || !activeOrgId) return;
+    loadSectionPrefs(profile.id, activeOrgId).then(saved => {
+      if (!saved || !Array.isArray(saved) || saved.length === 0) return;
+      // Merge saved with defaults to handle new sections added after initial save
+      const savedMap = Object.fromEntries(saved.map(s => [s.key, s]));
+      const merged = DEFAULT_SECTIONS.map(def => savedMap[def.key]
+        ? { ...def, visible: savedMap[def.key].visible, order: savedMap[def.key].order }
+        : def
+      ).sort((a, b) => a.order - b.order);
+      setSections(merged);
+    });
+  }, [profile?.id, activeOrgId]);
+
+  const handleSaveLayout = useCallback(async (newSections) => {
+    setSaving(true);
+    await saveSectionPrefs(profile?.id, activeOrgId, newSections);
+    setSaving(false);
+    setCustomizeOpen(false);
+  }, [profile?.id, activeOrgId]);
+
+  const handleResetLayout = useCallback(() => {
+    setSections(DEFAULT_SECTIONS);
+    saveSectionPrefs(profile?.id, activeOrgId, DEFAULT_SECTIONS);
+  }, [profile?.id, activeOrgId]);
 
   const fmt    = n => n == null || isNaN(n) ? '—' : `$${Math.round(n).toLocaleString()}`;
   const fmtPct = n => n == null || isNaN(n) ? '—' : `${Math.round(n)}%`;
@@ -234,7 +303,19 @@ export default function DealLeftColumn({
   const probability = stageProbability ?? DEFAULT_PROBABILITIES[stage] ?? 0;
 
   return (
-    <div className="h-full overflow-y-auto bg-white flex flex-col text-sm">
+    <div className="h-full overflow-y-auto bg-white flex flex-col text-sm relative">
+
+      {/* Customize drawer overlay */}
+      {customizeOpen && (
+        <CustomizeRecordDrawer
+          sections={sections}
+          onChange={setSections}
+          onSave={handleSaveLayout}
+          onReset={handleResetLayout}
+          onClose={() => setCustomizeOpen(false)}
+          saving={saving}
+        />
+      )}
 
       {/* Deal identity header */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
@@ -242,6 +323,15 @@ export default function DealLeftColumn({
           <h2 className="text-[15px] font-bold text-[#1a2332] leading-snug flex-1 min-w-0 line-clamp-2">
             {address || deal.address || 'Untitled Deal'}
           </h2>
+          {/* Customize button */}
+          <button
+            onClick={() => setCustomizeOpen(true)}
+            title="Customize sections"
+            className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+          >
+            <Settings2 size={13} />
+          </button>
+
           {/* Stage badge / editor */}
           {stageEditing && !readOnly
             ? (
@@ -317,67 +407,75 @@ export default function DealLeftColumn({
         </div>
       )}
 
-      {/* Sections */}
+      {/* Sections — rendered in user-configured order */}
       <div className="flex-1 overflow-y-auto">
 
-        {/* About */}
-        <Section title="About this deal">
-          <EditableField label="Address"     value={address}    onChange={v => { setAddress(v);    saveNow({ address: v });    }} readOnly={readOnly} />
-          <EditableField label="County"      value={county}     onChange={v => { setCounty(v);     saveNow({ county: v });     }} readOnly={readOnly} />
-          <EditableField label="State"       value={dealState}  onChange={v => { setDealState(v);  saveNow({ state: v });      }} readOnly={readOnly} />
-          <EditableField label="Zip"         value={zip}        onChange={v => { setZip(v);        saveNow({ zip: v });        }} readOnly={readOnly} />
-          <EditableField label="Parcel ID"   value={parcelId}   onChange={v => { setParcelId(v);   saveNow({ parcelId: v });   }} readOnly={readOnly} mono />
-          <EditableField label="Acreage"     value={acreage ? String(acreage) : ''} onChange={v => { setAcreage(v); saveNow({ acreage: v }); }} type="number" readOnly={readOnly} />
-          <EditableField label="ARV"         value={arv ? String(arv) : ''} onChange={v => { setArv(Number(v)); saveNow({ arv: Number(v) }); }} type="number" prefix="$" readOnly={readOnly} />
-          <EditableField label="Lead Source" value={leadSource} onChange={v => { setLeadSource(v); saveNow({ leadSource: v }); }} options={LEAD_SOURCE_OPTIONS} readOnly={readOnly} />
-          <EditableField label="Owner Type"  value={ownerType}  onChange={v => { setOwnerType(v);  saveNow({ ownerType: v });  }} options={OWNER_TYPE_OPTIONS} readOnly={readOnly} />
-          <EditableField label="Utilities"   value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} readOnly={readOnly} />
-        </Section>
-
-        {/* Seller / Owner */}
-        <Section title="Seller / Owner" defaultOpen={false}>
-          <EditableField label="Owner Name"  value={ownerName}   onChange={v => { setOwnerName(v);   saveNow({ ownerName: v });   }} readOnly={readOnly} />
-          <EditableField label="Seller Name" value={sellerName}  onChange={v => { setSellerName(v);  saveNow({ sellerName: v });  }} readOnly={readOnly} />
-          <EditableField label="Phone"       value={phone}       onChange={v => { setPhone(v);       saveNow({ phone: v });       }} type="tel"   readOnly={readOnly} />
-          <EditableField label="Email"       value={email}       onChange={v => { setEmail(v);       saveNow({ email: v });       }} type="email" readOnly={readOnly} />
-        </Section>
-
-        {/* Financing */}
-        <Section title="Financing" defaultOpen={false}>
-          <EditableField label="Type"     value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
-          <EditableField label="Investor" value={investor}  onChange={v => { setInvestor(v);  saveNow({ investor: v });  }} readOnly={readOnly} />
-        </Section>
-
-        {/* Closing */}
-        <Section title="Closing" defaultOpen={false}>
-          <EditableField label="Contract Date" value={contractDate}   onChange={v => { setContractDate(v);   saveNow({ contractDate: v });   }} type="date" readOnly={readOnly} />
-          <EditableField label="Close Date"    value={closeDate}      onChange={v => { setCloseDate(v);      saveNow({ closeDate: v });      }} type="date" readOnly={readOnly} />
-          <EditableField label="Attorney"      value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow({ closingAttorney: v }); }} readOnly={readOnly} />
-        </Section>
-
-        {/* Cost breakdown */}
-        <Section title="Cost Breakdown" defaultOpen={false} badge={allIn > 0 ? `$${Math.round(allIn / 1000)}k` : null}>
-          <div className="space-y-0">
-            {(COST_FIELDS || []).map(f => (
-              costs[f.key] > 0 && (
-                <div key={f.key} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-                  <span className="text-[12px] text-gray-500">{f.label}</span>
-                  <span className="text-[12px] font-semibold text-gray-700">{fmt(costs[f.key])}</span>
+        {sections
+          .filter(s => s.visible)
+          .sort((a, b) => a.order - b.order)
+          .map(s => {
+            if (s.key === 'about') return (
+              <Section key="about" title="About this deal">
+                <EditableField label="Address"     value={address}    onChange={v => { setAddress(v);    saveNow({ address: v });    }} readOnly={readOnly} />
+                <EditableField label="County"      value={county}     onChange={v => { setCounty(v);     saveNow({ county: v });     }} readOnly={readOnly} />
+                <EditableField label="State"       value={dealState}  onChange={v => { setDealState(v);  saveNow({ state: v });      }} readOnly={readOnly} />
+                <EditableField label="Zip"         value={zip}        onChange={v => { setZip(v);        saveNow({ zip: v });        }} readOnly={readOnly} />
+                <EditableField label="Parcel ID"   value={parcelId}   onChange={v => { setParcelId(v);   saveNow({ parcelId: v });   }} readOnly={readOnly} mono />
+                <EditableField label="Acreage"     value={acreage ? String(acreage) : ''} onChange={v => { setAcreage(v); saveNow({ acreage: v }); }} type="number" readOnly={readOnly} />
+                <EditableField label="ARV"         value={arv ? String(arv) : ''} onChange={v => { setArv(Number(v)); saveNow({ arv: Number(v) }); }} type="number" prefix="$" readOnly={readOnly} />
+                <EditableField label="Lead Source" value={leadSource} onChange={v => { setLeadSource(v); saveNow({ leadSource: v }); }} options={LEAD_SOURCE_OPTIONS} readOnly={readOnly} />
+                <EditableField label="Owner Type"  value={ownerType}  onChange={v => { setOwnerType(v);  saveNow({ ownerType: v });  }} options={OWNER_TYPE_OPTIONS} readOnly={readOnly} />
+                <EditableField label="Utilities"   value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'seller') return (
+              <Section key="seller" title="Seller / Owner" defaultOpen={false}>
+                <EditableField label="Owner Name"  value={ownerName}   onChange={v => { setOwnerName(v);   saveNow({ ownerName: v });   }} readOnly={readOnly} />
+                <EditableField label="Seller Name" value={sellerName}  onChange={v => { setSellerName(v);  saveNow({ sellerName: v });  }} readOnly={readOnly} />
+                <EditableField label="Phone"       value={phone}       onChange={v => { setPhone(v);       saveNow({ phone: v });       }} type="tel"   readOnly={readOnly} />
+                <EditableField label="Email"       value={email}       onChange={v => { setEmail(v);       saveNow({ email: v });       }} type="email" readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'financing') return (
+              <Section key="financing" title="Financing" defaultOpen={false}>
+                <EditableField label="Type"     value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
+                <EditableField label="Investor" value={investor}  onChange={v => { setInvestor(v);  saveNow({ investor: v });  }} readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'closing') return (
+              <Section key="closing" title="Closing" defaultOpen={false}>
+                <EditableField label="Contract Date" value={contractDate}    onChange={v => { setContractDate(v);   saveNow({ contractDate: v });   }} type="date" readOnly={readOnly} />
+                <EditableField label="Close Date"    value={closeDate}       onChange={v => { setCloseDate(v);      saveNow({ closeDate: v });      }} type="date" readOnly={readOnly} />
+                <EditableField label="Attorney"      value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow({ closingAttorney: v }); }} readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'cost_breakdown') return (
+              <Section key="cost_breakdown" title="Cost Breakdown" defaultOpen={false} badge={allIn > 0 ? `$${Math.round(allIn / 1000)}k` : null}>
+                <div className="space-y-0">
+                  {(COST_FIELDS || []).map(f => (
+                    costs[f.key] > 0 && (
+                      <div key={f.key} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
+                        <span className="text-[12px] text-gray-500">{f.label}</span>
+                        <span className="text-[12px] font-semibold text-gray-700">{fmt(costs[f.key])}</span>
+                      </div>
+                    )
+                  ))}
+                  <div className="flex items-center justify-between py-2 border-t border-gray-200 mt-1">
+                    <span className="text-[12px] font-bold text-gray-700">Total All-In</span>
+                    <span className="text-[12px] font-bold text-[#1a2332]">{fmt(allIn)}</span>
+                  </div>
+                  {arv > 0 && (
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[12px] text-gray-500">ROI</span>
+                      <span className={`text-[12px] font-semibold ${roi > 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(roi)}</span>
+                    </div>
+                  )}
                 </div>
-              )
-            ))}
-            <div className="flex items-center justify-between py-2 border-t border-gray-200 mt-1">
-              <span className="text-[12px] font-bold text-gray-700">Total All-In</span>
-              <span className="text-[12px] font-bold text-[#1a2332]">{fmt(allIn)}</span>
-            </div>
-            {arv > 0 && (
-              <div className="flex items-center justify-between py-1">
-                <span className="text-[12px] text-gray-500">ROI</span>
-                <span className={`text-[12px] font-semibold ${roi > 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(roi)}</span>
-              </div>
-            )}
-          </div>
-        </Section>
+              </Section>
+            );
+            return null;
+          })
+        }
 
         {/* Map action */}
         {!readOnly && (
