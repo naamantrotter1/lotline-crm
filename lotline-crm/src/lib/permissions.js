@@ -133,6 +133,14 @@ export const CAPABILITIES = {
   'thread.resolve':     ['owner','admin','operator'],
   'thread.archive':     ['owner','admin'],
 
+  // ── Cost Breakdown V2 ──────────────────────────────────────────────────────
+  'cost_breakdown.view_estimated':  ['owner','admin','operator','viewer'],
+  'cost_breakdown.view_actual':     ['owner','admin','operator','viewer'],
+  'cost_breakdown.edit_estimated':  ['owner','admin','operator'],
+  'cost_breakdown.edit_actual':     ['owner','admin','operator'],
+  'cost_breakdown.bulk_paste':      ['owner','admin','operator'],
+  'cost_breakdown.category_manage': ['owner','admin'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],
