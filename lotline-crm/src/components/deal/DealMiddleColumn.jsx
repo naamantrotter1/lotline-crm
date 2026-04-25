@@ -43,13 +43,22 @@ export default function DealMiddleColumn({
     <div className="h-full flex flex-col bg-[#f8f7f4] min-w-0">
       {/* Tab bar */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="flex overflow-x-auto px-2">
+        <div
+          className="flex overflow-x-auto px-2"
+          role="tablist"
+          aria-label="Deal activity sections"
+          aria-orientation="horizontal"
+        >
           {visibleTabs.map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
+                role="tab"
+                id={`deal-tab-${tab.key}`}
+                aria-selected={active}
+                aria-controls={`deal-panel-${tab.key}`}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-3 text-[12px] font-semibold border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
                   active
@@ -57,7 +66,7 @@ export default function DealMiddleColumn({
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
                 }`}
               >
-                <Icon size={13} className={active ? 'text-accent' : 'text-gray-400'} />
+                <Icon size={13} className={active ? 'text-accent' : 'text-gray-400'} aria-hidden="true" />
                 {getLabel(tab)}
               </button>
             );
@@ -67,8 +76,8 @@ export default function DealMiddleColumn({
 
       {/* Content area — self-scrolling tabs get no outer scroll/padding */}
       {selfScroll
-        ? <div className="flex-1 overflow-hidden">{children}</div>
-        : <div className="flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
+        ? <div role="tabpanel" id={`deal-panel-${activeTab}`} aria-labelledby={`deal-tab-${activeTab}`} className="flex-1 overflow-hidden">{children}</div>
+        : <div role="tabpanel" id={`deal-panel-${activeTab}`} aria-labelledby={`deal-tab-${activeTab}`} className="flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
       }
     </div>
   );

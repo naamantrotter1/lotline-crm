@@ -1,10 +1,13 @@
 /**
  * 3-column resizable layout shell for the deal detail page.
  * Uses react-resizable-panels v4. Column widths auto-persist to localStorage
- * via autoSaveId (user+deal scoped). Upgrading to Supabase persistence is PR 6.
+ * via autoSaveId (user+deal scoped).
  *
  * Default widths: left 22%, middle 52%, right 26%.
  * Collapses to mobile tab-switcher at < 1024px.
+ *
+ * headerHeight: measured dynamically by DealDetail via ResizeObserver.
+ * Falls back to 148px if not provided.
  */
 import { useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
@@ -12,19 +15,24 @@ import { useAuth } from '../../lib/AuthContext';
 
 const DEFAULT_L = 22;
 const DEFAULT_R = 26;
+// TopBar height (h-14 = 56px). Used in the calc when no dynamic measurement.
+const TOPBAR_H = 56;
 
-export default function DealPageLayout({ left, middle, right, dealId }) {
+export default function DealPageLayout({ left, middle, right, dealId, headerHeight = 148 }) {
   const { profile } = useAuth();
   const autoSaveId = `deal-layout-${profile?.id || 'anon'}-${dealId || 'x'}`;
+  // Use 100dvh (dynamic viewport units) for better mobile browser support
+  const layoutH = `calc(100dvh - ${TOPBAR_H}px - ${headerHeight}px)`;
 
   return (
     <>
       {/* Desktop: 3-column resizable */}
-      <div className="hidden lg:block" style={{ height: 'calc(100vh - 56px - 148px)', minHeight: '480px' }}>
+      <div className="hidden lg:block" style={{ height: layoutH, minHeight: '480px' }}>
         <PanelGroup
           direction="horizontal"
           autoSaveId={autoSaveId}
           style={{ height: '100%' }}
+          aria-label="Deal detail columns"
         >
           {/* Left — Information */}
           <Panel
@@ -34,6 +42,7 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
             minSize={15}
             maxSize={40}
             style={{ overflow: 'hidden', borderRight: '1px solid #e5e7eb' }}
+            aria-label="Deal information"
           >
             {left}
           </Panel>
@@ -47,6 +56,7 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
               transition: 'background 0.15s',
             }}
             className="hover:!bg-accent/40"
+            aria-label="Resize left column"
           />
 
           {/* Middle — Activity */}
@@ -56,6 +66,7 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
             defaultSize={100 - DEFAULT_L - DEFAULT_R}
             minSize={30}
             style={{ overflow: 'hidden' }}
+            aria-label="Deal activity"
           >
             {middle}
           </Panel>
@@ -69,6 +80,7 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
               transition: 'background 0.15s',
             }}
             className="hover:!bg-accent/40"
+            aria-label="Resize right column"
           />
 
           {/* Right — Associations */}
@@ -79,6 +91,7 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
             minSize={15}
             maxSize={40}
             style={{ overflow: 'hidden', borderLeft: '1px solid #e5e7eb' }}
+            aria-label="Deal associations"
           >
             {right}
           </Panel>
@@ -86,12 +99,12 @@ export default function DealPageLayout({ left, middle, right, dealId }) {
       </div>
 
       {/* Mobile (< 1024px): tab-based single column */}
-      <MobileLayout left={left} middle={middle} right={right} />
+      <MobileLayout left={left} middle={middle} right={right} layoutH={layoutH} />
     </>
   );
 }
 
-function MobileLayout({ left, middle, right }) {
+function MobileLayout({ left, middle, right, layoutH }) {
   const TABS = [
     { key: 'info',  label: 'Info'     },
     { key: 'feed',  label: 'Activity' },
@@ -101,12 +114,21 @@ function MobileLayout({ left, middle, right }) {
   const content = active === 'info' ? left : active === 'feed' ? middle : right;
 
   return (
-    <div className="flex flex-col lg:hidden" style={{ height: 'calc(100vh - 56px - 148px)', minHeight: '480px' }}>
+    <div className="flex flex-col lg:hidden" style={{ height: layoutH, minHeight: '480px' }}>
       {/* Mobile column tabs */}
-      <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
+      <div
+        className="flex border-b border-gray-200 bg-white flex-shrink-0"
+        role="tablist"
+        aria-label="Deal sections"
+        aria-orientation="horizontal"
+      >
         {TABS.map(t => (
           <button
             key={t.key}
+            role="tab"
+            id={`mobile-tab-${t.key}`}
+            aria-selected={active === t.key}
+            aria-controls={`mobile-panel-${t.key}`}
             onClick={() => setActive(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
               active === t.key ? 'border-accent text-accent' : 'border-transparent text-gray-500'
@@ -116,7 +138,12 @@ function MobileLayout({ left, middle, right }) {
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div
+        role="tabpanel"
+        id={`mobile-panel-${active}`}
+        aria-labelledby={`mobile-tab-${active}`}
+        className="flex-1 overflow-hidden"
+      >
         {content}
       </div>
     </div>

@@ -3,7 +3,7 @@
  * Renders as an absolute overlay inside the left column.
  * Uses HTML5 Drag-and-Drop API — no extra dependencies.
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, GripVertical, Eye, EyeOff, RotateCcw, Check, Loader2 } from 'lucide-react';
 
 export default function CustomizeRecordDrawer({
@@ -17,6 +17,12 @@ export default function CustomizeRecordDrawer({
   const [items, setItems] = useState(() =>
     [...sections].sort((a, b) => a.order - b.order)
   );
+  const closeBtnRef = useRef(null);
+
+  // Focus the close button when drawer opens
+  useEffect(() => {
+    closeBtnRef.current?.focus();
+  }, []);
 
   // ── Drag state ──────────────────────────────────────────────────────────────
   const dragIdx  = useRef(null);
@@ -75,16 +81,23 @@ export default function CustomizeRecordDrawer({
       />
 
       {/* Drawer panel */}
-      <div className="absolute inset-0 z-50 flex flex-col bg-white shadow-2xl overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customize-drawer-title"
+        className="absolute inset-0 z-50 flex flex-col bg-white shadow-2xl overflow-hidden"
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
           <div>
-            <p className="text-[13px] font-bold text-[#1a2332]">Customize Sections</p>
+            <p id="customize-drawer-title" className="text-[13px] font-bold text-[#1a2332]">Customize Sections</p>
             <p className="text-[11px] text-gray-400 mt-0.5">Drag to reorder · toggle eye to hide</p>
           </div>
           <button
+            ref={closeBtnRef}
             onClick={onClose}
+            aria-label="Close customize drawer"
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
             <X size={15} />

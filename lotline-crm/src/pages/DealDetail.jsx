@@ -2197,11 +2197,24 @@ function DealDetailContent({ deal }) {
   const currentStageIdx = STAGE_ORDER.indexOf(stage);
   const nextStage = STAGE_ORDER[currentStageIdx + 1];
 
+  // Dynamically measure deal header height for the 3-column layout calc
+  const dealHeaderRef = useRef(null);
+  const [dealHeaderH, setDealHeaderH] = useState(148);
+  useEffect(() => {
+    const el = dealHeaderRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setDealHeaderH(Math.round(entry.contentRect.height));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <>
     <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+      <div ref={dealHeaderRef} className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
         <div className="flex items-center gap-2 md:gap-4 overflow-x-auto">
           <button
             onClick={() => navigate(-1)}
@@ -2385,6 +2398,7 @@ function DealDetailContent({ deal }) {
       {/* 3-column HubSpot-style layout */}
       <DealPageLayout
         dealId={deal.id}
+        headerHeight={dealHeaderH}
         left={
           <DealLeftColumn
             deal={deal}

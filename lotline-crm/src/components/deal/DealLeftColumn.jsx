@@ -102,10 +102,13 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
 // ── Collapsible section ───────────────────────────────────────────────────────
 function Section({ title, defaultOpen = true, children, badge }) {
   const [open, setOpen] = useState(defaultOpen);
+  const sectionId = `section-${title.replace(/\s+/g, '-').toLowerCase()}`;
   return (
     <div className="border-b border-gray-100 last:border-0">
       <button
         onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={sectionId}
         className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50/60 transition-colors group"
       >
         <div className="flex items-center gap-2">
@@ -119,7 +122,7 @@ function Section({ title, defaultOpen = true, children, badge }) {
           : <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500" />
         }
       </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
+      {open && <div id={sectionId} className="px-4 pb-3">{children}</div>}
     </div>
   );
 }
