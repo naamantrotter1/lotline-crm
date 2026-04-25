@@ -3,15 +3,16 @@
  * "Activity" — wraps existing tab content with a clean tab bar.
  * Full unified feed + inline composer + month-grouped timeline land in PR 3.
  */
-import { LayoutGrid, FileText, Hammer, DollarSign, Layers, MessageSquare } from 'lucide-react';
+import { LayoutGrid, FileText, Hammer, DollarSign, Layers, MessageSquare, CreditCard } from 'lucide-react';
 
 const ALL_TABS = [
-  { key: 'overview',  label: 'Activity',        icon: LayoutGrid  },
-  { key: 'threads',   label: 'Threads',         icon: MessageSquare },
-  { key: 'details',   label: 'Deal Details',    icon: Layers      },
-  { key: 'dd',        label: 'Due Diligence',   icon: FileText    },
-  { key: 'dev',       label: 'Development',     icon: Hammer      },
-  { key: 'realized',  label: 'Cost Breakdown',  icon: DollarSign  },
+  { key: 'overview',   label: 'Activity',        icon: LayoutGrid   },
+  { key: 'threads',    label: 'Threads',         icon: MessageSquare },
+  { key: 'details',    label: 'Deal Details',    icon: Layers       },
+  { key: 'dd',         label: 'Due Diligence',   icon: FileText     },
+  { key: 'dev',        label: 'Development',     icon: Hammer       },
+  { key: 'realized',   label: 'Cost Breakdown',  icon: DollarSign   },
+  { key: 'financing',  label: 'Financing',       icon: CreditCard   },
 ];
 
 // Tabs that manage their own internal scroll (no outer padding/scroll wrapper)

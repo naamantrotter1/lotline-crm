@@ -1811,6 +1811,7 @@ function DealDetailContent({ deal }) {
   const [costSummary, setCostSummary] = useState(null);
   const { hasFlag } = useAuth();
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
+  const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [starred, setStarred] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
@@ -2454,7 +2455,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'threads', 'details', 'dd', 'dev', 'realized']}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'threads', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
@@ -2566,6 +2567,13 @@ function DealDetailContent({ deal }) {
           costBreakdownV2
             ? <CostBreakdownTab dealId={deal.id} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
+        )}
+        {activeTab === 'financing' && financingTabEnabled && (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-4 text-gray-300"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            <p className="text-sm font-semibold text-gray-500">Financing tab coming soon</p>
+            <p className="text-xs mt-1">Financing scenario configuration will move here.</p>
+          </div>
         )}
 
               {/* Capital & Partnerships — now inside middle column */}
