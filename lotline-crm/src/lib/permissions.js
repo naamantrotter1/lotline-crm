@@ -118,6 +118,16 @@ export const CAPABILITIES = {
   'property_data.view':     ['owner','admin','operator','viewer'],
   'property_data.pull':     ['owner','admin','operator'],
 
+  // ── Threads ────────────────────────────────────────────────────────────────
+  'thread.view':        ['owner','admin','operator','viewer'],
+  'thread.create':      ['owner','admin','operator'],
+  'thread.reply':       ['owner','admin','operator'],
+  'thread.edit_own':    ['owner','admin','operator'],
+  'thread.delete_own':  ['owner','admin','operator'],
+  'thread.delete_any':  ['owner','admin'],
+  'thread.resolve':     ['owner','admin','operator'],
+  'thread.archive':     ['owner','admin'],
+
   // ── Joint Ventures ──────────────────────────────────────
   // Hub org (LotLine Homes): propose, configure, suspend, terminate
   'joint_venture.manage':   ['owner','admin'],

@@ -21,6 +21,10 @@ import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 import FloodMap from './FloodMap';
 import CapitalStackModule from '../components/CapitalStackModule';
+import DealPageLayout from '../components/deal/DealPageLayout';
+import DealLeftColumn from '../components/deal/DealLeftColumn';
+import DealMiddleColumn from '../components/deal/DealMiddleColumn';
+import DealRightColumn from '../components/deal/DealRightColumn';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -2371,27 +2375,59 @@ function DealDetailContent({ deal }) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 md:px-6 overflow-x-auto">
-        <div className="flex gap-0 min-w-max">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab content */}
-      <div className={`p-4 md:p-6 ${fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}`}>
+      {/* 3-column HubSpot-style layout */}
+      <DealPageLayout
+        dealId={deal.id}
+        left={
+          <DealLeftColumn
+            deal={deal}
+            stage={stage} setStage={handleSetStage}
+            address={address} setAddress={setAddress}
+            county={county} setCounty={setCounty}
+            dealState={dealState} setDealState={setDealState}
+            zip={zip} setZip={setZip}
+            parcelId={parcelId} setParcelId={setParcelId}
+            acreage={acreage} setAcreage={setAcreage}
+            arv={arv} setArv={setArv}
+            costs={costs} setCosts={setCosts}
+            ownerName={ownerName} setOwnerName={setOwnerName}
+            sellerName={sellerName} setSellerName={setSellerName}
+            phone={phone} setPhone={setPhone}
+            email={email} setEmail={setEmail}
+            leadSource={leadSource} setLeadSource={setLeadSource}
+            ownerType={ownerType} setOwnerType={setOwnerType}
+            utilityScenario={utilityScenario} setUtilityScenario={setUtilityScenario}
+            homeModel={homeModel} setHomeModel={setHomeModel}
+            closingAttorney={closingAttorney} setClosingAttorney={setClosingAttorney}
+            closeDate={closeDate} setCloseDate={setCloseDate}
+            contractDate={contractDate} setContractDate={setContractDate}
+            financing={financing} setFinancing={setFinancing}
+            investor={investor} setInvestor={setInvestor}
+            netProfit={netProfit}
+            allIn={allIn}
+            roi={allIn > 0 ? ((netProfit / allIn) * 100) : 0}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
+            canEdit={canEdit}
+            stageOptions={STAGE_OPTIONS}
+            LEAD_SOURCE_OPTIONS={LEAD_SOURCE_OPTIONS}
+            OWNER_TYPE_OPTIONS={OWNER_TYPE_OPTIONS}
+            UTILITY_SCENARIO_OPTIONS={UTILITY_SCENARIO_OPTIONS}
+            FINANCING_OPTIONS={FINANCING_OPTIONS}
+            COST_FIELDS={COST_FIELDS}
+            saveNow={saveNow}
+            onOpenMapSearch={() => setShowMapModal(true)}
+            investorList={investorList}
+          />
+        }
+        middle={
+          <DealMiddleColumn
+            deal={deal}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'dd', 'dev', 'realized']}
+          >
+            <div className={fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
+      {/* Tab content — keep original rendering */}
         {activeTab === 'overview' && (
           <OverviewTab
             deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
@@ -2480,49 +2516,56 @@ function DealDetailContent({ deal }) {
         {activeTab === 'realized' && (
           <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
-      </div>
 
-      {/* Capital & Partnerships shortcuts */}
-      {!fromInvestorPortal && !isAgent && (
-        <div className="px-4 md:px-6 pb-8 pt-2">
-          <div className="border-t border-gray-200 pt-6">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Capital &amp; Partnerships</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => navigate('/lending', { state: { prefillLoan: {
-                  address: deal.address || '',
-                  purchasePrice: String(costs.land || 0),
-                  loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
-                  arv: String(arv || deal.arv || 0),
-                  loanType: 'Land + Home Package',
-                  propertyType: 'Manufactured Home',
-                  exitStrategy: 'Sell',
-                  notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
-                }}})}
-                className="flex items-center gap-2.5 px-5 py-3 bg-[#1a2332] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2332]/90 transition-colors shadow-sm"
-              >
-                <Landmark size={16} className="text-accent flex-shrink-0" />
-                Apply for Financing
-              </button>
-              <button
-                onClick={() => navigate('/lending', { state: { prefillPartner: {
-                  address: deal.address || '',
-                  arv: String(arv || deal.arv || 0),
-                  projectedProfit: String(Math.max(0, Math.round(netProfit))),
-                  dealType: 'Land + Home Package',
-                  propertyType: 'Manufactured',
-                  purchasePrice: String(costs.land || 0),
-                  repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
-                }}})}
-                className="flex items-center gap-2.5 px-5 py-3 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent/90 transition-colors shadow-sm"
-              >
-                <Handshake size={16} className="flex-shrink-0" />
-                Submit a Deal for Review
-              </button>
+              {/* Capital & Partnerships — now inside middle column */}
+              {!fromInvestorPortal && !isAgent && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Capital &amp; Partnerships</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => navigate('/lending', { state: { prefillLoan: {
+                        address: deal.address || '',
+                        purchasePrice: String(costs.land || 0),
+                        loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
+                        arv: String(arv || deal.arv || 0),
+                        loanType: 'Land + Home Package',
+                        propertyType: 'Manufactured Home',
+                        exitStrategy: 'Sell',
+                        notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
+                      }}})}
+                      className="flex items-center gap-2.5 px-5 py-3 bg-[#1a2332] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2332]/90 transition-colors shadow-sm"
+                    >
+                      <Landmark size={16} className="text-accent flex-shrink-0" />
+                      Apply for Financing
+                    </button>
+                    <button
+                      onClick={() => navigate('/lending', { state: { prefillPartner: {
+                        address: deal.address || '',
+                        arv: String(arv || deal.arv || 0),
+                        projectedProfit: String(Math.max(0, Math.round(netProfit))),
+                        dealType: 'Land + Home Package',
+                        propertyType: 'Manufactured',
+                        purchasePrice: String(costs.land || 0),
+                        repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+                      }}})}
+                      className="flex items-center gap-2.5 px-5 py-3 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent/90 transition-colors shadow-sm"
+                    >
+                      <Handshake size={16} className="flex-shrink-0" />
+                      Submit a Deal for Review
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+          </DealMiddleColumn>
+        }
+        right={
+          <DealRightColumn
+            deal={deal}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
+          />
+        }
+      />
     </div>
 
     {/* Add Investor Modal */}
