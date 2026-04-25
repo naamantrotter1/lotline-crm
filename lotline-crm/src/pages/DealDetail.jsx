@@ -961,38 +961,6 @@ function OverviewTab({
 
       </div>
 
-      {/* Right sidebar — documents — hidden for agents */}
-      {!isAgent && <div className="hidden lg:block w-64 flex-shrink-0 space-y-4">
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h3 className="text-sm font-semibold text-[#1a2332] mb-3">Project Files</h3>
-          <button className="w-full flex items-center justify-center gap-2 bg-accent text-white text-xs font-medium py-2 px-3 rounded-lg hover:bg-accent/90 transition-colors mb-3">
-            <Upload size={13} /> Upload Document
-          </button>
-          <div className="space-y-1.5">
-            {REQUIRED_DOCS.map(doc => {
-              const uploaded = (deal.id === 'deal-020' ? SWANSON_DOCS : []).find(d => d.category === doc);
-              return (
-                <div key={doc} className="flex items-start gap-2">
-                  {uploaded ? (
-                    <Check size={13} className="text-green-500 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <AlertCircle size={13} className="text-orange-400 mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <p className={`text-xs leading-tight ${uploaded ? 'text-gray-700' : 'text-gray-400'}`}>{doc}</p>
-                    {uploaded && (
-                      <p className="text-[10px] text-gray-400 truncate mt-0.5">{uploaded.file}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Auto-save indicator */}
-        <p className="text-[11px] text-gray-400 text-center">Auto-saving changes...</p>
-      </div>}
     </div>
   );
 }
