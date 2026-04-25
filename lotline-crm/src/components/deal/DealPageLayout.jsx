@@ -20,18 +20,19 @@ const TOPBAR_H = 56;
 
 export default function DealPageLayout({ left, middle, right, dealId, headerHeight = 148 }) {
   const { profile } = useAuth();
-  const autoSaveId = `deal-layout-${profile?.id || 'anon'}-${dealId || 'x'}`;
+  // v2 prefix busts the old localStorage cache that caused narrow columns
+  const autoSaveId = `deal-layout-v2-${profile?.id || 'anon'}-${dealId || 'x'}`;
   // Use 100dvh (dynamic viewport units) for better mobile browser support
   const layoutH = `calc(100dvh - ${TOPBAR_H}px - ${headerHeight}px)`;
 
   return (
     <>
       {/* Desktop: 3-column resizable */}
-      <div className="hidden lg:block" style={{ height: layoutH, minHeight: '480px' }}>
+      <div className="hidden lg:block" style={{ height: layoutH, minHeight: '480px', width: '100%' }}>
         <PanelGroup
           direction="horizontal"
           autoSaveId={autoSaveId}
-          style={{ height: '100%' }}
+          style={{ height: '100%', width: '100%' }}
           aria-label="Deal detail columns"
         >
           {/* Left — Information */}
