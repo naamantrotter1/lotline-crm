@@ -175,8 +175,8 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   const sessionRef   = useRef(null); // cached session for save
 
   // Pre-fetch all active org members as soon as orgId is known.
-  // profiles has no RLS, so query it directly by active_organization_id.
-  // memberships is queried separately for role info (best-effort).
+  // Uses /api/team/members (same endpoint as Team Settings) with a direct
+  // Supabase fallback for local dev where the API route isn't available.
   useEffect(() => {
     if (!orgId || !supabase) return;
 
@@ -185,26 +185,51 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       const { data: { session } } = await supabase.auth.getSession();
       sessionRef.current = session;
       const currentUserId = session?.user?.id;
+      const token = session?.access_token;
 
-      // Step 1: profiles — no RLS, always readable by any auth'd user
-      const { data: profiles, error: profErr } = await supabase
-        .from('profiles')
-        .select('id, name, first_name, last_name, avatar_url')
-        .eq('active_organization_id', orgId);
-
-      if (profErr) {
-        console.warn('[mentions] profile fetch error:', profErr.message);
-        return;
+      // Try the server API first — uses admin client, bypasses RLS, always correct
+      if (token) {
+        try {
+          const res = await fetch('/api/team/members', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const { members } = await res.json();
+            allMembersRef.current = (members || [])
+              .filter(m => m.user_id !== currentUserId && m.status === 'active')
+              .map(m => ({
+                id:            m.user_id,
+                name:          m.profiles?.name
+                               || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ')
+                               || 'Team member',
+                role:          m.role || 'member',
+                avatar_url:    m.profiles?.avatar_url || null,
+                is_jv_partner: false,
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name));
+            return; // done — API succeeded
+          }
+        } catch {
+          // fall through to Supabase fallback
+        }
       }
 
-      // Step 2: memberships for role — may be restricted by RLS; silently degrade
-      let roleMap = {};
+      // Fallback for local dev: memberships + profiles via direct Supabase query
       const { data: mems } = await supabase
         .from('memberships')
         .select('user_id, role')
         .eq('organization_id', orgId)
         .eq('status', 'active');
-      if (mems) roleMap = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
+
+      if (!mems?.length) return;
+
+      const memberIds = mems.map(m => m.user_id);
+      const roleMap   = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, first_name, last_name, avatar_url')
+        .in('id', memberIds);
 
       allMembersRef.current = (profiles || [])
         .filter(p => p.id !== currentUserId)
