@@ -1,102 +1,153 @@
 /**
  * 3-column resizable layout shell for the deal detail page.
- * Uses react-resizable-panels v4. Column widths auto-persist to localStorage
- * via autoSaveId (user+deal scoped).
+ * Custom drag-resize — no react-resizable-panels dependency.
  *
- * Default widths: left 22%, middle 52%, right 26%.
+ * Default widths: left 22%, middle fills, right 26%.
+ * Persists sizes to localStorage (versioned key, minSize enforced on load).
  * Collapses to mobile tab-switcher at < 1024px.
  *
  * headerHeight: measured dynamically by DealDetail via ResizeObserver.
- * Falls back to 148px if not provided.
  */
-import { useState } from 'react';
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 
-const DEFAULT_L = 22;
-const DEFAULT_R = 26;
-// TopBar height (h-14 = 56px). Used in the calc when no dynamic measurement.
+const MIN_L  = 15;   // % minimum for left column
+const MAX_L  = 40;
+const MIN_R  = 15;   // % minimum for right column
+const MAX_R  = 40;
+const MIN_M  = 30;   // % minimum for middle column
+const DEF_L  = 22;
+const DEF_R  = 26;
+const LS_VER = 'deal-col-v1';
 const TOPBAR_H = 56;
 
+function loadSizes(key) {
+  try {
+    const raw = localStorage.getItem(`${LS_VER}:${key}`);
+    if (!raw) return null;
+    const { left, right } = JSON.parse(raw);
+    if (
+      typeof left  === 'number' && left  >= MIN_L && left  <= MAX_L &&
+      typeof right === 'number' && right >= MIN_R && right <= MAX_R &&
+      (100 - left - right) >= MIN_M
+    ) {
+      return { left, right };
+    }
+  } catch {}
+  return null;
+}
+
+function saveSizes(key, left, right) {
+  try {
+    localStorage.setItem(`${LS_VER}:${key}`, JSON.stringify({ left, right }));
+  } catch {}
+}
+
+// ── Resize handle ─────────────────────────────────────────────────────────────
+function ResizeHandle({ onDragStart, side }) {
+  return (
+    <div
+      onMouseDown={e => onDragStart(e, side)}
+      aria-label={`Resize ${side} column`}
+      role="separator"
+      aria-orientation="vertical"
+      className="flex-shrink-0 w-1 cursor-col-resize bg-gray-200 hover:bg-accent/50 transition-colors active:bg-accent"
+      style={{ touchAction: 'none' }}
+    />
+  );
+}
+
+// ── Desktop 3-column layout ───────────────────────────────────────────────────
 export default function DealPageLayout({ left, middle, right, dealId, headerHeight = 148 }) {
   const { profile } = useAuth();
-  // v2 prefix busts the old localStorage cache that caused narrow columns
-  const autoSaveId = `deal-layout-v2-${profile?.id || 'anon'}-${dealId || 'x'}`;
-  // Use 100dvh (dynamic viewport units) for better mobile browser support
+  const lsKey   = `${profile?.id || 'anon'}-${dealId || 'x'}`;
   const layoutH = `calc(100dvh - ${TOPBAR_H}px - ${headerHeight}px)`;
+
+  const saved = loadSizes(lsKey);
+  const [leftPct,  setLeftPct]  = useState(saved?.left  ?? DEF_L);
+  const [rightPct, setRightPct] = useState(saved?.right ?? DEF_R);
+  const containerRef = useRef(null);
+  const dragState    = useRef(null);
+
+  // Persist whenever sizes change
+  useEffect(() => {
+    saveSizes(lsKey, leftPct, rightPct);
+  }, [lsKey, leftPct, rightPct]);
+
+  const onDragStart = useCallback((e, side) => {
+    e.preventDefault();
+    const containerW = containerRef.current?.getBoundingClientRect().width ?? 1;
+    dragState.current = { side, startX: e.clientX, startLeft: leftPct, startRight: rightPct, containerW };
+
+    const onMove = (ev) => {
+      if (!dragState.current) return;
+      const { side, startX, startLeft, startRight, containerW } = dragState.current;
+      const deltaPct = ((ev.clientX - startX) / containerW) * 100;
+
+      if (side === 'left') {
+        const newLeft = Math.max(MIN_L, Math.min(MAX_L, startLeft + deltaPct));
+        // Ensure middle doesn't get crushed
+        setLeftPct(prev => {
+          const middle = 100 - newLeft - rightPct;
+          return middle >= MIN_M ? newLeft : prev;
+        });
+      } else {
+        const newRight = Math.max(MIN_R, Math.min(MAX_R, startRight - deltaPct));
+        setRightPct(prev => {
+          const middle = 100 - leftPct - newRight;
+          return middle >= MIN_M ? newRight : prev;
+        });
+      }
+    };
+
+    const onUp = () => {
+      dragState.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [leftPct, rightPct]);
+
+  const middlePct = Math.max(MIN_M, 100 - leftPct - rightPct);
 
   return (
     <>
-      {/* Desktop: 3-column resizable */}
-      <div className="hidden lg:block" style={{ height: layoutH, minHeight: '480px', width: '100%' }}>
-        <PanelGroup
-          direction="horizontal"
-          autoSaveId={autoSaveId}
-          style={{ height: '100%', width: '100%' }}
-          aria-label="Deal detail columns"
+      {/* Desktop: 3-column drag-resize */}
+      <div
+        ref={containerRef}
+        className="hidden lg:flex flex-row"
+        style={{ height: layoutH, minHeight: '480px', width: '100%', overflow: 'hidden' }}
+        aria-label="Deal detail columns"
+      >
+        {/* Left — Information */}
+        <div
+          style={{ width: `${leftPct}%`, overflow: 'hidden', borderRight: '1px solid #e5e7eb', flexShrink: 0 }}
+          aria-label="Deal information"
         >
-          {/* Left — Information */}
-          <Panel
-            id="left"
-            order={1}
-            defaultSize={DEFAULT_L}
-            minSize={15}
-            maxSize={40}
-            style={{ overflow: 'hidden', borderRight: '1px solid #e5e7eb' }}
-            aria-label="Deal information"
-          >
-            {left}
-          </Panel>
+          {left}
+        </div>
 
-          <PanelResizeHandle
-            style={{
-              width: '4px',
-              background: '#e5e7eb',
-              cursor: 'col-resize',
-              flexShrink: 0,
-              transition: 'background 0.15s',
-            }}
-            className="hover:!bg-accent/40"
-            aria-label="Resize left column"
-          />
+        <ResizeHandle onDragStart={onDragStart} side="left" />
 
-          {/* Middle — Activity */}
-          <Panel
-            id="middle"
-            order={2}
-            defaultSize={100 - DEFAULT_L - DEFAULT_R}
-            minSize={30}
-            style={{ overflow: 'hidden' }}
-            aria-label="Deal activity"
-          >
-            {middle}
-          </Panel>
+        {/* Middle — Activity */}
+        <div
+          style={{ flex: 1, overflow: 'hidden', minWidth: `${MIN_M}%` }}
+          aria-label="Deal activity"
+        >
+          {middle}
+        </div>
 
-          <PanelResizeHandle
-            style={{
-              width: '4px',
-              background: '#e5e7eb',
-              cursor: 'col-resize',
-              flexShrink: 0,
-              transition: 'background 0.15s',
-            }}
-            className="hover:!bg-accent/40"
-            aria-label="Resize right column"
-          />
+        <ResizeHandle onDragStart={onDragStart} side="right" />
 
-          {/* Right — Associations */}
-          <Panel
-            id="right"
-            order={3}
-            defaultSize={DEFAULT_R}
-            minSize={15}
-            maxSize={40}
-            style={{ overflow: 'hidden', borderLeft: '1px solid #e5e7eb' }}
-            aria-label="Deal associations"
-          >
-            {right}
-          </Panel>
-        </PanelGroup>
+        {/* Right — Associations */}
+        <div
+          style={{ width: `${rightPct}%`, overflow: 'hidden', borderLeft: '1px solid #e5e7eb', flexShrink: 0 }}
+          aria-label="Deal associations"
+        >
+          {right}
+        </div>
       </div>
 
       {/* Mobile (< 1024px): tab-based single column */}
@@ -116,7 +167,6 @@ function MobileLayout({ left, middle, right, layoutH }) {
 
   return (
     <div className="flex flex-col lg:hidden" style={{ height: layoutH, minHeight: '480px' }}>
-      {/* Mobile column tabs */}
       <div
         className="flex border-b border-gray-200 bg-white flex-shrink-0"
         role="tablist"
