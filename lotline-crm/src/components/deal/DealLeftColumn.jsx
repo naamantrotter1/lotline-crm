@@ -445,8 +445,7 @@ export default function DealLeftColumn({
             );
             if (s.key === 'financing') return (
               <Section key="financing" title="Financing" defaultOpen={false}>
-                <EditableField label="Type"     value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
-                <EditableField label="Investor" value={investor}  onChange={v => { setInvestor(v);  saveNow({ investor: v });  }} readOnly={readOnly} />
+                <EditableField label="Type" value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
               </Section>
             );
             if (s.key === 'closing') return (
