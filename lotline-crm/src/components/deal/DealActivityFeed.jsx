@@ -180,28 +180,31 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       sessionRef.current = session;
       const currentUserId = session?.user?.id;
 
-      // Fetch memberships + profiles in parallel
-      const [{ data: mems }, { data: profiles }] = await Promise.all([
-        supabase
-          .from('memberships')
-          .select('user_id, role')
-          .eq('organization_id', orgId)
-          .eq('status', 'active'),
-        supabase
-          .from('profiles')
-          .select('id, name, first_name, last_name, avatar_url')
-          .eq('active_organization_id', orgId),
-      ]);
+      // Step 1: get active org members
+      const { data: mems } = await supabase
+        .from('memberships')
+        .select('user_id, role')
+        .eq('organization_id', orgId)
+        .eq('status', 'active');
 
-      const roleMap = Object.fromEntries((mems || []).map(m => [m.user_id, m.role]));
+      if (!mems?.length) return;
+
+      const memberIds = mems.map(m => m.user_id);
+      const roleMap   = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
+
+      // Step 2: fetch profiles by user ID (not by active_organization_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, first_name, last_name, avatar_url')
+        .in('id', memberIds);
 
       allMembersRef.current = (profiles || [])
-        .filter(p => p.id !== currentUserId && roleMap[p.id]) // active members only, exclude self
+        .filter(p => p.id !== currentUserId)
         .map(p => ({
-          id:           p.id,
-          name:         p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
-          role:         roleMap[p.id] || 'viewer',
-          avatar_url:   p.avatar_url || null,
+          id:            p.id,
+          name:          p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
+          role:          roleMap[p.id] || 'viewer',
+          avatar_url:    p.avatar_url || null,
           is_jv_partner: false,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
