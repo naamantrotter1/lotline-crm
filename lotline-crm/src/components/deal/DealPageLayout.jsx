@@ -18,7 +18,7 @@ const MAX_R    = 40;
 const MIN_M    = 30;
 const DEF_L    = 17;   // default left %
 const DEF_R    = 16;   // default right %
-const LS_KEY   = 'deal-col-v2';  // versioned key — v2 avoids any old cache
+const LS_KEY   = 'deal-col-v3';  // versioned key — v3 resets to new smaller defaults
 const TOPBAR_H = 56;
 
 function loadSizes(key) {
