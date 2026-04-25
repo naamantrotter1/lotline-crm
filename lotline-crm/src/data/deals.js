@@ -1,27 +1,36 @@
-export function calcNetProfit(deal) {
-  const totalCosts =
-    (deal.land || 0) +
-    (deal.mobileHome || 0) +
-    (deal.hudEngineer || 0) +
-    (deal.percTest || 0) +
-    (deal.survey || 0) +
-    (deal.footers || 0) +
-    (deal.setup || 0) +
-    (deal.clearLand || 0) +
-    (deal.water || 0) +
-    (deal.septic || 0) +
-    (deal.electric || 0) +
-    (deal.hvac || 0) +
-    (deal.underpinning || 0) +
-    (deal.decks || 0) +
-    (deal.driveway || 0) +
-    (deal.landscaping || 0) +
-    (deal.waterSewer || 0) +
-    (deal.mailbox || 0) +
-    (deal.gutters || 0) +
-    (deal.photos || 0) +
-    (deal.mobileTax || 0) +
-    (deal.staging || 0);
+/**
+ * Calculate net profit for a deal.
+ *
+ * When costBreakdownV2 is enabled and actual cost data is available,
+ * pass totalActualOverride (= deal_cost_summary_view.total_actual).
+ * When not provided, falls back to legacy column sum (pre-migration behavior,
+ * or when the feature flag is off — guaranteed identical math).
+ */
+export function calcNetProfit(deal, totalActualOverride) {
+  const totalCosts = totalActualOverride != null
+    ? totalActualOverride
+    : (deal.land || 0) +
+      (deal.mobileHome || 0) +
+      (deal.hudEngineer || 0) +
+      (deal.percTest || 0) +
+      (deal.survey || 0) +
+      (deal.footers || 0) +
+      (deal.setup || 0) +
+      (deal.clearLand || 0) +
+      (deal.water || 0) +
+      (deal.septic || 0) +
+      (deal.electric || 0) +
+      (deal.hvac || 0) +
+      (deal.underpinning || 0) +
+      (deal.decks || 0) +
+      (deal.driveway || 0) +
+      (deal.landscaping || 0) +
+      (deal.waterSewer || 0) +
+      (deal.mailbox || 0) +
+      (deal.gutters || 0) +
+      (deal.photos || 0) +
+      (deal.mobileTax || 0) +
+      (deal.staging || 0);
 
   const arv = deal.arv || 0;
 
