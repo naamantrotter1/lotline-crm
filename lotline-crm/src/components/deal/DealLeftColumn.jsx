@@ -446,10 +446,6 @@ export default function DealLeftColumn({
             if (s.key === 'financing') return (
               <Section key="financing" title="Financing" defaultOpen={false}>
                 <EditableField label="Type" value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
-              </Section>
-            );
-            if (s.key === 'closing') return (
-              <Section key="closing" title="Closing" defaultOpen={false}>
                 {/* Investor — custom row with + Add Investor button */}
                 <div className="py-1.5 border-b border-gray-50">
                   <div className="flex items-center justify-between mb-0.5">
@@ -473,6 +469,10 @@ export default function DealLeftColumn({
                     </select>
                   )}
                 </div>
+              </Section>
+            );
+            if (s.key === 'closing') return (
+              <Section key="closing" title="Closing" defaultOpen={false}>
                 <EditableField label="Attorney"      value={closingAttorney}        onChange={v => { setClosingAttorney(v);        saveNow({ closingAttorney: v });        }} readOnly={readOnly} />
                 <EditableField label="Atty Phone"    value={closingAttorneyPhone}   onChange={v => { setClosingAttorneyPhone(v);   saveNow({ closingAttorneyPhone: v });   }} type="tel" readOnly={readOnly} />
                 <EditableField label="Atty Address"  value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
