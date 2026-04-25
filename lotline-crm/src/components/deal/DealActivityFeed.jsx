@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { parseMentionSegments, buildMentionToken } from '../../lib/mentions';
+import { parseMentionSegments, buildMentionToken, extractMentions, validateMentions } from '../../lib/mentions';
 import MentionChip from './MentionChip';
 
 // ── Event type config ─────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ function getInitials(name) {
 
 // ── MentionAutocomplete popover ────────────────────────────────────────────────
 // Positioned relative to the composer textarea.
-function MentionAutocomplete({ results, selectedIdx, onSelect, loading }) {
+function MentionAutocomplete({ results, selectedIdx, onSelect }) {
   if (!results) return null;
   return (
     <div className="
@@ -80,9 +80,7 @@ function MentionAutocomplete({ results, selectedIdx, onSelect, loading }) {
       bg-white rounded-xl shadow-xl border border-gray-100
       overflow-hidden
     " style={{ top: '100%' }}>
-      {loading ? (
-        <p className="text-[12px] text-gray-400 px-3 py-2">Searching…</p>
-      ) : results.length === 0 ? (
+      {results.length === 0 ? (
         <p className="text-[12px] text-gray-400 px-3 py-2">No teammates found</p>
       ) : (
         <ul>
@@ -162,48 +160,64 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   const [error,  setError]  = useState(null);
 
   // Mention autocomplete state
-  const [mentionQuery,  setMentionQuery]  = useState(null);  // null = closed
-  const [mentionStart,  setMentionStart]  = useState(-1);
+  const [mentionQuery,   setMentionQuery]   = useState(null); // null = closed
+  const [mentionStart,   setMentionStart]   = useState(-1);
   const [mentionResults, setMentionResults] = useState([]);
-  const [mentionLoading, setMentionLoading] = useState(false);
-  const [mentionIdx,    setMentionIdx]    = useState(0);
+  const [mentionIdx,     setMentionIdx]     = useState(0);
 
-  const textRef    = useRef(null);
-  const debounceRef = useRef(null);
-  const tokenRef   = useRef(null); // stores the current bearer token
+  const textRef      = useRef(null);
+  const allMembersRef = useRef([]); // cached full list — filtered client-side
+  const sessionRef   = useRef(null); // cached session for save
 
-  // Fetch and cache the bearer token once the composer opens
+  // On open: pre-fetch all active org members from Supabase directly.
+  // Filtering is done client-side on every keystroke — no per-keystroke API calls.
   useEffect(() => {
-    if (!open) return;
-    supabase?.auth.getSession().then(({ data }) => {
-      tokenRef.current = data.session?.access_token ?? null;
-    });
-  }, [open]);
+    if (!open || !orgId || !supabase) return;
 
-  // Search teammates via the API (debounced 150 ms)
+    (async () => {
+      // Cache session for save
+      const { data: { session } } = await supabase.auth.getSession();
+      sessionRef.current = session;
+      const currentUserId = session?.user?.id;
+
+      // Fetch memberships + profiles in parallel
+      const [{ data: mems }, { data: profiles }] = await Promise.all([
+        supabase
+          .from('memberships')
+          .select('user_id, role')
+          .eq('organization_id', orgId)
+          .eq('status', 'active'),
+        supabase
+          .from('profiles')
+          .select('id, name, first_name, last_name, avatar_url')
+          .eq('active_organization_id', orgId),
+      ]);
+
+      const roleMap = Object.fromEntries((mems || []).map(m => [m.user_id, m.role]));
+
+      allMembersRef.current = (profiles || [])
+        .filter(p => p.id !== currentUserId && roleMap[p.id]) // active members only, exclude self
+        .map(p => ({
+          id:           p.id,
+          name:         p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
+          role:         roleMap[p.id] || 'viewer',
+          avatar_url:   p.avatar_url || null,
+          is_jv_partner: false,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    })();
+  }, [open, orgId]);
+
+  // Filter the cached member list client-side — instant, no debounce needed
   const searchTeammates = useCallback((q) => {
-    clearTimeout(debounceRef.current);
-    setMentionLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const qs = new URLSearchParams({ q, ...(dealId ? { deal_id: dealId } : {}) });
-        const res = await fetch(`/api/team/search?${qs}`, {
-          headers: tokenRef.current
-            ? { Authorization: `Bearer ${tokenRef.current}` }
-            : {},
-        });
-        if (res.ok) {
-          const { members } = await res.json();
-          setMentionResults(members || []);
-        }
-      } catch {
-        setMentionResults([]);
-      } finally {
-        setMentionLoading(false);
-        setMentionIdx(0);
-      }
-    }, 150);
-  }, [dealId]);
+    const all = allMembersRef.current;
+    const ql  = q.trim().toLowerCase();
+    const filtered = ql
+      ? all.filter(m => m.name.toLowerCase().includes(ql))
+      : all;
+    setMentionResults(filtered.slice(0, 10));
+    setMentionIdx(0);
+  }, []);
 
   // Parse textarea input for @ trigger
   const handleChange = (e) => {
@@ -230,8 +244,8 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       return;
     }
 
-    setMentionQuery(fragment);
     setMentionStart(atIdx);
+    setMentionQuery(fragment);
     searchTeammates(fragment);
   };
 
@@ -286,24 +300,78 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
     setError(null);
 
     try {
-      const token = tokenRef.current;
-      if (!token) throw new Error('Not authenticated');
+      // Refresh session if needed
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      const authorId = session.user.id;
 
-      const res = await fetch('/api/activity/notes', {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization:  `Bearer ${token}`,
-        },
-        body: JSON.stringify({ deal_id: dealId, body: text.trim() }),
-      });
+      const body = text.trim();
 
-      if (!res.ok) {
-        const { error: e } = await res.json().catch(() => ({}));
-        throw new Error(e || 'Save failed');
+      // Extract + validate mentions
+      const extracted = extractMentions(body);
+      const { valid: validMentionedIds } = extracted.length
+        ? await validateMentions(extracted, orgId)
+        : { valid: [] };
+
+      // Insert into activity_notes
+      const { data: note, error: noteErr } = await supabase
+        .from('activity_notes')
+        .insert({
+          organization_id:    orgId,
+          deal_id:            dealId,
+          author_id:          authorId,
+          body,
+          mentioned_user_ids: validMentionedIds,
+        })
+        .select('id, author_id, body, mentioned_user_ids, created_at')
+        .single();
+
+      if (noteErr) throw new Error(noteErr.message);
+
+      // Fan out mentions rows + notifications (non-blocking, best-effort)
+      const notifyIds = validMentionedIds.filter(uid => uid !== authorId);
+      if (notifyIds.length > 0) {
+        const authorName =
+          allMembersRef.current.find(m => m.id === authorId)?.name ||
+          currentUser ||
+          'Someone';
+
+        // Check mutes for all notifyIds
+        const { data: mutes } = await supabase
+          .from('deal_notification_mutes')
+          .select('user_id')
+          .eq('deal_id', dealId)
+          .in('user_id', notifyIds);
+
+        const mutedSet = new Set((mutes || []).map(m => m.user_id));
+
+        await Promise.all(notifyIds.map(async (uid) => {
+          // Always write the mention row
+          await supabase.from('mentions').insert({
+            org_id:               orgId,
+            mentioned_user_id:    uid,
+            mentioned_by_user_id: authorId,
+            target_type:          'activity_note',
+            target_id:            note.id,
+            deal_id:              dealId,
+          }).catch(e => console.warn('mention insert', e));
+
+          // Skip in-app notification if muted
+          if (mutedSet.has(uid)) return;
+
+          const preview = body.replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/gi, '@$1').slice(0, 140);
+          await supabase.from('notifications').insert({
+            organization_id: orgId,
+            user_id:         uid,
+            type:            'mention.deal_activity',
+            title:           `${authorName} mentioned you`,
+            body:            `"${preview}"`,
+            entity_type:     'activity_note',
+            entity_id:       note.id,
+          }).catch(e => console.warn('notification insert', e));
+        }));
       }
 
-      const { note } = await res.json();
       setText('');
       setOpen(false);
       onSaved(note);
@@ -349,7 +417,6 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
             <MentionAutocomplete
               results={mentionResults}
               selectedIdx={mentionIdx}
-              loading={mentionLoading}
               onSelect={insertMention}
             />
           </div>
