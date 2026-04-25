@@ -8,16 +8,36 @@
  *
  * headerHeight: measured dynamically by DealDetail via ResizeObserver.
  */
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useAuth } from '../../lib/AuthContext';
 
-const MIN_L  = 15;   // % minimum for left column
-const MAX_L  = 40;
-const MIN_R  = 15;   // % minimum for right column
-const MAX_R  = 40;
-const MIN_M  = 30;   // % minimum for middle column
-const DEF_L  = 22;   // default left %
-const DEF_R  = 26;   // default right %
+const MIN_L    = 15;
+const MAX_L    = 40;
+const MIN_R    = 15;
+const MAX_R    = 40;
+const MIN_M    = 30;
+const DEF_L    = 22;   // default left %
+const DEF_R    = 26;   // default right %
+const LS_KEY   = 'deal-col-v2';  // versioned key — v2 avoids any old cache
 const TOPBAR_H = 56;
+
+function loadSizes(key) {
+  try {
+    const raw = localStorage.getItem(`${LS_KEY}:${key}`);
+    if (!raw) return null;
+    const { left, right } = JSON.parse(raw);
+    if (
+      typeof left  === 'number' && left  >= MIN_L && left  <= MAX_L &&
+      typeof right === 'number' && right >= MIN_R && right <= MAX_R &&
+      (100 - left - right) >= MIN_M
+    ) return { left, right };
+  } catch {}
+  return null;
+}
+
+function saveSizes(key, left, right) {
+  try { localStorage.setItem(`${LS_KEY}:${key}`, JSON.stringify({ left, right })); } catch {}
+}
 
 // ── Resize handle ─────────────────────────────────────────────────────────────
 function ResizeHandle({ onDragStart, side }) {
@@ -35,13 +55,19 @@ function ResizeHandle({ onDragStart, side }) {
 
 // ── Desktop 3-column layout ───────────────────────────────────────────────────
 export default function DealPageLayout({ left, middle, right, dealId, headerHeight = 148 }) {
+  const { profile } = useAuth();
+  const lsKey   = `${profile?.id || 'anon'}-${dealId || 'x'}`;
   const layoutH = `calc(100dvh - ${TOPBAR_H}px - ${headerHeight}px)`;
 
-  // Always start at 22/52/26% — no localStorage persistence
-  const [leftPct,  setLeftPct]  = useState(DEF_L);
-  const [rightPct, setRightPct] = useState(DEF_R);
+  // Default 22/52/26%; restore saved sizes if the user previously resized
+  const saved = loadSizes(lsKey);
+  const [leftPct,  setLeftPct]  = useState(saved?.left  ?? DEF_L);
+  const [rightPct, setRightPct] = useState(saved?.right ?? DEF_R);
   const containerRef = useRef(null);
   const dragState    = useRef(null);
+
+  // Persist after each resize
+  useEffect(() => { saveSizes(lsKey, leftPct, rightPct); }, [lsKey, leftPct, rightPct]);
 
   const onDragStart = useCallback((e, side) => {
     e.preventDefault();
