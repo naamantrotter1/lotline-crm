@@ -140,6 +140,18 @@ const STAGE_COLORS = {
   'Complete':            'bg-green-50 text-green-700 border-green-200',
 };
 
+// Default stage probabilities (overridden by org settings from stage_probabilities table)
+const DEFAULT_PROBABILITIES = {
+  'New Lead':            5,
+  'Underwriting':        15,
+  'Negotiating':         30,
+  'Waiting on Contract': 50,
+  'Contract Signed':     75,
+  'Due Diligence':       80,
+  'Development':         90,
+  'Complete':            100,
+};
+
 // ── Note compose mini modal ───────────────────────────────────────────────────
 function NoteComposer({ dealId, onClose }) {
   const [text, setText] = useState('');
@@ -211,13 +223,15 @@ export default function DealLeftColumn({
   onSendEmail,
   onScheduleMeeting,
 }) {
-  const [showNote, setShowNote]     = useState(false);
+  const [showNote, setShowNote]         = useState(false);
   const [stageEditing, setStageEditing] = useState(false);
+  const [stageProbability, setStageProbability] = useState(null);
 
   const fmt    = n => n == null || isNaN(n) ? '—' : `$${Math.round(n).toLocaleString()}`;
   const fmtPct = n => n == null || isNaN(n) ? '—' : `${Math.round(n)}%`;
 
   const stageBadge = STAGE_COLORS[stage] || 'bg-gray-100 text-gray-600 border-gray-200';
+  const probability = stageProbability ?? DEFAULT_PROBABILITIES[stage] ?? 0;
 
   return (
     <div className="h-full overflow-y-auto bg-white flex flex-col text-sm">
@@ -252,9 +266,26 @@ export default function DealLeftColumn({
           }
         </div>
         {/* Location sub-line */}
-        <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap">
+        <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap mt-0.5">
           {county && <span className="flex items-center gap-0.5"><MapPin size={10} />{county}{dealState ? `, ${dealState}` : ''}</span>}
           {acreage && <span className="flex items-center gap-0.5"><Layers size={10} />{acreage} ac</span>}
+        </div>
+
+        {/* Win probability bar */}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Win Probability</span>
+            <span className="text-[11px] font-bold text-gray-600">{probability}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${probability}%`,
+                background: probability >= 75 ? '#22c55e' : probability >= 40 ? '#f59e0b' : '#6b7280',
+              }}
+            />
+          </div>
         </div>
       </div>
 

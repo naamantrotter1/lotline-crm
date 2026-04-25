@@ -118,6 +118,11 @@ export const CAPABILITIES = {
   'property_data.view':     ['owner','admin','operator','viewer'],
   'property_data.pull':     ['owner','admin','operator'],
 
+  // ── Pipeline / Stage ───────────────────────────────────────────────────────
+  'pipeline.view':            ['owner','admin','operator','viewer'],
+  'pipeline.configure':       ['owner','admin'],
+  'stage_probability.edit':   ['owner','admin'],
+
   // ── Threads ────────────────────────────────────────────────────────────────
   'thread.view':        ['owner','admin','operator','viewer'],
   'thread.create':      ['owner','admin','operator'],
