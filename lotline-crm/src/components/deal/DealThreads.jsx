@@ -503,11 +503,12 @@ export default function DealThreads({ deal, readOnly }) {
   const loadThreadsRef = useRef(loadThreads);
   useEffect(() => { loadThreadsRef.current = loadThreads; }, [loadThreads]);
 
-  // Realtime — only re-subscribe when deal.id changes, not on every render.
+  // Realtime — use a unique channel name each mount so we never try to add
+  // listeners to an already-subscribed channel (Supabase reuses channels by name).
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const ch = supabase
-      .channel(`deal-threads-${deal.id}`)
+      .channel(`deal-threads-${deal.id}-${Date.now()}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'deal_threads',
         filter: `deal_id=eq.${deal.id}`,
