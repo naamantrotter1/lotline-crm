@@ -446,28 +446,28 @@ export default function DealLeftColumn({
             if (s.key === 'financing') return (
               <Section key="financing" title="Financing" defaultOpen={false}>
                 <EditableField label="Type" value={financing} onChange={v => { setFinancing(v); saveNow({ financing: v }); }} options={FINANCING_OPTIONS} readOnly={readOnly} />
-                {/* Investor — custom row with + Add Investor button */}
-                <div className="py-1.5 border-b border-gray-50">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[11px] text-gray-400 font-medium">Investor</span>
+                {/* Investor — inline row matching EditableField layout */}
+                <div className="py-1.5 flex items-center border-b border-gray-50">
+                  <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0">Investor</span>
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    {readOnly ? (
+                      <span className="text-[13px] font-medium text-gray-800">{investor || <span className="text-gray-300">—</span>}</span>
+                    ) : (
+                      <select
+                        value={investor}
+                        onChange={e => { setInvestor(e.target.value); saveNow({ investor: e.target.value }); }}
+                        className="flex-1 min-w-0 text-[13px] font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
+                      >
+                        <option value="">— Select —</option>
+                        {(investorList || []).map(inv => (
+                          <option key={inv.id} value={inv.name}>{inv.name}</option>
+                        ))}
+                      </select>
+                    )}
                     {!readOnly && onAddInvestor && (
-                      <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-medium">+ Add</button>
+                      <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-medium flex-shrink-0">+ Add</button>
                     )}
                   </div>
-                  {readOnly ? (
-                    <p className="text-[13px] font-medium text-gray-800">{investor || <span className="text-gray-300">—</span>}</p>
-                  ) : (
-                    <select
-                      value={investor}
-                      onChange={e => { setInvestor(e.target.value); saveNow({ investor: e.target.value }); }}
-                      className="w-full text-[13px] font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
-                    >
-                      <option value="">— Select investor —</option>
-                      {(investorList || []).map(inv => (
-                        <option key={inv.id} value={inv.name}>{inv.name}</option>
-                      ))}
-                    </select>
-                  )}
                 </div>
               </Section>
             );
