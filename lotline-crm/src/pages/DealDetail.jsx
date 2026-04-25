@@ -2584,6 +2584,7 @@ function DealDetailContent({ deal }) {
           <DealRightColumn
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
+            onCreateTask={() => setShowCreateTask(true)}
           />
         }
       />
