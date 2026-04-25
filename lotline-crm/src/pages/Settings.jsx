@@ -727,7 +727,7 @@ export default function Settings() {
   const rawTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
   const initialTab = VALID_TABS.includes(rawTab) ? rawTab : 'profile';
   const [tab, setTab] = useState(initialTab);
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, refreshProfile, session } = useAuth();
 
   // Profile tab state
   const [firstName,   setFirstName]   = useState('');
@@ -767,6 +767,8 @@ export default function Settings() {
       showToast('Failed to save: ' + (error.message || error), 'error');
     } else {
       showToast('Profile updated successfully.');
+      // Re-fetch profile so auth context (and Team tab) reflects new name immediately
+      if (session?.user?.id) refreshProfile(session.user.id);
     }
     setSaving(false);
   };

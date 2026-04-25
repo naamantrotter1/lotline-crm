@@ -440,7 +440,16 @@ export default function TeamSettings() {
             <tbody className="divide-y divide-gray-50">
               {members.map(member => {
                 const isMe  = member.user_id === myId || member.profiles?.id === myId;
-                const prof  = member.profiles || {};
+                // For the current user, prefer live auth context profile over stale API data
+                const apiProf = member.profiles || {};
+                const prof = isMe ? {
+                  ...apiProf,
+                  name:       profile?.name       || apiProf.name,
+                  first_name: profile?.first_name || apiProf.first_name,
+                  last_name:  profile?.last_name  || apiProf.last_name,
+                  email:      profile?.email      || apiProf.email,
+                  avatar_url: profile?.avatar_url || apiProf.avatar_url,
+                } : apiProf;
                 return (
                   <tr key={member.id} className={`hover:bg-gray-50/50 transition-colors ${member.status === 'disabled' ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3.5">
