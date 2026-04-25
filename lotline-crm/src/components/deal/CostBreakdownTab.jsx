@@ -10,7 +10,18 @@
  * On mobile (<1024px): stacks vertically.
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CheckCircle2, Filter, ClipboardList } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+
+// Keys hidden from the cost breakdown UI
+const HIDDEN_KEYS = new Set([
+  'environmental_permits',
+  'environmental_permits.construction_authorization',
+  'environmental_permits.improvement_permit',
+  'environmental_permits.well_permit',
+  'gutters',
+  'professional_photos',
+  'staging',
+]);
 import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import {
@@ -116,15 +127,6 @@ function DiffCell({ line }) {
   );
 }
 
-// ── Column header strip ───────────────────────────────────────────────────────
-
-const FILTERS = [
-  { key: 'all',           label: 'All'            },
-  { key: 'overridden',    label: 'Overridden'     },
-  { key: 'mirrored',     label: 'Mirrored'        },
-  { key: 'has_notes',    label: 'Has Notes'       },
-];
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function CostBreakdownTab({ dealId }) {
@@ -136,7 +138,6 @@ export default function CostBreakdownTab({ dealId }) {
 
   const [lines,   setLines]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter,  setFilter]  = useState('all');
 
   const loadLines = useCallback(async () => {
     setLoading(true);
@@ -174,20 +175,12 @@ export default function CostBreakdownTab({ dealId }) {
     await resetActualToMirror(lineId);
   }, []);
 
-  // ── Filter ──────────────────────────────────────────────────────────────────
-  const filteredLines = lines.filter(l => {
-    if (filter === 'overridden') return l.actual_overridden;
-    if (filter === 'mirrored')  return !l.actual_overridden;
-    if (filter === 'has_notes') return !!l.notes;
-    return true;
-  });
+  const visibleLines = lines.filter(l => !HIDDEN_KEYS.has(l.category_key));
+  const grouped = groupLines(visibleLines);
 
-  const grouped = groupLines(filteredLines);
-
-  const totalEst = computeTotalEstimated(lines);
-  const totalAct = computeTotalActual(lines);
+  const totalEst = computeTotalEstimated(visibleLines);
+  const totalAct = computeTotalActual(visibleLines);
   const totalDiff = totalAct - totalEst;
-  const overrideCount = lines.filter(l => l.actual_overridden).length;
 
   if (loading) {
     return (
@@ -215,32 +208,6 @@ export default function CostBreakdownTab({ dealId }) {
 
   return (
     <div className="h-full flex flex-col">
-
-      {/* ── Filter strip ─────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-white">
-        <Filter size={12} className="text-gray-400" />
-        <div className="flex gap-1">
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${
-                filter === f.key
-                  ? 'bg-accent text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <div className="ml-auto text-[11px] text-gray-400">
-          {overrideCount > 0
-            ? <span title={`${overrideCount} manually-entered actuals out of ${lines.length} line items`}
-                    className="text-green-600 font-semibold">{overrideCount} override{overrideCount !== 1 ? 's' : ''}</span>
-            : 'No overrides'}
-        </div>
-      </div>
 
       {/* ── Desktop 3-column grid / Mobile stacked ───────────────────────── */}
       <div className="flex-1 overflow-y-auto">
@@ -408,11 +375,11 @@ export default function CostBreakdownTab({ dealId }) {
           </div>
 
           {/* Difference summary (non-zero only) */}
-          {lines.some(l => l.actual_overridden) && (
+          {visibleLines.some(l => l.actual_overridden) && (
             <div>
               <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Differences</h4>
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                {lines.filter(l => l.actual_overridden && resolveDifference(l) !== 0).map(l => {
+                {visibleLines.filter(l => l.actual_overridden && resolveDifference(l) !== 0).map(l => {
                   const diff = resolveDifference(l);
                   return (
                     <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-between">
