@@ -498,7 +498,12 @@ export default function DealThreads({ deal, readOnly }) {
 
   useEffect(() => { loadThreads(); }, [loadThreads]);
 
-  // Realtime
+  // Keep a stable ref to loadThreads so the Realtime effect never needs to
+  // re-subscribe just because loadThreads was recreated by useCallback.
+  const loadThreadsRef = useRef(loadThreads);
+  useEffect(() => { loadThreadsRef.current = loadThreads; }, [loadThreads]);
+
+  // Realtime — only re-subscribe when deal.id changes, not on every render.
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const ch = supabase
@@ -506,10 +511,10 @@ export default function DealThreads({ deal, readOnly }) {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'deal_threads',
         filter: `deal_id=eq.${deal.id}`,
-      }, loadThreads)
+      }, () => loadThreadsRef.current())
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, [deal?.id, loadThreads]);
+  }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createThread = async () => {
     if (!supabase || !newTitle.trim() || !activeOrgId) return;
