@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Settings2, TrendingUp, TrendingDown,
+  CalendarPlus, Layers, Settings2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -19,7 +19,6 @@ const DEFAULT_SECTIONS = [
   { key: 'seller',         label: 'Seller / Owner',  visible: true, order: 1 },
   { key: 'financing',      label: 'Financing',       visible: true, order: 2 },
   { key: 'closing',        label: 'Closing',         visible: true, order: 3 },
-  { key: 'cost_breakdown', label: 'Cost Breakdown',  visible: true, order: 4 },
 ];
 
 // ── Inline editable field ─────────────────────────────────────────────────────
@@ -249,8 +248,7 @@ export default function DealLeftColumn({
   netProfit,
   allIn,
   roi,
-  costSummary,
-  onViewCostBreakdown,
+
   readOnly,
   canEdit,
   stageOptions,
@@ -454,86 +452,6 @@ export default function DealLeftColumn({
                 <EditableField label="Attorney"      value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow({ closingAttorney: v }); }} readOnly={readOnly} />
               </Section>
             );
-            if (s.key === 'cost_breakdown') {
-              // When cost summary is available (flag on), show a compact card.
-              // When flag is off / summary not yet loaded, fall through to legacy view.
-              if (costSummary) {
-                const est  = Number(costSummary.total_estimated ?? allIn ?? 0);
-                const act  = Number(costSummary.total_actual   ?? allIn ?? 0);
-                const diff = act - est;
-                const overrides = Number(costSummary.override_count ?? 0);
-                return (
-                  <Section key="cost_breakdown" title="Cost Breakdown" defaultOpen={false}
-                    badge={act > 0 ? `$${Math.round(act / 1000)}k` : null}>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between py-1 border-b border-gray-50">
-                        <span className="text-[11px] text-gray-400">Total Estimated</span>
-                        <span className="text-[12px] font-semibold text-gray-700">{fmt(est)}</span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-gray-50">
-                        <span className="text-[11px] text-gray-400">Total Actual</span>
-                        <span className="text-[12px] font-bold text-[#1a2332]">{fmt(act)}</span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-gray-50">
-                        <span className="text-[11px] text-gray-400">Difference</span>
-                        <span className={`text-[12px] font-semibold flex items-center gap-0.5 ${
-                          diff < 0 ? 'text-green-600' : diff > 0 ? 'text-red-500' : 'text-gray-400'
-                        }`}>
-                          {diff < 0 && <TrendingDown size={11} />}
-                          {diff > 0 && <TrendingUp  size={11} />}
-                          {diff === 0 ? '—' : `${diff > 0 ? '+' : '−'}$${Math.abs(Math.round(diff)).toLocaleString()}`}
-                        </span>
-                      </div>
-                      {overrides > 0 && (
-                        <div className="flex items-center justify-between py-0.5">
-                          <span className="text-[11px] text-gray-400">Overrides</span>
-                          <span className="text-[11px] font-semibold text-green-600">{overrides}</span>
-                        </div>
-                      )}
-                      {arv > 0 && (
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-[12px] text-gray-500">ROI</span>
-                          <span className={`text-[12px] font-semibold ${roi > 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(roi)}</span>
-                        </div>
-                      )}
-                      {onViewCostBreakdown && (
-                        <button
-                          onClick={onViewCostBreakdown}
-                          className="w-full text-center text-[11px] text-accent font-semibold py-1.5 rounded-lg hover:bg-accent/5 transition-colors mt-1"
-                        >
-                          View Cost Breakdown →
-                        </button>
-                      )}
-                    </div>
-                  </Section>
-                );
-              }
-              // Legacy view (flag off or summary not loaded)
-              return (
-                <Section key="cost_breakdown" title="Cost Breakdown" defaultOpen={false} badge={allIn > 0 ? `$${Math.round(allIn / 1000)}k` : null}>
-                  <div className="space-y-0">
-                    {(COST_FIELDS || []).map(f => (
-                      costs[f.key] > 0 && (
-                        <div key={f.key} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-                          <span className="text-[12px] text-gray-500">{f.label}</span>
-                          <span className="text-[12px] font-semibold text-gray-700">{fmt(costs[f.key])}</span>
-                        </div>
-                      )
-                    ))}
-                    <div className="flex items-center justify-between py-2 border-t border-gray-200 mt-1">
-                      <span className="text-[12px] font-bold text-gray-700">Total All-In</span>
-                      <span className="text-[12px] font-bold text-[#1a2332]">{fmt(allIn)}</span>
-                    </div>
-                    {arv > 0 && (
-                      <div className="flex items-center justify-between py-1">
-                        <span className="text-[12px] text-gray-500">ROI</span>
-                        <span className={`text-[12px] font-semibold ${roi > 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(roi)}</span>
-                      </div>
-                    )}
-                  </div>
-                </Section>
-              );
-            }
             return null;
           })
         }
