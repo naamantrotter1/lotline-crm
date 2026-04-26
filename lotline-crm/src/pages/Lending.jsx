@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import {
   Landmark, Handshake, Clock, CheckCircle, XCircle,
   AlertCircle, MessageSquare, Send, X, ChevronRight,
+  Layers, Plus,
 } from 'lucide-react';
 import Button from '../components/UI/Button';
+import { fetchPooledLoans, createPooledLoan, monthlyInterest } from '../lib/pooledLoanData';
 
 // ── Storage ────────────────────────────────────────────────────────────────
 const loanKey    = (orgId) => orgId ? `lending_requests_${orgId}`        : 'lending_requests';
@@ -135,12 +137,35 @@ function Drawer({ open, onClose, title, children }) {
   );
 }
 
+const fmt$ = (n) => n == null ? '—' : `$${Number(n).toLocaleString()}`;
+
+// ── New Pooled Loan form ───────────────────────────────────────────────────
+const EMPTY_POOLED = {
+  name: '', lender_name: '', lender_contact_name: '', lender_contact_email: '',
+  lender_contact_phone: '', total_pool: '', interest_rate_pct: '', term_months: '12',
+  start_date: '', maturity_date: '', profit_participation_pct: '', notes: '',
+};
+
 // ══════════════════════════════════════════════════════════════════════════
 export default function Lending() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { activeOrgId, orgSlug } = useAuth();
-  const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership'
+  const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership' | 'pooled'
   const [activeTab, setActiveTab] = useState('loans');
+
+  // Pooled loans state
+  const [pooledLoans, setPooledLoans] = useState([]);
+  const [pooledForm, setPooledForm] = useState(EMPTY_POOLED);
+  const [pooledSaving, setPooledSaving] = useState(false);
+
+  const loadPooledLoans = useCallback(async () => {
+    if (!activeOrgId) return;
+    const data = await fetchPooledLoans(activeOrgId);
+    setPooledLoans(data);
+  }, [activeOrgId]);
+
+  useEffect(() => { loadPooledLoans(); }, [loadPooledLoans]);
 
   // Loan request state
   const [loanForm, setLoanForm]     = useState(EMPTY_LOAN);
@@ -246,6 +271,34 @@ export default function Lending() {
     setDrawer(null);
     setLoanConfirm(null);
     setPartnerConfirm(null);
+    setPooledForm(EMPTY_POOLED);
+  };
+
+  const handlePooledSubmit = async (e) => {
+    e.preventDefault();
+    if (!activeOrgId) return;
+    setPooledSaving(true);
+    const { data, error } = await createPooledLoan(activeOrgId, {
+      name: pooledForm.name,
+      lender_name: pooledForm.lender_name || null,
+      lender_contact_name: pooledForm.lender_contact_name || null,
+      lender_contact_email: pooledForm.lender_contact_email || null,
+      lender_contact_phone: pooledForm.lender_contact_phone || null,
+      total_pool: parseFloat(pooledForm.total_pool) || 0,
+      interest_rate: (parseFloat(pooledForm.interest_rate_pct) || 0) / 100,
+      term_months: parseInt(pooledForm.term_months) || 12,
+      start_date: pooledForm.start_date || null,
+      maturity_date: pooledForm.maturity_date || null,
+      profit_participation_pct: parseFloat(pooledForm.profit_participation_pct) || 0,
+      notes: pooledForm.notes || null,
+    });
+    setPooledSaving(false);
+    if (!error && data) {
+      await loadPooledLoans();
+      setActiveTab('pooled');
+      closeDrawer();
+      navigate(`/lending/pooled-loans/${data.id}`);
+    }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -258,7 +311,7 @@ export default function Lending() {
       </div>
 
       {/* Option cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1 — Financing */}
         <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -286,6 +339,20 @@ export default function Lending() {
             Submit a Deal for Review <ChevronRight size={14} className="ml-1" />
           </Button>
         </div>
+
+        {/* Card 3 — Pooled Loan */}
+        <div className="bg-card rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
+          <div className="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center">
+            <Layers size={22} className="text-purple-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-sidebar mb-1">Pooled Loan</h3>
+            <p className="text-sm text-gray-500 leading-relaxed">Create a single loan agreement linked across multiple deals simultaneously.</p>
+          </div>
+          <Button onClick={() => setDrawer('pooled')} className="mt-auto self-start">
+            <Plus size={14} className="mr-1" /> New Pooled Loan
+          </Button>
+        </div>
       </div>
 
       {/* Submission history */}
@@ -295,6 +362,7 @@ export default function Lending() {
           {[
             { key: 'loans',        label: 'My Loan Requests',         count: loanRequests.length },
             { key: 'partnerships', label: 'My Partnership Submissions', count: partnerships.length },
+            { key: 'pooled',       label: 'Pooled Loans',             count: pooledLoans.length },
           ].map(t => (
             <button
               key={t.key}
@@ -374,7 +442,118 @@ export default function Lending() {
             </div>
           )
         )}
+
+        {/* Pooled loans table */}
+        {activeTab === 'pooled' && (
+          pooledLoans.length === 0 ? (
+            <div className="py-14 text-center text-gray-400 text-sm">
+              <Layers size={28} className="mx-auto mb-2 text-gray-300" />
+              No pooled loans yet. Click "New Pooled Loan" above to create one.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {['Loan Name', 'Lender', 'Pool Size', 'Rate', 'Monthly Interest', 'Start Date', 'Term'].map(h => (
+                      <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pooledLoans.map(loan => (
+                    <tr
+                      key={loan.id}
+                      onClick={() => navigate(`/lending/pooled-loans/${loan.id}`)}
+                      className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    >
+                      <td className="py-3 px-4 text-sm font-semibold text-accent whitespace-nowrap">{loan.name}</td>
+                      <td className="py-3 px-4 text-sm text-gray-700 whitespace-nowrap">{loan.lender_name || '—'}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-sidebar whitespace-nowrap">{fmt$(loan.total_pool)}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{((loan.interest_rate || 0) * 100).toFixed(2)}%</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{fmt$(monthlyInterest(loan))}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">{loan.start_date || '—'}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">{loan.term_months ? `${loan.term_months} mo` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
       </div>
+
+      {/* ── Pooled Loan Drawer ───────────────────────────────────────────── */}
+      <Drawer open={drawer === 'pooled'} onClose={closeDrawer} title="New Pooled Loan">
+        <form onSubmit={handlePooledSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
+            <SectionHeading>Loan Identity</SectionHeading>
+            <Field label="Loan Name">
+              <input required className={inp} placeholder="e.g. Atium Build Group Loan #1" value={pooledForm.name} onChange={e => setPooledForm(p => ({ ...p, name: e.target.value }))} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Lender / Investor">
+                <input className={inp} placeholder="Atium Build Group LLC" value={pooledForm.lender_name} onChange={e => setPooledForm(p => ({ ...p, lender_name: e.target.value }))} />
+              </Field>
+              <Field label="Contact Name">
+                <input className={inp} placeholder="Bryton Smith" value={pooledForm.lender_contact_name} onChange={e => setPooledForm(p => ({ ...p, lender_contact_name: e.target.value }))} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Contact Email">
+                <input type="email" className={inp} placeholder="bryton@example.com" value={pooledForm.lender_contact_email} onChange={e => setPooledForm(p => ({ ...p, lender_contact_email: e.target.value }))} />
+              </Field>
+              <Field label="Contact Phone">
+                <input className={inp} placeholder="(555) 000-0000" value={pooledForm.lender_contact_phone} onChange={e => setPooledForm(p => ({ ...p, lender_contact_phone: e.target.value }))} />
+              </Field>
+            </div>
+
+            <SectionHeading>Loan Terms</SectionHeading>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Total Pool ($)">
+                <input required type="number" min="0" className={inp} placeholder="500000" value={pooledForm.total_pool} onChange={e => setPooledForm(p => ({ ...p, total_pool: e.target.value }))} />
+              </Field>
+              <Field label="Annual Interest Rate (%)">
+                <input required type="number" min="0" step="0.01" className={inp} placeholder="13" value={pooledForm.interest_rate_pct} onChange={e => setPooledForm(p => ({ ...p, interest_rate_pct: e.target.value }))} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Term (months)">
+                <input type="number" min="1" className={inp} placeholder="12" value={pooledForm.term_months} onChange={e => setPooledForm(p => ({ ...p, term_months: e.target.value }))} />
+              </Field>
+              <Field label="Profit Participation (%)">
+                <input type="number" min="0" step="0.1" className={inp} placeholder="10" value={pooledForm.profit_participation_pct} onChange={e => setPooledForm(p => ({ ...p, profit_participation_pct: e.target.value }))} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start Date">
+                <input type="date" className={inp} value={pooledForm.start_date} onChange={e => setPooledForm(p => ({ ...p, start_date: e.target.value }))} />
+              </Field>
+              <Field label="Maturity Date">
+                <input type="date" className={inp} value={pooledForm.maturity_date} onChange={e => setPooledForm(p => ({ ...p, maturity_date: e.target.value }))} />
+              </Field>
+            </div>
+            {pooledForm.total_pool && pooledForm.interest_rate_pct && (
+              <div className="rounded-lg bg-purple-50 border border-purple-100 px-4 py-3 text-sm">
+                <p className="font-semibold text-purple-700 mb-1">Preview</p>
+                <p className="text-purple-600">
+                  Monthly interest: <strong>${((parseFloat(pooledForm.total_pool) || 0) * (parseFloat(pooledForm.interest_rate_pct) || 0) / 100 / 12).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+                  {' '}· Annual: <strong>${((parseFloat(pooledForm.total_pool) || 0) * (parseFloat(pooledForm.interest_rate_pct) || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+                </p>
+                <p className="text-purple-500 text-xs mt-1">Interest calculated on the full pool amount.</p>
+              </div>
+            )}
+            <Field label="Notes" hint="optional">
+              <textarea rows={3} className={inp + ' resize-none'} placeholder="Loan terms, draw conditions, notes..." value={pooledForm.notes} onChange={e => setPooledForm(p => ({ ...p, notes: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+            <Button type="submit" disabled={pooledSaving} className="w-full justify-center">
+              <Plus size={14} className="mr-1.5" /> {pooledSaving ? 'Creating…' : 'Create Pooled Loan'}
+            </Button>
+          </div>
+        </form>
+      </Drawer>
 
       {/* ── Financing Drawer ─────────────────────────────────────────────── */}
       <Drawer open={drawer === 'financing'} onClose={closeDrawer} title="Request Financing">
