@@ -289,6 +289,7 @@ function ThreadView({ thread, orgMembers, currentUser, onResolve, onBack }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading]   = useState(true);
   const bottomRef               = useRef(null);
+  const instanceId              = useRef(Math.random().toString(36).slice(2));
   const { activeOrgId }         = useAuth();
 
   const loadMessages = useCallback(async () => {
@@ -316,7 +317,7 @@ function ThreadView({ thread, orgMembers, currentUser, onResolve, onBack }) {
   useEffect(() => {
     if (!supabase || !thread?.id) return;
     const channel = supabase
-      .channel(`thread-${thread.id}`)
+      .channel(`thread-${thread.id}-${instanceId.current}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -454,6 +455,7 @@ function ThreadListItem({ thread, onOpen }) {
 export default function DealThreads({ deal, readOnly }) {
   const { profile, activeOrgId } = useAuth();
   const { can } = usePermissions();
+  const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const [threads,    setThreads]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -508,7 +510,7 @@ export default function DealThreads({ deal, readOnly }) {
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const ch = supabase
-      .channel(`deal-threads-${deal.id}-${Date.now()}`)
+      .channel(`deal-threads-${deal.id}-${instanceId.current}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'deal_threads',
         filter: `deal_id=eq.${deal.id}`,
