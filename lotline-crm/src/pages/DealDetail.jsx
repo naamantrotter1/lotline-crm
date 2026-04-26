@@ -254,6 +254,7 @@ function FinancingScenarioPanel({
   // Investor Assignment
   investor, setInvestor,
   investorList,
+  onAddInvestor,
   investorCapitalContributed, setInvestorCapitalContributed,
   investorEquityPct, setInvestorEquityPct,
   projectedPayoutDate, setProjectedPayoutDate,
@@ -608,7 +609,14 @@ function FinancingScenarioPanel({
           <p className="text-[10px] text-gray-400 mb-3">Assign an investor to this deal. Once assigned, this deal will appear in their Investor Portal with the numbers below.</p>
           <div className="grid grid-cols-2 gap-x-6">
             <div className="py-2 col-span-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
+                {!readOnly && (
+                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
+                    + Add New Investor
+                  </button>
+                )}
+              </div>
               <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
                 {(investorList || []).map(inv => (
@@ -2884,6 +2892,7 @@ function DealDetailContent({ deal }) {
             cashSource={cashSource} setCashSource={setCashSource}
             investor={investor} setInvestor={setInvestor}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
+            onAddInvestor={() => setShowAddInvestor(true)}
             investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
             investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
             projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
