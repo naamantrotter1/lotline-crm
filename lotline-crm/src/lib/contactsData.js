@@ -125,12 +125,12 @@ export async function updateContact(id, { types, ...fields }) {
   return { data: await fetchContact(id) };
 }
 
-/** Soft-delete a contact. */
+/** Delete a contact (hard delete — cascades to contact_types, contact_deals). */
 export async function deleteContact(id) {
   if (!supabase) return { error: 'No Supabase client' };
   const { error } = await supabase
     .from('contacts')
-    .update({ deleted_at: new Date().toISOString() })
+    .delete()
     .eq('id', id);
   return error ? { error: error.message } : { ok: true };
 }
