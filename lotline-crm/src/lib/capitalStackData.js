@@ -33,49 +33,85 @@ function guard(data, error, fallback = []) {
 
 /**
  * When an investor is assigned to a deal, ensure they also exist as a Contact
- * with type='Investor'. If the investor already has a contact_id, does nothing.
+ * with type='Investor'. Checks for an existing contact by name first to avoid
+ * duplicates. If the investor record exists in Supabase, links them via contact_id.
  * Fire-and-forget: call without awaiting so it never blocks the UI.
  */
 export async function ensureInvestorContact(investorName, orgId) {
   if (!supabase || !investorName || !orgId) return;
 
-  const { data: inv } = await supabase
-    .from('investors')
-    .select('id, name, email, phone, contact, contact_id')
-    .eq('organization_id', orgId)
-    .eq('name', investorName)
-    .maybeSingle();
-
-  if (!inv) return;           // investor not in DB yet
-  if (inv.contact_id) return; // already linked to a contact
-
-  // Decide company vs person based on common corporate keywords
   const isCompany = /LLC|Inc\.?|Corp\.?|Capital|Group|Partners|Holdings|Realty|Properties|Investments/i.test(investorName);
   const parts = investorName.trim().split(/\s+/);
   const firstName = parts[0] || investorName;
   const lastName  = isCompany ? '' : parts.slice(1).join(' ');
+  const fullNameLower = investorName.trim().toLowerCase();
 
-  const { data: contact } = await supabase
+  // 1. Check if a contact with this name already exists
+  const { data: existing } = await supabase
     .from('contacts')
-    .insert({
-      organization_id: orgId,
-      first_name: firstName,
-      last_name:  lastName,
-      company:    isCompany ? investorName : (inv.contact || null),
-      email:      inv.email || null,
-      phone:      inv.phone || null,
-    })
     .select('id')
-    .single();
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .ilike('first_name', isCompany ? firstName : firstName)
+    .maybeSingle();
 
-  if (!contact) return;
+  // Broader check: find by full name match across first+last
+  const { data: allContacts } = await supabase
+    .from('contacts')
+    .select('id, first_name, last_name, company')
+    .eq('organization_id', orgId)
+    .is('deleted_at', null);
 
+  const matchedContact = (allContacts || []).find(c => {
+    const full = `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase();
+    const comp = (c.company || '').toLowerCase();
+    return full === fullNameLower || comp === fullNameLower;
+  });
+
+  let contactId = matchedContact?.id;
+
+  // 2. If no existing contact, create one
+  if (!contactId) {
+    // Look up investor record in Supabase to get email/phone (optional enrichment)
+    const { data: inv } = await supabase
+      .from('investors')
+      .select('id, email, phone, contact, contact_id')
+      .eq('organization_id', orgId)
+      .eq('name', investorName)
+      .maybeSingle();
+
+    // If investor already has a linked contact, use it
+    if (inv?.contact_id) {
+      contactId = inv.contact_id;
+    } else {
+      const { data: newContact } = await supabase
+        .from('contacts')
+        .insert({
+          organization_id: orgId,
+          first_name: firstName,
+          last_name:  lastName,
+          company:    isCompany ? investorName : (inv?.contact || null),
+          email:      inv?.email || null,
+          phone:      inv?.phone || null,
+        })
+        .select('id')
+        .single();
+
+      if (!newContact) return;
+      contactId = newContact.id;
+
+      // Link investor record back to contact if it exists
+      if (inv) {
+        await supabase.from('investors')
+          .update({ contact_id: contactId })
+          .eq('id', inv.id);
+      }
+    }
+  }
+
+  // 3. Ensure contact has type='Investor'
   await supabase.from('contact_types')
-    .upsert({ contact_id: contact.id, type: 'Investor' }, { onConflict: 'contact_id,type' });
-
-  await supabase.from('investors')
-    .update({ contact_id: contact.id })
-    .eq('id', inv.id);
+    .upsert({ contact_id: contactId, type: 'Investor' }, { onConflict: 'contact_id,type' });
 }
 
 /**
