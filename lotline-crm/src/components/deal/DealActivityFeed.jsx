@@ -628,6 +628,10 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   const { profile, activeOrgId, hasFlag } = useAuth();
   const mentionsEnabled = hasFlag('deal_activity.mentions.enabled');
 
+  // Stable unique ID per component instance — prevents channel-name collisions when
+  // DealPageLayout mounts this component twice (desktop + mobile) in the same tick.
+  const instanceId = useRef(Math.random().toString(36).slice(2));
+
   const [dbNotes,  setDbNotes]  = useState([]);
   const [legacyNotes, setLegacyNotes] = useState([]);
   const [events,   setEvents]   = useState([]);
@@ -695,7 +699,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const ch = supabase
-      .channel(`activity-notes-${deal.id}-${Date.now()}`)
+      .channel(`activity-notes-${deal.id}-${instanceId.current}`)
       .on('postgres_changes', {
         event:  'INSERT',
         schema: 'public',

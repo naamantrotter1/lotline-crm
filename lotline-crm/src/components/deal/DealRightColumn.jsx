@@ -2,13 +2,13 @@
  * Right column of the HubSpot-style deal detail layout.
  * "Association" — loads real data for tasks, contacts, e-sign, capital stack, distributions.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, UserCircle, FileText, CheckSquare, Scale,
   TrendingDown, ChevronDown, ChevronRight, Plus,
   ExternalLink, Circle, CheckCircle2, Clock, AlertCircle,
-  Mail, Phone, MapPin,
+  Mail, Phone, MapPin, Upload, Trash2, Download,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -94,6 +94,9 @@ function Avatar({ name, size = 'sm' }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+const DOC_CATEGORIES = ['Contract', 'Title Report', 'Survey', 'Inspection', 'Plat Map', 'Photos', 'Other'];
+const STORAGE_BUCKET = 'deal-documents';
+
 export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const navigate  = useNavigate();
   const { activeOrgId } = useAuth();
@@ -103,6 +106,11 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const [envelopes,   setEnvelopes]   = useState([]);
   const [allocations, setAllocations] = useState([]);
   const [loading,     setLoading]     = useState(true);
+
+  const [documents,    setDocuments]    = useState([]);
+  const [docCategory,  setDocCategory]  = useState('Other');
+  const [docUploading, setDocUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!deal?.id) return;
@@ -137,12 +145,23 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
             .order('created_at', { ascending: false })
             .then(({ data }) => data || [])
         : Promise.resolve([]),
-    ]).then(([t, c, e, a]) => {
+
+      // Deal documents
+      supabase
+        ? supabase
+            .from('deal_documents')
+            .select('*')
+            .eq('deal_id', deal.id)
+            .order('created_at', { ascending: false })
+            .then(({ data }) => data || [])
+        : Promise.resolve([]),
+    ]).then(([t, c, e, a, docs]) => {
       if (cancelled) return;
       setTasks(t);
       setContacts(c);
       setEnvelopes(e);
       setAllocations(a);
+      setDocuments(docs);
       setLoading(false);
     });
 
@@ -151,6 +170,32 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
 
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
   const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString()}`;
+
+  const handleDocUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !supabase) return;
+    setDocUploading(true);
+    const path = `${deal.id}/${Date.now()}_${file.name}`;
+    const { error: storageErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file);
+    if (!storageErr) {
+      const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      const { data: newDoc } = await supabase
+        .from('deal_documents')
+        .insert({ deal_id: deal.id, organization_id: activeOrgId, name: file.name, category: docCategory, storage_path: path, url: publicUrl, size: file.size })
+        .select('*')
+        .single();
+      if (newDoc) setDocuments(prev => [newDoc, ...prev]);
+    }
+    setDocUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDocDelete = async (doc) => {
+    if (!supabase) return;
+    await supabase.storage.from(STORAGE_BUCKET).remove([doc.storage_path]);
+    await supabase.from('deal_documents').delete().eq('id', doc.id);
+    setDocuments(prev => prev.filter(d => d.id !== doc.id));
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-white flex flex-col">
@@ -302,11 +347,66 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
           }
         </Section>
 
-        {/* Documents quick links */}
-        <Section icon={FileText} title="Documents">
+        {/* Documents */}
+        <Section
+          icon={FileText}
+          title="Documents"
+          count={documents.length}
+          defaultOpen={documents.length > 0}
+        >
+          {!readOnly && (
+            <div className="flex items-center gap-2 mb-3">
+              <select
+                value={docCategory}
+                onChange={e => setDocCategory(e.target.value)}
+                className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/40 flex-1 min-w-0"
+              >
+                {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={docUploading}
+                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex-shrink-0"
+              >
+                <Upload size={11} />
+                {docUploading ? 'Uploading…' : 'Upload'}
+              </button>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
+            </div>
+          )}
+          {documents.length > 0
+            ? documents.map(doc => (
+              <div key={doc.id} className="flex items-center gap-2 py-1.5 group">
+                <FileText size={12} className="text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] text-gray-700 truncate leading-tight">{doc.name}</p>
+                  <span className="text-[10px] text-gray-400">{doc.category}</span>
+                </div>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1 text-gray-300 hover:text-accent transition-colors flex-shrink-0"
+                  title="Download"
+                >
+                  <Download size={11} />
+                </a>
+                {!readOnly && (
+                  <button
+                    onClick={() => handleDocDelete(doc)}
+                    className="p-1 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                    title="Delete"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
+            ))
+            : <p className="text-[12px] text-gray-300 italic">No documents uploaded</p>
+          }
           <button
             onClick={() => navigate(`/deal/${deal.id}`, { state: { tab: 'dd' } })}
-            className="text-[12px] text-accent hover:underline"
+            className="text-[11px] text-accent hover:underline mt-2 block"
           >
             View DD documents →
           </button>

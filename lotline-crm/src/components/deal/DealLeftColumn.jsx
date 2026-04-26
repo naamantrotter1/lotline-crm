@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Settings2,
+  CalendarPlus, Layers, Settings2, Landmark, Handshake,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -267,6 +267,8 @@ export default function DealLeftColumn({
   onLogCall,
   onSendEmail,
   onScheduleMeeting,
+  onApplyFinancing,
+  onSubmitDeal,
 }) {
   const { profile, activeOrgId } = useAuth();
   const [showNote, setShowNote]         = useState(false);
@@ -307,7 +309,6 @@ export default function DealLeftColumn({
   const fmtPct = n => n == null || isNaN(n) ? '—' : `${Math.round(n)}%`;
 
   const stageBadge = STAGE_COLORS[stage] || 'bg-gray-100 text-gray-600 border-gray-200';
-  const probability = stageProbability ?? DEFAULT_PROBABILITIES[stage] ?? 0;
 
   return (
     <div className="h-full overflow-y-auto bg-white flex flex-col text-sm relative">
@@ -368,22 +369,6 @@ export default function DealLeftColumn({
           {acreage && <span className="flex items-center gap-0.5"><Layers size={10} />{acreage} ac</span>}
         </div>
 
-        {/* Win probability bar */}
-        <div className="mt-2.5">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Win Probability</span>
-            <span className="text-[11px] font-bold text-gray-600">{probability}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${probability}%`,
-                background: probability >= 75 ? '#22c55e' : probability >= 40 ? '#f59e0b' : '#6b7280',
-              }}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Quick stats bar */}
@@ -493,6 +478,30 @@ export default function DealLeftColumn({
             >
               <MapPin size={12} /> View on Map
             </button>
+          </div>
+        )}
+
+        {/* Capital & Partnerships */}
+        {(onApplyFinancing || onSubmitDeal) && (
+          <div className="px-4 py-3 border-t border-gray-100 flex flex-col gap-2 mt-auto">
+            {onApplyFinancing && (
+              <button
+                onClick={onApplyFinancing}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1a2332] text-white text-xs font-semibold rounded-xl hover:bg-[#1a2332]/90 transition-colors"
+              >
+                <Landmark size={13} className="text-accent flex-shrink-0" />
+                Apply for Financing
+              </button>
+            )}
+            {onSubmitDeal && (
+              <button
+                onClick={onSubmitDeal}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white text-xs font-semibold rounded-xl hover:bg-accent/90 transition-colors"
+              >
+                <Handshake size={13} className="flex-shrink-0" />
+                Submit a Deal for Review
+              </button>
+            )}
           </div>
         )}
 
