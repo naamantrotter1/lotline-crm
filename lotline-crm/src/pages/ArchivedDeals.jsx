@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Archive, XCircle } from 'lucide-react';
 import { useDeals } from '../lib/DealsContext';
 
@@ -18,6 +19,7 @@ function StatusBadge({ deal }) {
 }
 
 function DealsTable({ deals }) {
+  const navigate = useNavigate();
   if (deals.length === 0) {
     return (
       <div className="bg-card rounded-xl shadow-sm p-8 text-center text-gray-400">
@@ -41,7 +43,7 @@ function DealsTable({ deals }) {
         </thead>
         <tbody>
           {deals.map((deal) => (
-            <tr key={deal.id} className={`border-b border-gray-100 hover:bg-white/50 transition-colors ${deal.deadDeal ? 'bg-red-50/30' : ''}`}>
+            <tr key={deal.id} onClick={() => navigate(`/deal/${deal.id}`)} className={`border-b border-gray-100 hover:bg-white/50 transition-colors cursor-pointer ${deal.deadDeal ? 'bg-red-50/30' : ''}`}>
               <td className="py-3 px-4 text-sm text-gray-800">{deal.address}</td>
               <td className="py-3 px-4"><StatusBadge deal={deal} /></td>
               <td className="py-3 px-4">
