@@ -30,6 +30,7 @@ import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import SmsThread from '../components/Sms/SmsThread';
 import CallHistory from '../components/Voice/CallHistory';
 import { supabase } from '../lib/supabase';
+import { loadInvestors, saveInvestors } from '../lib/investorsStore';
 import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
 import { isEnabled } from '../lib/featureFlags';
 
@@ -128,7 +129,7 @@ function TimelineEntry({ icon: Icon, color, title, sub, time }) {
 export default function ContactDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { activeOrgId } = useAuth();
+  const { activeOrgId, orgSlug } = useAuth();
   const { can } = usePermissions();
   const { deals: allDeals } = useDeals();
 
@@ -187,6 +188,13 @@ export default function ContactDetail() {
   const handleDelete = async () => {
     if (!window.confirm(`Delete ${contact?.fullName}? This cannot be undone.`)) return;
     await deleteContact(id);
+    // If this contact was an Investor, remove them from the localStorage investor list
+    if (contact?.types?.includes('Investor') && activeOrgId) {
+      const investorName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company || '';
+      const all = loadInvestors(activeOrgId, orgSlug);
+      const filtered = all.filter(inv => inv.name !== investorName);
+      if (filtered.length !== all.length) saveInvestors(filtered, activeOrgId);
+    }
     navigate('/contacts');
   };
 
