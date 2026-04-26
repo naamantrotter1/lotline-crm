@@ -4,6 +4,38 @@
  */
 import { supabase } from './supabase';
 
+const ADV_SELECT = [
+  'id', 'stage', 'pipeline', 'arv', 'lead_source',
+  'is_archived', 'archived_at', 'created_at', 'contract_signed_at',
+  'investor', 'investor_capital_contributed', 'projected_irr',
+].join(', ');
+
+/**
+ * Fetch richer deal data for the advanced analytics sections.
+ * Returns { allDeals, investors }.
+ * allDeals = active deals (created in window) + archived deals (archived in window).
+ */
+export async function fetchAdvancedReportsData(orgId, since = null) {
+  if (!supabase || !orgId) return { allDeals: [], investors: [] };
+
+  let aq = supabase.from('deals').select(ADV_SELECT)
+    .eq('organization_id', orgId).eq('is_archived', false);
+  if (since) aq = aq.gte('created_at', since);
+
+  let rq = supabase.from('deals').select(ADV_SELECT)
+    .eq('organization_id', orgId).eq('is_archived', true);
+  if (since) rq = rq.gte('archived_at', since);
+
+  const iq = supabase.from('investors').select('id, name')
+    .eq('organization_id', orgId).order('name');
+
+  const [{ data: active }, { data: archived }, { data: investors }] = await Promise.all([aq, rq, iq]);
+  return {
+    allDeals:  [...(active || []), ...(archived || [])],
+    investors: investors || [],
+  };
+}
+
 /** Fetch all deals, contacts, and tasks for the org, optionally filtered by a start date. */
 export async function fetchReportsData(orgId, since = null) {
   if (!supabase || !orgId) return { deals: [], contacts: [], tasks: [] };
