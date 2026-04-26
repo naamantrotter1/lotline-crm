@@ -7,18 +7,33 @@ import { supabase } from './supabase';
 const SELECT_FIELDS = `
   id, organization_id, first_name, last_name, email, phone, secondary_phone,
   company, title, address, lead_source, owner_user_id, tags, custom_fields,
-  lifecycle_stage, do_not_contact, notes, last_contacted_at,
+  lifecycle_stage, do_not_contact, notes, last_contacted_at, states_serviced,
   created_at, updated_at,
   contact_types(type),
   contact_deals(deal_id, role)
 `.trim();
 
+function toStr(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'string') return v || null;
+  return null; // drop JSONB objects stored in text-like fields
+}
+
 function mapRow(r) {
   return {
     ...r,
-    types:       (r.contact_types || []).map(t => t.type),
+    // Normalize fields that should be strings but may be stored as JSONB {}
+    first_name: toStr(r.first_name),
+    last_name:  toStr(r.last_name),
+    email:      toStr(r.email),
+    phone:      toStr(r.phone),
+    company:    toStr(r.company),
+    title:      toStr(r.title),
+    address:    toStr(r.address),
+    notes:      toStr(r.notes),
+    types:       (r.contact_types || []).map(t => t.type).filter(t => typeof t === 'string'),
     linkedDeals: (r.contact_deals  || []),
-    fullName:    [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email || 'Unnamed',
+    fullName:    [r.first_name, r.last_name].filter(v => typeof v === 'string' && v).join(' ') || toStr(r.email) || 'Unnamed',
   };
 }
 

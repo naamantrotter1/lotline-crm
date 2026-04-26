@@ -68,9 +68,9 @@ export default async function handler(req, res) {
   if (firstName !== undefined || lastName !== undefined) {
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
     const profileUpdates = {};
-    if (firstName !== undefined) profileUpdates.first_name = firstName.trim();
-    if (lastName  !== undefined) profileUpdates.last_name  = lastName.trim();
-    if (fullName)                profileUpdates.name       = fullName;
+    // Only update `name` — first_name/last_name columns may not exist in all environments.
+    // The migration 050 adds them; until then, name is the single source of truth.
+    if (fullName) profileUpdates.name = fullName;
 
     const { error: profErr } = await adminClient
       .from('profiles')

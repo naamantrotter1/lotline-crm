@@ -173,7 +173,7 @@ function DevTaskCard({ deal, column, onUpdate }) {
 
   return (
     <div
-      onClick={() => navigate(`/deal/${deal.id}`)}
+      onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })}
       className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 mb-2 cursor-pointer hover:shadow-md transition-all"
     >
       {/* Address */}

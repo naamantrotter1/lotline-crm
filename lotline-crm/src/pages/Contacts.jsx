@@ -12,6 +12,7 @@ import {
 } from '../lib/contactsData';
 import CreateContactModal from '../components/Contacts/CreateContactModal';
 import ImportModal from '../components/Import/ImportModal';
+import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 
 const LIFECYCLE_COLORS = {
   new:       'bg-blue-50 text-blue-700 border-blue-200',
@@ -52,7 +53,7 @@ function initials(c) {
 }
 
 // ── Contact Row (Table View) ──────────────────────────────────────────────────
-function ContactRow({ contact, onDelete, canDelete }) {
+function ContactRow({ contact, onDelete, canDelete, onEmail }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -81,10 +82,10 @@ function ContactRow({ contact, onDelete, canDelete }) {
       <td className="px-4 py-3 text-sm text-gray-600">{contact.company || '—'}</td>
       <td className="px-4 py-3">
         {contact.email ? (
-          <a href={`mailto:${contact.email}`} onClick={e => e.stopPropagation()}
+          <button onClick={e => { e.stopPropagation(); onEmail(contact); }}
             className="text-sm text-accent hover:underline flex items-center gap-1">
             <Mail size={12} />{contact.email}
-          </a>
+          </button>
         ) : <span className="text-gray-300">—</span>}
       </td>
       <td className="px-4 py-3">
@@ -94,14 +95,6 @@ function ContactRow({ contact, onDelete, canDelete }) {
             <Phone size={12} />{contact.phone}
           </a>
         ) : <span className="text-gray-300">—</span>}
-      </td>
-      <td className="px-4 py-3">
-        <LifecycleBadge stage={contact.lifecycle_stage} />
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-400">
-        {contact.last_contacted_at
-          ? new Date(contact.last_contacted_at).toLocaleDateString()
-          : '—'}
       </td>
       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
         {canDelete && (
@@ -189,6 +182,7 @@ export default function Contacts() {
   const [filterStage, setFilterStage] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [emailContact, setEmailContact] = useState(null);
 
   const canCreate = can('contact.create');
   const canDelete = can('contact.delete');
@@ -355,14 +349,12 @@ export default function Contacts() {
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Company</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Email</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Phone</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-semibold">Stage</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-semibold">Last Contact</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map(c => (
-                  <ContactRow key={c.id} contact={c} onDelete={handleDelete} canDelete={canDelete} />
+                  <ContactRow key={c.id} contact={c} onDelete={handleDelete} canDelete={canDelete} onEmail={setEmailContact} />
                 ))}
               </tbody>
             </table>
@@ -381,6 +373,14 @@ export default function Contacts() {
           </div>
         )}
       </div>
+
+      {emailContact && (
+        <ComposeEmailModal
+          contact={emailContact}
+          onClose={() => setEmailContact(null)}
+          onSent={() => setEmailContact(null)}
+        />
+      )}
 
       {showCreate && (
         <CreateContactModal

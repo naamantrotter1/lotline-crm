@@ -497,7 +497,7 @@ export default function TeamSettings() {
                           <div className="flex items-center gap-2 group">
                             <div
                               className={canManage && !isMe ? 'cursor-pointer' : ''}
-                              onClick={canManage && !isMe ? () => { const v = { memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }; editingNameRef.current = v; setEditingName(v); } : undefined}
+                              onClick={canManage && !isMe ? () => { const nameParts = (prof.name || '').trim().split(/\s+/); const v = { memberId: member.id, firstName: prof.first_name || nameParts[0] || '', lastName: prof.last_name || nameParts.slice(1).join(' ') || '' }; editingNameRef.current = v; setEditingName(v); } : undefined}
                             >
                               <p className="text-xs font-semibold text-gray-800">
                                 {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
@@ -508,7 +508,7 @@ export default function TeamSettings() {
                             {canManage && !isMe && (
                               <button
                                 title="Edit name"
-                                onClick={() => { const v = { memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }; editingNameRef.current = v; setEditingName(v); }}
+                                onClick={() => { const nameParts = (prof.name || '').trim().split(/\s+/); const v = { memberId: member.id, firstName: prof.first_name || nameParts[0] || '', lastName: prof.last_name || nameParts.slice(1).join(' ') || '' }; editingNameRef.current = v; setEditingName(v); }}
                                 className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-500 hover:bg-gray-100 transition-all flex-shrink-0"
                               >
                                 <Edit3 size={12} />

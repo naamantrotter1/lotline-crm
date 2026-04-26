@@ -10,8 +10,19 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useDeals } from '../lib/DealsContext';
 import {
   fetchContact, updateContact, deleteContact,
-  LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS, LEAD_SOURCES,
+  CONTACT_TYPE_OPTIONS,
 } from '../lib/contactsData';
+
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
+  'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
+  'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire',
+  'New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
+  'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota',
+  'Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia',
+  'Wisconsin','Wyoming',
+];
 import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/tasksData';
 import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
@@ -22,13 +33,6 @@ import { supabase } from '../lib/supabase';
 import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
 import { isEnabled } from '../lib/featureFlags';
 
-const LIFECYCLE_COLORS = {
-  new:       'bg-blue-50 text-blue-700 border-blue-200',
-  working:   'bg-amber-50 text-amber-700 border-amber-200',
-  qualified: 'bg-purple-50 text-purple-700 border-purple-200',
-  customer:  'bg-green-50 text-green-700 border-green-200',
-  dormant:   'bg-gray-100 text-gray-500 border-gray-200',
-};
 
 function initials(c) {
   return ((c?.first_name?.[0] || '') + (c?.last_name?.[0] || '')).toUpperCase() || (c?.email?.[0] || '?').toUpperCase();
@@ -162,7 +166,7 @@ export default function ContactDetail() {
 
   const save = async (fields) => {
     const result = await updateContact(id, fields);
-    if (result.data) setContact(result.data);
+    if (result?.data) setContact(result.data);
   };
 
   const saveTypes = async () => {
@@ -186,10 +190,6 @@ export default function ContactDetail() {
       .eq('deal_id', dealId)
       .eq('role', role);
     setLinkedDeals(prev => prev.filter(d => !(d.id === dealId && d.role === role)));
-  };
-
-  const handleStageChange = async (stage) => {
-    await save({ lifecycle_stage: stage });
   };
 
   if (loading) {
@@ -239,12 +239,6 @@ export default function ContactDetail() {
               <Send size={12} />Send Email
             </button>
           )}
-          {/* Lifecycle stage selector */}
-          <select value={contact.lifecycle_stage} onChange={e => handleStageChange(e.target.value)}
-            disabled={!canEdit}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full border capitalize focus:outline-none ${LIFECYCLE_COLORS[contact.lifecycle_stage]} ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
-            {LIFECYCLE_STAGES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
           {canDelete && (
             <button onClick={handleDelete}
               className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
@@ -264,7 +258,7 @@ export default function ContactDetail() {
             <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
               {initials(contact)}
             </div>
-            <h2 className="text-base font-bold text-gray-800">{contact.fullName}</h2>
+            <p className="text-base font-bold text-gray-800 mb-1">{contact.fullName}</p>
             {contact.title && <p className="text-xs text-gray-500 mt-0.5">{contact.title}</p>}
             {contact.company && <p className="text-xs text-gray-400">{contact.company}</p>}
             <div className="flex flex-wrap justify-center gap-1 mt-3">
@@ -309,11 +303,14 @@ export default function ContactDetail() {
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact Info</p>
 
+            <EditableField label="First Name" value={contact.first_name} onSave={v => save({ first_name: v })} />
+            <EditableField label="Last Name" value={contact.last_name} onSave={v => save({ last_name: v })} />
+
             <EditableField label="Email" value={contact.email} onSave={v => save({ email: v })} type="email">
               {contact.email && (
-                <a href={`mailto:${contact.email}`} className="text-sm text-accent hover:underline flex items-center gap-1">
+                <button onClick={() => setShowCompose(true)} className="text-sm text-accent hover:underline flex items-center gap-1">
                   <Mail size={12} />{contact.email}
-                </a>
+                </button>
               )}
             </EditableField>
 
@@ -325,35 +322,66 @@ export default function ContactDetail() {
               )}
             </EditableField>
 
-            <EditableField label="Secondary phone" value={contact.secondary_phone} onSave={v => save({ secondary_phone: v })} type="tel" />
-
             <EditableField label="Company" value={contact.company} onSave={v => save({ company: v })}>
               {contact.company && <span className="text-sm text-gray-700 flex items-center gap-1"><Building size={12} className="text-gray-400" />{contact.company}</span>}
             </EditableField>
 
             <EditableField label="Title" value={contact.title} onSave={v => save({ title: v })} />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Lead source</label>
-              {canEdit ? (
-                <select value={contact.lead_source || ''} onChange={e => save({ lead_source: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
-                  <option value="">—</option>
-                  {LEAD_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              ) : <span className="text-sm text-gray-700">{contact.lead_source || '—'}</span>}
-            </div>
+            <EditableField label="Address" value={contact.address} onSave={v => save({ address: v })}>
+              {contact.address && <span className="text-sm text-gray-700 flex items-center gap-1"><MapPin size={12} className="text-gray-400" />{contact.address}</span>}
+            </EditableField>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Do not contact</label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={!!contact.do_not_contact}
-                  onChange={e => save({ do_not_contact: e.target.checked })}
-                  disabled={!canEdit}
-                  className="rounded border-gray-300 text-accent focus:ring-accent/30" />
-                <span className="text-sm text-gray-600">Do not contact</span>
-              </label>
-            </div>
+            {/* States serviced — inside Contact Info card */}
+            {(() => {
+              const serviced = Array.isArray(contact.states_serviced)
+                ? contact.states_serviced.filter(s => typeof s === 'string')
+                : [];
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-1">States Serviced</p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {serviced.map(s => (
+                      <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">
+                        {s}
+                        {canEdit && (
+                          <button
+                            onClick={async () => {
+                              const updated = serviced.filter(x => x !== s);
+                              setContact(c => ({ ...c, states_serviced: updated }));
+                              await save({ states_serviced: updated });
+                            }}
+                            className="hover:text-red-500 ml-0.5"
+                          >
+                            <X size={9} />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    {serviced.length === 0 && <span className="text-xs text-gray-300 italic">No states added</span>}
+                  </div>
+                  {canEdit && (
+                    <select
+                      defaultValue=""
+                      onChange={async e => {
+                        const s = e.target.value;
+                        if (!s || serviced.includes(s)) return;
+                        const updated = [...serviced, s];
+                        setContact(c => ({ ...c, states_serviced: updated }));
+                        await save({ states_serviced: updated });
+                        e.target.value = '';
+                      }}
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white text-gray-600"
+                    >
+                      <option value="">+ Add state…</option>
+                      {US_STATES.filter(s => !serviced.includes(s)).map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Tags */}

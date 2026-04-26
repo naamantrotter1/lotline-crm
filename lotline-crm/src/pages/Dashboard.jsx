@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Home, DollarSign, Target, Activity, Loader2, X } from 'lucide-react';
+import { TrendingUp, Home, DollarSign, Target, Activity, Loader2, X, Percent } from 'lucide-react';
 import { StatCard } from '../components/UI/Card';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -196,6 +196,29 @@ export default function Dashboard() {
     return Math.round(total / withDates.length);
   }, [doCompleteThisYear]);
 
+  // ── Deal Pipeline Conversion ─────────────────────────────────────────────────
+  // "Entered Deal Overview" = any deal (active or archived) with contractSignedAt set.
+  // contract_signed_at is stamped the moment a deal moves to Contract Signed stage.
+  const allDealsEver = useMemo(
+    () => [...(deals || []), ...(archivedDeals || [])],
+    [deals, archivedDeals],
+  );
+  const enteredDO = useMemo(
+    () => allDealsEver.filter(d => d.contractSignedAt),
+    [allDealsEver],
+  );
+  const DO_SALES = new Set([
+    'Contract Signed', 'Due Diligence', 'Development', 'Complete',
+    'Listed', 'Under Contract', 'Closed',
+  ]);
+  const activeInDO = useMemo(
+    () => (deals || []).filter(d => DO_SALES.has(d.stage)),
+    [deals],
+  );
+  const conversionPct = enteredDO.length
+    ? Math.round((activeInDO.length / enteredDO.length) * 100)
+    : null;
+
   // ── Pipeline summary ─────────────────────────────────────────────────────────
   const pipelineSummary = useMemo(() => {
     return PIPELINE_CONFIG.map(({ label, color, match }) => {
@@ -238,7 +261,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div
           className="cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => setShowActiveDeals(true)}
@@ -279,6 +302,13 @@ export default function Dashboard() {
           value={fmt$(totalARV)}
           icon={Target}
           color="text-gray-500"
+        />
+        <StatCard
+          label="Deal Conversion"
+          value={conversionPct != null ? `${conversionPct}%` : '—'}
+          subtext={`${activeInDO.length} active of ${enteredDO.length} entered Deal Overview`}
+          icon={Percent}
+          color="text-emerald-500"
         />
       </div>
 
@@ -378,7 +408,7 @@ export default function Dashboard() {
                   const profit = calcNetProfit(d);
                   return (
                     <li key={d.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => { setMonthModal(null); navigate(`/deal/${d.id}`); }}>
+                      onClick={() => { setMonthModal(null); navigate(`/deal/${d.id}`, { state: { deal: d } }); }}>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
                         <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''} · {d.stage}</p>
@@ -416,7 +446,7 @@ export default function Dashboard() {
                     const profit = calcNetProfit(d);
                     return (
                       <li key={d.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => { setShowActiveDeals(false); navigate(`/deal/${d.id}`); }}>
+                        onClick={() => { setShowActiveDeals(false); navigate(`/deal/${d.id}`, { state: { deal: d } }); }}>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
                           <p className="text-xs text-gray-400">{d.county}{d.state ? `, ${d.state}` : ''} · {d.stage}</p>
@@ -468,7 +498,7 @@ export default function Dashboard() {
                       <li
                         key={d.id}
                         className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => { setShowNewThisMonth(false); navigate(`/deal/${d.id}`); }}
+                        onClick={() => { setShowNewThisMonth(false); navigate(`/deal/${d.id}`, { state: { deal: d } }); }}
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-sidebar truncate">{d.address || '—'}</p>
