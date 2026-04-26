@@ -130,20 +130,23 @@ export default function Reports() {
     // "Entered Deal Overview" = has contract_signed_at (set when deal moves to Contract Signed)
     const enteredDO   = advData.allDeals.filter(d => d.contract_signed_at);
     const activeInDO  = enteredDO.filter(d => !d.is_archived && DD_AND_BEYOND.has(d.stage));
-    const deadDeals   = enteredDO.filter(d => d.dead_deal);
+    const deadInDO    = enteredDO.filter(d => d.dead_deal);
     const regArchived = enteredDO.filter(d => d.is_archived && !d.dead_deal);
     const total = enteredDO.length;
+    // All dead deals across every pipeline (incl. Land Acq deals marked dead before reaching DO)
+    const deadTotal   = advData.allDeals.filter(d => d.dead_deal).length;
     return {
       total,
       active:       activeInDO.length,
-      dead:         deadDeals.length,
+      dead:         deadInDO.length,
+      deadTotal,
       regArchived:  regArchived.length,
       convPct:      total > 0 ? Math.round((activeInDO.length  / total) * 100) : 0,
-      deadPct:      total > 0 ? Math.round((deadDeals.length   / total) * 100) : 0,
+      deadPct:      total > 0 ? Math.round((deadInDO.length    / total) * 100) : 0,
       archivedPct:  total > 0 ? Math.round((regArchived.length / total) * 100) : 0,
       pieData: [
         { name: 'Active in DO/Sales', value: activeInDO.length  },
-        { name: 'Dead Deal',          value: deadDeals.length   },
+        { name: 'Dead Deal',          value: deadInDO.length    },
         { name: 'Archived',           value: regArchived.length },
       ],
     };
@@ -409,33 +412,35 @@ export default function Reports() {
             <p className="text-[11px] text-gray-300 -mt-2 mb-4">
               Tracks deals that moved from Land Acquisition into Deal Overview (via Contract Signed)
             </p>
-            {pipelineConversion.total === 0 ? (
+            {pipelineConversion.total === 0 && pipelineConversion.deadTotal === 0 ? (
               <p className="text-sm text-gray-300 text-center py-6">No deals have entered Deal Overview in this period</p>
             ) : (
               <div className="flex flex-col lg:flex-row gap-6 items-start">
-                {/* Donut */}
-                <div className="shrink-0">
-                  <ResponsiveContainer width={160} height={160}>
-                    <PieChart>
-                      <Pie data={pipelineConversion.pieData} dataKey="value" nameKey="name"
-                        cx="50%" cy="50%" outerRadius={70} innerRadius={42} paddingAngle={2}>
-                        <Cell fill="#22c55e" />
-                        <Cell fill="#f87171" />
-                        <Cell fill="#d1d5db" />
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* Donut — only render when DO data exists */}
+                {pipelineConversion.total > 0 && (
+                  <div className="shrink-0">
+                    <ResponsiveContainer width={160} height={160}>
+                      <PieChart>
+                        <Pie data={pipelineConversion.pieData} dataKey="value" nameKey="name"
+                          cx="50%" cy="50%" outerRadius={70} innerRadius={42} paddingAngle={2}>
+                          <Cell fill="#22c55e" />
+                          <Cell fill="#f87171" />
+                          <Cell fill="#d1d5db" />
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
                 {/* Metric grid */}
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {[
-                    { label: 'Entered Deal Overview', value: pipelineConversion.total,      pct: null,                          color: '#4f8ef7' },
-                    { label: 'Active in DO / Sales',  value: pipelineConversion.active,     pct: pipelineConversion.convPct,    color: '#22c55e' },
-                    { label: 'Dead Deals',            value: pipelineConversion.dead,       pct: pipelineConversion.deadPct,    color: '#f87171' },
+                    { label: 'Entered Deal Overview', value: pipelineConversion.total,       pct: null,                           color: '#4f8ef7' },
+                    { label: 'Active in DO / Sales',  value: pipelineConversion.active,      pct: pipelineConversion.convPct,     color: '#22c55e' },
+                    { label: 'Total Dead Deals',      value: pipelineConversion.deadTotal,   pct: null,                           color: '#f87171' },
                     { label: 'Regular Archived',      value: pipelineConversion.regArchived, pct: pipelineConversion.archivedPct, color: '#9ca3af' },
                     { label: 'Conversion Rate',       value: `${pipelineConversion.convPct}%`,  pct: null, color: '#22c55e', big: true },
-                    { label: 'Dead Deal Rate',        value: `${pipelineConversion.deadPct}%`,  pct: null, color: '#f87171', big: true },
+                    { label: 'Dead Deal Rate (DO)',   value: `${pipelineConversion.deadPct}%`,  pct: null, color: '#f87171', big: true },
                   ].map(({ label, value, pct, color, big }) => (
                     <div key={label} className="bg-gray-50 rounded-xl p-3">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">{label}</p>
