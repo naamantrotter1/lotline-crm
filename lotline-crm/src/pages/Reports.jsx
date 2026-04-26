@@ -125,6 +125,30 @@ export default function Reports() {
 
   // ── Advanced analytics ──────────────────────────────────────────────────────
 
+  // 0. Deal Pipeline Conversion (Land Acq → Deal Overview funnel)
+  const pipelineConversion = useMemo(() => {
+    // "Entered Deal Overview" = has contract_signed_at (set when deal moves to Contract Signed)
+    const enteredDO   = advData.allDeals.filter(d => d.contract_signed_at);
+    const activeInDO  = enteredDO.filter(d => !d.is_archived && DD_AND_BEYOND.has(d.stage));
+    const deadDeals   = enteredDO.filter(d => d.dead_deal);
+    const regArchived = enteredDO.filter(d => d.is_archived && !d.dead_deal);
+    const total = enteredDO.length;
+    return {
+      total,
+      active:       activeInDO.length,
+      dead:         deadDeals.length,
+      regArchived:  regArchived.length,
+      convPct:      total > 0 ? Math.round((activeInDO.length  / total) * 100) : 0,
+      deadPct:      total > 0 ? Math.round((deadDeals.length   / total) * 100) : 0,
+      archivedPct:  total > 0 ? Math.round((regArchived.length / total) * 100) : 0,
+      pieData: [
+        { name: 'Active in DO/Sales', value: activeInDO.length  },
+        { name: 'Dead Deal',          value: deadDeals.length   },
+        { name: 'Archived',           value: regArchived.length },
+      ],
+    };
+  }, [advData.allDeals]);
+
   // 1. Lead Source Conversion Funnel
   const leadSourceFunnel = useMemo(() => {
     const map = {};
@@ -380,7 +404,59 @@ export default function Reports() {
 
           {/* ── ADVANCED ANALYTICS ───────────────────────────────────────────── */}
 
-          {/* Row 3: Lead Source Conversion Funnel */}
+          {/* Row 3: Deal Pipeline Conversion */}
+          <SectionCard title="Deal Pipeline Conversion">
+            <p className="text-[11px] text-gray-300 -mt-2 mb-4">
+              Tracks deals that moved from Land Acquisition into Deal Overview (via Contract Signed)
+            </p>
+            {pipelineConversion.total === 0 ? (
+              <p className="text-sm text-gray-300 text-center py-6">No deals have entered Deal Overview in this period</p>
+            ) : (
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
+                {/* Donut */}
+                <div className="shrink-0">
+                  <ResponsiveContainer width={160} height={160}>
+                    <PieChart>
+                      <Pie data={pipelineConversion.pieData} dataKey="value" nameKey="name"
+                        cx="50%" cy="50%" outerRadius={70} innerRadius={42} paddingAngle={2}>
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#f87171" />
+                        <Cell fill="#d1d5db" />
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Metric grid */}
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Entered Deal Overview', value: pipelineConversion.total,      pct: null,                          color: '#4f8ef7' },
+                    { label: 'Active in DO / Sales',  value: pipelineConversion.active,     pct: pipelineConversion.convPct,    color: '#22c55e' },
+                    { label: 'Dead Deals',            value: pipelineConversion.dead,       pct: pipelineConversion.deadPct,    color: '#f87171' },
+                    { label: 'Regular Archived',      value: pipelineConversion.regArchived, pct: pipelineConversion.archivedPct, color: '#9ca3af' },
+                    { label: 'Conversion Rate',       value: `${pipelineConversion.convPct}%`,  pct: null, color: '#22c55e', big: true },
+                    { label: 'Dead Deal Rate',        value: `${pipelineConversion.deadPct}%`,  pct: null, color: '#f87171', big: true },
+                  ].map(({ label, value, pct, color, big }) => (
+                    <div key={label} className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+                      <p className={`font-bold text-gray-800 ${big ? 'text-2xl' : 'text-xl'}`} style={{ color }}>{value}</p>
+                      {pct != null && <p className="text-[11px] text-gray-400 mt-0.5">{pct}% of total</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Legend */}
+            {pipelineConversion.total > 0 && (
+              <div className="flex gap-4 mt-4 pt-3 border-t border-gray-50 text-[10px] text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-green-400" /> Active in DO/Sales</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-red-300" /> Dead Deal</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-gray-300" /> Archived</span>
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Row 4: Lead Source Conversion Funnel */}
           <SectionCard title="Lead Source Conversion Funnel">
             {leadSourceFunnel.length === 0 ? (
               <p className="text-sm text-gray-300 text-center py-8">No lead source data for this period</p>
@@ -436,7 +512,7 @@ export default function Reports() {
             )}
           </SectionCard>
 
-          {/* Row 4: Time-in-Stage + Win/Loss */}
+          {/* Row 5: Time-in-Stage + Win/Loss */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SectionCard title="Avg. Deal Age by Stage (active deals)">
               <p className="text-[11px] text-gray-300 -mt-2 mb-3">
@@ -549,7 +625,7 @@ export default function Reports() {
             </SectionCard>
           </div>
 
-          {/* Row 5: Investor ROI Table */}
+          {/* Row 6: Investor ROI Table */}
           <SectionCard title="Investor ROI Comparison">
             {investorRoi.length === 0 ? (
               <p className="text-sm text-gray-300 text-center py-8">No investor data for this period</p>

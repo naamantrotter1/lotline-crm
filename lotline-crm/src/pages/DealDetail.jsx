@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { Component, useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
   CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon,
-  Landmark, Handshake,
+  Landmark, Handshake, XCircle,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase } from '../lib/dealsSync';
@@ -1846,6 +1846,7 @@ function DealDetailContent({ deal }) {
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [starred, setStarred] = useState(false);
+  const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
@@ -2335,6 +2336,14 @@ function DealDetailContent({ deal }) {
               >
                 <Star size={18} fill={starred ? 'currentColor' : 'none'} />
               </button>
+              {canEdit && !isLandAcq && (
+                <button
+                  onClick={() => setShowDeadDealModal(true)}
+                  className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <XCircle size={14} /> Dead Deal
+                </button>
+              )}
               {canEdit && (
                 <button
                   onClick={() => {
@@ -2484,6 +2493,25 @@ function DealDetailContent({ deal }) {
             onLogCall={() => setShowLogCall(true)}
             onSendEmail={() => setShowSendEmail(true)}
             onScheduleMeeting={() => setShowScheduleMeeting(true)}
+            onApplyFinancing={!fromInvestorPortal && !isAgent ? () => navigate('/lending', { state: { prefillLoan: {
+              address: deal.address || '',
+              purchasePrice: String(costs.land || 0),
+              loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
+              arv: String(arv || deal.arv || 0),
+              loanType: 'Land + Home Package',
+              propertyType: 'Manufactured Home',
+              exitStrategy: 'Sell',
+              notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
+            }}}) : null}
+            onSubmitDeal={!fromInvestorPortal && !isAgent ? () => navigate('/lending', { state: { prefillPartner: {
+              address: deal.address || '',
+              arv: String(arv || deal.arv || 0),
+              projectedProfit: String(Math.max(0, Math.round(netProfit))),
+              dealType: 'Land + Home Package',
+              propertyType: 'Manufactured',
+              purchasePrice: String(costs.land || 0),
+              repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+            }}}) : null}
           />
         }
         middle={
@@ -2641,45 +2669,6 @@ function DealDetailContent({ deal }) {
           />
         )}
 
-              {/* Capital & Partnerships — now inside middle column */}
-              {!fromInvestorPortal && !isAgent && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Capital &amp; Partnerships</p>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => navigate('/lending', { state: { prefillLoan: {
-                        address: deal.address || '',
-                        purchasePrice: String(costs.land || 0),
-                        loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
-                        arv: String(arv || deal.arv || 0),
-                        loanType: 'Land + Home Package',
-                        propertyType: 'Manufactured Home',
-                        exitStrategy: 'Sell',
-                        notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
-                      }}})}
-                      className="flex items-center gap-2.5 px-5 py-3 bg-[#1a2332] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2332]/90 transition-colors shadow-sm"
-                    >
-                      <Landmark size={16} className="text-accent flex-shrink-0" />
-                      Apply for Financing
-                    </button>
-                    <button
-                      onClick={() => navigate('/lending', { state: { prefillPartner: {
-                        address: deal.address || '',
-                        arv: String(arv || deal.arv || 0),
-                        projectedProfit: String(Math.max(0, Math.round(netProfit))),
-                        dealType: 'Land + Home Package',
-                        propertyType: 'Manufactured',
-                        purchasePrice: String(costs.land || 0),
-                        repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
-                      }}})}
-                      className="flex items-center gap-2.5 px-5 py-3 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent/90 transition-colors shadow-sm"
-                    >
-                      <Handshake size={16} className="flex-shrink-0" />
-                      Submit a Deal for Review
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </DealMiddleColumn>
         }
@@ -2716,6 +2705,58 @@ function DealDetailContent({ deal }) {
       />
     )}
 
+    {/* Dead Deal confirmation modal */}
+    {showDeadDealModal && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[4000] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+              <XCircle size={20} className="text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Mark as Dead Deal?</h3>
+              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[220px]">{deal.address || 'Untitled deal'}</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mb-6">
+            This deal will be moved to Archived Deals and flagged as a dead deal. It will be tracked separately in pipeline conversion reporting.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowDeadDealModal(false)}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const now = new Date().toISOString();
+                saveDeal({
+                  ...deal,
+                  stage,
+                  deadDeal: true,
+                  deadDealDate: now,
+                  isArchived: true,
+                  archivedAt: now,
+                  lastStage: stage,
+                }, activeOrgId);
+                try {
+                  const lsK = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
+                  const all = JSON.parse(localStorage.getItem(lsK) || '[]');
+                  localStorage.setItem(lsK, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
+                } catch {}
+                setShowDeadDealModal(false);
+                navigate('/archived');
+              }}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+            >
+              Mark as Dead
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Map Search Modal */}
     {showMapModal && (
       <div className="fixed inset-0 z-[3000] bg-black/60 flex items-center justify-center p-4">
@@ -2734,18 +2775,54 @@ function DealDetailContent({ deal }) {
   );
 }
 
+// ── Error boundary — catches render crashes and shows the error instead of blank page ──
+class DealErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('DealDetail crashed:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-8">
+          <div className="max-w-lg w-full bg-red-50 border border-red-200 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-red-700 mb-2">Something went wrong loading this deal</h2>
+            <p className="text-sm text-red-600 font-mono bg-red-100 rounded p-3 break-all">
+              {this.state.error?.message || String(this.state.error)}
+            </p>
+            <button
+              onClick={() => { this.setState({ error: null }); window.history.back(); }}
+              className="mt-4 text-sm text-red-600 underline"
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ── Outer wrapper — handles loading + deal lookup ─────────────────────────────
 export default function DealDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { activeOrgId, loading: authLoading } = useAuth();
   const { deals: customDeals, dealsLoading } = useDeals();
 
-  // Prefer localStorage (updated synchronously on every edit via saveToLS) over context
-  const lsDeals = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  const deal = lsDeals.find(d => String(d.id) === String(id))
+  // 1. Deal passed via navigation state (most reliable — always available immediately)
+  const stateDeal = location.state?.deal;
+
+  // 2. Org-specific localStorage (updated synchronously on every edit via saveToLS)
+  const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
+  const lsDeals = (() => { try { return JSON.parse(localStorage.getItem(lsKey) || '[]'); } catch { return []; } })();
+
+  const deal = (stateDeal && String(stateDeal.id) === String(id) ? stateDeal : null)
+    || lsDeals.find(d => String(d.id) === String(id))
     || customDeals.find(d => String(d.id) === String(id));
 
-  if (dealsLoading && !deal) {
+  if ((authLoading || dealsLoading) && !deal) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
@@ -2763,5 +2840,9 @@ export default function DealDetail() {
   }
 
   // key={deal.id} ensures DealDetailContent remounts fresh with correct state
-  return <DealDetailContent key={deal.id} deal={deal} />;
+  return (
+    <DealErrorBoundary key={deal.id}>
+      <DealDetailContent deal={deal} />
+    </DealErrorBoundary>
+  );
 }

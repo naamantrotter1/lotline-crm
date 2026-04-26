@@ -8,6 +8,7 @@ const ADV_SELECT = [
   'id', 'stage', 'pipeline', 'arv', 'lead_source',
   'is_archived', 'archived_at', 'created_at', 'contract_signed_at',
   'investor', 'investor_capital_contributed', 'projected_irr',
+  'dead_deal', 'dead_deal_date',
 ].join(', ');
 
 /**

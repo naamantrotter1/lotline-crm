@@ -118,6 +118,8 @@ function dealToRow(deal) {
     funded_to_date:          deal.fundedToDate ?? 0,
     scheduled_to_date:       deal.scheduledToDate ?? 0,
     financing_scenario_type: deal.financingScenarioType || null,
+    dead_deal:               deal.deadDeal || false,
+    dead_deal_date:          deal.deadDealDate || null,
   };
 }
 
@@ -208,6 +210,8 @@ function rowToDeal(row) {
     fundedToDate:           row.funded_to_date ?? 0,
     scheduledToDate:        row.scheduled_to_date ?? 0,
     financingScenarioType:  row.financing_scenario_type ?? null,
+    deadDeal:               row.dead_deal ?? false,
+    deadDealDate:           row.dead_deal_date ?? null,
   };
 }
 
