@@ -258,14 +258,7 @@ export default function ContactDetail() {
             <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
               {initials(contact)}
             </div>
-            <div className="flex justify-center gap-2 mb-1">
-              <EditableField label="" value={contact.first_name} onSave={v => save({ first_name: v })}>
-                <span className="text-base font-bold text-gray-800">{contact.first_name}</span>
-              </EditableField>
-              <EditableField label="" value={contact.last_name} onSave={v => save({ last_name: v })}>
-                <span className="text-base font-bold text-gray-800">{contact.last_name}</span>
-              </EditableField>
-            </div>
+            <p className="text-base font-bold text-gray-800 mb-1">{contact.fullName}</p>
             {contact.title && <p className="text-xs text-gray-500 mt-0.5">{contact.title}</p>}
             {contact.company && <p className="text-xs text-gray-400">{contact.company}</p>}
             <div className="flex flex-wrap justify-center gap-1 mt-3">
@@ -309,6 +302,9 @@ export default function ContactDetail() {
           {/* Contact info */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact Info</p>
+
+            <EditableField label="First Name" value={contact.first_name} onSave={v => save({ first_name: v })} />
+            <EditableField label="Last Name" value={contact.last_name} onSave={v => save({ last_name: v })} />
 
             <EditableField label="Email" value={contact.email} onSave={v => save({ email: v })} type="email">
               {contact.email && (
