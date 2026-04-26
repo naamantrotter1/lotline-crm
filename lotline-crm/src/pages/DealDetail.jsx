@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
   CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon,
-  Landmark, Handshake, XCircle,
+  Landmark, Handshake, XCircle, Info,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase } from '../lib/dealsSync';
@@ -248,6 +248,7 @@ function FinancingScenarioPanel({
   ccpTranches, setCcpTranches,
   readOnly,
 }) {
+  const [showScenarioInfo, setShowScenarioInfo] = useState(false);
   // ── Derived values (same formulas as OverviewTab — must stay in sync) ────────
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -277,10 +278,34 @@ function FinancingScenarioPanel({
 
       {/* Scenario selector */}
       <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Select Scenario</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Select Scenario</p>
+          {selectedScenario && (
+            <div className="relative">
+              <button
+                onClick={() => setShowScenarioInfo(v => !v)}
+                className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${showScenarioInfo ? 'bg-accent text-white' : 'bg-gray-100 text-gray-400 hover:bg-accent/10 hover:text-accent'}`}
+              >
+                <Info size={11} />
+              </button>
+              {showScenarioInfo && (() => {
+                const scenario = FINANCING_SCENARIOS.find(s => s.id === selectedScenario);
+                return scenario?.description ? (
+                  <div className="absolute right-0 top-7 z-20 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <p className="text-xs font-bold text-sidebar">{scenario.label}</p>
+                      <button onClick={() => setShowScenarioInfo(false)} className="text-gray-300 hover:text-gray-500 flex-shrink-0"><XIcon size={12} /></button>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">{scenario.description}</p>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+        </div>
         <select
           value={selectedScenario}
-          onChange={e => applyScenario(e.target.value)}
+          onChange={e => { applyScenario(e.target.value); setShowScenarioInfo(false); }}
           className="w-full text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
           <option value="">— Choose a financing scenario —</option>
@@ -1744,13 +1769,34 @@ function CommittedCapitalPartnerPanel({
 
 // ── Financing scenario types (matching Lovable CRM) ──────────────────────────
 const FINANCING_SCENARIOS = [
-  { id: 'cash',                    label: 'Cash',                                         financingType: 'Cash',                       dbType: 'cash' },
-  { id: 'hard-money-loan',         label: 'Hard Money Loan',                              financingType: 'Hard Money Loan',            dbType: 'hard_money_loan' },
-  { id: 'hard-money-land-home',    label: 'Hard Money (Land + Home)',                     financingType: 'Hard Money (Land + Home)',   dbType: 'hard_money_land_home' },
-  { id: 'loc',                     label: 'Line of Credit',                               financingType: 'Line of Credit',             dbType: 'line_of_credit' },
-  { id: 'profit-split',            label: 'Profit Split',                                 financingType: 'Profit Split',               dbType: 'profit_split' },
-  { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner', dbType: 'committed_capital_partner' },
-  { id: 'pooled-loan', label: 'Pooled Loan (Multi-Deal)', financingType: 'Pooled Loan', dbType: 'pooled_loan' },
+  {
+    id: 'cash', label: 'Cash', financingType: 'Cash', dbType: 'cash',
+    description: 'You are funding this deal entirely with your own cash — no lender, no interest, no loan fees. Net profit is not reduced by any cost of capital.',
+  },
+  {
+    id: 'hard-money-loan', label: 'Hard Money Loan', financingType: 'Hard Money Loan', dbType: 'hard_money_loan',
+    description: 'A short-term loan from a private lender secured by the property. Interest accrues on the deployed loan amount for the duration of your hold period. Includes origination and servicing fees.',
+  },
+  {
+    id: 'hard-money-land-home', label: 'Hard Money (Land + Home)', financingType: 'Hard Money (Land + Home)', dbType: 'hard_money_land_home',
+    description: 'Hard money covering both the land purchase and home cost as a single blended loan. Interest and fees are calculated on the combined land + home amount.',
+  },
+  {
+    id: 'loc', label: 'Line of Credit', financingType: 'Line of Credit', dbType: 'line_of_credit',
+    description: 'A revolving credit line you draw from as needed. You pay an annual fee on the credit limit and interest only on the drawn balance. Offers flexibility — draw what you need, when you need it.',
+  },
+  {
+    id: 'profit-split', label: 'Profit Split', financingType: 'Profit Split', dbType: 'profit_split',
+    description: 'An investor provides capital in exchange for a percentage of the net profit on this specific deal. No fixed interest payments — the investor gets paid when you get paid.',
+  },
+  {
+    id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner', dbType: 'committed_capital_partner',
+    description: 'An investor commits capital to one deal at a time with deal-specific terms (tranche amount, preferred return %, profit split %). Each deal gets its own allocation negotiated separately. Interest is based on the amount deployed into this deal only.',
+  },
+  {
+    id: 'pooled-loan', label: 'Pooled Loan (Multi-Deal)', financingType: 'Pooled Loan', dbType: 'pooled_loan',
+    description: 'A single loan agreement (e.g. a $500k credit facility) that covers multiple deals simultaneously under fixed terms. Interest accrues on the full pool amount from day one — not just what you\'ve drawn. Monthly interest is prorated to each linked deal by allocation share.',
+  },
 ];
 
 // ── Per-investor default terms ────────────────────────────────────────────────
