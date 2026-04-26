@@ -32,6 +32,7 @@ import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
+import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -1797,6 +1798,10 @@ const FINANCING_SCENARIOS = [
     id: 'pooled-loan', label: 'Pooled Loan (Multi-Deal)', financingType: 'Pooled Loan', dbType: 'pooled_loan',
     description: 'A single loan agreement (e.g. a $500k credit facility) that covers multiple deals simultaneously under fixed terms. Interest accrues on the full pool amount from day one — not just what you\'ve drawn. Monthly interest is prorated to each linked deal by allocation share.',
   },
+  {
+    id: 'hmcb', label: 'Hard Money – Construction Holdback', financingType: 'Hard Money – Construction Holdback', dbType: 'hard_money_construction_holdback',
+    description: 'A private lender loan with two components: purchase funds released at closing, plus a construction holdback released in draws as work is inspected. Interest is interest-only on the funded amount (or full loan, depending on lender). Draws are tracked individually with inspection status.',
+  },
 ];
 
 // ── Per-investor default terms ────────────────────────────────────────────────
@@ -2078,6 +2083,11 @@ function DealDetailContent({ deal }) {
   const [financingScenarioType, setFinancingScenarioType] = useState(deal?.financingScenarioType ?? null);
   const [ccpSaving, setCcpSaving] = useState(false);
   const [ccpSaved, setCcpSaved] = useState(false);
+  // HMCB: loan config stored in deal.scenarioData.hmcb
+  const [hmcbData, setHmcbData] = useState(() => ({
+    ...HMCB_DEFAULTS,
+    ...(deal?.scenarioData?.hmcb || {}),
+  }));
 
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
@@ -2202,6 +2212,8 @@ function DealDetailContent({ deal }) {
         ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
         ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
         ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
+        // Hard Money – Construction Holdback
+        hmcb: hmcbData,
       },
       ...costs,
     };
@@ -2233,7 +2245,7 @@ function DealDetailContent({ deal }) {
     ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
     ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
     ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
-    financingScenarioType,
+    financingScenarioType, hmcbData,
   ]);
 
   // ── Load pooled loan links for this deal ──────────────────────────────────
@@ -2768,6 +2780,15 @@ function DealDetailContent({ deal }) {
             ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
             ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
             ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
+            readOnly={fromInvestorPortal || !canEdit}
+          />
+        )}
+
+        {activeTab === 'financing' && financingTabEnabled && selectedScenario === 'hmcb' && (
+          <HMCBPanel
+            dealId={deal.id}
+            data={hmcbData}
+            onChange={setHmcbData}
             readOnly={fromInvestorPortal || !canEdit}
           />
         )}
