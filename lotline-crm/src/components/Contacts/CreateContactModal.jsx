@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, User, Plus } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { createContact, CONTACT_TYPE_OPTIONS } from '../../lib/contactsData';
+import { supabase } from '../../lib/supabase';
 
 const US_STATES = [
   'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
@@ -48,6 +49,25 @@ export default function CreateContactModal({ onClose, onCreated }) {
     });
     setSaving(false);
     if (err) { setError(err); return; }
+
+    // If contact type includes Investor, auto-create an investor record and link it
+    if (types.includes('Investor') && data && supabase) {
+      const investorName = [form.first_name, form.last_name].filter(Boolean).join(' ') || form.company || form.email || 'Unnamed';
+      const { data: inv } = await supabase
+        .from('investors')
+        .insert({
+          organization_id: activeOrgId,
+          name: investorName,
+          email: form.email || null,
+          phone: form.phone || null,
+          contact: form.company || null,
+          contact_id: data.id,
+        })
+        .select('id')
+        .single();
+      if (!inv) console.warn('[CreateContactModal] investor insert failed');
+    }
+
     onCreated(data);
   };
 

@@ -38,7 +38,7 @@ export async function fetchInvestors(orgIds) {
   if (!supabase) return [];
   let q = supabase
     .from('investors')
-    .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes')
+    .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes, contact_id')
     .order('name');
   if (orgIds) {
     const ids = Array.isArray(orgIds) ? orgIds.filter(Boolean) : [orgIds].filter(Boolean);

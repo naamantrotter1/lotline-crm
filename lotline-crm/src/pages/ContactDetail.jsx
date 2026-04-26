@@ -142,6 +142,7 @@ export default function ContactDetail() {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [emailLogs, setEmailLogs]   = useState([]);
   const [showCompose, setShowCompose] = useState(false);
+  const [investorRecord, setInvestorRecord] = useState(null);
 
   const canEdit   = can('contact.update');
   const canDelete = can('contact.delete');
@@ -158,6 +159,13 @@ export default function ContactDetail() {
         return deal ? { ...deal, role: ld.role } : null;
       }).filter(Boolean);
       setLinkedDeals(linked);
+      if (c.types?.includes('Investor')) {
+        supabase.from('investors')
+          .select('id, name, type, preferred_financing, standard_terms, notes')
+          .eq('contact_id', id)
+          .maybeSingle()
+          .then(({ data }) => setInvestorRecord(data));
+      }
       setLoading(false);
     });
     fetchTasks({ contactId: id }).then(setTasks);
@@ -521,6 +529,11 @@ export default function ContactDetail() {
             </div>
           )}
 
+          {/* Investor Profile — only for Investor-typed contacts */}
+          {contact.types?.includes('Investor') && (
+            <InvestorSummaryCard investor={investorRecord} />
+          )}
+
           {/* Metadata */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3 text-xs text-gray-400">
             <p className="font-semibold text-gray-500 uppercase tracking-widest">Record Info</p>
@@ -548,6 +561,51 @@ export default function ContactDetail() {
       />
     )}
     </>
+  );
+}
+
+// ── Investor Summary Card ─────────────────────────────────────────────────────
+function InvestorSummaryCard({ investor }) {
+  const navigate = useNavigate();
+  return (
+    <div className="bg-white rounded-xl border border-blue-100 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Investor Profile</p>
+        <button
+          onClick={() => navigate('/investor-portal')}
+          className="flex items-center gap-1 text-xs text-accent hover:underline"
+        >
+          View Portal <ExternalLink size={11} />
+        </button>
+      </div>
+      {investor ? (
+        <div className="space-y-2">
+          {investor.type && (
+            <div>
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Type</p>
+              <p className="text-sm text-gray-700">{investor.type}</p>
+            </div>
+          )}
+          {investor.preferred_financing && (
+            <div>
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Preferred Financing</p>
+              <p className="text-sm text-gray-700">{investor.preferred_financing}</p>
+            </div>
+          )}
+          {investor.standard_terms && (
+            <div>
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Standard Terms</p>
+              <p className="text-xs text-gray-600 leading-relaxed">{investor.standard_terms}</p>
+            </div>
+          )}
+          {!investor.type && !investor.preferred_financing && !investor.standard_terms && (
+            <p className="text-xs text-gray-300 italic">No investor details yet — edit in Investor Portal</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400 italic">Not yet linked to an investor record</p>
+      )}
+    </div>
   );
 }
 
