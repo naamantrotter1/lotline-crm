@@ -259,12 +259,20 @@ export async function loadAllDeals(orgIds) {
     const summaryRows = (await Promise.all(ids.map(id => fetchCostSummariesForOrg(id)))).flat();
     const summaryByDealId = Object.fromEntries(summaryRows.map(s => [String(s.deal_id), s]));
 
+    // LS is considered "fresh" if it was saved within the last 5 minutes.
+    // This handles the race condition where the Supabase write hasn't completed
+    // before a hard refresh — LS is updated synchronously but Supabase is async.
+    const LS_FRESH_MS = 5 * 60 * 1000;
+
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
       const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
       const summary = summaryByDealId[id];
+      // Prefer LS for user-edited financing/investor fields when LS was saved recently
+      // (Supabase write may still be in-flight if the user hard-refreshed quickly)
+      const lsFresh = fromLS._lsSavedAt && (Date.now() - fromLS._lsSavedAt) < LS_FRESH_MS;
       return {
         ...fromSupabase,
         // Canonical cost total from deal_cost_summary_view — used by calcNetProfit
@@ -280,6 +288,14 @@ export async function loadAllDeals(orgIds) {
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
+        // For financing/investor fields: prefer fresh LS over potentially stale Supabase
+        // (covers the case where the Supabase async write hadn't finished before hard refresh)
+        ...(lsFresh && {
+          investor:              fromLS.investor              ?? fromSupabase.investor,
+          financing:             fromLS.financing             ?? fromSupabase.financing,
+          financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
+          scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
+        }),
       };
     });
 
@@ -336,7 +352,8 @@ export function saveToLS(deal, orgId) {
   console.log('[dealsSync] saveToLS: deal', deal.id, '→ key', lsKey(orgId), '(orgId:', orgId, ')');
   const all = lsGet(orgId);
   const idx = all.findIndex(d => String(d.id) === String(deal.id));
-  if (idx >= 0) all[idx] = deal; else all.push(deal);
+  const stamped = { ...deal, _lsSavedAt: Date.now() };
+  if (idx >= 0) all[idx] = stamped; else all.push(stamped);
   lsSet(all, orgId);
 }
 
