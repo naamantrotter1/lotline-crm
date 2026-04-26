@@ -32,6 +32,53 @@ function guard(data, error, fallback = []) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * When an investor is assigned to a deal, ensure they also exist as a Contact
+ * with type='Investor'. If the investor already has a contact_id, does nothing.
+ * Fire-and-forget: call without awaiting so it never blocks the UI.
+ */
+export async function ensureInvestorContact(investorName, orgId) {
+  if (!supabase || !investorName || !orgId) return;
+
+  const { data: inv } = await supabase
+    .from('investors')
+    .select('id, name, email, phone, contact, contact_id')
+    .eq('organization_id', orgId)
+    .eq('name', investorName)
+    .maybeSingle();
+
+  if (!inv) return;           // investor not in DB yet
+  if (inv.contact_id) return; // already linked to a contact
+
+  // Decide company vs person based on common corporate keywords
+  const isCompany = /LLC|Inc\.?|Corp\.?|Capital|Group|Partners|Holdings|Realty|Properties|Investments/i.test(investorName);
+  const parts = investorName.trim().split(/\s+/);
+  const firstName = parts[0] || investorName;
+  const lastName  = isCompany ? '' : parts.slice(1).join(' ');
+
+  const { data: contact } = await supabase
+    .from('contacts')
+    .insert({
+      organization_id: orgId,
+      first_name: firstName,
+      last_name:  lastName,
+      company:    isCompany ? investorName : (inv.contact || null),
+      email:      inv.email || null,
+      phone:      inv.phone || null,
+    })
+    .select('id')
+    .single();
+
+  if (!contact) return;
+
+  await supabase.from('contact_types')
+    .upsert({ contact_id: contact.id, type: 'Investor' }, { onConflict: 'contact_id,type' });
+
+  await supabase.from('investors')
+    .update({ contact_id: contact.id })
+    .eq('id', inv.id);
+}
+
+/**
  * Fetch all investors ordered by name.
  */
 export async function fetchInvestors(orgIds) {

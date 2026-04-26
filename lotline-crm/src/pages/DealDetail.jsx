@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase } from '../lib/dealsSync';
-import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
+import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation, ensureInvestorContact } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -2139,6 +2139,14 @@ function DealDetailContent({ deal }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showInvestorPicker]);
+
+  // When an investor is assigned to a deal, ensure they exist as a Contact
+  // with type='Investor' so they appear in the Contacts overview.
+  useEffect(() => {
+    if (investor && activeOrgId) {
+      ensureInvestorContact(investor, activeOrgId);
+    }
+  }, [investor, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
