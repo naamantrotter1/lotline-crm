@@ -8,7 +8,7 @@ import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
-import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
+import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -205,7 +205,11 @@ const FINANCING_SCENARIOS_LIST = [
 function AssignFunderModal({ deal, investors, onAssign, onClose }) {
   const [mode, setMode] = useState('existing');
   const [selected, setSelected] = useState('');
-  const [newName, setNewName] = useState('');
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
+  const [newCompany, setNewCompany] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPhone, setNewPhone] = useState('');
 
   // Financing scenario
   const [scenario, setScenario] = useState('');
@@ -241,13 +245,25 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
     }
   };
 
-  const funderName = mode === 'existing' ? selected : newName.trim();
+  const newFunderName = [newFirstName.trim(), newLastName.trim()].filter(Boolean).join(' ') || newCompany.trim();
+  const funderName = mode === 'existing' ? selected : newFunderName;
   const canSubmit = !!funderName;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
     const terms = { scenario, interestRate, originationFeeType, originationFeePct, originationFeeFlat, servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm, holdPeriod, monthlyHoldCost, profitSharePct, capitalDeployedDate, capitalReturnedDate, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct, investorProfitSplitPct };
-    onAssign({ funderName, terms, isNew: mode === 'new', newInvestor: mode === 'new' ? { name: funderName, standardTerms: '' } : null });
+    onAssign({
+      funderName,
+      terms,
+      isNew: mode === 'new',
+      newInvestor: mode === 'new' ? {
+        name: funderName,
+        contact: newCompany.trim(),
+        email: newEmail.trim(),
+        phone: newPhone.trim(),
+        standardTerms: '',
+      } : null,
+    });
   };
 
   // Shared styles matching DealDetail
@@ -296,11 +312,39 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
               </select>
             </div>
           ) : (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Investor Name</label>
-              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="e.g. John Smith Capital"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">First Name</label>
+                  <input type="text" value={newFirstName} onChange={e => setNewFirstName(e.target.value)}
+                    placeholder="Jane"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Last Name</label>
+                  <input type="text" value={newLastName} onChange={e => setNewLastName(e.target.value)}
+                    placeholder="Smith"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
+                <input type="text" value={newCompany} onChange={e => setNewCompany(e.target.value)}
+                  placeholder="Acme Capital LLC"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)}
+                  placeholder="(555) 000-0000"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
+              </div>
             </div>
           )}
 
@@ -463,6 +507,16 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
       const updated = [...extraInvestors, newInvestor];
       setExtraInvestors(updated);
       localStorage.setItem('nf_extra_investors', JSON.stringify(updated));
+      // Add to the main investors list so they appear in future dropdowns
+      storeAddInvestor({
+        name: newInvestor.name,
+        contact: newInvestor.contact || '',
+        email: newInvestor.email || '',
+        phone: newInvestor.phone || '',
+      }, activeOrgId, orgSlug);
+      setInvestors(loadInvestors(activeOrgId, orgSlug));
+      // Auto-create a Contact with type Investor
+      ensureInvestorContact(newInvestor.name, activeOrgId);
     }
     const updated = { ...assignments, [modalDeal.address]: { funder: funderName, terms } };
     setAssignments(updated);
