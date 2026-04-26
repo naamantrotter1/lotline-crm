@@ -7,7 +7,7 @@ import { supabase } from './supabase';
 const SELECT_FIELDS = `
   id, organization_id, first_name, last_name, email, phone, secondary_phone,
   company, title, address, lead_source, owner_user_id, tags, custom_fields,
-  lifecycle_stage, do_not_contact, notes, last_contacted_at,
+  lifecycle_stage, do_not_contact, notes, last_contacted_at, states_serviced,
   created_at, updated_at,
   contact_types(type),
   contact_deals(deal_id, role)

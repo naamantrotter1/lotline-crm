@@ -12,6 +12,17 @@ import {
   fetchContact, updateContact, deleteContact,
   CONTACT_TYPE_OPTIONS,
 } from '../lib/contactsData';
+
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
+  'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
+  'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire',
+  'New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
+  'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota',
+  'Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia',
+  'Wisconsin','Wyoming',
+];
 import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/tasksData';
 import { fetchEmailLogs } from '../lib/emailData';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
@@ -247,7 +258,14 @@ export default function ContactDetail() {
             <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
               {initials(contact)}
             </div>
-            <h2 className="text-base font-bold text-gray-800">{contact.fullName}</h2>
+            <div className="flex justify-center gap-2 mb-1">
+              <EditableField label="" value={contact.first_name} onSave={v => save({ first_name: v })}>
+                <span className="text-base font-bold text-gray-800">{contact.first_name}</span>
+              </EditableField>
+              <EditableField label="" value={contact.last_name} onSave={v => save({ last_name: v })}>
+                <span className="text-base font-bold text-gray-800">{contact.last_name}</span>
+              </EditableField>
+            </div>
             {contact.title && <p className="text-xs text-gray-500 mt-0.5">{contact.title}</p>}
             {contact.company && <p className="text-xs text-gray-400">{contact.company}</p>}
             <div className="flex flex-wrap justify-center gap-1 mt-3">
@@ -313,7 +331,55 @@ export default function ContactDetail() {
             </EditableField>
 
             <EditableField label="Title" value={contact.title} onSave={v => save({ title: v })} />
+
+            <EditableField label="Address" value={contact.address} onSave={v => save({ address: v })}>
+              {contact.address && <span className="text-sm text-gray-700 flex items-center gap-1"><MapPin size={12} className="text-gray-400" />{contact.address}</span>}
+            </EditableField>
           </div>
+
+          {/* States serviced */}
+          {canEdit && (
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">States Serviced</p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(contact.states_serviced || []).map(s => (
+                  <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">
+                    {s}
+                    <button onClick={() => save({ states_serviced: (contact.states_serviced || []).filter(x => x !== s) }).then(() => setContact(c => ({ ...c, states_serviced: (c.states_serviced || []).filter(x => x !== s) })))}
+                      className="hover:text-red-500 ml-0.5"><X size={9} /></button>
+                  </span>
+                ))}
+                {(contact.states_serviced || []).length === 0 && <span className="text-xs text-gray-300 italic">No states added</span>}
+              </div>
+              <select
+                defaultValue=""
+                onChange={async e => {
+                  const s = e.target.value;
+                  if (!s || (contact.states_serviced || []).includes(s)) return;
+                  const updated = [...(contact.states_serviced || []), s];
+                  setContact(c => ({ ...c, states_serviced: updated }));
+                  await save({ states_serviced: updated });
+                  e.target.value = '';
+                }}
+                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white text-gray-600"
+              >
+                <option value="">+ Add state…</option>
+                {US_STATES.filter(s => !(contact.states_serviced || []).includes(s)).map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {!canEdit && (contact.states_serviced || []).length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">States Serviced</p>
+              <div className="flex flex-wrap gap-1.5">
+                {contact.states_serviced.map(s => (
+                  <span key={s} className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tags */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
