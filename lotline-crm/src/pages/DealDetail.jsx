@@ -1766,7 +1766,7 @@ function DealDetailContent({ deal }) {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
-  const { setDeals } = useDeals();
+  const { setDeals, setArchivedDeals } = useDeals();
   const { profile, activeOrgId, orgSlug } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -2731,7 +2731,7 @@ function DealDetailContent({ deal }) {
             <button
               onClick={() => {
                 const now = new Date().toISOString();
-                saveDeal({
+                const deadDeal = {
                   ...deal,
                   stage,
                   deadDeal: true,
@@ -2739,7 +2739,15 @@ function DealDetailContent({ deal }) {
                   isArchived: true,
                   archivedAt: now,
                   lastStage: stage,
-                }, activeOrgId);
+                };
+                saveDeal(deadDeal, activeOrgId);
+                // Update context immediately so ArchivedDeals page shows it right away
+                setDeals(prev => prev.filter(d => String(d.id) !== String(deal.id)));
+                setArchivedDeals(prev => {
+                  const idx = prev.findIndex(d => String(d.id) === String(deal.id));
+                  if (idx >= 0) { const next = [...prev]; next[idx] = deadDeal; return next; }
+                  return [...prev, deadDeal];
+                });
                 try {
                   const lsK = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
                   const all = JSON.parse(localStorage.getItem(lsK) || '[]');
