@@ -93,9 +93,10 @@ export async function createContact({ orgId, types = [], ...fields }) {
   if (error) return { error: error.message };
 
   if (types.length) {
-    await supabase.from('contact_types').insert(
+    const { error: typesErr } = await supabase.from('contact_types').insert(
       types.map(type => ({ contact_id: data.id, type }))
     );
+    if (typesErr) console.error('contact_types insert failed:', typesErr.message);
   }
 
   return { data: await fetchContact(data.id) };
