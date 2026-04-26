@@ -187,7 +187,11 @@ export default function ContactDetail() {
 
   const handleDelete = async () => {
     if (!window.confirm(`Delete ${contact?.fullName}? This cannot be undone.`)) return;
-    await deleteContact(id);
+    const result = await deleteContact(id);
+    if (result?.error) {
+      alert(`Could not delete contact: ${result.error}`);
+      return;
+    }
     // If this contact was an Investor, remove them from the localStorage investor list
     if (contact?.types?.includes('Investor') && activeOrgId) {
       const investorName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company || '';
@@ -195,7 +199,7 @@ export default function ContactDetail() {
       const filtered = all.filter(inv => inv.name !== investorName);
       if (filtered.length !== all.length) saveInvestors(filtered, activeOrgId);
     }
-    navigate('/contacts');
+    navigate('/contacts', { state: { deletedId: id } });
   };
 
   const handleUnlinkDeal = async (dealId, role) => {
