@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Users, UserPlus, X, CheckCircle, AlertCircle, Loader2,
@@ -238,6 +238,7 @@ export default function TeamSettings() {
   const [saving,      setSaving]      = useState(null); // memberId being updated
   const [toast,       setToast]       = useState(null);
   const [editingName, setEditingName] = useState(null); // { memberId, firstName, lastName }
+  const editingNameRef = useRef(null); // mirrors editingName to avoid stale closures
 
   const myId = profile?.id || session?.user?.id;
 
@@ -329,24 +330,29 @@ export default function TeamSettings() {
     setSaving(null);
   };
 
-  const handleSaveName = async () => {
-    if (!editingName) return;
-    const { memberId, firstName, lastName } = editingName;
+  const handleSaveName = useCallback(async () => {
+    const current = editingNameRef.current;
+    if (!current) return;
+    editingNameRef.current = null;   // prevent double-save
+    setEditingName(null);
+
+    const { memberId, firstName, lastName } = current;
+    if (!firstName.trim() && !lastName.trim()) return; // nothing to save
+
     setSaving(memberId);
     try {
-      await callTeamApi('/api/team/update-member', 'PATCH', { memberId, firstName, lastName });
-      const fullName = [firstName, lastName].filter(Boolean).join(' ');
+      await callTeamApi('/api/team/update-member', 'PATCH', { memberId, firstName: firstName.trim(), lastName: lastName.trim() });
+      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
       setMembers(prev => prev.map(m => m.id === memberId ? {
         ...m,
-        profiles: { ...m.profiles, first_name: firstName, last_name: lastName, name: fullName || m.profiles?.name },
+        profiles: { ...m.profiles, first_name: firstName.trim(), last_name: lastName.trim(), name: fullName },
       } : m));
       showToast('Name updated.');
     } catch (e) {
       showToast(e.message, 'error');
     }
     setSaving(null);
-    setEditingName(null);
-  };
+  }, [callTeamApi, showToast]);
 
   const totalSeats = members.filter(m => m.status === 'active').length + invitations.length;
   const seatLimit  = orgSeatLimit ?? PLAN_SEAT_LIMITS[orgPlan] ?? 1;
@@ -459,7 +465,6 @@ export default function TeamSettings() {
                           <div
                             className="flex items-center gap-1.5"
                             onBlur={e => {
-                              // Auto-save when focus leaves the entire edit container
                               if (!e.currentTarget.contains(e.relatedTarget)) {
                                 handleSaveName();
                               }
@@ -468,15 +473,21 @@ export default function TeamSettings() {
                             <input
                               autoFocus
                               value={editingName.firstName}
-                              onChange={e => setEditingName(n => ({ ...n, firstName: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(null); }}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingName(n => { const next = { ...n, firstName: val }; editingNameRef.current = next; return next; });
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { editingNameRef.current = null; setEditingName(null); } }}
                               placeholder="First"
                               className="w-24 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/30"
                             />
                             <input
                               value={editingName.lastName}
-                              onChange={e => setEditingName(n => ({ ...n, lastName: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(null); }}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingName(n => { const next = { ...n, lastName: val }; editingNameRef.current = next; return next; });
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { editingNameRef.current = null; setEditingName(null); } }}
                               placeholder="Last"
                               className="w-24 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/30"
                             />
@@ -486,7 +497,7 @@ export default function TeamSettings() {
                           <div className="flex items-center gap-2 group">
                             <div
                               className={canManage && !isMe ? 'cursor-pointer' : ''}
-                              onClick={canManage && !isMe ? () => setEditingName({ memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }) : undefined}
+                              onClick={canManage && !isMe ? () => { const v = { memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }; editingNameRef.current = v; setEditingName(v); } : undefined}
                             >
                               <p className="text-xs font-semibold text-gray-800">
                                 {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
@@ -497,7 +508,7 @@ export default function TeamSettings() {
                             {canManage && !isMe && (
                               <button
                                 title="Edit name"
-                                onClick={() => setEditingName({ memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' })}
+                                onClick={() => { const v = { memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }; editingNameRef.current = v; setEditingName(v); }}
                                 className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-500 hover:bg-gray-100 transition-all flex-shrink-0"
                               >
                                 <Edit3 size={12} />
