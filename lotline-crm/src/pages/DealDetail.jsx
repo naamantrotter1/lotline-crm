@@ -997,15 +997,18 @@ function OverviewTab({
 
 // ── Add Investor Modal ────────────────────────────────────────────────────────
 function AddInvestorModal({ onClose, onSave }) {
-  const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [type, setType] = useState('Private Lender');
-  const [standardTerms, setStandardTerms] = useState('');
+  const [notes, setNotes] = useState('');
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent';
   const labelCls = 'text-xs font-medium text-gray-500 mb-1 block';
+
+  const derivedName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || company.trim();
+  const canSave = !!derivedName;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -1015,42 +1018,43 @@ function AddInvestorModal({ onClose, onSave }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XIcon size={18} /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
-          <div>
-            <label className={labelCls}>Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Investor name" className={inputCls} />
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Contact Name</label>
-              <input value={contact} onChange={e => setContact(e.target.value)} placeholder="First Last" className={inputCls} />
+              <label className={labelCls}>First Name</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Type</label>
-              <select value={type} onChange={e => setType(e.target.value)} className={inputCls + ' bg-white'}>
-                {['Hard Money Lender', 'Private Lender', 'Line of Credit', 'Internal'].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Phone</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(000) 000-0000" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Email</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
+              <label className={labelCls}>Last Name</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" className={inputCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Standard Terms</label>
-            <input value={standardTerms} onChange={e => setStandardTerms(e.target.value)} placeholder="e.g. 3 and 13" className={inputCls} />
+            <label className={labelCls}>Company</label>
+            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Acme Capital LLC" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Phone</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 000-0000" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Type</label>
+            <div className="px-3 py-2 text-sm text-accent font-medium bg-accent/5 border border-accent/20 rounded-lg">Investor</div>
+          </div>
+          <div>
+            <label className={labelCls}>Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Initial notes…" rows={2}
+              className={inputCls + ' resize-none'} />
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-5">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50">Cancel</button>
           <button
-            onClick={() => { if (name.trim()) onSave({ name: name.trim(), contact, phone, email, type, standardTerms }); }}
-            disabled={!name.trim()}
+            onClick={() => { if (canSave) onSave({ name: derivedName, contact: company.trim(), phone, email, type: 'Private Lender', standardTerms: notes }); }}
+            disabled={!canSave}
             className="flex-1 bg-accent text-white text-sm font-medium py-2 rounded-lg hover:bg-accent/90 disabled:opacity-40"
           >
             Save Investor
