@@ -1,8 +1,36 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Component } from 'react';
 import { DealsProvider } from './lib/DealsContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { JvProvider } from './lib/JvContext';
 import { usePermissions } from './hooks/usePermissions';
+
+class DealErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(err) { return { error: err }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+          <p className="text-lg font-semibold text-gray-700">Something went wrong loading this deal.</p>
+          <pre className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-4 max-w-xl overflow-auto whitespace-pre-wrap">
+            {this.state.error?.message || String(this.state.error)}
+          </pre>
+          <button
+            onClick={() => { this.setState({ error: null }); window.history.back(); }}
+            className="text-sm text-accent underline"
+          >
+            Go back
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import Landing from './pages/marketing/Landing';
 import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
@@ -240,7 +268,7 @@ export default function App() {
               <Route path="pipelines/due-diligence" element={<AgentRoute path="pipelines/due-diligence"><DueDiligence /></AgentRoute>} />
               <Route path="pipelines/development"   element={<AgentRoute path="pipelines/development"><Development /></AgentRoute>} />
               <Route path="pipelines/sales"         element={<Sales />} />
-              <Route path="deal/:id"    element={<DealDetail />} />
+              <Route path="deal/:id"    element={<DealErrorBoundary><DealDetail /></DealErrorBoundary>} />
               <Route path="calculator"  element={<AgentRoute path="calculator"><DealCalculator /></AgentRoute>} />
               <Route path="home-models" element={<AgentRoute path="home-models"><HomeModels /></AgentRoute>} />
               <Route path="counties"    element={<AgentRoute path="counties"><CountyDatabase /></AgentRoute>} />
