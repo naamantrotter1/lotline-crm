@@ -456,7 +456,15 @@ export default function TeamSettings() {
                       <div className="flex items-center gap-3">
                         <Avatar name={prof.name || prof.first_name} avatarUrl={prof.avatar_url} />
                         {editingName?.memberId === member.id ? (
-                          <div className="flex items-center gap-1.5">
+                          <div
+                            className="flex items-center gap-1.5"
+                            onBlur={e => {
+                              // Auto-save when focus leaves the entire edit container
+                              if (!e.currentTarget.contains(e.relatedTarget)) {
+                                handleSaveName();
+                              }
+                            }}
+                          >
                             <input
                               autoFocus
                               value={editingName.firstName}
@@ -472,14 +480,14 @@ export default function TeamSettings() {
                               placeholder="Last"
                               className="w-24 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/30"
                             />
-                            <button onClick={handleSaveName} disabled={saving === member.id} className="text-xs font-semibold text-accent hover:text-accent/80 disabled:opacity-40">
-                              {saving === member.id ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
-                            </button>
-                            <button onClick={() => setEditingName(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                            {saving === member.id && <Loader2 size={12} className="animate-spin text-accent flex-shrink-0" />}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <div>
+                          <div className="flex items-center gap-2 group">
+                            <div
+                              className={canManage && !isMe ? 'cursor-pointer' : ''}
+                              onClick={canManage && !isMe ? () => setEditingName({ memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' }) : undefined}
+                            >
                               <p className="text-xs font-semibold text-gray-800">
                                 {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
                                 {isMe && <span className="ml-1.5 text-[10px] text-accent">(you)</span>}
@@ -490,7 +498,7 @@ export default function TeamSettings() {
                               <button
                                 title="Edit name"
                                 onClick={() => setEditingName({ memberId: member.id, firstName: prof.first_name || '', lastName: prof.last_name || '' })}
-                                className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+                                className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-500 hover:bg-gray-100 transition-all flex-shrink-0"
                               >
                                 <Edit3 size={12} />
                               </button>
