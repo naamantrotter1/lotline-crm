@@ -331,58 +331,58 @@ export default function ContactDetail() {
             <EditableField label="Address" value={contact.address} onSave={v => save({ address: v })}>
               {contact.address && <span className="text-sm text-gray-700 flex items-center gap-1"><MapPin size={12} className="text-gray-400" />{contact.address}</span>}
             </EditableField>
-          </div>
 
-          {/* States serviced */}
-          {(() => {
-            const serviced = Array.isArray(contact.states_serviced)
-              ? contact.states_serviced.filter(s => typeof s === 'string')
-              : [];
-            return (
-              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">States Serviced</p>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {serviced.map(s => (
-                    <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">
-                      {s}
-                      {canEdit && (
-                        <button
-                          onClick={async () => {
-                            const updated = serviced.filter(x => x !== s);
-                            setContact(c => ({ ...c, states_serviced: updated }));
-                            await save({ states_serviced: updated });
-                          }}
-                          className="hover:text-red-500 ml-0.5"
-                        >
-                          <X size={9} />
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                  {serviced.length === 0 && <span className="text-xs text-gray-300 italic">No states added</span>}
-                </div>
-                {canEdit && (
-                  <select
-                    defaultValue=""
-                    onChange={async e => {
-                      const s = e.target.value;
-                      if (!s || serviced.includes(s)) return;
-                      const updated = [...serviced, s];
-                      setContact(c => ({ ...c, states_serviced: updated }));
-                      await save({ states_serviced: updated });
-                      e.target.value = '';
-                    }}
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white text-gray-600"
-                  >
-                    <option value="">+ Add state…</option>
-                    {US_STATES.filter(s => !serviced.includes(s)).map(s => (
-                      <option key={s} value={s}>{s}</option>
+            {/* States serviced — inside Contact Info card */}
+            {(() => {
+              const serviced = Array.isArray(contact.states_serviced)
+                ? contact.states_serviced.filter(s => typeof s === 'string')
+                : [];
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-1">States Serviced</p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {serviced.map(s => (
+                      <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">
+                        {s}
+                        {canEdit && (
+                          <button
+                            onClick={async () => {
+                              const updated = serviced.filter(x => x !== s);
+                              setContact(c => ({ ...c, states_serviced: updated }));
+                              await save({ states_serviced: updated });
+                            }}
+                            className="hover:text-red-500 ml-0.5"
+                          >
+                            <X size={9} />
+                          </button>
+                        )}
+                      </span>
                     ))}
-                  </select>
-                )}
-              </div>
-            );
-          })()}
+                    {serviced.length === 0 && <span className="text-xs text-gray-300 italic">No states added</span>}
+                  </div>
+                  {canEdit && (
+                    <select
+                      defaultValue=""
+                      onChange={async e => {
+                        const s = e.target.value;
+                        if (!s || serviced.includes(s)) return;
+                        const updated = [...serviced, s];
+                        setContact(c => ({ ...c, states_serviced: updated }));
+                        await save({ states_serviced: updated });
+                        e.target.value = '';
+                      }}
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white text-gray-600"
+                    >
+                      <option value="">+ Add state…</option>
+                      {US_STATES.filter(s => !serviced.includes(s)).map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
 
           {/* Tags */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
