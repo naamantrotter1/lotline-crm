@@ -102,6 +102,7 @@ import Homes from './pages/Homes';
 import Settings from './pages/Settings';
 import JointVentures from './pages/JointVentures';
 import Lending from './pages/Lending';
+import PooledLoanDetail from './pages/PooledLoanDetail';
 import BuilderNetwork from './pages/BuilderNetwork';
 import UserManagement from './pages/UserManagement';
 import AcceptInvite from './pages/AcceptInvite';
@@ -306,6 +307,7 @@ export default function App() {
               <Route path="flood-map"   element={<AgentRoute path="flood-map"><FloodMap /></AgentRoute>} />
               <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
               <Route path="lending"     element={<AgentRoute path="lending"><Lending /></AgentRoute>} />
+              <Route path="lending/pooled-loans/:id" element={<AgentRoute path="lending"><PooledLoanDetail /></AgentRoute>} />
               <Route path="builder-network" element={<AgentRoute path="builder-network"><BuilderNetwork /></AgentRoute>} />
               <Route path="contacts"             element={<AgentRoute path="contacts"><Contacts /></AgentRoute>} />
               <Route path="contacts/:id"        element={<AgentRoute path="contacts"><ContactDetail /></AgentRoute>} />

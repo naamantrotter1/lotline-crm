@@ -31,6 +31,7 @@ import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
+import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -1749,6 +1750,7 @@ const FINANCING_SCENARIOS = [
   { id: 'loc',                     label: 'Line of Credit',                               financingType: 'Line of Credit',             dbType: 'line_of_credit' },
   { id: 'profit-split',            label: 'Profit Split',                                 financingType: 'Profit Split',               dbType: 'profit_split' },
   { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal, Tranched)', financingType: 'Committed Capital Partner', dbType: 'committed_capital_partner' },
+  { id: 'pooled-loan', label: 'Pooled Loan (Multi-Deal)', financingType: 'Pooled Loan', dbType: 'pooled_loan' },
 ];
 
 // ── Per-investor default terms ────────────────────────────────────────────────
@@ -1846,6 +1848,7 @@ function DealDetailContent({ deal }) {
   const { hasFlag } = useAuth();
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
+  const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
   const [starred, setStarred] = useState(false);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
@@ -2186,6 +2189,12 @@ function DealDetailContent({ deal }) {
     ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
     financingScenarioType,
   ]);
+
+  // ── Load pooled loan links for this deal ──────────────────────────────────
+  useEffect(() => {
+    if (!deal?.id || !activeOrgId) return;
+    fetchPooledLoansForDeal(deal.id, activeOrgId).then(links => setPooledLoanLinks(links));
+  }, [deal?.id, activeOrgId]);
 
   // ── Load cost summary when feature flag is on ─────────────────────────────
   useEffect(() => {
@@ -2633,6 +2642,53 @@ function DealDetailContent({ deal }) {
             ? <CostBreakdownTab dealId={deal.id} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
+        {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (
+          <div className="space-y-3 mb-4">
+            {pooledLoanLinks.map(({ loan, allocation }) => {
+              if (!loan) return null;
+              const allocs = pooledLoanLinks.map(l => ({ ...l.allocation, deal_id: deal.id }));
+              const totalAlloc = allocs.reduce((s, a) => s + (parseFloat(a.allocated_amount) || 0), 0);
+              const monthly = pooledMonthlyInterest(loan);
+              const attrInterest = totalAlloc > 0 ? (parseFloat(allocation.allocated_amount) / totalAlloc) * monthly : 0;
+              return (
+                <div key={loan.id} className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-600"><rect x="2" y="3" width="6" height="18"/><rect x="9" y="3" width="6" height="18"/><rect x="16" y="3" width="6" height="18"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-sidebar">{loan.name}</p>
+                        <p className="text-xs text-gray-500">{loan.lender_name || 'Pooled Loan'}{loan.lender_contact_name ? ` · ${loan.lender_contact_name}` : ''}</p>
+                      </div>
+                    </div>
+                    <a href={`/lending/pooled-loans/${loan.id}`} className="text-xs text-purple-600 hover:underline font-medium flex-shrink-0">View Loan →</a>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <div className="bg-white rounded-lg px-3 py-2">
+                      <p className="text-xs text-gray-400">Allocated</p>
+                      <p className="text-sm font-bold text-sidebar">${Number(allocation.allocated_amount || 0).toLocaleString()}</p>
+                    </div>
+                    <div className="bg-white rounded-lg px-3 py-2">
+                      <p className="text-xs text-gray-400">Pool Rate</p>
+                      <p className="text-sm font-bold text-sidebar">{((loan.interest_rate || 0) * 100).toFixed(2)}%</p>
+                    </div>
+                    <div className="bg-white rounded-lg px-3 py-2">
+                      <p className="text-xs text-gray-400">Attributed Interest/mo</p>
+                      <p className="text-sm font-bold text-sidebar">${attrInterest.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-white rounded-lg px-3 py-2">
+                      <p className="text-xs text-gray-400">Profit Participation</p>
+                      <p className="text-sm font-bold text-sidebar">{loan.profit_participation_pct || 0}% of net</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Full pool: ${Number(loan.total_pool).toLocaleString()} · Interest accrues on full pool regardless of draws</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
             deal={deal} costs={costs} arv={arv}
