@@ -53,7 +53,7 @@ function initials(c) {
 }
 
 // ── Contact Row (Table View) ──────────────────────────────────────────────────
-function ContactRow({ contact, onDelete, canDelete }) {
+function ContactRow({ contact, onDelete, canDelete, onEmail }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -82,7 +82,7 @@ function ContactRow({ contact, onDelete, canDelete }) {
       <td className="px-4 py-3 text-sm text-gray-600">{contact.company || '—'}</td>
       <td className="px-4 py-3">
         {contact.email ? (
-          <button onClick={e => { e.stopPropagation(); setEmailContact(contact); }}
+          <button onClick={e => { e.stopPropagation(); onEmail(contact); }}
             className="text-sm text-accent hover:underline flex items-center gap-1">
             <Mail size={12} />{contact.email}
           </button>
@@ -364,7 +364,7 @@ export default function Contacts() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map(c => (
-                  <ContactRow key={c.id} contact={c} onDelete={handleDelete} canDelete={canDelete} />
+                  <ContactRow key={c.id} contact={c} onDelete={handleDelete} canDelete={canDelete} onEmail={setEmailContact} />
                 ))}
               </tbody>
             </table>
