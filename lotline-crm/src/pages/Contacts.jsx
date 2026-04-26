@@ -56,16 +56,29 @@ function ContactRow({ contact, onDelete, canDelete, onEmail, onTypeChange }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
-  const typeRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const typeBtnRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (!typeOpen) return;
     function handleClick(e) {
-      if (typeRef.current && !typeRef.current.contains(e.target)) setTypeOpen(false);
+      if (
+        typeBtnRef.current && !typeBtnRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) setTypeOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [typeOpen]);
+
+  const openTypePicker = () => {
+    if (typeBtnRef.current) {
+      const rect = typeBtnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setTypeOpen(v => !v);
+  };
 
   const toggleType = (t) => {
     const next = contact.types.includes(t)
@@ -91,37 +104,40 @@ function ContactRow({ contact, onDelete, canDelete, onEmail, onTypeChange }) {
         </div>
       </td>
       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-        <div className="relative" ref={typeRef}>
-          <button
-            onClick={() => setTypeOpen(v => !v)}
-            className="flex flex-wrap gap-1 min-w-[60px] text-left"
-          >
-            {contact.types.length > 0 ? (
-              <>
-                {contact.types.slice(0, 3).map(t => <TypeBadge key={t} type={t} />)}
-                {contact.types.length > 3 && <span className="text-[10px] text-gray-400">+{contact.types.length - 3}</span>}
-              </>
-            ) : (
-              <span className="text-[11px] text-gray-300 hover:text-accent transition-colors">+ Add type</span>
-            )}
-          </button>
-          {typeOpen && (
-            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 w-44 py-1">
-              {CONTACT_TYPE_OPTIONS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => toggleType(t)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-50 capitalize"
-                >
-                  <span className={`w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ${contact.types.includes(t) ? 'bg-accent border-accent' : 'border-gray-300'}`}>
-                    {contact.types.includes(t) && <span className="text-white text-[8px]">✓</span>}
-                  </span>
-                  {t}
-                </button>
-              ))}
-            </div>
+        <button
+          ref={typeBtnRef}
+          onClick={openTypePicker}
+          className="flex flex-wrap gap-1 min-w-[60px] text-left"
+        >
+          {contact.types.length > 0 ? (
+            <>
+              {contact.types.slice(0, 3).map(t => <TypeBadge key={t} type={t} />)}
+              {contact.types.length > 3 && <span className="text-[10px] text-gray-400">+{contact.types.length - 3}</span>}
+            </>
+          ) : (
+            <span className="text-[11px] text-gray-300 hover:text-accent transition-colors">+ Add type</span>
           )}
-        </div>
+        </button>
+        {typeOpen && (
+          <div
+            ref={dropdownRef}
+            style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+            className="bg-white border border-gray-200 rounded-xl shadow-lg w-44 py-1 max-h-64 overflow-y-auto"
+          >
+            {CONTACT_TYPE_OPTIONS.map(t => (
+              <button
+                key={t}
+                onClick={() => toggleType(t)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-50 capitalize"
+              >
+                <span className={`w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ${contact.types.includes(t) ? 'bg-accent border-accent' : 'border-gray-300'}`}>
+                  {contact.types.includes(t) && <span className="text-white text-[8px]">✓</span>}
+                </span>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </td>
       <td className="px-4 py-3 text-sm text-gray-600">{contact.company || '—'}</td>
       <td className="px-4 py-3">
