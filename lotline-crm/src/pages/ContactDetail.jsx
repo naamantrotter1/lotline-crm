@@ -308,9 +308,9 @@ export default function ContactDetail() {
 
             <EditableField label="Email" value={contact.email} onSave={v => save({ email: v })} type="email">
               {contact.email && (
-                <a href={`mailto:${contact.email}`} className="text-sm text-accent hover:underline flex items-center gap-1">
+                <button onClick={() => setShowEmail(true)} className="text-sm text-accent hover:underline flex items-center gap-1">
                   <Mail size={12} />{contact.email}
-                </a>
+                </button>
               )}
             </EditableField>
 
