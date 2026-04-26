@@ -5,6 +5,33 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 import { JvProvider } from './lib/JvContext';
 import { usePermissions } from './hooks/usePermissions';
 
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(err) { return { error: err }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ fontFamily: 'monospace', padding: 32, background: '#fff', minHeight: '100vh' }}>
+          <h2 style={{ color: '#c8613a', marginBottom: 12 }}>Something went wrong</h2>
+          <pre style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: 16, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 800 }}>
+            {this.state.error?.stack || this.state.error?.message || String(this.state.error)}
+          </pre>
+          <button
+            onClick={() => { this.setState({ error: null }); window.history.back(); }}
+            style={{ marginTop: 16, color: '#c8613a', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', fontSize: 14 }}
+          >
+            ← Go back
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 class DealErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -14,16 +41,16 @@ class DealErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
-          <p className="text-lg font-semibold text-gray-700">Something went wrong loading this deal.</p>
-          <pre className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-4 max-w-xl overflow-auto whitespace-pre-wrap">
-            {this.state.error?.message || String(this.state.error)}
+        <div style={{ fontFamily: 'monospace', padding: 32 }}>
+          <h2 style={{ color: '#c8613a', marginBottom: 12 }}>Deal page error</h2>
+          <pre style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: 16, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 800 }}>
+            {this.state.error?.stack || this.state.error?.message || String(this.state.error)}
           </pre>
           <button
             onClick={() => { this.setState({ error: null }); window.history.back(); }}
-            className="text-sm text-accent underline"
+            style={{ marginTop: 16, color: '#c8613a', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', fontSize: 14 }}
           >
-            Go back
+            ← Go back
           </button>
         </div>
       );
@@ -200,6 +227,7 @@ function AgentRoute({ children, path }) {
 
 export default function App() {
   return (
+    <AppErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
         <JvProvider>
@@ -332,5 +360,6 @@ export default function App() {
         </JvProvider>
       </AuthProvider>
     </BrowserRouter>
+    </AppErrorBoundary>
   );
 }
