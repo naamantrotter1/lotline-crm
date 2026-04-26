@@ -125,12 +125,12 @@ export async function updateContact(id, { types, ...fields }) {
   return { data: await fetchContact(id) };
 }
 
-/** Soft-delete a contact by setting deleted_at (hard DELETE is blocked by RLS). */
+/** Delete a contact. Requires migration 058_contacts_delete_rls.sql to be run in Supabase. */
 export async function deleteContact(id) {
   if (!supabase) return { error: 'No Supabase client' };
   const { error } = await supabase
     .from('contacts')
-    .update({ deleted_at: new Date().toISOString() })
+    .delete()
     .eq('id', id);
   return error ? { error: error.message } : { ok: true };
 }
