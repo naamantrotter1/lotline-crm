@@ -29,6 +29,7 @@ import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
+import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
@@ -2688,6 +2689,15 @@ function DealDetailContent({ deal }) {
         defaultDealId={deal.id}
         onClose={() => setShowCreateTask(false)}
         onCreated={() => setShowCreateTask(false)}
+      />
+    )}
+
+    {showSendEmail && (
+      <ComposeEmailModal
+        contact={{ email: email, fullName: sellerName || ownerName || '' }}
+        dealId={deal.id}
+        onClose={() => setShowSendEmail(false)}
+        onSent={() => setShowSendEmail(false)}
       />
     )}
 

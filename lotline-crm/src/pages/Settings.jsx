@@ -758,8 +758,6 @@ export default function Settings() {
     setSaving(true);
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     const { error } = await updateProfile({
-      first_name: firstName.trim(),
-      last_name:  lastName.trim(),
       name:       fullName,
       phone:      phone.trim() || null,
     });

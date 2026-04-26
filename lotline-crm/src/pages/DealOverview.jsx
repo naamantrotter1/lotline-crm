@@ -211,7 +211,7 @@ export default function DealOverview() {
                   <DealCard
                     key={deal.id}
                     deal={deal}
-                    onClick={() => navigate(`/deal/${deal.id}`, { state: { pipeline: 'deal-overview' } })}
+                    onClick={() => navigate(`/deal/${deal.id}`, { state: { pipeline: 'deal-overview', deal } })}
                     isAgent={isAgent}
                   />
                 ))}

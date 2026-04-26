@@ -884,7 +884,7 @@ export default function LandAcquisition() {
               {/* Cards */}
               <div>
                 {deals.map(deal => (
-                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`)} onDelete={handleDelete} />
+                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })} onDelete={handleDelete} />
                 ))}
                 {deals.length === 0 && (
                   <div className="rounded-2xl p-6 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
