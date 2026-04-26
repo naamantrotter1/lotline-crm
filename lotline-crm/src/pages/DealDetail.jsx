@@ -1007,7 +1007,7 @@ function AddInvestorModal({ onClose, onSave }) {
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent';
   const labelCls = 'text-xs font-medium text-gray-500 mb-1 block';
 
-  const derivedName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || company.trim();
+  const derivedName = company.trim() || [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
   const canSave = !!derivedName;
 
   return (

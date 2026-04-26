@@ -245,7 +245,7 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
     }
   };
 
-  const newFunderName = [newFirstName.trim(), newLastName.trim()].filter(Boolean).join(' ') || newCompany.trim();
+  const newFunderName = newCompany.trim() || [newFirstName.trim(), newLastName.trim()].filter(Boolean).join(' ');
   const funderName = mode === 'existing' ? selected : newFunderName;
   const canSubmit = !!funderName;
 
