@@ -2526,20 +2526,28 @@ function DealDetailContent({ deal }) {
               : <p className="text-sm font-bold text-[#1a2332]">{investor || deal.investor || '—'}</p>
             }
             {showInvestorPicker && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[180px] py-1 max-h-60 overflow-y-auto">
-                {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
-                  <button
-                    key={inv.id}
-                    onClick={() => {
-                      setInvestor(inv.name);
-                      saveNow?.({ investor: inv.name });
-                      setShowInvestorPicker(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
-                  >
-                    {inv.name}
-                  </button>
-                ))}
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 w-52 py-1 flex flex-col">
+                <button
+                  onClick={() => { setShowInvestorPicker(false); setShowAddInvestor(true); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent/5 text-accent font-semibold border-b border-gray-100"
+                >
+                  + Add New Investor
+                </button>
+                <div className="overflow-y-auto max-h-48">
+                  {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
+                    <button
+                      key={inv.id}
+                      onClick={() => {
+                        setInvestor(inv.name);
+                        saveNow?.({ investor: inv.name });
+                        setShowInvestorPicker(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
+                    >
+                      {inv.name}
+                    </button>
+                  ))}
+                </div>
                 {investor && (
                   <button
                     onClick={() => {
@@ -2547,19 +2555,11 @@ function DealDetailContent({ deal }) {
                       saveNow?.({ investor: '' });
                       setShowInvestorPicker(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-500"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-500 border-t border-gray-100"
                   >
                     Remove investor
                   </button>
                 )}
-                <div className="border-t border-gray-100 mt-1 pt-1">
-                  <button
-                    onClick={() => { setShowInvestorPicker(false); setShowAddInvestor(true); }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-accent font-medium flex items-center gap-1"
-                  >
-                    + Add New Investor
-                  </button>
-                </div>
               </div>
             )}
           </div></>}
