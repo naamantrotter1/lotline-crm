@@ -96,14 +96,6 @@ function ContactRow({ contact, onDelete, canDelete, onEmail }) {
           </a>
         ) : <span className="text-gray-300">—</span>}
       </td>
-      <td className="px-4 py-3">
-        <LifecycleBadge stage={contact.lifecycle_stage} />
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-400">
-        {contact.last_contacted_at
-          ? new Date(contact.last_contacted_at).toLocaleDateString()
-          : '—'}
-      </td>
       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
         {canDelete && (
           <div className="relative">
@@ -357,8 +349,6 @@ export default function Contacts() {
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Company</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Email</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-semibold">Phone</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-semibold">Stage</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-semibold">Last Contact</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
