@@ -4,35 +4,62 @@
  */
 import { supabase } from './supabase';
 
-const ADV_SELECT = [
+// Columns available after the dead_deal migration. We try with them first and
+// fall back to the base set if Supabase returns a column-not-found error.
+const ADV_SELECT_FULL = [
   'id', 'stage', 'pipeline', 'arv', 'lead_source',
   'is_archived', 'archived_at', 'created_at', 'contract_signed_at',
   'investor', 'investor_capital_contributed', 'projected_irr',
   'dead_deal', 'dead_deal_date',
 ].join(', ');
 
+const ADV_SELECT_BASE = [
+  'id', 'stage', 'pipeline', 'arv', 'lead_source',
+  'is_archived', 'archived_at', 'created_at', 'contract_signed_at',
+  'investor', 'investor_capital_contributed', 'projected_irr',
+].join(', ');
+
+async function fetchDeals(orgId, isArchived, since, selectStr) {
+  let q = supabase.from('deals').select(selectStr)
+    .eq('organization_id', orgId).eq('is_archived', isArchived);
+  if (since) q = isArchived ? q.gte('archived_at', since) : q.gte('created_at', since);
+  const { data, error } = await q;
+  return { data, error };
+}
+
 /**
  * Fetch richer deal data for the advanced analytics sections.
  * Returns { allDeals, investors }.
- * allDeals = active deals (created in window) + archived deals (archived in window).
+ * Gracefully falls back to the base SELECT if dead_deal columns don't exist yet.
  */
 export async function fetchAdvancedReportsData(orgId, since = null) {
   if (!supabase || !orgId) return { allDeals: [], investors: [] };
 
-  let aq = supabase.from('deals').select(ADV_SELECT)
-    .eq('organization_id', orgId).eq('is_archived', false);
-  if (since) aq = aq.gte('created_at', since);
-
-  let rq = supabase.from('deals').select(ADV_SELECT)
-    .eq('organization_id', orgId).eq('is_archived', true);
-  if (since) rq = rq.gte('archived_at', since);
-
   const iq = supabase.from('investors').select('id, name')
     .eq('organization_id', orgId).order('name');
 
-  const [{ data: active }, { data: archived }, { data: investors }] = await Promise.all([aq, rq, iq]);
+  // Try full select (with dead_deal)
+  const [activeRes, archivedRes, { data: investors }] = await Promise.all([
+    fetchDeals(orgId, false, since, ADV_SELECT_FULL),
+    fetchDeals(orgId, true,  since, ADV_SELECT_FULL),
+    iq,
+  ]);
+
+  // If dead_deal column doesn't exist yet, fall back to base select
+  const needsFallback = activeRes.error || archivedRes.error;
+  if (needsFallback) {
+    const [a2, r2] = await Promise.all([
+      fetchDeals(orgId, false, since, ADV_SELECT_BASE),
+      fetchDeals(orgId, true,  since, ADV_SELECT_BASE),
+    ]);
+    return {
+      allDeals:  [...(a2.data || []), ...(r2.data || [])],
+      investors: investors || [],
+    };
+  }
+
   return {
-    allDeals:  [...(active || []), ...(archived || [])],
+    allDeals:  [...(activeRes.data || []), ...(archivedRes.data || [])],
     investors: investors || [],
   };
 }
