@@ -75,13 +75,12 @@ function getInitials(name) {
 // Rendered into document.body via a portal with position:fixed so it escapes
 // any overflow:hidden ancestor in the deal page layout.
 function MentionAutocomplete({ results, selectedIdx, onSelect, anchorRef }) {
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 280 });
-
-  useEffect(() => {
-    if (!anchorRef?.current) return;
+  // Compute position synchronously from the anchor rect — no state needed.
+  const coords = (() => {
+    if (!anchorRef?.current) return { top: 0, left: 0, width: 280 };
     const rect = anchorRef.current.getBoundingClientRect();
-    setCoords({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
-  });
+    return { top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) };
+  })();
 
   if (!results) return null;
 
