@@ -122,7 +122,7 @@ function ContactRow({ contact, onDelete, canDelete, onEmail, onTypeChange }) {
           <div
             ref={dropdownRef}
             style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
-            className="bg-white border border-gray-200 rounded-xl shadow-lg w-44 py-1 max-h-64 overflow-y-auto"
+            className="bg-white border border-gray-200 rounded-xl shadow-lg w-52 py-1 max-h-64 overflow-y-auto"
           >
             {CONTACT_TYPE_OPTIONS.map(t => (
               <button
