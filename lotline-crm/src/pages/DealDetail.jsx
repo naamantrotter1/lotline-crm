@@ -33,7 +33,7 @@ import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
-import { fetchAllInvestors } from '../lib/investorPortalData';
+import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -2111,12 +2111,26 @@ function DealDetailContent({ deal }) {
 
   // Load investors from Supabase for Investor Assignment dropdown
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);
+  const [showInvestorPicker, setShowInvestorPicker] = useState(false);
+  const investorPickerRef = useRef(null);
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
       if (inv?.length) setSupabaseInvestors(inv);
     });
   }, [activeOrgId]);
+
+  // Close investor picker on outside click
+  useEffect(() => {
+    if (!showInvestorPicker) return;
+    function handleClick(e) {
+      if (investorPickerRef.current && !investorPickerRef.current.contains(e.target)) {
+        setShowInvestorPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showInvestorPicker]);
 
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
@@ -2499,17 +2513,55 @@ function DealDetailContent({ deal }) {
             }
           </div>
           <div className="hidden sm:block w-px h-8 bg-gray-200" />
-          <div>
+          <div className="relative" ref={investorPickerRef}>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Investor</p>
-            {financingTabEnabled
+            {canEdit
               ? <button
-                  onClick={() => setActiveTab('financing')}
-                  className="text-sm font-bold text-[#1a2332] hover:text-accent transition-colors text-left"
+                  onClick={() => setShowInvestorPicker(v => !v)}
+                  className="text-sm font-bold text-[#1a2332] hover:text-accent transition-colors text-left flex items-center gap-1"
                 >
                   {investor || deal.investor || 'Assign →'}
+                  <ChevronDown size={12} className="text-gray-400 mt-0.5" />
                 </button>
-              : <p className="text-sm font-bold text-[#1a2332]">{deal.investor || 'TBD'}</p>
+              : <p className="text-sm font-bold text-[#1a2332]">{investor || deal.investor || '—'}</p>
             }
+            {showInvestorPicker && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[180px] py-1 max-h-60 overflow-y-auto">
+                {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
+                  <button
+                    key={inv.id}
+                    onClick={() => {
+                      setInvestor(inv.name);
+                      saveNow?.({ investor: inv.name });
+                      setShowInvestorPicker(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
+                  >
+                    {inv.name}
+                  </button>
+                ))}
+                {investor && (
+                  <button
+                    onClick={() => {
+                      setInvestor('');
+                      saveNow?.({ investor: '' });
+                      setShowInvestorPicker(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-500"
+                  >
+                    Remove investor
+                  </button>
+                )}
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
+                    onClick={() => { setShowInvestorPicker(false); setShowAddInvestor(true); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-accent font-medium flex items-center gap-1"
+                  >
+                    + Add New Investor
+                  </button>
+                </div>
+              </div>
+            )}
           </div></>}
           <div className="hidden sm:block w-px h-8 bg-gray-200" />
           <div>
@@ -2885,11 +2937,28 @@ function DealDetailContent({ deal }) {
     {showAddInvestor && (
       <AddInvestorModal
         onClose={() => setShowAddInvestor(false)}
-        onSave={(newInv) => {
+        onSave={async (newInv) => {
+          // Save to Supabase so investor appears in the portal
+          const { investor: saved } = await upsertInvestor({
+            name: newInv.name,
+            contact: newInv.contact || null,
+            email: newInv.email || null,
+            phone: newInv.phone || null,
+            type: newInv.type || 'Private Lender',
+            standard_terms: newInv.standardTerms || null,
+            organization_id: activeOrgId,
+          });
+          // Refresh Supabase investor list
+          fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
+            if (inv?.length) setSupabaseInvestors(inv);
+          });
+          // Also update localStorage list for fallback
           const updated = addInvestor(newInv, activeOrgId, orgSlug);
           setInvestorList(updated);
-          setInvestor(newInv.name);
-          saveNow?.({ investor: newInv.name });
+          // Assign to this deal
+          const name = saved?.name || newInv.name;
+          setInvestor(name);
+          saveNow?.({ investor: name });
           setShowAddInvestor(false);
         }}
       />
