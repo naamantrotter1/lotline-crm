@@ -10,7 +10,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useDeals } from '../lib/DealsContext';
 import {
   fetchContact, updateContact, deleteContact,
-  LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS, LEAD_SOURCES,
+  CONTACT_TYPE_OPTIONS,
 } from '../lib/contactsData';
 import { fetchTasks, updateTask, createTask, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/tasksData';
 import { fetchEmailLogs } from '../lib/emailData';
@@ -22,13 +22,6 @@ import { supabase } from '../lib/supabase';
 import CustomFieldsSection from '../components/CustomFields/CustomFieldsSection';
 import { isEnabled } from '../lib/featureFlags';
 
-const LIFECYCLE_COLORS = {
-  new:       'bg-blue-50 text-blue-700 border-blue-200',
-  working:   'bg-amber-50 text-amber-700 border-amber-200',
-  qualified: 'bg-purple-50 text-purple-700 border-purple-200',
-  customer:  'bg-green-50 text-green-700 border-green-200',
-  dormant:   'bg-gray-100 text-gray-500 border-gray-200',
-};
 
 function initials(c) {
   return ((c?.first_name?.[0] || '') + (c?.last_name?.[0] || '')).toUpperCase() || (c?.email?.[0] || '?').toUpperCase();
@@ -188,10 +181,6 @@ export default function ContactDetail() {
     setLinkedDeals(prev => prev.filter(d => !(d.id === dealId && d.role === role)));
   };
 
-  const handleStageChange = async (stage) => {
-    await save({ lifecycle_stage: stage });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ background: '#f5f3ee' }}>
@@ -239,12 +228,6 @@ export default function ContactDetail() {
               <Send size={12} />Send Email
             </button>
           )}
-          {/* Lifecycle stage selector */}
-          <select value={contact.lifecycle_stage} onChange={e => handleStageChange(e.target.value)}
-            disabled={!canEdit}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full border capitalize focus:outline-none ${LIFECYCLE_COLORS[contact.lifecycle_stage]} ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
-            {LIFECYCLE_STAGES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
           {canDelete && (
             <button onClick={handleDelete}
               className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
@@ -325,35 +308,11 @@ export default function ContactDetail() {
               )}
             </EditableField>
 
-            <EditableField label="Secondary phone" value={contact.secondary_phone} onSave={v => save({ secondary_phone: v })} type="tel" />
-
             <EditableField label="Company" value={contact.company} onSave={v => save({ company: v })}>
               {contact.company && <span className="text-sm text-gray-700 flex items-center gap-1"><Building size={12} className="text-gray-400" />{contact.company}</span>}
             </EditableField>
 
             <EditableField label="Title" value={contact.title} onSave={v => save({ title: v })} />
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Lead source</label>
-              {canEdit ? (
-                <select value={contact.lead_source || ''} onChange={e => save({ lead_source: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-white">
-                  <option value="">—</option>
-                  {LEAD_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              ) : <span className="text-sm text-gray-700">{contact.lead_source || '—'}</span>}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Do not contact</label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={!!contact.do_not_contact}
-                  onChange={e => save({ do_not_contact: e.target.checked })}
-                  disabled={!canEdit}
-                  className="rounded border-gray-300 text-accent focus:ring-accent/30" />
-                <span className="text-sm text-gray-600">Do not contact</span>
-              </label>
-            </div>
           </div>
 
           {/* Tags */}
