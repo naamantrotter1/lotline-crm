@@ -626,6 +626,7 @@ function MuteToggle({ dealId }) {
 // ── Main feed component ───────────────────────────────────────────────────────
 export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   const { profile, activeOrgId, hasFlag } = useAuth();
+  const instanceId = useRef(Math.random().toString(36).slice(2));
   const mentionsEnabled = hasFlag('deal_activity.mentions.enabled');
 
   const [dbNotes,  setDbNotes]  = useState([]);
@@ -695,7 +696,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const ch = supabase
-      .channel(`activity-notes-${deal.id}-${Date.now()}`)
+      .channel(`activity-notes-${deal.id}-${instanceId.current}`)
       .on('postgres_changes', {
         event:  'INSERT',
         schema: 'public',
