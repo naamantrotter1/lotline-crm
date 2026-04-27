@@ -1919,16 +1919,22 @@ function DealDetailContent({ deal }) {
 
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
-    supabase
-      .from('memberships')
-      .select('profiles(id, name)')
-      .eq('organization_id', activeOrgId)
-      .eq('status', 'active')
-      .then(({ data }) => {
-        if (data) setAllUsers(
-          data.map(m => m.profiles).filter(p => p?.name).map(p => ({ id: p.id, name: p.name }))
-        );
-      });
+    (async () => {
+      const { data: mems } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('organization_id', activeOrgId)
+        .eq('status', 'active');
+      if (!mems?.length) return;
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', mems.map(m => m.user_id));
+      if (profiles) setAllUsers(
+        profiles.map(p => ({ id: p.id, name: p.name || p.email || 'Unknown' }))
+          .filter(p => p.name !== 'Unknown')
+      );
+    })();
   }, [activeOrgId]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
