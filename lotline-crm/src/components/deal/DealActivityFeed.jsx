@@ -269,6 +269,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   const [mentionStart,   setMentionStart]   = useState(-1);
   const [mentionResults, setMentionResults] = useState([]);
   const [mentionIdx,     setMentionIdx]     = useState(0);
+  const [mentionMap,     setMentionMap]     = useState({}); // { name → userId }
 
   const textRef       = useRef(null);
   const allMembersRef = useRef([]);
@@ -356,16 +357,17 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
   };
 
   const insertMention = (member) => {
-    const token  = buildMentionToken(member.name, member.id);
+    const displayToken = `@${member.name}`;
     const before = text.slice(0, mentionStart);
     const after  = text.slice(textRef.current.selectionStart);
-    const next   = `${before}${token}\u00a0${after}`;
+    const next   = `${before}${displayToken}\u00a0${after}`;
     setText(next);
+    setMentionMap(prev => ({ ...prev, [member.name]: member.id }));
     setMentionQuery(null);
     setTimeout(() => {
       if (!textRef.current) return;
       textRef.current.focus();
-      const pos = before.length + token.length + 1;
+      const pos = before.length + displayToken.length + 1;
       textRef.current.setSelectionRange(pos, pos);
     }, 0);
   };
@@ -397,7 +399,12 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       const authorId = session.user.id;
-      const body = text.trim();
+      // Reconstruct full mention tokens from display text (@Name → @[Name](uuid))
+      let body = text.trim();
+      Object.entries(mentionMap).forEach(([name, id]) => {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        body = body.replace(new RegExp(`@${escaped}`, 'g'), buildMentionToken(name, id));
+      });
       const extracted = extractMentions(body);
       const { valid: validMentionedIds } = extracted.length
         ? await validateMentions(extracted, orgId)
@@ -442,6 +449,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
       }
 
       setText('');
+      setMentionMap({});
       setOpen(false);
       onSaved(note);
     } catch (err) {
@@ -492,7 +500,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { setText(''); setOpen(false); setMentionQuery(null); }}
+            onClick={() => { setText(''); setMentionMap({}); setOpen(false); setMentionQuery(null); }}
             className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100"
           >Cancel</button>
           <button
