@@ -192,7 +192,7 @@ function MarketingFooter() {
 /* ─── Layout wrapper ─── */
 export default function MarketingLayout({ children }) {
   return (
-    <div className="min-h-screen flex flex-col font-sans">
+    <div className="flex-1 min-h-screen flex flex-col font-sans">
       <MarketingNav />
       <main className="flex-1">{children}</main>
       <MarketingFooter />
