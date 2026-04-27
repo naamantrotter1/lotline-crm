@@ -1143,9 +1143,12 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           deal_id:         dealId,
           author_id:       session.user.id,
           author_name:     profile?.name || null,
-          body:            `✅ DD item marked complete: "${col.name}"`,
+          body:            `✅ DD item marked complete: "${col.label}"`,
           note_type:       'note',
-        }).then(({ error }) => { if (error) console.error('DD activity note failed:', error.message); });
+        }).then(({ error }) => {
+          if (error) console.error('DD activity note failed:', error.message, error);
+          else console.log('DD activity note inserted for', col.label);
+        });
       });
     }
   };
