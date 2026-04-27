@@ -619,7 +619,7 @@ function FinancingScenarioPanel({
               </div>
               <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
-                {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
+                {investorList.map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
