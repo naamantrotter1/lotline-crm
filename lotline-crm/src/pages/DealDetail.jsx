@@ -2410,7 +2410,7 @@ function DealDetailContent({ deal }) {
           <div className="flex flex-wrap items-center gap-2 md:gap-3 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
-            {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            {(deal.tags || []).filter(t => typeof t === 'string' && t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
             {!fromInvestorPortal && <>
               <button
                 onClick={() => canEdit && handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}

@@ -360,27 +360,29 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
           defaultOpen={documents.length > 0}
         >
           {!readOnly && (
-            <div className="flex items-center gap-2 mb-3">
-              <select
-                value={docCategory}
-                onChange={e => setDocCategory(e.target.value)}
-                className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/40 flex-1 min-w-0"
-              >
-                {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={docUploading}
-                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex-shrink-0"
-              >
-                <Upload size={11} />
-                {docUploading ? 'Uploading…' : 'Upload'}
-              </button>
-              <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
-            </div>
-            {docError && (
-              <p className="text-[11px] text-red-500 mb-2">{docError}</p>
-            )}
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <select
+                  value={docCategory}
+                  onChange={e => setDocCategory(e.target.value)}
+                  className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/40 flex-1 min-w-0"
+                >
+                  {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={docUploading}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  <Upload size={11} />
+                  {docUploading ? 'Uploading…' : 'Upload'}
+                </button>
+                <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
+              </div>
+              {docError && (
+                <p className="text-[11px] text-red-500 mb-2">{docError}</p>
+              )}
+            </>
           )}
           {documents.length > 0
             ? documents.map(doc => (

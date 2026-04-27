@@ -453,12 +453,15 @@ function PricingPreview() {
               </div>
               <p className={`text-xs mb-5 ${p.highlighted ? 'text-white/75' : 'text-white/40'}`}>{p.tagline}</p>
               <ul className="space-y-2 mb-6 flex-1">
-                {p.features.map((feat) => (
-                  <li key={feat} className="flex items-center gap-2 text-sm">
-                    <Check size={13} className={p.highlighted ? 'text-white/80' : 'text-accent'} strokeWidth={2.5} />
-                    <span className={p.highlighted ? 'text-white/85' : 'text-white/60'}>{feat}</span>
-                  </li>
-                ))}
+                {p.features.map((feat) => {
+                  const label = typeof feat === 'string' ? feat : feat.text;
+                  return (
+                    <li key={label} className="flex items-center gap-2 text-sm">
+                      <Check size={13} className={p.highlighted ? 'text-white/80' : 'text-accent'} strokeWidth={2.5} />
+                      <span className={p.highlighted ? 'text-white/85' : 'text-white/60'}>{label}</span>
+                    </li>
+                  );
+                })}
               </ul>
               <Link
                 to={p.name === 'Scale' ? '/contact' : `/cart?plan=${p.name.toLowerCase()}`}
