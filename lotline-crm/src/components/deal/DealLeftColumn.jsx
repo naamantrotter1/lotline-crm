@@ -243,15 +243,20 @@ const DEFAULT_PROBABILITIES = {
 function NoteComposer({ dealId, orgId, onClose }) {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
+  const { profile } = useAuth();
   const save = async () => {
     if (!text.trim()) { onClose(); return; }
     setSaving(true);
     if (supabase && orgId) {
       const { data: { session } } = await supabase.auth.getSession();
+      const authorName = profile?.name
+        || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
+        || null;
       await supabase.from('activity_notes').insert({
         organization_id: orgId,
         deal_id: dealId,
         author_id: session?.user?.id || null,
+        author_name: authorName,
         body: text.trim(),
         mentioned_user_ids: [],
       });

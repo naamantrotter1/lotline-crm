@@ -20,7 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, Mail, Phone,
-  FileEdit, X, AtSign, BellOff, Bell,
+  FileEdit, X, AtSign, BellOff, Bell, Pencil,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -55,6 +55,13 @@ function timeAgo(dateStr) {
     month: 'short', day: 'numeric',
     year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   });
+}
+
+function fmtNoteDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function monthLabel(dateStr) {
@@ -354,10 +361,11 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           organization_id:    orgId,
           deal_id:            dealId,
           author_id:          authorId,
+          author_name:        currentUser || null,
           body,
           mentioned_user_ids: validMentionedIds,
         })
-        .select('id, author_id, body, mentioned_user_ids, created_at')
+        .select('id, author_id, author_name, body, mentioned_user_ids, created_at')
         .single();
 
       if (noteErr) throw new Error(noteErr.message);
@@ -485,21 +493,141 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 }
 
 // ── Single event card ─────────────────────────────────────────────────────────
-function EventCard({ event, usersById, onDeleteNote }) {
+function EventCard({ event, usersById, onDeleteNote, onEditNote, currentUserId }) {
   const cfg  = EVENT_CONFIG[event.type] || EVENT_CONFIG.note;
   const Icon = cfg.icon;
-  const [exp, setExp] = useState(false);
+  const [exp,      setExp]      = useState(false);
+  const [editing,  setEditing]  = useState(false);
+  const [editText, setEditText] = useState(event.body || '');
+  const [saving,   setSaving]   = useState(false);
 
-  const isLong = (event.body || '').length > 200;
+  const isLong    = (event.body || '').length > 200;
+  const isOwnNote = event.type === 'note' && event._dbId && currentUserId && event.author_id === currentUserId;
 
+  const saveEdit = async () => {
+    if (!editText.trim() || saving) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('activity_notes')
+        .update({ body: editText.trim() })
+        .eq('id', event._dbId);
+      if (!error) {
+        onEditNote?.(event._dbId, editText.trim());
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Note card: author-centric layout ──────────────────────────────────────
+  if (event.type === 'note') {
+    const authorName = event.meta?.author || 'Unknown';
+    const avatarUrl  = event.meta?.avatar_url;
+    const initials   = getInitials(authorName);
+
+    return (
+      <div className="flex gap-3" id={`activity-${event.id}`}>
+        {/* Avatar circle */}
+        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden bg-accent/15">
+          {avatarUrl
+            ? <img src={avatarUrl} alt={authorName} className="w-full h-full object-cover" />
+            : <span className="text-[11px] font-bold text-accent">{initials}</span>
+          }
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+          {/* Header: author name + date + actions */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <span className="text-[13px] font-semibold text-gray-800">{authorName}</span>
+              <span className="text-[11px] text-gray-400 ml-2">{fmtNoteDate(event.date)}</span>
+            </div>
+            {isOwnNote && !editing && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => { setEditText(event.body || ''); setEditing(true); }}
+                  className="p-0.5 text-gray-300 hover:text-accent transition-colors rounded"
+                  title="Edit note"
+                >
+                  <Pencil size={12} />
+                </button>
+                {onDeleteNote && (
+                  <button
+                    onClick={() => onDeleteNote(event.id)}
+                    className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
+                    title="Delete note"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Edit textarea or note body */}
+          {editing ? (
+            <div>
+              <textarea
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                rows={3}
+                autoFocus
+                className="w-full text-sm text-gray-800 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-accent/50"
+              />
+              <div className="flex gap-2 mt-2 justify-end">
+                <button
+                  onClick={() => setEditing(false)}
+                  className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEdit}
+                  disabled={!editText.trim() || saving}
+                  className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold disabled:opacity-40"
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : event.body ? (
+            <>
+              <div className={!exp && isLong ? 'line-clamp-3' : ''}>
+                {event.hasMentions ? (
+                  <NoteBodyRenderer
+                    body={event.body}
+                    usersById={usersById}
+                    authorName={authorName}
+                    createdAt={event.date}
+                  />
+                ) : (
+                  <p className="text-[13px] text-gray-600 leading-relaxed">{event.body}</p>
+                )}
+              </div>
+              {isLong && (
+                <button
+                  onClick={() => setExp(e => !e)}
+                  className="text-[11px] text-accent mt-1 font-medium"
+                >
+                  {exp ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Non-note events (stage change, field edit, etc.) ──────────────────────
   return (
     <div className="flex gap-3" id={`activity-${event.id}`}>
-      {/* Icon dot */}
       <div className={`w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.color}`}>
         <Icon size={13} />
       </div>
-
-      {/* Content */}
       <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -508,48 +636,15 @@ function EventCard({ event, usersById, onDeleteNote }) {
               <p className="text-[11px] text-gray-400 mt-0.5">{event.subtitle}</p>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[11px] text-gray-400 whitespace-nowrap">
-              {timeAgo(event.date)}
-            </span>
-            {event.type === 'note' && onDeleteNote && (
-              <button
-                onClick={() => onDeleteNote(event.id)}
-                className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+          <span className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0">
+            {timeAgo(event.date)}
+          </span>
         </div>
-
-        {/* Body — renders @mention chips */}
         {event.body && (
-          <div className={`mt-2 ${!exp && isLong ? 'line-clamp-3' : ''}`}>
-            {event.hasMentions ? (
-              <NoteBodyRenderer
-                body={event.body}
-                usersById={usersById}
-                authorName={event.meta?.author}
-                createdAt={event.date}
-              />
-            ) : (
-              <p className="text-[13px] text-gray-600 leading-relaxed">{event.body}</p>
-            )}
-          </div>
+          <p className="text-[13px] text-gray-600 leading-relaxed mt-2">{event.body}</p>
         )}
-        {isLong && (
-          <button
-            onClick={() => setExp(e => !e)}
-            className="text-[11px] text-accent mt-1 font-medium"
-          >
-            {exp ? 'Show less' : 'Show more'}
-          </button>
-        )}
-
-        {/* Author */}
         {event.meta?.author && (
-          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-400">
+          <div className="mt-2 text-[11px] text-gray-400">
             <span className="font-medium text-gray-500">{event.meta.author}</span>
           </div>
         )}
@@ -626,6 +721,7 @@ function MuteToggle({ dealId }) {
 // ── Main feed component ───────────────────────────────────────────────────────
 export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   const { profile, activeOrgId, hasFlag } = useAuth();
+  const currentUserId = profile?.id || null;
   // Stable unique ID per component instance — prevents channel-name collisions when
   // DealPageLayout mounts this component twice (desktop + mobile) in the same tick.
   const instanceId = useRef(Math.random().toString(36).slice(2));
@@ -641,7 +737,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, body, mentioned_user_ids, created_at')
+      .select('id, author_id, author_name, body, mentioned_user_ids, created_at')
       .eq('deal_id', deal.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -658,7 +754,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
       if (allIds.length > 0 && supabase) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, name, first_name, last_name')
+          .select('id, name, first_name, last_name, avatar_url')
           .in('id', allIds);
 
         setUsersById(prev => ({
@@ -666,9 +762,10 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
           ...Object.fromEntries((profiles || []).map(p => [
             p.id,
             {
-              name:  p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
-              role:  null, // populated separately if needed
-              email: null,
+              name:       p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
+              avatar_url: p.avatar_url || null,
+              role:       null,
+              email:      null,
             },
           ])),
         }));
@@ -722,7 +819,11 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
       body:        n.body,
       date:        n.created_at,
       hasMentions: !!(n.mentioned_user_ids?.length),
-      meta:        { author: usersById[n.author_id]?.name || 'Unknown' },
+      author_id:   n.author_id,
+      meta:        {
+        author:     n.author_name || usersById[n.author_id]?.name || 'Unknown',
+        avatar_url: usersById[n.author_id]?.avatar_url || null,
+      },
     }));
 
     const legacyEvents = legacyNotes.map(note => ({
@@ -763,6 +864,10 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNoteAdded = (note) => {
     setDbNotes(prev => [note, ...prev]);
+  };
+
+  const handleEditNote = (dbId, newBody) => {
+    setDbNotes(prev => prev.map(n => n.id === dbId ? { ...n, body: newBody } : n));
   };
 
   const handleDeleteNote = async (eventId) => {
@@ -837,7 +942,9 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
                 key={evt.id}
                 event={evt}
                 usersById={usersById}
+                currentUserId={currentUserId}
                 onDeleteNote={!readOnly ? handleDeleteNote : null}
+                onEditNote={!readOnly ? handleEditNote : null}
               />
             ))}
           </div>
