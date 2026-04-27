@@ -1918,11 +1918,18 @@ function DealDetailContent({ deal }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !canAdmin) return;
-    supabase.from('profiles').select('name').then(({ data }) => {
-      if (data) setAllUsers(data.map(u => u.name).filter(Boolean));
-    });
-  }, [canAdmin]);
+    if (!supabase || !activeOrgId) return;
+    supabase
+      .from('memberships')
+      .select('profiles(id, name)')
+      .eq('organization_id', activeOrgId)
+      .eq('status', 'active')
+      .then(({ data }) => {
+        if (data) setAllUsers(
+          data.map(m => m.profiles).filter(p => p?.name).map(p => ({ id: p.id, name: p.name }))
+        );
+      });
+  }, [activeOrgId]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
@@ -2605,7 +2612,7 @@ function DealDetailContent({ deal }) {
                   className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
                 >
                   <option value="">Unassigned</option>
-                  {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                  {allUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                 </select>
               : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
