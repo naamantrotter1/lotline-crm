@@ -739,7 +739,6 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
       .from('activity_notes')
       .select('id, author_id, author_name, body, mentioned_user_ids, created_at')
       .eq('deal_id', deal.id)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(200);
 
