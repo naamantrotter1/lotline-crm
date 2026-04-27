@@ -99,7 +99,7 @@ const STORAGE_BUCKET = 'deal-documents';
 
 export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const navigate  = useNavigate();
-  const { activeOrgId } = useAuth();
+  const { activeOrgId, profile } = useAuth();
 
   const [tasks,       setTasks]       = useState([]);
   const [contacts,    setContacts]    = useState([]);
@@ -217,7 +217,23 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
         .select('*')
         .single();
       if (dbErr) setDocError(dbErr.message);
-      else if (newDoc) setDocuments(prev => [newDoc, ...prev]);
+      else if (newDoc) {
+        setDocuments(prev => [newDoc, ...prev]);
+        // Log document upload to activity feed
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            await supabase.from('activity_notes').insert({
+              organization_id: activeOrgId,
+              deal_id:         deal.id,
+              author_id:       session.user.id,
+              author_name:     profile?.name || null,
+              body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''}`,
+              note_type:       'note',
+            });
+          }
+        } catch (e) { console.warn('activity note for doc upload', e); }
+      }
     }
     setDocUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
