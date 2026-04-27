@@ -157,8 +157,8 @@ export default function ImportantDates({ deal, readOnly }) {
                     type="date"
                     autoFocus
                     defaultValue={val}
-                    onChange={e => handleChange(key, e.target.value)}
                     onBlur={e => handleChange(key, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditing(null); }}
                     className="text-[11px] border border-accent/60 rounded px-1 py-0.5 focus:outline-none w-32 flex-shrink-0"
                   />
                 ) : (
