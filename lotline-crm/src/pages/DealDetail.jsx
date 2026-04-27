@@ -1918,24 +1918,27 @@ function DealDetailContent({ deal }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !activeOrgId) return;
+    if (!supabase) return;
     (async () => {
-      const { data: mems } = await supabase
-        .from('memberships')
-        .select('user_id')
-        .eq('organization_id', activeOrgId)
-        .eq('status', 'active');
-      if (!mems?.length) return;
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .in('id', mems.map(m => m.user_id));
-      if (profiles) setAllUsers(
-        profiles.map(p => ({ id: p.id, name: p.name || p.email || 'Unknown' }))
-          .filter(p => p.name !== 'Unknown')
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/team/members', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { members } = await res.json();
+      if (members) setAllUsers(
+        members
+          .filter(m => m.status === 'active')
+          .map(m => ({
+            id: m.user_id,
+            name: m.profiles?.name || m.profiles?.email || m.profiles?.first_name || 'Unknown',
+          }))
+          .filter(u => u.name !== 'Unknown')
       );
     })();
-  }, [activeOrgId]);
+  }, []);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
