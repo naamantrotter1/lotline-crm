@@ -197,7 +197,7 @@ export default function CreateAccount() {
               You're on a 14-day free trial — no credit card needed.
             </p>
             <button
-              onClick={() => navigate('/', { replace: true })}
+              onClick={() => navigate('/dashboard', { replace: true })}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white"
               style={{ backgroundColor: '#c9703a' }}
             >

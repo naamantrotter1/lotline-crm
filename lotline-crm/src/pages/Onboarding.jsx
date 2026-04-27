@@ -119,7 +119,7 @@ export default function Onboarding() {
   }
 
   function handleFinish() {
-    navigate('/', { replace: true });
+    navigate('/dashboard', { replace: true });
   }
 
   return (

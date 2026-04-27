@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { marketing } from '../../content/marketing';
+import { useAuth } from '../../lib/AuthContext';
 
 /* ─── Nav ─── */
 function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { session } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -71,22 +73,33 @@ function MarketingNav() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              to="/login"
-              className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                scrolled
-                  ? 'text-sidebar hover:text-accent'
-                  : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Log in
-            </Link>
-            <Link
-              to="/signup"
-              className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
-            >
-              Start free trial
-            </Link>
+            {session ? (
+              <Link
+                to="/dashboard"
+                className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
+              >
+                Go to Dashboard →
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+                    scrolled
+                      ? 'text-sidebar hover:text-accent'
+                      : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
+                >
+                  Start free trial
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -116,18 +129,29 @@ function MarketingNav() {
               </Link>
             ))}
             <div className="border-t border-gray-100 pt-3 mt-2 flex flex-col gap-2">
-              <Link
-                to="/login"
-                className="text-sm font-medium text-sidebar py-2.5 px-3 rounded-lg hover:bg-cream text-center"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/signup"
-                className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
-              >
-                Start free trial
-              </Link>
+              {session ? (
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
+                >
+                  Go to Dashboard →
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-sm font-medium text-sidebar py-2.5 px-3 rounded-lg hover:bg-cream text-center"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
+                  >
+                    Start free trial
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -128,7 +128,8 @@ import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
- *  Special case: unauthenticated users hitting exactly "/" see the marketing landing page. */
+ *  "/" always shows the marketing landing page for all users (authenticated or not).
+ *  Authenticated users access the app via /dashboard. */
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -139,10 +140,9 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!session) {
-    if (location.pathname === '/') return <Landing />;
-    return <Navigate to="/login" replace />;
-  }
+  // Root always shows the marketing landing page (with "Dashboard" button for logged-in users)
+  if (location.pathname === '/') return <Landing />;
+  if (!session) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -163,12 +163,12 @@ function OnboardingGuard({ children }) {
   return children;
 }
 
-/** Redirects non-admins (owner/admin) to / */
+/** Redirects non-admins (owner/admin) to /dashboard */
 function AdminRoute({ children }) {
   const { can } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (!can('team.view')) return <Navigate to="/" replace />;
+  if (!can('team.view')) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -209,7 +209,7 @@ function InvestorRoute({ children }) {
   if (loading) return null;
   // Operators are allowed in (they may be impersonating)
   if (isInvestor || canEdit || canAdmin) return children;
-  return <Navigate to="/" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 /** Redirects agents/investors away from pages they have no access to */
@@ -287,6 +287,8 @@ export default function App() {
             >
               {/* Agents hitting / are redirected to their landing page */}
               <Route index element={<AgentIndexRoute />} />
+              {/* /dashboard is the CRM home for authenticated users (post-login redirect target) */}
+              <Route path="dashboard" element={<AgentIndexRoute />} />
               <Route path="big-rocks"   element={<AgentRoute path="big-rocks"><BigRocks /></AgentRoute>} />
               <Route path="pnl"         element={<AgentRoute path="pnl"><PnlDashboard /></AgentRoute>} />
               <Route path="analytics"   element={<AgentRoute path="analytics"><Analytics /></AgentRoute>} />

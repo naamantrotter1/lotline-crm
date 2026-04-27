@@ -22,7 +22,7 @@ export default function Login() {
   const skipNavRef = useRef(false);
 
   useEffect(() => {
-    if (session && !skipNavRef.current) navigate('/', { replace: true });
+    if (session && !skipNavRef.current) navigate('/dashboard', { replace: true });
   }, [session]);
 
   // Mode: 'signin' | 'mfa-challenge' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
@@ -120,7 +120,7 @@ export default function Login() {
     skipNavRef.current = false;
     // Defer navigation one tick so React commits the session state update
     // from onAuthStateChange before ProtectedRoute checks it.
-    setTimeout(() => navigate('/', { replace: true }), 0);
+    setTimeout(() => navigate('/dashboard', { replace: true }), 0);
     setLoading(false);
   };
 
@@ -147,7 +147,7 @@ export default function Login() {
       return;
     }
     skipNavRef.current = false;
-    setTimeout(() => navigate('/', { replace: true }), 0);
+    setTimeout(() => navigate('/dashboard', { replace: true }), 0);
     setLoading(false);
   };
 
