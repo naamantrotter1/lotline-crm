@@ -3,23 +3,96 @@
  * "Information" — deal header, quick action row, editable About fields,
  * property quick stats, capital position mini.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Settings2, Landmark, Handshake,
+  CalendarPlus, Layers, Settings2, Landmark, Handshake, User,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import CustomizeRecordDrawer from './CustomizeRecordDrawer';
+import ImportantDates from './ImportantDates';
 
 // ── Default section definitions ───────────────────────────────────────────────
 const DEFAULT_SECTIONS = [
-  { key: 'about',          label: 'About this deal', visible: true, order: 0 },
-  { key: 'seller',         label: 'Seller / Owner',  visible: true, order: 1 },
-  { key: 'financing',      label: 'Financing',       visible: true, order: 2 },
-  { key: 'closing',        label: 'Closing',         visible: true, order: 3 },
+  { key: 'about',           label: 'About this deal',  visible: true,  order: 0 },
+  { key: 'seller',          label: 'Seller / Owner',   visible: true,  order: 1 },
+  { key: 'financing',       label: 'Financing',        visible: true,  order: 2 },
+  { key: 'closing',         label: 'Closing',          visible: true,  order: 3 },
+  { key: 'important_dates', label: 'Important Dates',  visible: true,  order: 4 },
+  { key: 'key_contacts',    label: 'Key Contacts',     visible: true,  order: 5 },
 ];
+
+// ── Key Contacts section (reads deal_stage_contacts) ──────────────────────────
+function KeyContacts({ deal }) {
+  const [items, setItems] = useState([]);
+  const instanceId = useRef(Math.random().toString(36).slice(2));
+
+  const load = useCallback(async () => {
+    if (!supabase || !deal?.id) return;
+    const { data } = await supabase
+      .from('deal_stage_contacts')
+      .select('stage_key, contacts(id, first_name, last_name, company, phone, email, contractor_type)')
+      .eq('deal_id', deal.id);
+    if (data) {
+      setItems(data.filter(r => r.contacts).map(r => ({ stageKey: r.stage_key, ...r.contacts })));
+    }
+  }, [deal?.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    const dealId = deal.id;
+    const ch = supabase
+      .channel(`key-contacts-${dealId}-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_stage_contacts' },
+        (payload) => { const row = payload.new || payload.old; if (row?.deal_id === dealId) load(); })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [deal?.id, load]);
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[12px] text-gray-300 italic">
+        No key contacts assigned yet. Add contractors from the pipeline boards.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((c, i) => (
+        <div key={i} className="flex items-start gap-2 border-b border-gray-50 last:border-0 pb-2 last:pb-0">
+          <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User size={10} className="text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-semibold text-gray-800">
+              {`${c.first_name || ''} ${c.last_name || ''}`.trim() || c.company || 'Unknown'}
+            </p>
+            {c.contractor_type && (
+              <p className="text-[10px] text-accent font-medium">{c.contractor_type}</p>
+            )}
+            {c.phone && (
+              <a href={`tel:${c.phone}`}
+                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5">
+                <Phone size={9} />{c.phone}
+              </a>
+            )}
+            {c.email && (
+              <a href={`mailto:${c.email}`}
+                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5 truncate">
+                <Mail size={9} />{c.email}
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Inline editable field ─────────────────────────────────────────────────────
 function EditableField({ label, value, onChange, type = 'text', options, readOnly, mono, prefix }) {
@@ -463,6 +536,16 @@ export default function DealLeftColumn({
                 <EditableField label="Atty Address"  value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
                 <EditableField label="Close Date"    value={closeDate}              onChange={v => { setCloseDate(v);              saveNow({ closeDate: v });              }} type="date" readOnly={readOnly} />
                 <EditableField label="Contract Signed" value={contractDate}         onChange={v => { setContractDate(v);           saveNow({ contractDate: v });           }} type="date" readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'important_dates') return (
+              <Section key="important_dates" title="Important Dates" defaultOpen={false}>
+                <ImportantDates deal={deal} readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'key_contacts') return (
+              <Section key="key_contacts" title="Key Contacts" defaultOpen={false}>
+                <KeyContacts deal={deal} />
               </Section>
             );
             return null;

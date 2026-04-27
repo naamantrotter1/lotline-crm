@@ -1,71 +1,130 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
-import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckSquare, Square, Calendar } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
+import { supabase } from '../lib/supabase';
+import ContractorPicker from '../components/deal/ContractorPicker';
 
-// ── Column definitions (matches Lovable CRM) ──────────────────────────────────
+// ── Column definitions ─────────────────────────────────────────────────────────
+// milestoneKey  → deal_milestones.milestone_key (two-way sync with Important Dates sidebar)
+// contractorType → filters ContractorPicker to matching contacts
 const DEV_COLUMNS = [
   {
-    key: 'land_clearing', label: 'Land Clearing', color: '#16a34a', bg: '#dcfce7',
+    key: 'land_clearing', label: 'Land Clearing',
+    color: '#16a34a', bg: '#dcfce7',
     subtasks: ['Land clearing scheduled', 'Land clearing complete'],
-    tagOnly: true, // only show deals tagged 'Land Clearing'
+    tagOnly: true,
+    milestoneKey: 'land_clearing_scheduled',
+    contractorType: 'Land Clearing Contractor',
+    dateLabel: 'Land Clearing Scheduled',
   },
   {
-    key: 'env_permits', label: 'Environmental Permits', color: '#16a34a', bg: '#dcfce7',
+    key: 'env_permits', label: 'Environmental Permits',
+    color: '#16a34a', bg: '#dcfce7',
     subtasks: ['Septic Permit', 'Well Permit', 'Construction Authorization Permit'],
+    milestoneKey: 'env_permits_submitted',
+    contractorType: 'Environmental Consultant',
+    dateLabel: 'Permits Submitted',
   },
   {
-    key: 'mh_order', label: 'Mobile Home Order', color: '#7c3aed', bg: '#ede9fe',
+    key: 'mh_order', label: 'Mobile Home Order',
+    color: '#7c3aed', bg: '#ede9fe',
     subtasks: ['Order mobile home', 'MH ordered'],
+    milestoneKey: 'home_ordered',
+    contractorType: 'Home Dealer',
+    dateLabel: 'Home Ordered',
   },
   {
-    key: 'construction_permits', label: 'Construction Permits', color: '#d97706', bg: '#fef3c7',
+    key: 'construction_permits', label: 'Construction Permits',
+    color: '#d97706', bg: '#fef3c7',
     subtasks: ['Building Permit', 'Electrical Permit', 'Plumbing Permit', 'Mechanical Permit'],
+    milestoneKey: 'building_permits_submitted',
+    contractorType: 'Permit Expeditor',
+    dateLabel: 'Permits Submitted',
   },
   {
-    key: 'setup_crew', label: 'Set-Up Crew', color: '#0891b2', bg: '#cffafe',
+    key: 'setup_crew', label: 'Set-Up Crew',
+    color: '#0891b2', bg: '#cffafe',
     subtasks: ['Schedule set-up crew', 'Set-up crew scheduled', 'Set-up crew complete (home set)', 'De-title home (after set)'],
+    milestoneKey: 'setup_contractor_scheduled',
+    contractorType: 'Home Setup Contractor',
+    dateLabel: 'Set-Up Scheduled',
   },
   {
-    key: 'septic', label: 'Septic', color: '#ea580c', bg: '#ffedd5',
+    key: 'septic', label: 'Septic',
+    color: '#ea580c', bg: '#ffedd5',
     subtasks: ['Schedule septic', 'Septic scheduled', 'Septic complete'],
+    milestoneKey: 'septic_install_scheduled',
+    contractorType: 'Septic Contractor',
+    dateLabel: 'Septic Scheduled',
   },
   {
-    key: 'well', label: 'Well', color: '#2563eb', bg: '#dbeafe',
+    key: 'well', label: 'Well',
+    color: '#2563eb', bg: '#dbeafe',
     subtasks: ['Schedule well', 'Well scheduled', 'Well complete'],
+    milestoneKey: 'well_install_scheduled',
+    contractorType: 'Well Drilling Contractor',
+    dateLabel: 'Well Scheduled',
   },
   {
-    key: 'electrical', label: 'Electrical', color: '#ca8a04', bg: '#fef9c3',
+    key: 'electrical', label: 'Electrical',
+    color: '#ca8a04', bg: '#fef9c3',
     subtasks: ['Schedule electrical', 'Electrical scheduled', 'Electrical complete'],
+    milestoneKey: 'power_company_scheduled',
+    contractorType: 'Electrician',
+    dateLabel: 'Electrical Scheduled',
   },
   {
-    key: 'plumbing', label: 'Plumbing', color: '#4f46e5', bg: '#e0e7ff',
+    key: 'plumbing', label: 'Plumbing',
+    color: '#4f46e5', bg: '#e0e7ff',
     subtasks: ['Schedule plumbing hook-up (well/septic)', 'Plumbing scheduled', 'Plumbing complete'],
+    milestoneKey: null,
+    contractorType: 'Plumbing Contractor',
   },
   {
-    key: 'hvac', label: 'HVAC', color: '#be185d', bg: '#fce7f3',
+    key: 'hvac', label: 'HVAC',
+    color: '#be185d', bg: '#fce7f3',
     subtasks: ['Schedule HVAC', 'HVAC scheduled', 'HVAC complete'],
+    milestoneKey: null,
+    contractorType: 'HVAC Contractor',
   },
   {
-    key: 'skirting', label: 'Skirting', color: '#059669', bg: '#d1fae5',
+    key: 'skirting', label: 'Skirting',
+    color: '#059669', bg: '#d1fae5',
     subtasks: ['Schedule skirting', 'Skirting scheduled', 'Skirting complete'],
+    milestoneKey: null,
+    contractorType: 'Skirting Contractor',
   },
   {
-    key: 'steps', label: 'Steps / Entry', color: '#7c3aed', bg: '#f3e8ff',
+    key: 'steps', label: 'Steps / Entry',
+    color: '#7c3aed', bg: '#f3e8ff',
     subtasks: ['Order steps (front & back)', 'Steps ordered', 'Steps delivery date', 'Schedule steps install', 'Steps installed'],
+    milestoneKey: null,
+    contractorType: null,
   },
   {
-    key: 'final_grade', label: 'Final Grade', color: '#374151', bg: '#f3f4f6',
+    key: 'final_grade', label: 'Final Grade',
+    color: '#374151', bg: '#f3f4f6',
     subtasks: ['Final grade scheduled', 'Final grade complete'],
+    milestoneKey: null,
+    contractorType: 'Land Clearing Contractor',
   },
   {
-    key: 'inspection', label: 'Final Inspection & CO', color: '#dc2626', bg: '#fee2e2',
+    key: 'inspection', label: 'Final Inspection & CO',
+    color: '#dc2626', bg: '#fee2e2',
     subtasks: ['Schedule final building inspection', 'Final building inspection scheduled', 'Final building inspection passed', 'Certificate of Occupancy (CO) received'],
+    milestoneKey: 'co_received',
+    contractorType: 'General Contractor',
+    dateLabel: 'CO Received',
   },
   {
-    key: 'list_home', label: 'List Home', color: '#0891b2', bg: '#e0f2fe',
+    key: 'list_home', label: 'List Home',
+    color: '#0891b2', bg: '#e0f2fe',
     subtasks: ['List home'],
+    milestoneKey: 'home_listed',
+    contractorType: 'Real Estate Agent',
+    dateLabel: 'Home Listed',
   },
 ];
 
@@ -74,20 +133,6 @@ const COUNTED_COLUMNS = DEV_COLUMNS.filter(c => !c.tagOnly);
 const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.length, 0);
 
 const DEAL_OVERVIEW_STAGES = new Set(['Development']);
-function loadDevDeals() {
-  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  return all
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
-}
-// devDeals now computed inside component from context
-
-const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development'];
-const STAGE_COLORS = {
-  'Contract Signed': { color: '#16a34a', bg: '#dcfce7' },
-  'Due Diligence':   { color: '#d97706', bg: '#fef3c7' },
-  'Development':     { color: '#2563eb', bg: '#dbeafe' },
-};
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 const lsGet = (k)    => localStorage.getItem(k) || '';
@@ -95,9 +140,6 @@ const lsSet = (k, v) => localStorage.setItem(k, v);
 
 function subtaskKey(dealId, colKey, subtaskIdx) {
   return `dev_${dealId}_${colKey}_${subtaskIdx}`;
-}
-function contractorKey(dealId, colKey) {
-  return `dev_${dealId}_${colKey}_cont`;
 }
 function isSubtaskDone(dealId, colKey, idx) {
   return lsGet(subtaskKey(dealId, colKey, idx)) === '1';
@@ -131,19 +173,25 @@ function formatClose(str) {
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
-function DevTaskCard({ deal, column, onUpdate }) {
+function DevTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange }) {
   const navigate = useNavigate();
 
   const [checks, setChecks] = useState(() =>
     column.subtasks.map((_, i) => isSubtaskDone(deal.id, column.key, i))
   );
-  const ck = contractorKey(deal.id, column.key);
   const [contExpanded, setContExpanded] = useState(false);
-  const [contractor, setContractor] = useState(() => lsGet(ck));
-  const [contPhone,   setContPhone]   = useState(() => lsGet(`${ck}_phone`));
-  const [contEmail,   setContEmail]   = useState(() => lsGet(`${ck}_email`));
-  const [contCompany, setContCompany] = useState(() => lsGet(`${ck}_company`));
-  const [contNotes,   setContNotes]   = useState(() => lsGet(`${ck}_notes`));
+  // Date: prefer milestoneDate from DB, fall back to localStorage
+  const [date, setDate] = useState(
+    milestoneDate || lsGet(`dev_${deal.id}_${column.key}_date`) || ''
+  );
+
+  // Keep in sync if parent's milestoneDate changes (real-time update)
+  useEffect(() => {
+    if (milestoneDate && milestoneDate !== date) {
+      setDate(milestoneDate);
+      lsSet(`dev_${deal.id}_${column.key}_date`, milestoneDate);
+    }
+  }, [milestoneDate]); // eslint-disable-line
 
   const allDone = checks.every(Boolean);
   if (allDone) return null;
@@ -158,17 +206,17 @@ function DevTaskCard({ deal, column, onUpdate }) {
     next[idx] = !next[idx];
     setSubtaskDone(deal.id, column.key, idx, next[idx]);
     setChecks(next);
-    if (next.every(Boolean)) onUpdate(); // disappear from column
-    else onUpdate();
+    onUpdate();
   };
 
-  const saveCont = (field, val) => {
-    lsSet(`${ck}${field === 'cont' ? '' : `_${field}`}`, val);
-    if (field === 'cont')     setContractor(val);
-    if (field === 'phone')    setContPhone(val);
-    if (field === 'email')    setContEmail(val);
-    if (field === 'company')  setContCompany(val);
-    if (field === 'notes')    setContNotes(val);
+  const handleDate = (e) => {
+    e.stopPropagation();
+    const val = e.target.value;
+    lsSet(`dev_${deal.id}_${column.key}_date`, val);
+    setDate(val);
+    if (column.milestoneKey) {
+      onMilestoneChange(deal.id, column.milestoneKey, val);
+    }
   };
 
   return (
@@ -215,50 +263,43 @@ function DevTaskCard({ deal, column, onUpdate }) {
         ))}
       </div>
 
-      {/* Contractor panel */}
-      <div onClick={e => e.stopPropagation()}>
-        <button
-          onClick={e => { e.stopPropagation(); setContExpanded(v => !v); }}
-          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
-        >
-          <User size={9} className="flex-shrink-0" />
-          <span className="flex-1 text-left truncate">{contractor || 'Add Contractor'}</span>
-          {contExpanded ? <ChevronUp size={9} className="flex-shrink-0" /> : <ChevronDown size={9} className="flex-shrink-0" />}
-        </button>
+      {/* Date field (only for columns with a milestoneKey) */}
+      {column.milestoneKey && (
+        <div className="mb-2" onClick={e => e.stopPropagation()}>
+          <p className="text-[9px] text-gray-400 mb-0.5">{column.dateLabel}</p>
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50">
+            <Calendar size={9} className="text-gray-400 flex-shrink-0" />
+            <input
+              type="date"
+              value={date}
+              onChange={handleDate}
+              className="text-[10px] text-gray-600 bg-transparent outline-none flex-1 min-w-0"
+            />
+          </div>
+        </div>
+      )}
 
-        {contExpanded && (
-          <div className="mt-1.5 space-y-1.5 border border-gray-100 rounded-lg p-2 bg-gray-50">
-            {[
-              { icon: User,     key: 'cont',    val: contractor, ph: 'Contractor name' },
-              { icon: Phone,    key: 'phone',   val: contPhone,  ph: 'Phone' },
-              { icon: Mail,     key: 'email',   val: contEmail,  ph: 'Email' },
-              { icon: Building, key: 'company', val: contCompany,ph: 'Company (optional)' },
-            ].map(({ icon: Icon, key: fk, val, ph }) => (
-              <div key={fk} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
-                <Icon size={11} className="text-gray-400 flex-shrink-0" />
-                <input
-                  value={val}
-                  onChange={e => saveCont(fk, e.target.value)}
-                  placeholder={ph}
-                  onClick={e => e.stopPropagation()}
-                  className="flex-1 text-[10px] outline-none bg-transparent placeholder-gray-400"
-                />
-              </div>
-            ))}
-            <div className="flex items-start gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
-              <FileText size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
-              <textarea
-                value={contNotes}
-                onChange={e => saveCont('notes', e.target.value)}
-                placeholder="Notes for this task..."
-                onClick={e => e.stopPropagation()}
-                rows={2}
-                className="flex-1 text-[10px] outline-none bg-transparent resize-none placeholder-gray-400"
+      {/* Contractor picker */}
+      {column.contractorType && (
+        <div className="mb-1" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={e => { e.stopPropagation(); setContExpanded(v => !v); }}
+            className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 w-full mb-1"
+          >
+            {contExpanded ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
+            <span className="text-[10px] font-medium">{column.contractorType}</span>
+          </button>
+          {contExpanded && (
+            <div onClick={e => e.stopPropagation()}>
+              <ContractorPicker
+                dealId={deal.id}
+                stageKey={column.key}
+                contractorType={column.contractorType}
               />
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -267,6 +308,8 @@ function DevTaskCard({ deal, column, onUpdate }) {
 export default function Development() {
   const { deals } = useDeals();
   const [tick, setTick] = useState(0);
+  const [milestones, setMilestones] = useState({});
+  const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
@@ -280,6 +323,59 @@ export default function Development() {
     if (!b.closeDate) return -1;
     return new Date(a.closeDate) - new Date(b.closeDate);
   });
+
+  // Load all deal_milestones for visible deals in one query
+  const loadMilestones = useCallback(async () => {
+    if (!supabase || !devDeals.length) return;
+    const mKeys = DEV_COLUMNS.filter(c => c.milestoneKey).map(c => c.milestoneKey);
+    const dealIds = devDeals.map(d => d.id);
+    const { data } = await supabase
+      .from('deal_milestones')
+      .select('deal_id, milestone_key, eta')
+      .in('deal_id', dealIds)
+      .in('milestone_key', mKeys);
+    if (data) {
+      const map = {};
+      for (const row of data) {
+        if (row.eta) map[`${row.deal_id}/${row.milestone_key}`] = row.eta;
+      }
+      setMilestones(map);
+    }
+  }, [devDeals]);
+
+  useEffect(() => { loadMilestones(); }, [loadMilestones]);
+
+  // Real-time: reload milestones when any change arrives
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel(`dev-milestones-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_milestones' },
+        () => loadMilestones())
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [loadMilestones]);
+
+  const handleMilestoneChange = useCallback(async (dealId, milestoneKey, value) => {
+    setMilestones(prev => {
+      const next = { ...prev };
+      if (value) next[`${dealId}/${milestoneKey}`] = value;
+      else delete next[`${dealId}/${milestoneKey}`];
+      return next;
+    });
+    if (!supabase) return;
+    if (value) {
+      await supabase.from('deal_milestones').upsert(
+        { deal_id: dealId, milestone_key: milestoneKey, eta: value, status: 'in_progress' },
+        { onConflict: 'deal_id,milestone_key' }
+      );
+    } else {
+      await supabase.from('deal_milestones')
+        .update({ eta: null })
+        .eq('deal_id', dealId)
+        .eq('milestone_key', milestoneKey);
+    }
+  }, []);
 
   return (
     <div className="space-y-0">
@@ -298,7 +394,6 @@ export default function Development() {
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
         {DEV_COLUMNS.map(col => {
-          // Land Clearing: only show tagged deals; other columns: show all
           const colDeals = sortedDeals.filter(d => {
             if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !isColComplete(d.id, col);
             return !isColComplete(d.id, col);
@@ -316,25 +411,24 @@ export default function Development() {
                 </span>
               </div>
 
-              {/* Cards grouped by stage */}
+              {/* Cards */}
               <div>
-                {(() => {
-                  if (colDeals.length === 0) {
-                    return (
-                      <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
-                        All tasks done ✓
-                      </div>
-                    );
-                  }
-                  return colDeals.map(deal => (
+                {colDeals.length === 0 ? (
+                  <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
+                    All tasks done ✓
+                  </div>
+                ) : (
+                  colDeals.map(deal => (
                     <DevTaskCard
                       key={`${deal.id}-${col.key}-${tick}`}
                       deal={deal}
                       column={col}
                       onUpdate={forceUpdate}
+                      milestoneDate={col.milestoneKey ? milestones[`${deal.id}/${col.milestoneKey}`] : undefined}
+                      onMilestoneChange={handleMilestoneChange}
                     />
-                  ));
-                })()}
+                  ))
+                )}
               </div>
             </div>
           );

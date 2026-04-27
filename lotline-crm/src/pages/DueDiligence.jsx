@@ -1,17 +1,66 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
-import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
+import { CheckCircle2, Calendar } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
+import { supabase } from '../lib/supabase';
+import ContractorPicker from '../components/deal/ContractorPicker';
 
 // ── Column definitions ────────────────────────────────────────────────────────
+// milestoneKey  → deal_milestones.milestone_key (two-way sync with Important Dates sidebar)
+// contractorType → filters ContractorPicker to matching contacts
 const DD_COLUMNS = [
-  { key: 'survey',        label: 'Survey / Boundary Review',            color: '#2563eb', bg: '#dbeafe', hasDate: false, hasContractor: true  },
-  { key: 'zoning',        label: 'Zoning & Land Use Verification',      color: '#7c3aed', bg: '#ede9fe', hasDate: false, hasContractor: false },
-  { key: 'hoa',           label: 'HOA / Deed Restrictions Review',      color: '#db2777', bg: '#fce7f3', hasDate: false, hasContractor: false },
-  { key: 'perc_test',     label: 'Perc Test',                           color: '#16a34a', bg: '#dcfce7', hasDate: true,  hasContractor: true  },
-  { key: 'flood_zone',    label: 'Flood Zone & Environmental Check',    color: '#0891b2', bg: '#cffafe', hasDate: false, hasContractor: false },
-  { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: false },
+  {
+    key: 'survey',
+    label: 'Survey / Boundary Review',
+    color: '#2563eb', bg: '#dbeafe',
+    hasDate: true,
+    milestoneKey: 'land_survey_scheduled',
+    contractorType: 'Land Surveyor',
+    dateLabel: 'Survey Scheduled',
+  },
+  {
+    key: 'zoning',
+    label: 'Zoning & Land Use Verification',
+    color: '#7c3aed', bg: '#ede9fe',
+    hasDate: false,
+    milestoneKey: null,
+    contractorType: null,
+  },
+  {
+    key: 'hoa',
+    label: 'HOA / Deed Restrictions Review',
+    color: '#db2777', bg: '#fce7f3',
+    hasDate: false,
+    milestoneKey: null,
+    contractorType: null,
+  },
+  {
+    key: 'perc_test',
+    label: 'Perc Test',
+    color: '#16a34a', bg: '#dcfce7',
+    hasDate: true,
+    milestoneKey: 'perc_tests_scheduled',
+    contractorType: 'Soil Scientist',
+    dateLabel: 'Perc Test Scheduled',
+  },
+  {
+    key: 'flood_zone',
+    label: 'Flood Zone & Environmental Check',
+    color: '#0891b2', bg: '#cffafe',
+    hasDate: true,
+    milestoneKey: 'env_permits_submitted',
+    contractorType: 'Environmental Consultant',
+    dateLabel: 'Env. Permits Submitted',
+  },
+  {
+    key: 'utilities',
+    label: 'Utilities & Access Confirmation',
+    color: '#ea580c', bg: '#ffedd5',
+    hasDate: false,
+    milestoneKey: null,
+    contractorType: null,
+  },
 ];
 
 const TOTAL_TASKS = DD_COLUMNS.length;
@@ -26,22 +75,10 @@ const INIT_MAP = {
 };
 
 const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-function loadDDDeals() {
-  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  return all
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))
-    .sort((a, b) => {
-      // Deals with a closing date sort before those without
-      if (!a.closeDate && !b.closeDate) return 0;
-      if (!a.closeDate) return 1;
-      if (!b.closeDate) return -1;
-      return new Date(a.closeDate) - new Date(b.closeDate);
-    });
-}
+
 // ── localStorage helpers ──────────────────────────────────────────────────────
-const lsGet  = (k)      => localStorage.getItem(k) || '';
-const lsSet  = (k, v)   => localStorage.setItem(k, v);
+const lsGet   = (k)      => localStorage.getItem(k) || '';
+const lsSet   = (k, v)   => localStorage.setItem(k, v);
 const taskKey = (id, col) => `dd_${id}_${col}`;
 
 function getTaskStatus(dealId, colKey) {
@@ -54,7 +91,6 @@ function getCompletedCount(dealId) {
   return DD_COLUMNS.filter(c => getTaskStatus(dealId, c.key) === 'complete').length;
 }
 
-// Seed from deal.ddTasksCompleted (called inside the component after deals load)
 function seedInitialState(deals) {
   for (const deal of deals) {
     for (const name of (deal.ddTasksCompleted || [])) {
@@ -85,13 +121,20 @@ function getDayCount(contractDate) {
 }
 
 // ── Task card ─────────────────────────────────────────────────────────────────
-function DDTaskCard({ deal, column, onUpdate }) {
+function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange }) {
   const navigate = useNavigate();
 
-  const [status,     setStatus]     = useState(() => getTaskStatus(deal.id, column.key));
-  const [date,       setDate]       = useState(() => lsGet(`${taskKey(deal.id, column.key)}_date`));
-  const [contractor, setContractor] = useState(() => lsGet(`${taskKey(deal.id, column.key)}_cont`));
-  const [editingCont, setEditingCont] = useState(false);
+  const [status, setStatus] = useState(() => getTaskStatus(deal.id, column.key));
+  // Date: prefer milestoneDate from DB (passed as prop), fall back to localStorage
+  const [date, setDate] = useState(milestoneDate || lsGet(`${taskKey(deal.id, column.key)}_date`) || '');
+
+  // Keep in sync if parent's milestoneDate changes (real-time update from DB)
+  useEffect(() => {
+    if (milestoneDate && milestoneDate !== date) {
+      setDate(milestoneDate);
+      lsSet(`${taskKey(deal.id, column.key)}_date`, milestoneDate);
+    }
+  }, [milestoneDate]); // eslint-disable-line
 
   if (status === 'complete') return null;
 
@@ -117,16 +160,9 @@ function DDTaskCard({ deal, column, onUpdate }) {
       setStatus('in_progress');
       onUpdate();
     }
-  };
-
-  const saveContractor = (val) => {
-    lsSet(`${taskKey(deal.id, column.key)}_cont`, val);
-    setContractor(val);
-    setEditingCont(false);
-    if (status === 'not_started' && val) {
-      setTaskStatus(deal.id, column.key, 'in_progress');
-      setStatus('in_progress');
-      onUpdate();
+    // Sync to deal_milestones (two-way link with Important Dates sidebar)
+    if (column.milestoneKey) {
+      onMilestoneChange(deal.id, column.milestoneKey, val);
     }
   };
 
@@ -172,10 +208,10 @@ function DDTaskCard({ deal, column, onUpdate }) {
         )}
       </div>
 
-      {/* Date picker (Perc Test) */}
+      {/* Date picker — two-way synced to deal_milestones */}
       {column.hasDate && (
         <div className="mb-2" onClick={e => e.stopPropagation()}>
-          <p className="text-[9px] text-gray-400 mb-0.5">Perc Test Scheduled Date</p>
+          <p className="text-[9px] text-gray-400 mb-0.5">{column.dateLabel}</p>
           <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50">
             <Calendar size={9} className="text-gray-400 flex-shrink-0" />
             <input
@@ -188,36 +224,14 @@ function DDTaskCard({ deal, column, onUpdate }) {
         </div>
       )}
 
-      {/* Contractor */}
-      {column.hasContractor && (
-        <div className="mb-2" onClick={e => e.stopPropagation()}>
-          {contractor ? (
-            <button
-              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-              className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 rounded-lg px-2 py-1 w-full text-left"
-            >
-              <User size={9} className="flex-shrink-0" />
-              <span className="truncate">{contractor}</span>
-            </button>
-          ) : editingCont ? (
-            <input
-              autoFocus
-              type="text"
-              placeholder="Contractor name..."
-              className="text-[10px] border border-gray-300 rounded-lg px-2 py-1 w-full outline-none focus:border-blue-400"
-              onBlur={e => saveContractor(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveContractor(e.target.value); if (e.key === 'Escape') setEditingCont(false); }}
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <button
-              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
-            >
-              <ChevronDown size={9} />
-              Add Contractor
-            </button>
-          )}
+      {/* Contractor picker — queries contacts by contractor_type */}
+      {column.contractorType && (
+        <div className="mb-2">
+          <ContractorPicker
+            dealId={deal.id}
+            stageKey={column.key}
+            contractorType={column.contractorType}
+          />
         </div>
       )}
 
@@ -237,6 +251,9 @@ function DDTaskCard({ deal, column, onUpdate }) {
 export default function DueDiligence() {
   const { deals } = useDeals();
   const [tick, setTick] = useState(0);
+  // milestones: { [dealId/milestoneKey]: 'YYYY-MM-DD' }
+  const [milestones, setMilestones] = useState({});
+  const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
@@ -252,6 +269,60 @@ export default function DueDiligence() {
     if (!b.closeDate) return -1;
     return new Date(a.closeDate) - new Date(b.closeDate);
   });
+
+  // Load all deal_milestones for the visible deals in one query
+  const loadMilestones = useCallback(async () => {
+    if (!supabase || !ddDeals.length) return;
+    const mKeys = DD_COLUMNS.filter(c => c.milestoneKey).map(c => c.milestoneKey);
+    const dealIds = ddDeals.map(d => d.id);
+    const { data } = await supabase
+      .from('deal_milestones')
+      .select('deal_id, milestone_key, eta')
+      .in('deal_id', dealIds)
+      .in('milestone_key', mKeys);
+    if (data) {
+      const map = {};
+      for (const row of data) {
+        if (row.eta) map[`${row.deal_id}/${row.milestone_key}`] = row.eta;
+      }
+      setMilestones(map);
+    }
+  }, [ddDeals]);
+
+  useEffect(() => { loadMilestones(); }, [loadMilestones]);
+
+  // Real-time: when any milestone changes, reload
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel(`dd-milestones-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_milestones' },
+        () => loadMilestones())
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [loadMilestones]);
+
+  // Called by a card when the user edits a date — persists to DB and updates local state
+  const handleMilestoneChange = useCallback(async (dealId, milestoneKey, value) => {
+    setMilestones(prev => {
+      const next = { ...prev };
+      if (value) next[`${dealId}/${milestoneKey}`] = value;
+      else delete next[`${dealId}/${milestoneKey}`];
+      return next;
+    });
+    if (!supabase) return;
+    if (value) {
+      await supabase.from('deal_milestones').upsert(
+        { deal_id: dealId, milestone_key: milestoneKey, eta: value, status: 'in_progress' },
+        { onConflict: 'deal_id,milestone_key' }
+      );
+    } else {
+      await supabase.from('deal_milestones')
+        .update({ eta: null })
+        .eq('deal_id', dealId)
+        .eq('milestone_key', milestoneKey);
+    }
+  }, []);
 
   return (
     <div className="space-y-0">
@@ -290,6 +361,8 @@ export default function DueDiligence() {
                     deal={deal}
                     column={col}
                     onUpdate={forceUpdate}
+                    milestoneDate={col.milestoneKey ? milestones[`${deal.id}/${col.milestoneKey}`] : undefined}
+                    onMilestoneChange={handleMilestoneChange}
                   />
                 ))}
                 {colDeals.length === 0 && (
