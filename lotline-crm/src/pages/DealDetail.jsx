@@ -2557,7 +2557,7 @@ function DealDetailContent({ deal }) {
                 </button>
                 <div className="overflow-y-auto max-h-48">
                   {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
-                    <div key={inv.id} className="flex items-center group">
+                    <div key={inv.id} className="flex items-center">
                       <button
                         onClick={() => {
                           setInvestor(inv.name);
@@ -2571,12 +2571,11 @@ function DealDetailContent({ deal }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!window.confirm(`Remove "${inv.name}" from investor list?`)) return;
                           // Remove from localStorage
                           const updatedLocal = investorList.filter(i => i.id !== inv.id);
                           saveInvestors(updatedLocal, activeOrgId);
                           setInvestorList(updatedLocal);
-                          // Remove from Supabase investors table
+                          // Remove from Supabase investors table + state
                           setSupabaseInvestors(prev => prev.filter(i => i.id !== inv.id));
                           if (supabase && inv.id) {
                             supabase.from('investors').delete().eq('id', inv.id).then(() => {});
@@ -2586,8 +2585,8 @@ function DealDetailContent({ deal }) {
                             saveNow?.({ investor: '' });
                           }
                         }}
-                        className="opacity-0 group-hover:opacity-100 px-2 py-2 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                        title="Delete investor"
+                        className="px-2 py-2 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Remove investor"
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       </button>
