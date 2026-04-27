@@ -220,19 +220,18 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
       else if (newDoc) {
         setDocuments(prev => [newDoc, ...prev]);
         // Log document upload to activity feed
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            await supabase.from('activity_notes').insert({
-              organization_id: activeOrgId,
-              deal_id:         deal.id,
-              author_id:       session.user.id,
-              author_name:     profile?.name || null,
-              body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''}`,
-              note_type:       'note',
-            });
-          }
-        } catch (e) { console.warn('activity note for doc upload', e); }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { error: noteErr } = await supabase.from('activity_notes').insert({
+            organization_id: activeOrgId,
+            deal_id:         deal.id,
+            author_id:       session.user.id,
+            author_name:     profile?.name || null,
+            body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''}`,
+            note_type:       'note',
+          });
+          if (noteErr) console.error('activity note for doc upload failed:', noteErr.message, noteErr);
+        }
       }
     }
     setDocUploading(false);
