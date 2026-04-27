@@ -10,7 +10,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useDeals } from '../lib/DealsContext';
 import {
   fetchContact, updateContact, deleteContact,
-  CONTACT_TYPE_OPTIONS,
+  CONTACT_TYPE_OPTIONS, CONTRACTOR_TYPE_OPTIONS,
 } from '../lib/contactsData';
 
 const US_STATES = [
@@ -347,6 +347,33 @@ export default function ContactDetail() {
             </EditableField>
 
             <EditableField label="Title" value={contact.title} onSave={v => save({ title: v })} />
+
+            {/* Contractor Type — inline select */}
+            <div className="group">
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Contractor Type</label>
+              <div className="flex items-center gap-2">
+                {canEdit ? (
+                  <select
+                    value={contact.contractor_type || ''}
+                    onChange={async e => {
+                      const val = e.target.value || null;
+                      setContact(c => ({ ...c, contractor_type: val }));
+                      await save({ contractor_type: val });
+                    }}
+                    className="text-sm text-gray-700 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-accent bg-white"
+                  >
+                    <option value="">— None —</option>
+                    {CONTRACTOR_TYPE_OPTIONS.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-sm text-gray-700">
+                    {contact.contractor_type || <span className="text-gray-300 italic">—</span>}
+                  </span>
+                )}
+              </div>
+            </div>
 
             <EditableField label="Address" value={contact.address} onSave={v => save({ address: v })}>
               {contact.address && <span className="text-sm text-gray-700 flex items-center gap-1"><MapPin size={12} className="text-gray-400" />{contact.address}</span>}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, User, Plus } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { createContact, CONTACT_TYPE_OPTIONS } from '../../lib/contactsData';
+import { createContact, CONTACT_TYPE_OPTIONS, CONTRACTOR_TYPE_OPTIONS } from '../../lib/contactsData';
 import { supabase } from '../../lib/supabase';
 
 const US_STATES = [
@@ -19,7 +19,7 @@ export default function CreateContactModal({ onClose, onCreated }) {
   const { activeOrgId } = useAuth();
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
-    company: '', title: '', notes: '',
+    company: '', title: '', notes: '', contractor_type: '',
   });
   const [types, setTypes] = useState([]);
   const [states, setStates] = useState([]);
@@ -182,6 +182,21 @@ export default function CreateContactModal({ onClose, onCreated }) {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Contractor Type */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contractor Type</label>
+            <select
+              value={form.contractor_type}
+              onChange={e => set('contractor_type', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— Select if contractor —</option>
+              {CONTRACTOR_TYPE_OPTIONS.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
 
           {/* States serviced */}

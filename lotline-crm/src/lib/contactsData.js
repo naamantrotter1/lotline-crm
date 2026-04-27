@@ -8,10 +8,30 @@ const SELECT_FIELDS = `
   id, organization_id, first_name, last_name, email, phone, secondary_phone,
   company, title, address, lead_source, owner_user_id, tags, custom_fields,
   lifecycle_stage, do_not_contact, notes, last_contacted_at, states_serviced,
-  created_at, updated_at,
+  contractor_type, created_at, updated_at,
   contact_types(type),
   contact_deals(deal_id, role)
 `.trim();
+
+export const CONTRACTOR_TYPE_OPTIONS = [
+  'Closing Attorney',
+  'Electrician',
+  'Environmental Consultant',
+  'General Contractor',
+  'HVAC Contractor',
+  'Home Dealer',
+  'Home Setup Contractor',
+  'Land Clearing Contractor',
+  'Land Surveyor',
+  'Permit Expeditor',
+  'Plumbing Contractor',
+  'Real Estate Agent',
+  'Septic Contractor',
+  'Skirting Contractor',
+  'Soil Scientist',
+  'Well Drilling Contractor',
+  'Other',
+];
 
 function toStr(v) {
   if (v === null || v === undefined) return null;
