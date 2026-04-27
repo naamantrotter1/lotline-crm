@@ -69,10 +69,13 @@ export default async function handler(req, res) {
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
     if (!fullName) return res.status(400).json({ error: 'Name cannot be empty.' });
 
+    // Use upsert so members without an existing profile row still get saved
     const { error: profErr } = await adminClient
       .from('profiles')
-      .update({ name: fullName, first_name: firstName || null, last_name: lastName || null })
-      .eq('id', target.user_id);
+      .upsert(
+        { id: target.user_id, name: fullName, first_name: firstName || null, last_name: lastName || null },
+        { onConflict: 'id' }
+      );
 
     if (profErr) return res.status(500).json({ error: profErr.message });
   }
