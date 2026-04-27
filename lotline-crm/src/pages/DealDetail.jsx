@@ -2808,7 +2808,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'threads', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
