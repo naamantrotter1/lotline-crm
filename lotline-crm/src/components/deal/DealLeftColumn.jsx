@@ -22,6 +22,7 @@ const DEFAULT_SECTIONS = [
   { key: 'closing',         label: 'Closing',          visible: true,  order: 3 },
   { key: 'important_dates', label: 'Important Dates',  visible: true,  order: 4 },
   { key: 'key_contacts',    label: 'Key Contacts',     visible: true,  order: 5 },
+  { key: 'deal_owner',      label: 'Deal Owner',       visible: true,  order: 6 },
 ];
 
 // ── Key Contacts section (reads deal_stage_contacts) ──────────────────────────
@@ -355,6 +356,8 @@ export default function DealLeftColumn({
   onLogCall,
   onSendEmail,
   onScheduleMeeting,
+  dealOwner, setDealOwner,
+  allUsers = [],
   onApplyFinancing,
   onSubmitDeal,
 }) {
@@ -560,6 +563,23 @@ export default function DealLeftColumn({
             if (s.key === 'key_contacts') return (
               <Section key="key_contacts" title="Key Contacts" defaultOpen={false}>
                 <KeyContacts deal={deal} />
+              </Section>
+            );
+            if (s.key === 'deal_owner') return (
+              <Section key="deal_owner" title="Deal Owner" defaultOpen={true}>
+                {readOnly
+                  ? <p className="text-sm text-gray-700">{dealOwner || <span className="text-gray-400">Unassigned</span>}</p>
+                  : <select
+                      value={dealOwner || ''}
+                      onChange={e => { setDealOwner(e.target.value); saveNow({ dealOwner: e.target.value }); }}
+                      className="w-full text-sm text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    >
+                      <option value="">— Unassigned —</option>
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.name}>{u.name}</option>
+                      ))}
+                    </select>
+                }
               </Section>
             );
             return null;

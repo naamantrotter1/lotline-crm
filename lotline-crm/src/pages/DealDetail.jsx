@@ -2677,6 +2677,8 @@ function DealDetailContent({ deal }) {
             FINANCING_OPTIONS={FINANCING_OPTIONS}
             COST_FIELDS={COST_FIELDS}
             saveNow={saveNow}
+            dealOwner={dealOwner} setDealOwner={setDealOwner}
+            allUsers={allUsers}
             onOpenMapSearch={() => setShowMapModal(true)}
             investorList={investorList}
             onCreateTask={() => setShowCreateTask(true)}
