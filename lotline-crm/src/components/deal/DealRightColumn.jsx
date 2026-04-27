@@ -227,7 +227,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
             deal_id:         deal.id,
             author_id:       session.user.id,
             author_name:     profile?.name || null,
-            body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''}`,
+            body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''} · [Open](${publicUrl})`,
             note_type:       'note',
           });
           if (noteErr) console.error('activity note for doc upload failed:', noteErr.message, noteErr);

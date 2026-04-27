@@ -126,6 +126,27 @@ function MentionAutocomplete({ results, selectedIdx, onSelect, anchorRef }) {
 }
 
 // ── NoteBodyRenderer ──────────────────────────────────────────────────────────
+const MD_LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+
+function renderTextWithLinks(text, baseKey) {
+  const parts = [];
+  let last = 0;
+  let match;
+  MD_LINK_RE.lastIndex = 0;
+  while ((match = MD_LINK_RE.exec(text)) !== null) {
+    if (match.index > last) parts.push(<span key={`${baseKey}-t${last}`}>{text.slice(last, match.index)}</span>);
+    parts.push(
+      <a key={`${baseKey}-l${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer"
+        className="text-accent underline hover:text-accent/80 font-medium"
+        onClick={e => e.stopPropagation()}
+      >{match[1]}</a>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(<span key={`${baseKey}-t${last}`}>{text.slice(last)}</span>);
+  return parts.length > 0 ? parts : [<span key={baseKey}>{text}</span>];
+}
+
 function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
   const segments = parseMentionSegments(body, usersById);
   return (
@@ -145,7 +166,7 @@ function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
             />
           );
         }
-        return <span key={i}>{seg.content}</span>;
+        return renderTextWithLinks(seg.content, i);
       })}
     </span>
   );
