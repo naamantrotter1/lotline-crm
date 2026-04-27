@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, Mail, Phone,
   FileEdit, X, AtSign, BellOff, Bell, Pencil, MessageSquare,
-  ArrowRight,
+  ArrowRight, Pin,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -541,7 +541,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, currentUserName, me
 // ── Single event card ─────────────────────────────────────────────────────────
 function EventCard({
   event, replies = [], usersById,
-  onDeleteNote, onEditNote, onAddReply, onDeleteReply,
+  onDeleteNote, onEditNote, onAddReply, onDeleteReply, onPinNote,
   currentUserId, currentUserName, dealId, orgId, readOnly,
 }) {
   const cfg  = EVENT_CONFIG[event.type] || EVENT_CONFIG.note;
@@ -638,16 +638,27 @@ function EventCard({
             <span className="text-[13px] font-semibold text-gray-800">{authorName}</span>
             <span className="text-[11px] text-gray-400 ml-2">{fmtNoteDate(event.date)}</span>
           </div>
-          {isOwnNote && !editing && (
+          {!editing && event._dbId && !readOnly && (
             <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => { setEditText(event.body || ''); setEditing(true); }}
-                className="p-0.5 text-gray-300 hover:text-accent transition-colors rounded"
-                title="Edit note"
-              >
-                <Pencil size={12} />
-              </button>
-              {onDeleteNote && (
+              {onPinNote && (
+                <button
+                  onClick={() => onPinNote(event._dbId, !event.pinned)}
+                  className={`p-0.5 rounded transition-colors ${event.pinned ? 'text-amber-400 hover:text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}
+                  title={event.pinned ? 'Unpin note' : 'Pin to top'}
+                >
+                  <Pin size={12} className={event.pinned ? 'fill-amber-400' : ''} />
+                </button>
+              )}
+              {isOwnNote && (
+                <button
+                  onClick={() => { setEditText(event.body || ''); setEditing(true); }}
+                  className="p-0.5 text-gray-300 hover:text-accent transition-colors rounded"
+                  title="Edit note"
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
+              {isOwnNote && onDeleteNote && (
                 <button
                   onClick={() => onDeleteNote(event.id)}
                   className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
@@ -827,7 +838,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type')
+      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned')
       .eq('deal_id', deal.id)
       .order('created_at', { ascending: false })
       .limit(500);
@@ -912,6 +923,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
       title:       n.note_type === 'stage_change' ? n.body : 'Note added',
       body:        n.note_type === 'stage_change' ? null : n.body,
       date:        n.created_at,
+      pinned:      !!n.pinned,
       hasMentions: !!(n.mentioned_user_ids?.length),
       author_id:   n.author_id,
       meta: {
@@ -985,8 +997,20 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
     }));
   };
 
+  const handlePinNote = async (dbId, pin) => {
+    const { error } = await supabase
+      ?.from('activity_notes').update({ pinned: pin }).eq('id', dbId);
+    if (!error) {
+      setDbNotes(prev => prev.map(n => n.id === dbId ? { ...n, pinned: pin } : n));
+    }
+  };
+
+  // ── Split pinned vs chronological ─────────────────────────────────────────
+  const pinnedEvents = events.filter(e => e.pinned);
+  const unpinnedEvents = events.filter(e => !e.pinned);
+
   // ── Group by month ─────────────────────────────────────────────────────────
-  const grouped = events.reduce((acc, evt) => {
+  const grouped = unpinnedEvents.reduce((acc, evt) => {
     const label = monthLabel(evt.date);
     if (!acc[label]) acc[label] = [];
     acc[label].push(evt);
@@ -1013,7 +1037,37 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
         />
       )}
 
-      {groups.length === 0 && (
+      {/* Pinned notes */}
+      {pinnedEvents.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 overflow-hidden">
+          <div className="flex items-center gap-1.5 px-4 py-2 border-b border-amber-200">
+            <Pin size={11} className="text-amber-500 fill-amber-500" />
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Pinned</span>
+          </div>
+          <div className="p-3 space-y-3">
+            {pinnedEvents.map(evt => (
+              <EventCard
+                key={evt.id}
+                event={evt}
+                replies={evt._dbId ? (repliesByParentId[evt._dbId] || []) : []}
+                usersById={usersById}
+                currentUserId={currentUserId}
+                currentUserName={currentUserName}
+                dealId={deal.id}
+                orgId={activeOrgId}
+                readOnly={readOnly}
+                onDeleteNote={!readOnly ? handleDeleteNote : null}
+                onEditNote={!readOnly ? handleEditNote : null}
+                onAddReply={!readOnly ? handleAddReply : null}
+                onDeleteReply={!readOnly ? handleDeleteReply : null}
+                onPinNote={!readOnly ? handlePinNote : null}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {groups.length === 0 && pinnedEvents.length === 0 && (
         <div className="text-center py-12">
           <StickyNote size={32} className="text-gray-200 mx-auto mb-3" />
           <p className="text-sm text-gray-400">No activity yet</p>
@@ -1043,6 +1097,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
                 onEditNote={!readOnly ? handleEditNote : null}
                 onAddReply={!readOnly ? handleAddReply : null}
                 onDeleteReply={!readOnly ? handleDeleteReply : null}
+                onPinNote={!readOnly ? handlePinNote : null}
               />
             ))}
           </div>
