@@ -321,9 +321,43 @@ export default function DealEventsTab({ deal, readOnly }) {
       }
     }
 
-    setEvents([...nonMilestoneEvents, ...milestoneEvents]);
+    // Add close_date and contract_date from the deal object directly
+    const dealDateEvents = [];
+    const closeDate = deal.closeDate || deal.close_date;
+    const contractDate = deal.contractDate || deal.contract_date;
+    if (closeDate) {
+      dealDateEvents.push({
+        id: `deal-close-${deal.id}`,
+        title: 'Closing Date',
+        event_type: 'closing',
+        start_at: `${closeDate}T00:00:00`,
+        all_day: true,
+        color: '#10b981',
+        source_table: 'deals_close_date',
+        source_id: deal.id,
+      });
+    }
+    if (contractDate) {
+      dealDateEvents.push({
+        id: `deal-contract-${deal.id}`,
+        title: 'Contract Signed',
+        event_type: 'milestone',
+        start_at: `${contractDate}T00:00:00`,
+        all_day: true,
+        color: '#3b82f6',
+        source_table: 'deals_contract_date',
+        source_id: deal.id,
+      });
+    }
+
+    // Filter out deal_events rows for these sources to avoid duplication
+    const filteredNonMilestone = nonMilestoneEvents.filter(
+      e => e.source_table !== 'deals_close_date' && e.source_table !== 'deals_contract_date'
+    );
+
+    setEvents([...filteredNonMilestone, ...milestoneEvents, ...dealDateEvents]);
     setLoading(false);
-  }, [deal?.id]);
+  }, [deal?.id, deal?.closeDate, deal?.close_date, deal?.contractDate, deal?.contract_date]);
 
   useEffect(() => { load(); }, [load]);
 
