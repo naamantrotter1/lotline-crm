@@ -37,15 +37,16 @@ function QuickAddContact({ contractorType, orgId, onSaved, onClose }) {
           company:          company.trim() || null,
           phone:            phone.trim()   || null,
           email:            email.trim()   || null,
-          contractor_type:  contractorType || null,
         })
-        .select('id, first_name, last_name, company, phone, email, contractor_type')
+        .select('id, first_name, last_name, company, phone, email')
         .single();
       if (error) throw error;
-      // Tag as contractor type
-      await supabase.from('contact_types')
-        .insert({ contact_id: contact.id, type: 'contractor' })
-        .catch(() => {});
+      // Tag with the specific contractor type so ContractorPicker can find this contact
+      if (contractorType) {
+        await supabase.from('contact_types')
+          .insert({ contact_id: contact.id, type: contractorType })
+          .catch(() => {});
+      }
       onSaved(contact);
     } catch (e) {
       setErr(e.message);
@@ -116,17 +117,26 @@ export default function ContractorPicker({ dealId, stageKey, contractorType, rea
   const [showAdd,   setShowAdd]   = useState(false);
   const dropRef = useRef(null);
 
-  // Load all contacts of this contractor_type for the org
+  // Load contacts whose contact_types include this contractorType
   useEffect(() => {
     if (!supabase || !activeOrgId || !contractorType) return;
+    // Get contact IDs that have this type, then fetch those contacts
     supabase
-      .from('contacts')
-      .select('id, first_name, last_name, company, phone, email, contractor_type')
-      .eq('organization_id', activeOrgId)
-      .eq('contractor_type', contractorType)
-      .is('deleted_at', null)
-      .order('first_name')
-      .then(({ data }) => setContacts(data || []));
+      .from('contact_types')
+      .select('contact_id')
+      .eq('type', contractorType)
+      .then(async ({ data: typeRows }) => {
+        if (!typeRows?.length) { setContacts([]); return; }
+        const ids = typeRows.map(r => r.contact_id);
+        const { data } = await supabase
+          .from('contacts')
+          .select('id, first_name, last_name, company, phone, email')
+          .eq('organization_id', activeOrgId)
+          .in('id', ids)
+          .is('deleted_at', null)
+          .order('first_name');
+        setContacts(data || []);
+      });
   }, [activeOrgId, contractorType]);
 
   // Load the currently assigned contact for this deal + stage

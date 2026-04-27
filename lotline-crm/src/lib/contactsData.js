@@ -8,30 +8,10 @@ const SELECT_FIELDS = `
   id, organization_id, first_name, last_name, email, phone, secondary_phone,
   company, title, address, lead_source, owner_user_id, tags, custom_fields,
   lifecycle_stage, do_not_contact, notes, last_contacted_at, states_serviced,
-  contractor_type, created_at, updated_at,
+  created_at, updated_at,
   contact_types(type),
   contact_deals(deal_id, role)
 `.trim();
-
-export const CONTRACTOR_TYPE_OPTIONS = [
-  'Closing Attorney',
-  'Electrician',
-  'Environmental Consultant',
-  'General Contractor',
-  'HVAC Contractor',
-  'Home Dealer',
-  'Home Setup Contractor',
-  'Land Clearing Contractor',
-  'Land Surveyor',
-  'Permit Expeditor',
-  'Plumbing Contractor',
-  'Real Estate Agent',
-  'Septic Contractor',
-  'Skirting Contractor',
-  'Soil Scientist',
-  'Well Drilling Contractor',
-  'Other',
-];
 
 function toStr(v) {
   if (v === null || v === undefined) return null;
@@ -175,9 +155,33 @@ export async function fetchDealContacts(dealId) {
 }
 
 export const LIFECYCLE_STAGES = ['new', 'working', 'qualified', 'customer', 'dormant'];
+// Unified type list — covers both general contact roles and contractor specialties.
+// These values are stored in the contact_types table and are used by ContractorPicker
+// to filter contacts for a specific pipeline stage.
 export const CONTACT_TYPE_OPTIONS = [
-  'Buyer','Closing Attorney','Contractor','Home Dealer','Home Manufacturer',
-  'Investor','Land Clearing Contractor','Land Surveyor','Real Estate Agent',
-  'Septic Installer','Set-up Contractor','Soil Scientist','Well Installer','Wholesaler',
+  // General roles
+  'Buyer',
+  'Investor',
+  'Seller',
+  'Wholesaler',
+  'Home Manufacturer',
+  // Contractor / trade specialties (must match pipeline contractorType strings exactly)
+  'Closing Attorney',
+  'Electrician',
+  'Environmental Consultant',
+  'General Contractor',
+  'HVAC Contractor',
+  'Home Dealer',
+  'Home Setup Contractor',
+  'Land Clearing Contractor',
+  'Land Surveyor',
+  'Permit Expeditor',
+  'Plumbing Contractor',
+  'Real Estate Agent',
+  'Septic Contractor',
+  'Skirting Contractor',
+  'Soil Scientist',
+  'Well Drilling Contractor',
+  'Other',
 ];
 export const LEAD_SOURCES = ['Direct','Referral','Website','Cold Call','Social Media','Email Campaign','Conference','Driving for Dollars','MLS','Wholesaler','Other'];
