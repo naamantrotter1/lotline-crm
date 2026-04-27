@@ -1,26 +1,39 @@
 /**
  * CalendarView.jsx
- * Phase 14: Calendar page — month view with meeting list, create/edit modal,
- * Google Calendar connect banner, and scheduler link management.
+ * Global calendar — shows CRM meetings + all deal events across the org.
+ * Filter chips: All | Meetings | Tasks | Milestones | Stage Changes | Contractors
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ChevronLeft, ChevronRight, Plus, Loader2,
   Video, Phone, Users, MapPin,
-  RefreshCw, Link2, Trash2, Check, X, Copy,
+  RefreshCw, Link2, Trash2, Check, X, Copy, ExternalLink,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { supabase } from '../lib/supabase';
 import {
   fetchMeetings, createMeeting, updateMeeting, deleteMeeting,
   fetchCalendarConnection, syncGoogleCalendar,
   fetchSchedulerLinks, createSchedulerLink, deleteSchedulerLink,
   MEETING_TYPES, MEETING_STATUS, fmtMeetingTime,
 } from '../lib/calendarData';
+import { fetchOrgEvents, eventColor, eventTypeLabel, fmtEventDate } from '../lib/dealEvents';
+import AddEventModal from '../components/deal/AddEventModal';
 
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
+
+const FILTER_CHIPS = [
+  { key: 'all',          label: 'All'           },
+  { key: 'meeting',      label: 'Meetings'      },
+  { key: 'task',         label: 'Tasks'         },
+  { key: 'milestone',    label: 'Milestones'    },
+  { key: 'stage_change', label: 'Stage Changes' },
+  { key: 'contractor',   label: 'Contractors'   },
+];
 
 // Google Calendar color palette (colorId 1–11)
 const GCAL_COLORS = {
@@ -167,17 +180,20 @@ function MeetingModal({ orgId, userId, meeting, onSaved, onClose }) {
 }
 
 // ── Month grid ────────────────────────────────────────────────────────────────
-function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick, currentUserId }) {
-  const firstDay = new Date(year, month, 1).getDay();
+function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, currentUserId }) {
+  const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date();
+  const today       = new Date();
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const meetingsForDay = (day) => {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    return meetings.filter(m => m.starts_at?.startsWith(dateStr));
+  const eventsForDay = (day) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return allEvents.filter(e => {
+      const ts = e._isMeeting ? e.starts_at : e.start_at;
+      return ts?.startsWith(dateStr);
+    });
   };
 
   return (
@@ -191,7 +207,7 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick, currentU
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} className="bg-white min-h-[120px]" />;
           const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-          const dayMeetings = meetingsForDay(day);
+          const dayEvents = eventsForDay(day);
           return (
             <div key={day} onClick={() => onDayClick(day)}
               className="bg-white min-h-[120px] p-2 cursor-pointer hover:bg-orange-50/50 transition-colors group">
@@ -201,24 +217,31 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick, currentU
                 {day}
               </div>
               <div className="space-y-1">
-                {dayMeetings.slice(0, 4).map(m => {
-                  const chipStyle = meetingChipStyle(m);
-                  const isOther = m.created_by && m.created_by !== currentUserId;
+                {dayEvents.slice(0, 4).map(ev => {
+                  if (ev._isMeeting) {
+                    const chipStyle = meetingChipStyle(ev);
+                    return (
+                      <div key={ev.id} onClick={e => { e.stopPropagation(); onEventClick(ev); }}
+                        className={`text-xs px-2 py-1 rounded font-medium truncate transition-colors flex items-center gap-1 cursor-pointer ${chipStyle ? 'opacity-90 hover:opacity-100' : 'bg-accent/10 text-accent hover:bg-accent/20'}`}
+                        style={chipStyle || undefined}>
+                        <span className="truncate">{ev.title}</span>
+                      </div>
+                    );
+                  }
+                  // deal_event
+                  const bg = eventColor(ev);
+                  const label = ev._dealAddress ? `${ev._dealAddress} — ${ev.title}` : ev.title;
                   return (
-                    <div key={m.id} onClick={e => { e.stopPropagation(); onMeetingClick(m); }}
-                      className={`text-xs px-2 py-1 rounded font-medium truncate transition-colors flex items-center gap-1 ${chipStyle ? 'opacity-90 hover:opacity-100' : 'bg-accent/10 text-accent hover:bg-accent/20'}`}
-                      style={chipStyle || undefined}>
-                      {isOther && (
-                        <span className="flex-shrink-0 w-4 h-4 rounded-full bg-black/20 text-[9px] font-bold flex items-center justify-center leading-none">
-                          {creatorInitials(m)}
-                        </span>
-                      )}
-                      <span className="truncate">{m.title}</span>
+                    <div key={ev.id} onClick={e => { e.stopPropagation(); onEventClick(ev); }}
+                      className="text-xs px-2 py-1 rounded font-medium truncate cursor-pointer text-white opacity-90 hover:opacity-100 transition-opacity"
+                      style={{ backgroundColor: bg }}
+                      title={label}>
+                      <span className="truncate">{label}</span>
                     </div>
                   );
                 })}
-                {dayMeetings.length > 4 && (
-                  <div className="text-xs text-gray-400 px-1">+{dayMeetings.length - 4} more</div>
+                {dayEvents.length > 4 && (
+                  <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 4} more</div>
                 )}
               </div>
             </div>
@@ -229,40 +252,126 @@ function MonthGrid({ year, month, meetings, onDayClick, onMeetingClick, currentU
   );
 }
 
+// ── Deal event detail popover ─────────────────────────────────────────────────
+function DealEventPopover({ event, dealAddress, onClose, navigate }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[360px] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="h-1.5 w-full" style={{ backgroundColor: eventColor(event) }} />
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white inline-block mb-1"
+                style={{ backgroundColor: eventColor(event) }}>
+                {eventTypeLabel(event.event_type)}
+              </span>
+              <h3 className="text-sm font-semibold text-gray-800">{event.title}</h3>
+              {dealAddress && (
+                <p className="text-xs text-gray-400 mt-0.5">{dealAddress}</p>
+              )}
+            </div>
+            <button onClick={onClose} className="p-1 text-gray-300 hover:text-gray-500"><X size={14} /></button>
+          </div>
+          <p className="text-xs text-gray-500">{fmtEventDate(event.start_at, event.end_at, event.all_day)}</p>
+          {event.location && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <MapPin size={11} className="text-gray-400" />{event.location}
+            </div>
+          )}
+          {event.description && <p className="text-xs text-gray-600 leading-relaxed">{event.description}</p>}
+          {event.deal_id && (
+            <button
+              onClick={() => { onClose(); navigate(`/deal/${event.deal_id}`); }}
+              className="flex items-center gap-1.5 text-xs text-accent border border-accent/30 px-3 py-1.5 rounded-lg hover:bg-accent/5 font-medium"
+            >
+              <ExternalLink size={11} /> Go to Deal
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CalendarView() {
   const { activeOrgId, profile } = useAuth();
   const { can } = usePermissions();
+  const navigate = useNavigate();
   const today = new Date();
-  const [year, setYear]         = useState(today.getFullYear());
-  const [month, setMonth]       = useState(today.getMonth());
-  const [meetings, setMeetings] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [showNew, setShowNew]   = useState(false);
-  const [editing, setEditing]   = useState(null);
-  const [connection, setConn]   = useState(null);
-  const [syncing, setSyncing]   = useState(false);
+  const [year, setYear]           = useState(today.getFullYear());
+  const [month, setMonth]         = useState(today.getMonth());
+  const [meetings, setMeetings]   = useState([]);
+  const [dealEvents, setDealEvents] = useState([]);
+  const [deals, setDeals]         = useState({});  // { dealId: { address } }
+  const [loading, setLoading]     = useState(true);
+  const [showNew, setShowNew]     = useState(false);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editing, setEditing]     = useState(null);
+  const [selectedDealEvent, setSelectedDealEvent] = useState(null);
+  const [connection, setConn]     = useState(null);
+  const [syncing, setSyncing]     = useState(false);
   const [schedulerLinks, setSchedulerLinks] = useState([]);
-  const [newSlug, setNewSlug]   = useState('');
-  const [copied, setCopied]     = useState(null);
+  const [newSlug, setNewSlug]     = useState('');
+  const [copied, setCopied]       = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
   const canManage = can('calendar.manage');
+  const instanceId = useRef(Math.random().toString(36).slice(2));
 
-  useEffect(() => {
+  const loadAll = async () => {
     if (!activeOrgId) return;
     setLoading(true);
     const from = new Date(year, month, 1).toISOString();
     const to   = new Date(year, month + 1, 0, 23, 59).toISOString();
-    Promise.all([
+    const [m, conn, links, evts] = await Promise.all([
       fetchMeetings(activeOrgId, { from, to }),
       fetchCalendarConnection(profile?.id),
       fetchSchedulerLinks(activeOrgId),
-    ]).then(([m, conn, links]) => {
-      setMeetings(m);
-      setConn(conn);
-      setSchedulerLinks(links);
-      setLoading(false);
-    });
-  }, [activeOrgId, year, month]);
+      fetchOrgEvents(activeOrgId, { from, to }),
+    ]);
+    setMeetings(m);
+    setConn(conn);
+    setSchedulerLinks(links);
+    setDealEvents(evts);
+
+    // Load deal addresses for labeling
+    if (evts.length > 0 && supabase) {
+      const dealIds = [...new Set(evts.map(e => e.deal_id).filter(Boolean))];
+      const { data: dealRows } = await supabase
+        .from('deals')
+        .select('id, address')
+        .in('id', dealIds);
+      if (dealRows) {
+        setDeals(Object.fromEntries(dealRows.map(d => [d.id, d])));
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadAll(); }, [activeOrgId, year, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real-time for deal_events
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    const ch = supabase
+      .channel(`global-deal-events-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_events' }, () => {
+        const from = new Date(year, month, 1).toISOString();
+        const to   = new Date(year, month + 1, 0, 23, 59).toISOString();
+        fetchOrgEvents(activeOrgId, { from, to }).then(evts => {
+          setDealEvents(evts);
+          if (evts.length > 0) {
+            const dealIds = [...new Set(evts.map(e => e.deal_id).filter(Boolean))];
+            supabase.from('deals').select('id, address').in('id', dealIds)
+              .then(({ data }) => {
+                if (data) setDeals(d => ({ ...d, ...Object.fromEntries(data.map(r => [r.id, r])) }));
+              });
+          }
+        });
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [activeOrgId, year, month]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const prevMonth = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
@@ -312,14 +421,32 @@ export default function CalendarView() {
     if (data) { setSchedulerLinks(prev => [data, ...prev]); setNewSlug(''); }
   };
 
-  const upcomingMeetings = meetings
-    .filter(m => new Date(m.starts_at) >= today)
-    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+  // Merge meetings (tagged _isMeeting) + deal_events for the calendar grid
+  const taggedMeetings = meetings.map(m => ({ ...m, _isMeeting: true }));
+  const taggedDealEvents = dealEvents.map(e => ({
+    ...e,
+    _dealAddress: deals[e.deal_id]?.address || null,
+  }));
+
+  const allCalendarEvents = [...taggedMeetings, ...taggedDealEvents].filter(e => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'meeting') return e._isMeeting || e.event_type === 'meeting';
+    return !e._isMeeting && e.event_type === activeFilter;
+  });
+
+  const upcomingAll = allCalendarEvents
+    .filter(e => new Date(e._isMeeting ? e.starts_at : e.start_at) >= today)
+    .sort((a, b) => new Date(a._isMeeting ? a.starts_at : a.start_at) - new Date(b._isMeeting ? b.starts_at : b.start_at))
     .slice(0, 10);
+
+  const handleEventClick = (ev) => {
+    if (ev._isMeeting) setEditing(ev);
+    else setSelectedDealEvent(ev);
+  };
 
   return (
     <div className="w-full flex gap-6">
-      {/* Left: Calendar + Google connect */}
+      {/* Left: Calendar */}
       <div className="flex-1 min-w-0 space-y-4">
         {!connection && (
           <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex items-center justify-between">
@@ -329,8 +456,7 @@ export default function CalendarView() {
             </div>
             <a href="/settings?tab=integrations"
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-xl whitespace-nowrap"
-              style={{ backgroundColor: '#4285f4' }}
-            >
+              style={{ backgroundColor: '#4285f4' }}>
               Go to Settings
             </a>
           </div>
@@ -349,9 +475,9 @@ export default function CalendarView() {
           </div>
         )}
 
-        {/* Month nav */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-5">
+          {/* Month nav + Add Event */}
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-800">{MONTHS[month]} {year}</h2>
             <div className="flex items-center gap-2">
               <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={16} /></button>
@@ -361,47 +487,84 @@ export default function CalendarView() {
               </button>
               <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={16} /></button>
               {canManage && (
-                <button onClick={() => setShowNew(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl ml-2"
-                  style={{ backgroundColor: '#c9703a' }}>
-                  <Plus size={13} /> New
-                </button>
+                <>
+                  <button onClick={() => setShowNew(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-xl hover:bg-gray-50 ml-1">
+                    <Plus size={12} /> Meeting
+                  </button>
+                  <button onClick={() => setShowAddEvent(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl"
+                    style={{ backgroundColor: '#c9703a' }}>
+                    <Plus size={12} /> Event
+                  </button>
+                </>
               )}
             </div>
           </div>
+
+          {/* Filter chips */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-4">
+            {FILTER_CHIPS.map(chip => (
+              <button
+                key={chip.key}
+                onClick={() => setActiveFilter(chip.key)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                  activeFilter === chip.key
+                    ? 'bg-accent text-white border-accent'
+                    : 'text-gray-500 border-gray-200 hover:border-accent/40 hover:text-accent'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-gray-300" /></div>
           ) : (
             <MonthGrid
-              year={year} month={month} meetings={meetings}
-              onDayClick={(day) => { if (canManage) setShowNew(true); }}
-              onMeetingClick={setEditing}
+              year={year} month={month}
+              allEvents={allCalendarEvents}
+              onDayClick={() => { if (canManage) setShowNew(true); }}
+              onEventClick={handleEventClick}
               currentUserId={profile?.id}
             />
           )}
         </div>
       </div>
 
-      {/* Right panel: Upcoming + Scheduler links */}
+      {/* Right panel */}
       <div className="w-72 flex-shrink-0 space-y-4">
-        {/* Upcoming meetings */}
+        {/* Upcoming */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Upcoming</p>
-          {upcomingMeetings.length === 0 ? (
-            <p className="text-xs text-gray-300 italic py-2">No upcoming meetings</p>
+          {upcomingAll.length === 0 ? (
+            <p className="text-xs text-gray-300 italic py-2">No upcoming events</p>
           ) : (
             <div className="space-y-2">
-              {upcomingMeetings.map(m => {
-                const st = MEETING_STATUS[m.status] || MEETING_STATUS.scheduled;
+              {upcomingAll.map(ev => {
+                if (ev._isMeeting) {
+                  return (
+                    <button key={ev.id} onClick={() => setEditing(ev)}
+                      className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-accent/30 hover:bg-orange-50/30 transition-colors">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm">{typeIcon(ev.meeting_type)}</span>
+                        <p className="text-xs font-semibold text-gray-800 truncate flex-1">{ev.title}</p>
+                      </div>
+                      <p className="text-[10px] text-gray-400">{fmtMeetingTime(ev.starts_at, ev.ends_at)}</p>
+                    </button>
+                  );
+                }
+                const addr = deals[ev.deal_id]?.address;
                 return (
-                  <button key={m.id} onClick={() => setEditing(m)}
-                    className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-accent/30 hover:bg-orange-50/30 transition-colors group">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm">{typeIcon(m.meeting_type)}</span>
-                      <p className="text-xs font-semibold text-gray-800 truncate flex-1">{m.title}</p>
+                  <button key={ev.id} onClick={() => setSelectedDealEvent(ev)}
+                    className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: eventColor(ev) }} />
+                      <p className="text-xs font-semibold text-gray-800 truncate flex-1">{ev.title}</p>
                     </div>
-                    <p className="text-[10px] text-gray-400">{fmtMeetingTime(m.starts_at, m.ends_at)}</p>
-                    {m.location && <p className="text-[10px] text-gray-400 truncate mt-0.5">📍 {m.location}</p>}
+                    {addr && <p className="text-[10px] text-gray-400 truncate">{addr}</p>}
+                    <p className="text-[10px] text-gray-400">{fmtEventDate(ev.start_at, ev.end_at, ev.all_day)}</p>
                   </button>
                 );
               })}
@@ -447,7 +610,7 @@ export default function CalendarView() {
         </div>
       </div>
 
-      {/* Meeting modal */}
+      {/* Meeting modal (existing flow) */}
       {(showNew || editing) && (
         <div className="fixed inset-0 z-50">
           {editing ? (
@@ -461,10 +624,6 @@ export default function CalendarView() {
                   <div className="flex items-center gap-1">
                     {canManage && (
                       <>
-                        <button onClick={() => { setShowNew(false); /* editing will open modal */ setEditing(null); setTimeout(() => setEditing(editing), 0); }}
-                          className="px-3 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded-lg hover:bg-accent/5">
-                          Edit
-                        </button>
                         <button onClick={() => handleDelete(editing.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
                           <Trash2 size={14} />
@@ -484,11 +643,7 @@ export default function CalendarView() {
                   {editing.location && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-                      <a href={editing.location.startsWith('http') ? editing.location : undefined}
-                        target="_blank" rel="noopener noreferrer"
-                        className={editing.location.startsWith('http') ? 'text-accent hover:underline' : ''}>
-                        {editing.location}
-                      </a>
+                      <span>{editing.location}</span>
                     </div>
                   )}
                   {editing.attendee_emails?.length > 0 && (
@@ -497,20 +652,10 @@ export default function CalendarView() {
                       <span className="text-xs">{editing.attendee_emails.join(', ')}</span>
                     </div>
                   )}
-                  {editing.profiles && editing.created_by !== profile?.id && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <div className="w-5 h-5 rounded-full bg-accent/20 text-accent text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                        {creatorInitials(editing)}
-                      </div>
-                      <span className="text-xs">{[editing.profiles.first_name, editing.profiles.last_name].filter(Boolean).join(' ')}'s calendar</span>
-                    </div>
-                  )}
                   {editing.description && <p className="text-sm text-gray-600 leading-relaxed">{editing.description}</p>}
-                  <div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${(MEETING_STATUS[editing.status] || MEETING_STATUS.scheduled).cls}`}>
-                      {(MEETING_STATUS[editing.status] || MEETING_STATUS.scheduled).label}
-                    </span>
-                  </div>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${(MEETING_STATUS[editing.status] || MEETING_STATUS.scheduled).cls}`}>
+                    {(MEETING_STATUS[editing.status] || MEETING_STATUS.scheduled).label}
+                  </span>
                   {canManage && (
                     <div className="flex gap-2 pt-2">
                       {['completed','no-show','cancelled'].map(s => (
@@ -533,6 +678,35 @@ export default function CalendarView() {
               onSaved={handleSaved} onClose={() => setShowNew(false)}
             />
           )}
+        </div>
+      )}
+
+      {/* Deal event detail popover */}
+      {selectedDealEvent && (
+        <DealEventPopover
+          event={selectedDealEvent}
+          dealAddress={deals[selectedDealEvent.deal_id]?.address}
+          onClose={() => setSelectedDealEvent(null)}
+          navigate={navigate}
+        />
+      )}
+
+      {/* Add Event modal (from global calendar — needs deal selector note) */}
+      {showAddEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[360px] text-center">
+            <p className="text-sm font-semibold text-gray-800 mb-2">Add Event</p>
+            <p className="text-xs text-gray-500 mb-4">
+              To add an event, navigate to a deal and click the <strong>Event</strong> button in the deal actions bar, or use the <strong>Events</strong> tab.
+            </p>
+            <button
+              onClick={() => setShowAddEvent(false)}
+              className="px-4 py-2 text-sm font-medium text-white rounded-xl"
+              style={{ backgroundColor: '#c9703a' }}
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -3,10 +3,11 @@
  * "Activity" — wraps existing tab content with a clean tab bar.
  * Full unified feed + inline composer + month-grouped timeline land in PR 3.
  */
-import { LayoutGrid, FileText, Hammer, DollarSign, Layers, MessageSquare, CreditCard } from 'lucide-react';
+import { LayoutGrid, FileText, Hammer, DollarSign, Layers, MessageSquare, CreditCard, CalendarDays } from 'lucide-react';
 
 const ALL_TABS = [
   { key: 'overview',   label: 'Activity',        icon: LayoutGrid   },
+  { key: 'events',     label: 'Events',          icon: CalendarDays },
   { key: 'threads',    label: 'Threads',         icon: MessageSquare },
   { key: 'details',    label: 'Deal Details',    icon: Layers       },
   { key: 'dd',         label: 'Due Diligence',   icon: FileText     },

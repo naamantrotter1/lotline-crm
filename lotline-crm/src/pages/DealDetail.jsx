@@ -27,6 +27,8 @@ import DealMiddleColumn from '../components/deal/DealMiddleColumn';
 import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
+import DealEventsTab from '../components/deal/DealEventsTab';
+import AddEventModal from '../components/deal/AddEventModal';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
@@ -2806,7 +2808,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'threads', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'threads', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
@@ -2822,6 +2824,12 @@ function DealDetailContent({ deal }) {
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
             refreshRef={activityFeedRefreshRef}
+          />
+        )}
+        {activeTab === 'events' && (
+          <DealEventsTab
+            deal={deal}
+            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
           />
         )}
         {activeTab === 'threads' && (
@@ -3071,6 +3079,14 @@ function DealDetailContent({ deal }) {
         dealId={deal.id}
         onClose={() => setShowSendEmail(false)}
         onSent={() => setShowSendEmail(false)}
+      />
+    )}
+
+    {showScheduleMeeting && (
+      <AddEventModal
+        deal={deal}
+        onSaved={() => { setShowScheduleMeeting(false); setActiveTab('events'); }}
+        onClose={() => setShowScheduleMeeting(false)}
       />
     )}
 

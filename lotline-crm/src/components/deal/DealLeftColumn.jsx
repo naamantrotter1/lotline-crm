@@ -488,7 +488,7 @@ export default function DealLeftColumn({
           <ActionBtn icon={Mail}        label="Email"   onClick={onSendEmail}    />
           <ActionBtn icon={Phone}       label="Call"    onClick={onLogCall}      />
           <ActionBtn icon={CheckSquare} label="Task"    onClick={onCreateTask}   />
-          <ActionBtn icon={CalendarPlus}label="Meeting" onClick={onScheduleMeeting} />
+          <ActionBtn icon={CalendarPlus}label="Event" onClick={onScheduleMeeting} />
           {showNote && (
             <NoteComposer dealId={deal.id} orgId={activeOrgId} onClose={() => setShowNote(false)} />
           )}
