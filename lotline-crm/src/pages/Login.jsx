@@ -118,7 +118,9 @@ export default function Login() {
       return; // keep skipNavRef.current = true — nav blocked until MFA passed
     }
     skipNavRef.current = false;
-    navigate('/', { replace: true });
+    // Defer navigation one tick so React commits the session state update
+    // from onAuthStateChange before ProtectedRoute checks it.
+    setTimeout(() => navigate('/', { replace: true }), 0);
     setLoading(false);
   };
 
@@ -145,7 +147,7 @@ export default function Login() {
       return;
     }
     skipNavRef.current = false;
-    navigate('/', { replace: true });
+    setTimeout(() => navigate('/', { replace: true }), 0);
     setLoading(false);
   };
 
