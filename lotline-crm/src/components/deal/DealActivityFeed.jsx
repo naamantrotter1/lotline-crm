@@ -684,11 +684,7 @@ function EventCard({
         ) : event.body ? (
           <>
             <div className={!exp && isLong ? 'line-clamp-3' : ''}>
-              {event.hasMentions ? (
-                <NoteBodyRenderer body={event.body} usersById={usersById} authorName={authorName} createdAt={event.date} />
-              ) : (
-                <p className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{event.body}</p>
-              )}
+              <NoteBodyRenderer body={event.body} usersById={usersById} authorName={authorName} createdAt={event.date} />
             </div>
             {isLong && (
               <button onClick={() => setExp(e => !e)} className="text-[11px] text-accent mt-1 font-medium">
