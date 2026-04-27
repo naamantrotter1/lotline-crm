@@ -267,12 +267,12 @@ function Hero() {
                 {hero.cta1}
                 <ArrowRight size={16} />
               </Link>
-              <a
-                href="#how-it-works"
+              <Link
+                to="/login"
                 className="inline-flex items-center gap-2 bg-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/15 transition-colors"
               >
-                {hero.cta2}
-              </a>
+                Log in
+              </Link>
             </div>
             {/* Metric badges */}
             <div className="flex flex-wrap gap-5 mt-10">
