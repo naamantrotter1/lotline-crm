@@ -8,7 +8,7 @@
  * Used inside DueDiligence.jsx and Development.jsx pipeline cards.
  */
 import { useState, useEffect, useRef } from 'react';
-import { User, Phone, Mail, ChevronDown, Plus, X } from 'lucide-react';
+import { User, ChevronDown, Plus, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -224,24 +224,6 @@ export default function ContractorPicker({ dealId, stageKey, contractorType, rea
               </button>
             )}
           </div>
-          {(selected.phone || selected.email) && (
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {selected.phone && (
-                <a href={`tel:${selected.phone}`}
-                  onClick={e => e.stopPropagation()}
-                  className="text-[9px] text-blue-500 hover:text-blue-700 flex items-center gap-0.5">
-                  <Phone size={8} />{selected.phone}
-                </a>
-              )}
-              {selected.email && (
-                <a href={`mailto:${selected.email}`}
-                  onClick={e => e.stopPropagation()}
-                  className="text-[9px] text-blue-500 hover:text-blue-700 flex items-center gap-0.5 truncate max-w-full">
-                  <Mail size={8} />{selected.email}
-                </a>
-              )}
-            </div>
-          )}
           {!readOnly && (
             <button onClick={() => setOpen(v => !v)}
               className="text-[9px] text-blue-500 hover:text-blue-700 mt-0.5 font-medium">
