@@ -110,6 +110,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const [documents,    setDocuments]    = useState([]);
   const [docCategory,  setDocCategory]  = useState('Other');
   const [docUploading, setDocUploading] = useState(false);
+  const [docError,     setDocError]     = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -176,15 +177,19 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
     if (!file || !supabase) return;
     setDocUploading(true);
     const path = `${deal.id}/${Date.now()}_${file.name}`;
+    setDocError(null);
     const { error: storageErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file);
-    if (!storageErr) {
+    if (storageErr) {
+      setDocError(storageErr.message);
+    } else {
       const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-      const { data: newDoc } = await supabase
+      const { data: newDoc, error: dbErr } = await supabase
         .from('deal_documents')
         .insert({ deal_id: deal.id, organization_id: activeOrgId, name: file.name, category: docCategory, storage_path: path, url: publicUrl, size: file.size })
         .select('*')
         .single();
-      if (newDoc) setDocuments(prev => [newDoc, ...prev]);
+      if (dbErr) setDocError(dbErr.message);
+      else if (newDoc) setDocuments(prev => [newDoc, ...prev]);
     }
     setDocUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -373,6 +378,9 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
               </button>
               <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
             </div>
+            {docError && (
+              <p className="text-[11px] text-red-500 mb-2">{docError}</p>
+            )}
           )}
           {documents.length > 0
             ? documents.map(doc => (

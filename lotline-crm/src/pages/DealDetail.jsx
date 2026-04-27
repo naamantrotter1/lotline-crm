@@ -15,7 +15,7 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
-import { loadInvestors, addInvestor } from '../lib/investorsStore';
+import { loadInvestors, addInvestor, saveInvestors } from '../lib/investorsStore';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -2125,6 +2125,7 @@ function DealDetailContent({ deal }) {
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);
   const [showInvestorPicker, setShowInvestorPicker] = useState(false);
   const investorPickerRef = useRef(null);
+  const investorMountRef = useRef(false);
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
@@ -2144,9 +2145,10 @@ function DealDetailContent({ deal }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showInvestorPicker]);
 
-  // When an investor is assigned to a deal, ensure they exist as a Contact
-  // with type='Investor' so they appear in the Contacts overview.
+  // When the investor is actively changed (not on initial load), ensure they
+  // exist as a Contact with type='Investor' so they appear in the Contacts overview.
   useEffect(() => {
+    if (!investorMountRef.current) { investorMountRef.current = true; return; }
     if (investor && activeOrgId) {
       ensureInvestorContact(investor, activeOrgId);
     }
@@ -2555,17 +2557,35 @@ function DealDetailContent({ deal }) {
                 </button>
                 <div className="overflow-y-auto max-h-48">
                   {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
-                    <button
-                      key={inv.id}
-                      onClick={() => {
-                        setInvestor(inv.name);
-                        saveNow?.({ investor: inv.name });
-                        setShowInvestorPicker(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
-                    >
-                      {inv.name}
-                    </button>
+                    <div key={inv.id} className="flex items-center group">
+                      <button
+                        onClick={() => {
+                          setInvestor(inv.name);
+                          saveNow?.({ investor: inv.name });
+                          setShowInvestorPicker(false);
+                        }}
+                        className={`flex-1 text-left px-3 py-2 text-sm hover:bg-gray-50 truncate ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
+                      >
+                        {inv.name}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!window.confirm(`Remove "${inv.name}" from investor list?`)) return;
+                          const updated = investorList.filter(i => i.id !== inv.id);
+                          saveInvestors(updated, activeOrgId);
+                          setInvestorList(updated);
+                          if (investor === inv.name) {
+                            setInvestor('');
+                            saveNow?.({ investor: '' });
+                          }
+                        }}
+                        className="opacity-0 group-hover:opacity-100 px-2 py-2 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Delete investor"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
                   ))}
                 </div>
                 {investor && (
