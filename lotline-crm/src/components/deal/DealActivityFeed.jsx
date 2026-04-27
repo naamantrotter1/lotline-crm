@@ -806,7 +806,7 @@ function MuteToggle({ dealId }) {
 }
 
 // ── Main feed component ───────────────────────────────────────────────────────
-export default function DealActivityFeed({ deal, readOnly, currentUser }) {
+export default function DealActivityFeed({ deal, readOnly, currentUser, refreshRef }) {
   const { profile, activeOrgId, hasFlag } = useAuth();
   const currentUserId   = profile?.id || null;
   const currentUserName = profile?.name
@@ -884,17 +884,11 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
 
   // ── Realtime ──────────────────────────────────────────────────────────────
   const loadDbNotesRef = useRef(loadDbNotes);
-  useEffect(() => { loadDbNotesRef.current = loadDbNotes; }, [loadDbNotes]);
-
-  // Listen for activity notes created by other components (doc upload, DD, Dev)
   useEffect(() => {
-    if (!deal?.id) return;
-    const handler = (e) => {
-      if (e.detail?.dealId === deal.id) loadDbNotesRef.current();
-    };
-    window.addEventListener('activity-note-created', handler);
-    return () => window.removeEventListener('activity-note-created', handler);
-  }, [deal?.id]);
+    loadDbNotesRef.current = loadDbNotes;
+    if (refreshRef) refreshRef.current = loadDbNotes;
+  }, [loadDbNotes, refreshRef]);
+
 
   useEffect(() => {
     if (!supabase || !deal?.id) return;

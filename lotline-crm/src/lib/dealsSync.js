@@ -357,6 +357,34 @@ export function saveToLS(deal, orgId) {
   lsSet(all, orgId);
 }
 
+/** Awaitable version of flushToSupabase — returns {error} (error=null on success).
+ *  Use this when you need to know if the write succeeded (e.g. for UI feedback). */
+export async function flushToSupabaseAsync(deal, orgId) {
+  if (!supabase) return { error: new Error('Supabase not configured') };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: new Error('Not authenticated') };
+    const row = dealToRow(deal);
+    if (orgId) row.organization_id = orgId;
+    const { error, data } = await supabase.from('deals').update(row).eq('id', row.id).select('id');
+    if (error) return { error };
+    if (!data || data.length === 0) {
+      // UPDATE matched 0 rows — check if deal genuinely doesn't exist (new deal) vs RLS block
+      const { data: existing } = await supabase.from('deals').select('id').eq('id', row.id).maybeSingle();
+      if (existing) {
+        // Deal exists but update was blocked — likely RLS (org mismatch or insufficient role)
+        return { error: new Error('Write blocked — check organization membership and permissions') };
+      }
+      // Genuinely new deal — insert it
+      const { error: insertError } = await supabase.from('deals').insert(row);
+      if (insertError) return { error: insertError };
+    }
+    return { error: null };
+  } catch (e) {
+    return { error: e };
+  }
+}
+
 /** Flush a single deal to Supabase only (async, no localStorage touch).
  *  Tries UPDATE first; falls back to INSERT only for genuinely new deals.
  *  Skips entirely when there is no authenticated session. */

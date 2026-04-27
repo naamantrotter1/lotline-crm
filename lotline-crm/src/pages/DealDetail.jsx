@@ -8,7 +8,7 @@ import {
   Landmark, Handshake, XCircle, Info,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal, flushToSupabase } from '../lib/dealsSync';
+import { saveDeal, flushToSupabase, flushToSupabaseAsync, saveToLS } from '../lib/dealsSync';
 import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation, ensureInvestorContact } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
@@ -1147,7 +1147,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           note_type:       'note',
         }).then(({ error }) => {
           if (error) console.error('DD activity note failed:', error.message, error);
-          else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId } }));
+          else activityFeedRefreshRef.current?.();
         });
       });
     }
@@ -1381,10 +1381,19 @@ function DDTab({ deal, readOnly, onStatusChange }) {
 }
 
 // ── Tab: Development ──────────────────────────────────────────────────────────
-function DevTab({ devTasks, setDevTasks, readOnly, onTaskComplete }) {
+function DevTab({ dealId, orgId, devTasks, setDevTasks, readOnly, onTaskComplete }) {
   const allTasks = DEV_GROUPS.flatMap(g => g.tasks);
   const complete = devTasks.filter(Boolean).length;
   let taskIndex = 0;
+
+  const saveTaskToSupabase = useCallback(async (idx, value) => {
+    if (!supabase || !orgId || !dealId) return;
+    const { error } = await supabase.from('deal_task_statuses').upsert(
+      { deal_id: dealId, organization_id: orgId, task_key: `dev_${idx}`, value: value ? '1' : '' },
+      { onConflict: 'deal_id,organization_id,task_key' }
+    );
+    if (error) console.error('[DevTab] saveTaskToSupabase error:', error.message);
+  }, [dealId, orgId]);
 
   return (
     <div className="max-w-2xl">
@@ -1411,8 +1420,10 @@ function DevTab({ devTasks, setDevTasks, readOnly, onTaskComplete }) {
                       key={task}
                       className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
                       onClick={readOnly ? undefined : () => {
-                        setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; });
-                        if (!devTasks[idx]) onTaskComplete?.(task);
+                        const newVal = !devTasks[idx];
+                        setDevTasks(prev => { const n = [...prev]; n[idx] = newVal; return n; });
+                        saveTaskToSupabase(idx, newVal);
+                        if (newVal) onTaskComplete?.(task);
                       }}
                     >
                       {devTasks[idx]
@@ -2002,11 +2013,8 @@ function DealDetailContent({ deal }) {
     DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
   );
 
-  // Initial dev tasks — Swanson has 1/38 complete (land cleared)
+  // Dev tasks — initialized all false; Supabase load in useEffect below overwrites
   const totalDevTasks = DEV_GROUPS.flatMap(g => g.tasks).length;
-  const initDev = Array(totalDevTasks).fill(false).map((_, i) =>
-    deal?.id === 'deal-020' ? i === 0 : false
-  );
 
   const [activeTab, setActiveTab] = useState('overview');
   const [searchParams] = useSearchParams();
@@ -2030,11 +2038,13 @@ function DealDetailContent({ deal }) {
     setTimeout(() => attempt(), 400);
   }, [searchParams]);
 
+  const activityFeedRefreshRef = useRef(null);
+
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
   const [arv,   setArv]   = useState(deal?.arv ?? 0);
   const [listingUrl, setListingUrl] = useState(deal?.listingUrl || '');
-  const [devTasks, setDevTasks] = useState(initDev);
+  const [devTasks, setDevTasks] = useState(() => Array(totalDevTasks).fill(false));
   const [realized, setRealized] = useState({});
   const [costSummary, setCostSummary] = useState(null);
   const { hasFlag } = useAuth();
@@ -2363,13 +2373,13 @@ function DealDetailContent({ deal }) {
     flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-save: fires immediately on every field change ───────────────────────
+  // ── Auto-save: fires on every field change, awaits Supabase write ─────────────
   const autoSaveMounted = useRef(false);
   const [saveStatus, setSaveStatus] = useState('idle');
 
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
-    if (!deal?.id) return;
+    if (!deal?.id || !activeOrgId) return;
     if (!canEdit && !isAgent) return;
 
     const updatedDeal = {
@@ -2383,7 +2393,7 @@ function DealDetailContent({ deal }) {
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
-      realtor, dateListed, dealOwner,
+      dealOwner,
       // Derive investor position fields from scenario — only when a scenario is explicitly active
       investorCapitalContributed:
         (selectedScenario === 'hard-money-loan' || selectedScenario === 'hard-money-land-home')
@@ -2415,16 +2425,31 @@ function DealDetailContent({ deal }) {
       ...costs,
     };
 
-    // Save immediately — localStorage, context, and Supabase all at once
-    saveDeal(updatedDeal, activeOrgId);
-    setSaveStatus('saved');
+    // Optimistic: update localStorage and context immediately
+    saveToLS(updatedDeal, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updatedDeal.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = updatedDeal; return next; }
       return [...prev, updatedDeal];
     });
-    const t = setTimeout(() => setSaveStatus('idle'), 2000);
-    return () => clearTimeout(t);
+
+    // Async: write to Supabase and surface any errors
+    setSaveStatus('saving');
+    let cancelled = false;
+    flushToSupabaseAsync(updatedDeal, activeOrgId).then(({ error }) => {
+      if (cancelled) return;
+      if (error) {
+        console.error('[auto-save] Supabase write failed:', error.message);
+        setSaveStatus('error');
+        const t = setTimeout(() => { if (!cancelled) setSaveStatus('idle'); }, 4000);
+        return () => clearTimeout(t);
+      }
+      setSaveStatus('saved');
+      const t = setTimeout(() => { if (!cancelled) setSaveStatus('idle'); }, 2000);
+      return () => clearTimeout(t);
+    });
+
+    return () => { cancelled = true; };
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
     ownerName, sellerName, phone, email, investor, financing, notes,
@@ -2433,7 +2458,7 @@ function DealDetailContent({ deal }) {
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
-    realtor, dateListed, dealOwner,
+    dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate,
     loanAmountOverride, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
@@ -2447,6 +2472,30 @@ function DealDetailContent({ deal }) {
     drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
     investorReturnType, investorAssignmentStatus,
   ]);
+
+  // ── Load dev tasks from Supabase on mount ─────────────────────────────────
+  useEffect(() => {
+    if (!supabase || !deal?.id || !activeOrgId) return;
+    supabase.from('deal_task_statuses')
+      .select('task_key, value')
+      .eq('deal_id', deal.id)
+      .eq('organization_id', activeOrgId)
+      .like('task_key', 'dev_%')
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        setDevTasks(prev => {
+          const next = [...prev];
+          data.forEach(row => {
+            const m = row.task_key.match(/^dev_(\d+)$/);
+            if (m) {
+              const idx = parseInt(m[1], 10);
+              if (idx >= 0 && idx < next.length) next[idx] = row.value === '1';
+            }
+          });
+          return next;
+        });
+      });
+  }, [deal?.id, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load pooled loan links for this deal ──────────────────────────────────
   useEffect(() => {
@@ -2586,6 +2635,11 @@ function DealDetailContent({ deal }) {
               {(canEdit || isAgent) && saveStatus === 'saved' && (
                 <span className="text-xs text-green-600 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Saved
+                </span>
+              )}
+              {(canEdit || isAgent) && saveStatus === 'error' && (
+                <span className="text-xs text-red-500 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Save failed
                 </span>
               )}
               {isAgent && (
@@ -2767,6 +2821,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
+            refreshRef={activityFeedRefreshRef}
           />
         )}
         {activeTab === 'threads' && (
@@ -2859,6 +2914,8 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'dev' && (
           <DevTab
+            dealId={deal.id}
+            orgId={activeOrgId}
             devTasks={devTasks}
             setDevTasks={setDevTasks}
             readOnly={fromInvestorPortal || !canEdit}
@@ -2875,7 +2932,7 @@ function DealDetailContent({ deal }) {
                   note_type:       'note',
                 }).then(({ error }) => {
                   if (error) console.error('Dev activity note failed:', error.message);
-                  else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId: deal.id } }));
+                  else activityFeedRefreshRef.current?.();
                 });
               });
             }}
@@ -2993,6 +3050,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             onCreateTask={() => setShowCreateTask(true)}
+            onActivityNoteAdded={() => activityFeedRefreshRef.current?.()}
           />
         }
       />

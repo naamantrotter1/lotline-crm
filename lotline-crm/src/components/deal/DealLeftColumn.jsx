@@ -580,6 +580,10 @@ export default function DealLeftColumn({
                       className="w-full text-sm text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
                     >
                       <option value="">— Unassigned —</option>
+                      {/* Ensure current value always has a matching option while allUsers loads */}
+                      {dealOwner && !allUsers.some(u => u.name === dealOwner) && (
+                        <option key="__current__" value={dealOwner}>{dealOwner}</option>
+                      )}
                       {allUsers.map(u => (
                         <option key={u.id} value={u.name}>{u.name}</option>
                       ))}

@@ -97,7 +97,7 @@ function Avatar({ name, size = 'sm' }) {
 const DOC_CATEGORIES = ['Contract', 'Title Report', 'Survey', 'Inspection', 'Plat Map', 'Photos', 'Other'];
 const STORAGE_BUCKET = 'deal-documents';
 
-export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
+export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivityNoteAdded }) {
   const navigate  = useNavigate();
   const { activeOrgId, profile } = useAuth();
 
@@ -231,7 +231,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
             note_type:       'note',
           });
           if (noteErr) console.error('activity note for doc upload failed:', noteErr.message, noteErr);
-          else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId: deal.id } }));
+          else onActivityNoteAdded?.();
         }
       }
     }
