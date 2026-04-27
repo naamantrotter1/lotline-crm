@@ -1074,7 +1074,7 @@ const DD_STATUS_CONFIG = {
 const STATUS_CYCLE = { not_started: 'in_progress', in_progress: 'complete', complete: 'not_started' };
 
 function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
-  const { activeOrgId } = useAuth();
+  const { activeOrgId, profile } = useAuth();
   const lk = `dd_${col.key}`;
   const [status, setStatus]   = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}`) || 'not_started');
   const [expanded, setExpanded] = useState(false);
@@ -1135,6 +1135,19 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
     setStatus(next);
     saveToSupabase(`dd_${col.key}`, next);
     onCountChange();
+    if (next === 'complete' && supabase && activeOrgId) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        supabase.from('activity_notes').insert({
+          organization_id: activeOrgId,
+          deal_id:         dealId,
+          author_id:       session.user.id,
+          author_name:     profile?.name || null,
+          body:            `✅ DD item marked complete: "${col.name}"`,
+          note_type:       'note',
+        }).then(({ error }) => { if (error) console.error('DD activity note failed:', error.message); });
+      });
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -1365,7 +1378,7 @@ function DDTab({ deal, readOnly, onStatusChange }) {
 }
 
 // ── Tab: Development ──────────────────────────────────────────────────────────
-function DevTab({ devTasks, setDevTasks, readOnly }) {
+function DevTab({ devTasks, setDevTasks, readOnly, onTaskComplete }) {
   const allTasks = DEV_GROUPS.flatMap(g => g.tasks);
   const complete = devTasks.filter(Boolean).length;
   let taskIndex = 0;
@@ -1394,7 +1407,10 @@ function DevTab({ devTasks, setDevTasks, readOnly }) {
                     <div
                       key={task}
                       className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
-                      onClick={readOnly ? undefined : () => setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; })}
+                      onClick={readOnly ? undefined : () => {
+                        setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; });
+                        if (!devTasks[idx]) onTaskComplete?.(task);
+                      }}
                     >
                       {devTasks[idx]
                         ? <CheckSquare size={16} className="text-green-500 flex-shrink-0" />
@@ -2839,7 +2855,25 @@ function DealDetailContent({ deal }) {
           <DDTab deal={deal} readOnly={fromInvestorPortal || !canEdit} onStatusChange={setDdCompleteCount} />
         )}
         {activeTab === 'dev' && (
-          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal || !canEdit} />
+          <DevTab
+            devTasks={devTasks}
+            setDevTasks={setDevTasks}
+            readOnly={fromInvestorPortal || !canEdit}
+            onTaskComplete={(taskName) => {
+              if (!supabase || !activeOrgId) return;
+              supabase.auth.getSession().then(({ data: { session } }) => {
+                if (!session) return;
+                supabase.from('activity_notes').insert({
+                  organization_id: activeOrgId,
+                  deal_id:         deal.id,
+                  author_id:       session.user.id,
+                  author_name:     profile?.name || null,
+                  body:            `✅ Dev task marked complete: "${taskName}"`,
+                  note_type:       'note',
+                }).then(({ error }) => { if (error) console.error('Dev activity note failed:', error.message); });
+              });
+            }}
+          />
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
