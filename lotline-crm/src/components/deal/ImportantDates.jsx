@@ -115,16 +115,54 @@ export default function ImportantDates({ deal, readOnly }) {
     });
     setEditing(null);
     if (!supabase) return;
+
+    const label = PHASES.flatMap(p => p.keys).find(k => k.key === key)?.label || key;
+
     if (value) {
-      await supabase.from('deal_milestones').upsert(
-        { deal_id: deal.id, milestone_key: key, eta: value, status: 'in_progress' },
-        { onConflict: 'deal_id,milestone_key' }
-      );
+      // Upsert milestone, get back the id for linking to deal_events
+      const { data: ms } = await supabase
+        .from('deal_milestones')
+        .upsert(
+          { deal_id: deal.id, milestone_key: key, eta: value, status: 'in_progress' },
+          { onConflict: 'deal_id,milestone_key' }
+        )
+        .select('id')
+        .single();
+
+      // Sync directly to deal_events so it shows on the calendar immediately
+      if (ms?.id && deal.organization_id) {
+        await supabase.from('deal_events').upsert(
+          {
+            organization_id: deal.organization_id,
+            deal_id:         deal.id,
+            title:           label,
+            event_type:      'milestone',
+            start_at:        `${value}T00:00:00`,
+            all_day:         true,
+            color:           '#3b82f6',
+            source_table:    'deal_milestones',
+            source_id:       ms.id,
+            deleted_at:      null,
+          },
+          { onConflict: 'source_table,source_id', ignoreDuplicates: false }
+        );
+      }
     } else {
-      await supabase.from('deal_milestones')
+      const { data: ms } = await supabase
+        .from('deal_milestones')
         .update({ eta: null })
         .eq('deal_id', deal.id)
-        .eq('milestone_key', key);
+        .eq('milestone_key', key)
+        .select('id')
+        .single();
+
+      // Soft-delete the calendar event
+      if (ms?.id) {
+        await supabase.from('deal_events')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('source_table', 'deal_milestones')
+          .eq('source_id', ms.id);
+      }
     }
   };
 
