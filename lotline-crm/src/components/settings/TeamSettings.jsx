@@ -339,14 +339,17 @@ export default function TeamSettings() {
     const { memberId, firstName, lastName } = current;
     if (!firstName.trim() && !lastName.trim()) return; // nothing to save
 
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+
+    // Optimistic update — show name immediately so hard-refresh doesn't look broken
+    setMembers(prev => prev.map(m => m.id === memberId ? {
+      ...m,
+      profiles: { ...m.profiles, first_name: firstName.trim(), last_name: lastName.trim(), name: fullName },
+    } : m));
+
     setSaving(memberId);
     try {
       await callTeamApi('/api/team/update-member', 'PATCH', { memberId, firstName: firstName.trim(), lastName: lastName.trim() });
-      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
-      setMembers(prev => prev.map(m => m.id === memberId ? {
-        ...m,
-        profiles: { ...m.profiles, first_name: firstName.trim(), last_name: lastName.trim(), name: fullName },
-      } : m));
       showToast('Name updated.');
     } catch (e) {
       showToast(e.message, 'error');
