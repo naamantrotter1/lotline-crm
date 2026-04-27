@@ -231,6 +231,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
             note_type:       'note',
           });
           if (noteErr) console.error('activity note for doc upload failed:', noteErr.message, noteErr);
+          else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId: deal.id } }));
         }
       }
     }

@@ -886,6 +886,16 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   const loadDbNotesRef = useRef(loadDbNotes);
   useEffect(() => { loadDbNotesRef.current = loadDbNotes; }, [loadDbNotes]);
 
+  // Listen for activity notes created by other components (doc upload, DD, Dev)
+  useEffect(() => {
+    if (!deal?.id) return;
+    const handler = (e) => {
+      if (e.detail?.dealId === deal.id) loadDbNotesRef.current();
+    };
+    window.addEventListener('activity-note-created', handler);
+    return () => window.removeEventListener('activity-note-created', handler);
+  }, [deal?.id]);
+
   useEffect(() => {
     if (!supabase || !deal?.id) return;
     const dealId = deal.id;

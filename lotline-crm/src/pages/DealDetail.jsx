@@ -1147,7 +1147,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           note_type:       'note',
         }).then(({ error }) => {
           if (error) console.error('DD activity note failed:', error.message, error);
-          else console.log('DD activity note inserted for', col.label);
+          else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId } }));
         });
       });
     }
@@ -2873,7 +2873,10 @@ function DealDetailContent({ deal }) {
                   author_name:     profile?.name || null,
                   body:            `✅ Dev task marked complete: "${taskName}"`,
                   note_type:       'note',
-                }).then(({ error }) => { if (error) console.error('Dev activity note failed:', error.message); });
+                }).then(({ error }) => {
+                  if (error) console.error('Dev activity note failed:', error.message);
+                  else window.dispatchEvent(new CustomEvent('activity-note-created', { detail: { dealId: deal.id } }));
+                });
               });
             }}
           />
