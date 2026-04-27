@@ -2572,9 +2572,15 @@ function DealDetailContent({ deal }) {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!window.confirm(`Remove "${inv.name}" from investor list?`)) return;
-                          const updated = investorList.filter(i => i.id !== inv.id);
-                          saveInvestors(updated, activeOrgId);
-                          setInvestorList(updated);
+                          // Remove from localStorage
+                          const updatedLocal = investorList.filter(i => i.id !== inv.id);
+                          saveInvestors(updatedLocal, activeOrgId);
+                          setInvestorList(updatedLocal);
+                          // Remove from Supabase investors table
+                          setSupabaseInvestors(prev => prev.filter(i => i.id !== inv.id));
+                          if (supabase && inv.id) {
+                            supabase.from('investors').delete().eq('id', inv.id).then(() => {});
+                          }
                           if (investor === inv.name) {
                             setInvestor('');
                             saveNow?.({ investor: '' });
