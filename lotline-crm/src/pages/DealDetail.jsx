@@ -2611,21 +2611,6 @@ function DealDetailContent({ deal }) {
                 </select>
             }
           </div>
-          <div className="hidden sm:block w-px h-8 bg-gray-200" />
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Deal Owner</p>
-            {canAdmin
-              ? <select
-                  value={dealOwner}
-                  onChange={e => setDealOwner(e.target.value)}
-                  className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  <option value="">Unassigned</option>
-                  {allUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                </select>
-              : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
-            }
-          </div>
           <div className="ml-auto flex items-center gap-2">
             {!isLandAcq && !fromInvestorPortal && canEdit && (
               <button
