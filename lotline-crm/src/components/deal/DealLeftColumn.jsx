@@ -239,13 +239,28 @@ const DEFAULT_PROBABILITIES = {
 };
 
 // ── Note compose mini modal ───────────────────────────────────────────────────
-function NoteComposer({ dealId, onClose }) {
+function NoteComposer({ dealId, orgId, onClose }) {
   const [text, setText] = useState('');
-  const save = () => {
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
     if (!text.trim()) { onClose(); return; }
-    const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
-    notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
-    localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
+    setSaving(true);
+    if (supabase && orgId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.from('activity_notes').insert({
+        organization_id: orgId,
+        deal_id: dealId,
+        author_id: session?.user?.id || null,
+        body: text.trim(),
+        mentioned_user_ids: [],
+      });
+    } else {
+      // Fallback: legacy localStorage (no Supabase available)
+      const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
+      notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
+      localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
+    }
+    setSaving(false);
     onClose();
   };
   return (
@@ -260,7 +275,7 @@ function NoteComposer({ dealId, onClose }) {
       />
       <div className="flex justify-end gap-2 mt-2">
         <button onClick={onClose} className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100">Cancel</button>
-        <button onClick={save} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold">Save Note</button>
+        <button onClick={save} disabled={saving} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold disabled:opacity-50">{saving ? 'Saving…' : 'Save Note'}</button>
       </div>
     </div>
   );
@@ -467,7 +482,7 @@ export default function DealLeftColumn({
           <ActionBtn icon={CheckSquare} label="Task"    onClick={onCreateTask}   />
           <ActionBtn icon={CalendarPlus}label="Meeting" onClick={onScheduleMeeting} />
           {showNote && (
-            <NoteComposer dealId={deal.id} onClose={() => setShowNote(false)} />
+            <NoteComposer dealId={deal.id} orgId={activeOrgId} onClose={() => setShowNote(false)} />
           )}
         </div>
       )}
@@ -487,7 +502,6 @@ export default function DealLeftColumn({
                 <EditableField label="Zip"         value={zip}        onChange={v => { setZip(v);        saveNow({ zip: v });        }} readOnly={readOnly} />
                 <EditableField label="Parcel ID"   value={parcelId}   onChange={v => { setParcelId(v);   saveNow({ parcelId: v });   }} readOnly={readOnly} mono />
                 <EditableField label="Acreage"     value={acreage ? String(acreage) : ''} onChange={v => { setAcreage(v); saveNow({ acreage: v }); }} type="number" readOnly={readOnly} />
-                <EditableField label="ARV"         value={arv ? String(arv) : ''} onChange={v => { setArv(Number(v)); saveNow({ arv: Number(v) }); }} type="number" prefix="$" readOnly={readOnly} />
                 <EditableField label="Lead Source" value={leadSource} onChange={v => { setLeadSource(v); saveNow({ leadSource: v }); }} options={LEAD_SOURCE_OPTIONS} readOnly={readOnly} />
                 <EditableField label="Owner Type"  value={ownerType}  onChange={v => { setOwnerType(v);  saveNow({ ownerType: v });  }} options={OWNER_TYPE_OPTIONS} readOnly={readOnly} />
                 <EditableField label="Utilities"   value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} readOnly={readOnly} />

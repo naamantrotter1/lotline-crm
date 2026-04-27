@@ -15,7 +15,7 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
-import { loadInvestors, addInvestor, saveInvestors } from '../lib/investorsStore';
+import { loadInvestors } from '../lib/investorsStore';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -619,7 +619,7 @@ function FinancingScenarioPanel({
               </div>
               <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
-                {(investorList || []).map(inv => (
+                {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
@@ -1074,45 +1074,114 @@ const DD_STATUS_CONFIG = {
 const STATUS_CYCLE = { not_started: 'in_progress', in_progress: 'complete', complete: 'not_started' };
 
 function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
-  const lk = `dd_${dealId}_${col.key}`;
-  const [status, setStatus]   = useState(() => localStorage.getItem(lk) || 'not_started');
+  const { activeOrgId } = useAuth();
+  const lk = `dd_${col.key}`;
+  const [status, setStatus]   = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}`) || 'not_started');
   const [expanded, setExpanded] = useState(false);
-  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_cont`)    || '');
-  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`${lk}_phone`)   || '');
-  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`${lk}_email`)   || '');
-  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`${lk}_company`) || '');
-  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`${lk}_notes`) || '');
-  const [files, setFiles] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`${lk}_files`) || '[]'); } catch { return []; }
-  });
+  const [cName,    setCName]   = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_cont`)    || '');
+  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_phone`)   || '');
+  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_email`)   || '');
+  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_company`) || '');
+  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_notes`) || '');
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
-  const save = (suffix, val) => localStorage.setItem(`${lk}_${suffix}`, val);
+  // Load from Supabase on mount — overrides any stale localStorage value
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('deal_task_statuses')
+      .select('task_key, value')
+      .eq('deal_id', dealId)
+      .like('task_key', `dd_${col.key}%`)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        for (const row of data) map[row.task_key] = row.value;
+        if (map[`dd_${col.key}`])         setStatus(map[`dd_${col.key}`]);
+        if (map[`dd_${col.key}_cont`])    setCName(map[`dd_${col.key}_cont`]);
+        if (map[`dd_${col.key}_phone`])   setCPhone(map[`dd_${col.key}_phone`]);
+        if (map[`dd_${col.key}_email`])   setCEmail(map[`dd_${col.key}_email`]);
+        if (map[`dd_${col.key}_company`]) setCCompany(map[`dd_${col.key}_company`]);
+        if (map[`dd_${col.key}_notes`])   setTaskNotes(map[`dd_${col.key}_notes`]);
+      });
+  }, [dealId, col.key]); // eslint-disable-line
+
+  // Load attachments from Supabase
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    supabase.from('deal_attachments')
+      .select('id, file_name, storage_path, size_bytes')
+      .eq('deal_id', dealId)
+      .eq('organization_id', activeOrgId)
+      .eq('task_key', `dd_${col.key}`)
+      .order('created_at')
+      .then(({ data }) => {
+        if (data) setFiles(data.map(f => ({ id: f.id, name: f.file_name, path: f.storage_path, size: f.size_bytes })));
+      });
+  }, [dealId, col.key, activeOrgId]); // eslint-disable-line
+
+  const saveToSupabase = useCallback(async (taskKey, value) => {
+    if (!supabase || !activeOrgId) return;
+    await supabase.from('deal_task_statuses').upsert(
+      { deal_id: dealId, organization_id: activeOrgId, task_key: taskKey, value },
+      { onConflict: 'deal_id,organization_id,task_key' }
+    );
+  }, [dealId, activeOrgId]);
 
   const cycleStatus = (e) => {
     e.stopPropagation();
     if (readOnly) return;
     const next = STATUS_CYCLE[status];
-    localStorage.setItem(lk, next);
     setStatus(next);
+    saveToSupabase(`dd_${col.key}`, next);
     onCountChange();
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const updated = [...files, { name: file.name, url: ev.target.result }];
-      setFiles(updated);
-      localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
-    };
-    reader.readAsDataURL(file);
+    if (!file || !activeOrgId || uploading) return;
+    e.target.value = '';
+    setUploading(true);
+    try {
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+      const uid = crypto.randomUUID();
+      const storagePath = `${activeOrgId}/${dealId}/dd_${col.key}/${uid}${ext ? '.' + ext : ''}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('deal-attachments')
+        .upload(storagePath, file, { contentType: file.type });
+
+      if (uploadError) { console.error('Upload error:', uploadError); return; }
+
+      const { data: row, error: insertError } = await supabase.from('deal_attachments').insert({
+        deal_id: dealId,
+        organization_id: activeOrgId,
+        task_key: `dd_${col.key}`,
+        file_name: file.name,
+        storage_path: storagePath,
+        size_bytes: file.size,
+        mime_type: file.type,
+      }).select('id').single();
+
+      if (!insertError && row) {
+        setFiles(prev => [...prev, { id: row.id, name: file.name, path: storagePath, size: file.size }]);
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const removeFile = (idx) => {
-    const updated = files.filter((_, i) => i !== idx);
-    setFiles(updated);
-    localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+  const openFile = async (path) => {
+    const { data } = await supabase.storage
+      .from('deal-attachments')
+      .createSignedUrl(path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  };
+
+  const removeFile = async (fileId, path) => {
+    await supabase.storage.from('deal-attachments').remove([path]);
+    await supabase.from('deal_attachments').delete().eq('id', fileId);
+    setFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
   const sc = DD_STATUS_CONFIG[status];
@@ -1149,7 +1218,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           <div className="flex items-center gap-3">
             {isComplete ? (
               <button
-                onClick={(e) => { e.stopPropagation(); if (!readOnly) { localStorage.setItem(lk, 'not_started'); setStatus('not_started'); onCountChange(); } }}
+                onClick={(e) => { e.stopPropagation(); if (!readOnly) { setStatus('not_started'); saveToSupabase(`dd_${col.key}`, 'not_started'); onCountChange(); } }}
                 disabled={readOnly}
                 className="text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
               >
@@ -1181,7 +1250,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
                   <FieldIcon size={14} className="text-gray-400 flex-shrink-0" />
                   <input
                     value={val}
-                    onChange={e => { set(e.target.value); save(sfx, e.target.value); }}
+                    onChange={e => { set(e.target.value); saveToSupabase(`dd_${col.key}_${sfx}`, e.target.value); }}
                     placeholder={ph}
                     disabled={readOnly}
                     className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
@@ -1199,7 +1268,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
             </div>
             <textarea
               value={taskNotes}
-              onChange={e => { setTaskNotes(e.target.value); save('notes', e.target.value); }}
+              onChange={e => { setTaskNotes(e.target.value); saveToSupabase(`dd_${col.key}_notes`, e.target.value); }}
               placeholder="Add notes for this task..."
               disabled={readOnly}
               rows={3}
@@ -1215,21 +1284,21 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
                 <p className="text-xs font-semibold text-gray-500">Files & Photos</p>
               </div>
               {!readOnly && (
-                <label className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 cursor-pointer">
+                <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${uploading ? 'text-gray-400 pointer-events-none' : 'text-accent hover:text-accent/80'}`}>
                   <Upload size={12} />
-                  Upload
-                  <input type="file" className="hidden" onChange={handleFileUpload} />
+                  {uploading ? 'Uploading…' : 'Upload'}
+                  <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
                 </label>
               )}
             </div>
             {files.length > 0 && (
               <div className="space-y-1.5">
-                {files.map((f, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                {files.map((f) => (
+                  <div key={f.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
                     <Paperclip size={12} className="text-gray-400 flex-shrink-0" />
-                    <a href={f.url} download={f.name} className="flex-1 text-xs text-blue-600 hover:underline truncate">{f.name}</a>
+                    <button onClick={() => openFile(f.path)} className="flex-1 text-xs text-blue-600 hover:underline truncate text-left">{f.name}</button>
                     {!readOnly && (
-                      <button onClick={() => removeFile(idx)} className="text-gray-400 hover:text-red-400 flex-shrink-0">
+                      <button onClick={() => removeFile(f.id, f.path)} className="text-gray-400 hover:text-red-400 flex-shrink-0">
                         <XIcon size={12} />
                       </button>
                     )}
@@ -1245,26 +1314,36 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
 }
 
 function DDTab({ deal, readOnly, onStatusChange }) {
-  const [completeCount, setCompleteCount] = useState(() =>
-    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
+  const { activeOrgId } = useAuth();
+  const [completeCount, setCompleteCount] = useState(
+    () => DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
   );
 
-  // Seed legacy ddTasksCompleted on first render
+  // Load count from Supabase on mount
   useEffect(() => {
-    for (const name of (deal.ddTasksCompleted || [])) {
-      const k = DD_LS_INIT_MAP[name];
-      if (k) {
-        const lk = `dd_${deal.id}_${k}`;
-        if (!localStorage.getItem(lk)) localStorage.setItem(lk, 'complete');
-      }
-    }
-    setCompleteCount(DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length);
-  }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!supabase) return;
+    supabase.from('deal_task_statuses')
+      .select('task_key, value')
+      .eq('deal_id', deal.id)
+      .in('task_key', DD_COLS.map(c => `dd_${c.key}`))
+      .then(({ data }) => {
+        if (!data) return;
+        const count = data.filter(r => r.value === 'complete').length;
+        if (count > 0) { setCompleteCount(count); onStatusChange?.(count); }
+      });
+  }, [deal.id]); // eslint-disable-line
 
   const handleCountChange = () => {
-    const count = DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length;
-    setCompleteCount(count);
-    onStatusChange?.(count);
+    if (!supabase) return;
+    supabase.from('deal_task_statuses')
+      .select('task_key, value')
+      .eq('deal_id', deal.id)
+      .in('task_key', DD_COLS.map(c => `dd_${c.key}`))
+      .then(({ data }) => {
+        const count = (data || []).filter(r => r.value === 'complete').length;
+        setCompleteCount(count);
+        onStatusChange?.(count);
+      });
   };
 
   return (
@@ -1909,7 +1988,7 @@ function DealDetailContent({ deal }) {
   const [starred, setStarred] = useState(false);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-  const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
+  const currentStageVal = deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
@@ -1938,7 +2017,7 @@ function DealDetailContent({ deal }) {
   const [phone, setPhone] = useState(deal?.phone || '');
   const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
-  const [investorList, setInvestorList] = useState(() => loadInvestors(activeOrgId, orgSlug));
+  const [investorList, setInvestorList] = useState([]);
   const [showAddInvestor, setShowAddInvestor]         = useState(false);
   const [showCreateTask, setShowCreateTask]           = useState(false);
   const [showLogCall, setShowLogCall]                 = useState(false);
@@ -1951,26 +2030,21 @@ function DealDetailContent({ deal }) {
   const [sewerCompany, setSewerCompany] = useState(deal?.sewerCompany || '');
   const [electricCompany, setElectricCompany] = useState(deal?.electricCompany || '');
   const [homeModel, setHomeModel] = useState(deal?.homeModel || '');
-  const [subdividable, setSubdividable] = useState(() => {
-    const saved = localStorage.getItem(`lotline_subdivide_${deal?.id}`);
-    if (saved !== null) return saved;
-    return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
-  });
-  const [landClearing, setLandClearing] = useState(() => {
-    const saved = localStorage.getItem(`lotline_land_clearing_${deal?.id}`);
-    if (saved !== null) return saved;
-    return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
-  });
+  const [subdividable, setSubdividable] = useState(
+    () => deal?.subdividable ?? ((deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No')
+  );
+  const [landClearing, setLandClearing] = useState(
+    () => deal?.landClearing ?? ((deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No')
+  );
 
-  // Persist subdivide state so the kanban card reflects it
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
-    if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
+    if (deal?.id) saveDeal({ ...deal, subdividable: val }, activeOrgId);
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
-    if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
+    if (deal?.id) saveDeal({ ...deal, landClearing: val }, activeOrgId);
   };
 
   const handleSendToLandAcq = () => {
@@ -1981,7 +2055,6 @@ function DealDetailContent({ deal }) {
       stage: 'Waiting on Contract',
       contractSignedAt: null,
     };
-    localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
     saveDeal(updated, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updated.id));
@@ -1994,7 +2067,6 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
-      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
       const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       const isMovingToContractSigned = val === 'Contract Signed';
       // Auto-fill Contract Signed Date when moving to Deal Overview
@@ -2129,7 +2201,7 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-      if (inv?.length) setSupabaseInvestors(inv);
+      if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
     });
   }, [activeOrgId]);
 
@@ -2571,11 +2643,9 @@ function DealDetailContent({ deal }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Remove from localStorage
-                          const updatedLocal = investorList.filter(i => i.id !== inv.id);
-                          saveInvestors(updatedLocal, activeOrgId);
-                          setInvestorList(updatedLocal);
-                          // Remove from Supabase investors table + state
+                          // Remove from Supabase investors table + local state
+                          const updated = investorList.filter(i => i.id !== inv.id);
+                          setInvestorList(updated);
                           setSupabaseInvestors(prev => prev.filter(i => i.id !== inv.id));
                           if (supabase && inv.id) {
                             supabase.from('investors').delete().eq('id', inv.id).then(() => {});
@@ -2846,7 +2916,7 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
-            ? <CostBreakdownTab dealId={deal.id} />
+            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} readOnly={fromInvestorPortal || !canEdit} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (
@@ -2996,11 +3066,8 @@ function DealDetailContent({ deal }) {
           });
           // Refresh Supabase investor list
           fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-            if (inv?.length) setSupabaseInvestors(inv);
+            if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
           });
-          // Also update localStorage list for fallback
-          const updated = addInvestor(newInv, activeOrgId, orgSlug);
-          setInvestorList(updated);
           // Assign to this deal
           const name = saved?.name || newInv.name;
           setInvestor(name);

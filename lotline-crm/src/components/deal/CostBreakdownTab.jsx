@@ -129,7 +129,7 @@ function DiffCell({ line }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function CostBreakdownTab({ dealId }) {
+export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, readOnly = false }) {
   const { profile } = useAuth();
   const { can }     = usePermissions();
 
@@ -286,6 +286,25 @@ export default function CostBreakdownTab({ dealId }) {
             </div>
           </div>
 
+          {/* ARV row */}
+          <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50 px-3 py-2 flex items-center justify-between gap-3">
+            <span className="text-[12px] font-semibold text-gray-500">ARV</span>
+            {!readOnly && onArvChange ? (
+              <div className="flex items-center gap-1">
+                <span className="text-[12px] text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={arv || ''}
+                  onChange={e => onArvChange(Number(e.target.value) || 0)}
+                  className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <span className="text-[12px] font-semibold text-[#1a2332]">{fmt(arv)}</span>
+            )}
+          </div>
+
           {/* Footer — outside the scroll, always visible at bottom */}
           <div className="flex-shrink-0 grid" style={{ gridTemplateColumns: '1fr 1fr 9rem' }}>
             <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
@@ -397,6 +416,24 @@ export default function CostBreakdownTab({ dealId }) {
               </div>
             </div>
           )}
+          {/* ARV */}
+          <div className="bg-gray-50 rounded-xl border border-gray-100 px-3 py-2 flex items-center justify-between gap-3">
+            <span className="text-[12px] font-semibold text-gray-500">ARV</span>
+            {!readOnly && onArvChange ? (
+              <div className="flex items-center gap-1">
+                <span className="text-[12px] text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={arv || ''}
+                  onChange={e => onArvChange(Number(e.target.value) || 0)}
+                  className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <span className="text-[12px] font-semibold text-[#1a2332]">{fmt(arv)}</span>
+            )}
+          </div>
         </div>
 
       </div>

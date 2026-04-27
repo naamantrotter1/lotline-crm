@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
 import { CheckCircle2, Calendar } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { supabase } from '../lib/supabase';
@@ -76,33 +77,6 @@ const INIT_MAP = {
 
 const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
-const lsGet   = (k)      => localStorage.getItem(k) || '';
-const lsSet   = (k, v)   => localStorage.setItem(k, v);
-const taskKey = (id, col) => `dd_${id}_${col}`;
-
-function getTaskStatus(dealId, colKey) {
-  return lsGet(taskKey(dealId, colKey)) || 'not_started';
-}
-function setTaskStatus(dealId, colKey, status) {
-  lsSet(taskKey(dealId, colKey), status);
-}
-function getCompletedCount(dealId) {
-  return DD_COLUMNS.filter(c => getTaskStatus(dealId, c.key) === 'complete').length;
-}
-
-function seedInitialState(deals) {
-  for (const deal of deals) {
-    for (const name of (deal.ddTasksCompleted || [])) {
-      const k = INIT_MAP[name];
-      if (k) {
-        const lk = taskKey(deal.id, k);
-        if (!localStorage.getItem(lk)) lsSet(lk, 'complete');
-      }
-    }
-  }
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatCloseDate(str) {
   if (!str) return null;
@@ -121,43 +95,52 @@ function getDayCount(contractDate) {
 }
 
 // ── Task card ─────────────────────────────────────────────────────────────────
-function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange }) {
+function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, taskStatuses, onTaskStatusChange }) {
   const navigate = useNavigate();
 
-  const [status, setStatus] = useState(() => getTaskStatus(deal.id, column.key));
-  // Date: prefer milestoneDate from DB (passed as prop), fall back to localStorage
-  const [date, setDate] = useState(milestoneDate || lsGet(`${taskKey(deal.id, column.key)}_date`) || '');
+  // Read status from Supabase state; fall back to localStorage for backward compat
+  const dbStatus = taskStatuses[`${deal.id}:dd_${column.key}`];
+  const dbDate   = taskStatuses[`${deal.id}:dd_${column.key}_date`];
 
-  // Keep in sync if parent's milestoneDate changes (real-time update from DB)
+  const [status, setStatus] = useState(
+    dbStatus ?? localStorage.getItem(`dd_${deal.id}_${column.key}`) ?? 'not_started'
+  );
+  const [date, setDate] = useState(
+    milestoneDate || dbDate || localStorage.getItem(`dd_${deal.id}_${column.key}_date`) || ''
+  );
+
+  // Sync when Supabase data arrives or changes (e.g. another user updated it)
   useEffect(() => {
-    if (milestoneDate && milestoneDate !== date) {
-      setDate(milestoneDate);
-      lsSet(`${taskKey(deal.id, column.key)}_date`, milestoneDate);
-    }
-  }, [milestoneDate]); // eslint-disable-line
+    if (dbStatus !== undefined && dbStatus !== status) setStatus(dbStatus);
+  }, [dbStatus]); // eslint-disable-line
+
+  useEffect(() => {
+    const incoming = milestoneDate || dbDate;
+    if (incoming && incoming !== date) setDate(incoming);
+  }, [milestoneDate, dbDate]); // eslint-disable-line
 
   if (status === 'complete') return null;
 
-  const completed   = getCompletedCount(deal.id);
+  const completed   = DD_COLUMNS.filter(c => (taskStatuses[`${deal.id}:dd_${c.key}`] ?? localStorage.getItem(`dd_${deal.id}_${c.key}`) ?? 'not_started') === 'complete').length;
   const netProfit   = calcNetProfit(deal);
   const days        = getDayCount(deal.contractDate);
   const isInProgress = status === 'in_progress';
 
   const markComplete = (e) => {
     e.stopPropagation();
-    setTaskStatus(deal.id, column.key, 'complete');
     setStatus('complete');
+    onTaskStatusChange(deal.id, `dd_${column.key}`, 'complete');
     onUpdate();
   };
 
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
-    lsSet(`${taskKey(deal.id, column.key)}_date`, val);
     setDate(val);
+    onTaskStatusChange(deal.id, `dd_${column.key}_date`, val);
     if (status === 'not_started' && val) {
-      setTaskStatus(deal.id, column.key, 'in_progress');
       setStatus('in_progress');
+      onTaskStatusChange(deal.id, `dd_${column.key}`, 'in_progress');
       onUpdate();
     }
     // Sync to deal_milestones (two-way link with Important Dates sidebar)
@@ -250,18 +233,18 @@ function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange }
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
   const { deals } = useDeals();
+  const { activeOrgId } = useAuth();
   const [tick, setTick] = useState(0);
-  // milestones: { [dealId/milestoneKey]: 'YYYY-MM-DD' }
   const [milestones, setMilestones] = useState({});
+  // taskStatuses: { '${dealId}:${taskKey}': value }
+  const [taskStatuses, setTaskStatuses] = useState({});
   const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
-  const ddDeals = useMemo(() => {
-    const filtered = deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived);
-    seedInitialState(filtered);
-    return filtered;
-  }, [deals]);
+  const ddDeals = useMemo(() =>
+    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
+  , [deals]);
 
   const sortedDeals = [...ddDeals].sort((a, b) => {
     if (!a.closeDate && !b.closeDate) return 0;
@@ -270,7 +253,76 @@ export default function DueDiligence() {
     return new Date(a.closeDate) - new Date(b.closeDate);
   });
 
-  // Load all deal_milestones for the visible deals in one query
+  // ── Seed legacy data from deal.ddTasksCompleted into Supabase ────────────
+  const seedLegacyStatuses = useCallback(async (dealsToSeed) => {
+    if (!supabase || !activeOrgId) return;
+    const rows = [];
+    for (const deal of dealsToSeed) {
+      for (const name of (deal.ddTasksCompleted || [])) {
+        const k = INIT_MAP[name];
+        if (k) rows.push({ deal_id: deal.id, organization_id: activeOrgId, task_key: `dd_${k}`, value: 'complete' });
+      }
+    }
+    if (rows.length) {
+      await supabase.from('deal_task_statuses').upsert(rows, { onConflict: 'deal_id,organization_id,task_key', ignoreDuplicates: true });
+    }
+  }, [activeOrgId]);
+
+  // ── Load all task statuses for visible deals ──────────────────────────────
+  const loadTaskStatuses = useCallback(async () => {
+    if (!supabase || !ddDeals.length) return;
+    const dealIds = ddDeals.map(d => d.id);
+    const { data } = await supabase
+      .from('deal_task_statuses')
+      .select('deal_id, task_key, value')
+      .in('deal_id', dealIds);
+    if (data) {
+      const map = {};
+      for (const row of data) map[`${row.deal_id}:${row.task_key}`] = row.value;
+      setTaskStatuses(map);
+    }
+  }, [ddDeals]);
+
+  useEffect(() => {
+    loadTaskStatuses();
+    seedLegacyStatuses(ddDeals);
+  }, [loadTaskStatuses, seedLegacyStatuses, ddDeals]);
+
+  // ── Real-time: task status changes from other users ───────────────────────
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel(`dd-task-statuses-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_task_statuses' },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (row && ddDeals.some(d => d.id === row.deal_id)) {
+            if (payload.eventType === 'DELETE') {
+              setTaskStatuses(prev => {
+                const next = { ...prev };
+                delete next[`${row.deal_id}:${row.task_key}`];
+                return next;
+              });
+            } else {
+              setTaskStatuses(prev => ({ ...prev, [`${row.deal_id}:${row.task_key}`]: payload.new.value }));
+            }
+          }
+        })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [ddDeals]); // eslint-disable-line
+
+  // ── Write a task status to Supabase ──────────────────────────────────────
+  const handleTaskStatusChange = useCallback(async (dealId, taskKey, value) => {
+    setTaskStatuses(prev => ({ ...prev, [`${dealId}:${taskKey}`]: value }));
+    if (!supabase || !activeOrgId) return;
+    await supabase.from('deal_task_statuses').upsert(
+      { deal_id: dealId, organization_id: activeOrgId, task_key: taskKey, value },
+      { onConflict: 'deal_id,organization_id,task_key' }
+    );
+  }, [activeOrgId]);
+
+  // ── Load milestones ───────────────────────────────────────────────────────
   const loadMilestones = useCallback(async () => {
     if (!supabase || !ddDeals.length) return;
     const mKeys = DD_COLUMNS.filter(c => c.milestoneKey).map(c => c.milestoneKey);
@@ -291,7 +343,6 @@ export default function DueDiligence() {
 
   useEffect(() => { loadMilestones(); }, [loadMilestones]);
 
-  // Real-time: when any milestone changes, reload
   useEffect(() => {
     if (!supabase) return;
     const ch = supabase
@@ -302,7 +353,6 @@ export default function DueDiligence() {
     return () => supabase.removeChannel(ch);
   }, [loadMilestones]);
 
-  // Called by a card when the user edits a date — persists to DB and updates local state
   const handleMilestoneChange = useCallback(async (dealId, milestoneKey, value) => {
     setMilestones(prev => {
       const next = { ...prev };
@@ -336,11 +386,16 @@ export default function DueDiligence() {
 
       {/* Kanban board */}
       <div
+        key={tick}
         className="flex gap-3 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
         {DD_COLUMNS.map(col => {
-          const colDeals = sortedDeals.filter(d => getTaskStatus(d.id, col.key) !== 'complete');
+          const getStatus = (dealId) =>
+            taskStatuses[`${dealId}:dd_${col.key}`] ??
+            localStorage.getItem(`dd_${dealId}_${col.key}`) ??
+            'not_started';
+          const colDeals = sortedDeals.filter(d => getStatus(d.id) !== 'complete');
           return (
             <div key={col.key} className="flex-shrink-0 w-60">
               {/* Column header */}
@@ -363,6 +418,8 @@ export default function DueDiligence() {
                     onUpdate={forceUpdate}
                     milestoneDate={col.milestoneKey ? milestones[`${deal.id}/${col.milestoneKey}`] : undefined}
                     onMilestoneChange={handleMilestoneChange}
+                    taskStatuses={taskStatuses}
+                    onTaskStatusChange={handleTaskStatusChange}
                   />
                 ))}
                 {colDeals.length === 0 && (

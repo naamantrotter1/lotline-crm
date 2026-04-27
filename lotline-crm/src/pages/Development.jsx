@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
 import { ChevronDown, ChevronUp, CheckSquare, Square, Calendar } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { supabase } from '../lib/supabase';
@@ -134,25 +135,19 @@ const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.lengt
 
 const DEAL_OVERVIEW_STAGES = new Set(['Development']);
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
-const lsGet = (k)    => localStorage.getItem(k) || '';
-const lsSet = (k, v) => localStorage.setItem(k, v);
-
-function subtaskKey(dealId, colKey, subtaskIdx) {
-  return `dev_${dealId}_${colKey}_${subtaskIdx}`;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+// Read subtask state: prefer Supabase taskStatuses, fall back to localStorage
+function getSubtaskDone(taskStatuses, dealId, colKey, idx) {
+  const dbVal = taskStatuses[`${dealId}:dev_${colKey}_${idx}`];
+  if (dbVal !== undefined) return dbVal === '1';
+  return localStorage.getItem(`dev_${dealId}_${colKey}_${idx}`) === '1';
 }
-function isSubtaskDone(dealId, colKey, idx) {
-  return lsGet(subtaskKey(dealId, colKey, idx)) === '1';
+function isColComplete(taskStatuses, dealId, col) {
+  return col.subtasks.every((_, i) => getSubtaskDone(taskStatuses, dealId, col.key, i));
 }
-function setSubtaskDone(dealId, colKey, idx, done) {
-  lsSet(subtaskKey(dealId, colKey, idx), done ? '1' : '');
-}
-function isColComplete(dealId, col) {
-  return col.subtasks.every((_, i) => isSubtaskDone(dealId, col.key, i));
-}
-function getTotalDone(dealId) {
+function getTotalDone(taskStatuses, dealId) {
   return COUNTED_COLUMNS.reduce((sum, col) =>
-    sum + col.subtasks.filter((_, i) => isSubtaskDone(dealId, col.key, i)).length, 0);
+    sum + col.subtasks.filter((_, i) => getSubtaskDone(taskStatuses, dealId, col.key, i)).length, 0);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -173,30 +168,34 @@ function formatClose(str) {
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
-function DevTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange }) {
+function DevTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, taskStatuses, onTaskStatusChange }) {
   const navigate = useNavigate();
 
   const [checks, setChecks] = useState(() =>
-    column.subtasks.map((_, i) => isSubtaskDone(deal.id, column.key, i))
+    column.subtasks.map((_, i) => getSubtaskDone(taskStatuses, deal.id, column.key, i))
   );
   const [contExpanded, setContExpanded] = useState(false);
-  // Date: prefer milestoneDate from DB, fall back to localStorage
+  const dbDate = taskStatuses[`${deal.id}:dev_${column.key}_date`];
   const [date, setDate] = useState(
-    milestoneDate || lsGet(`dev_${deal.id}_${column.key}_date`) || ''
+    milestoneDate || dbDate || localStorage.getItem(`dev_${deal.id}_${column.key}_date`) || ''
   );
 
-  // Keep in sync if parent's milestoneDate changes (real-time update)
+  // Sync checks when Supabase data arrives or changes from another user
   useEffect(() => {
-    if (milestoneDate && milestoneDate !== date) {
-      setDate(milestoneDate);
-      lsSet(`dev_${deal.id}_${column.key}_date`, milestoneDate);
-    }
-  }, [milestoneDate]); // eslint-disable-line
+    const updated = column.subtasks.map((_, i) => getSubtaskDone(taskStatuses, deal.id, column.key, i));
+    setChecks(updated);
+  }, [taskStatuses]); // eslint-disable-line
+
+  // Sync date from DB/milestone
+  useEffect(() => {
+    const incoming = milestoneDate || dbDate;
+    if (incoming && incoming !== date) setDate(incoming);
+  }, [milestoneDate, dbDate]); // eslint-disable-line
 
   const allDone = checks.every(Boolean);
   if (allDone) return null;
 
-  const totalDone = getTotalDone(deal.id);
+  const totalDone = getTotalDone(taskStatuses, deal.id);
   const days = getDayCount(deal.contractDate);
   const inProgress = checks.some(Boolean);
 
@@ -204,16 +203,16 @@ function DevTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange 
     e.stopPropagation();
     const next = [...checks];
     next[idx] = !next[idx];
-    setSubtaskDone(deal.id, column.key, idx, next[idx]);
     setChecks(next);
+    onTaskStatusChange(deal.id, `dev_${column.key}_${idx}`, next[idx] ? '1' : '');
     onUpdate();
   };
 
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
-    lsSet(`dev_${deal.id}_${column.key}_date`, val);
     setDate(val);
+    onTaskStatusChange(deal.id, `dev_${column.key}_date`, val);
     if (column.milestoneKey) {
       onMilestoneChange(deal.id, column.milestoneKey, val);
     }
@@ -307,8 +306,10 @@ function DevTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Development() {
   const { deals } = useDeals();
+  const { activeOrgId } = useAuth();
   const [tick, setTick] = useState(0);
   const [milestones, setMilestones] = useState({});
+  const [taskStatuses, setTaskStatuses] = useState({});
   const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -324,7 +325,57 @@ export default function Development() {
     return new Date(a.closeDate) - new Date(b.closeDate);
   });
 
-  // Load all deal_milestones for visible deals in one query
+  // ── Load task statuses ───────────────────────────────────────────────────
+  const loadTaskStatuses = useCallback(async () => {
+    if (!supabase || !devDeals.length) return;
+    const dealIds = devDeals.map(d => d.id);
+    const { data } = await supabase
+      .from('deal_task_statuses')
+      .select('deal_id, task_key, value')
+      .in('deal_id', dealIds);
+    if (data) {
+      const map = {};
+      for (const row of data) map[`${row.deal_id}:${row.task_key}`] = row.value;
+      setTaskStatuses(map);
+    }
+  }, [devDeals]);
+
+  useEffect(() => { loadTaskStatuses(); }, [loadTaskStatuses]);
+
+  // Real-time: task status changes from other users
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel(`dev-task-statuses-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_task_statuses' },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (row && devDeals.some(d => d.id === row.deal_id)) {
+            if (payload.eventType === 'DELETE') {
+              setTaskStatuses(prev => {
+                const next = { ...prev };
+                delete next[`${row.deal_id}:${row.task_key}`];
+                return next;
+              });
+            } else {
+              setTaskStatuses(prev => ({ ...prev, [`${row.deal_id}:${row.task_key}`]: payload.new.value }));
+            }
+          }
+        })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [devDeals]); // eslint-disable-line
+
+  const handleTaskStatusChange = useCallback(async (dealId, taskKey, value) => {
+    setTaskStatuses(prev => ({ ...prev, [`${dealId}:${taskKey}`]: value }));
+    if (!supabase || !activeOrgId) return;
+    await supabase.from('deal_task_statuses').upsert(
+      { deal_id: dealId, organization_id: activeOrgId, task_key: taskKey, value },
+      { onConflict: 'deal_id,organization_id,task_key' }
+    );
+  }, [activeOrgId]);
+
+  // ── Load milestones ───────────────────────────────────────────────────────
   const loadMilestones = useCallback(async () => {
     if (!supabase || !devDeals.length) return;
     const mKeys = DEV_COLUMNS.filter(c => c.milestoneKey).map(c => c.milestoneKey);
@@ -395,8 +446,8 @@ export default function Development() {
       >
         {DEV_COLUMNS.map(col => {
           const colDeals = sortedDeals.filter(d => {
-            if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !isColComplete(d.id, col);
-            return !isColComplete(d.id, col);
+            if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !isColComplete(taskStatuses, d.id, col);
+            return !isColComplete(taskStatuses, d.id, col);
           });
 
           return (
@@ -420,12 +471,14 @@ export default function Development() {
                 ) : (
                   colDeals.map(deal => (
                     <DevTaskCard
-                      key={`${deal.id}-${col.key}-${tick}`}
+                      key={`${deal.id}-${col.key}`}
                       deal={deal}
                       column={col}
                       onUpdate={forceUpdate}
                       milestoneDate={col.milestoneKey ? milestones[`${deal.id}/${col.milestoneKey}`] : undefined}
                       onMilestoneChange={handleMilestoneChange}
+                      taskStatuses={taskStatuses}
+                      onTaskStatusChange={handleTaskStatusChange}
                     />
                   ))
                 )}
