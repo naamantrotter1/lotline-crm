@@ -295,6 +295,12 @@ export async function loadAllDeals(orgIds) {
           financing:             fromLS.financing             ?? fromSupabase.financing,
           financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
           scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
+          // Closing fields — also prefer fresh LS so data isn't lost if DB column was missing
+          closingAttorney:        fromLS.closingAttorney        ?? fromSupabase.closingAttorney,
+          closingAttorneyPhone:   fromLS.closingAttorneyPhone   ?? fromSupabase.closingAttorneyPhone,
+          closingAttorneyAddress: fromLS.closingAttorneyAddress ?? fromSupabase.closingAttorneyAddress,
+          closeDate:              fromLS.closeDate              ?? fromSupabase.closeDate,
+          contractDate:           fromLS.contractDate           ?? fromSupabase.contractDate,
         }),
       };
     });
