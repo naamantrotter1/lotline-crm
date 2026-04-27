@@ -1,5 +1,5 @@
 import React, { Component, useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Star, Archive, ChevronRight, MapPin, ExternalLink,
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
@@ -1990,6 +1990,27 @@ function DealDetailContent({ deal }) {
   );
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+
+  // If ?activity=noteId is in the URL (from a mention notification), scroll to that note
+  useEffect(() => {
+    const noteId = searchParams.get('activity');
+    if (!noteId) return;
+    setActiveTab('overview');
+    const attempt = (tries = 0) => {
+      const el = document.getElementById(`activity-db-note-${noteId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = '0 0 0 3px rgba(var(--color-accent), 0.4)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+      } else if (tries < 10) {
+        setTimeout(() => attempt(tries + 1), 300);
+      }
+    };
+    setTimeout(() => attempt(), 400);
+  }, [searchParams]);
+
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
   const [arv,   setArv]   = useState(deal?.arv ?? 0);

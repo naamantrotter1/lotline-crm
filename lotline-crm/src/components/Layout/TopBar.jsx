@@ -253,11 +253,27 @@ function NotifPanel({ onClose, onRead, unreadMentions }) {
   const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'mentions'
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotifications().then(data => { setNotifs(data); setLoading(false); });
     markAllNotifsRead().then(() => onRead && onRead());
   }, []);
+
+  const handleNotifClick = (n) => {
+    if (n.entity_type === 'activity_note' && n.entity_id) {
+      try {
+        const { dealId, noteId } = JSON.parse(n.entity_id);
+        onClose();
+        navigate(`/deal/${dealId}?activity=${noteId}`);
+        return;
+      } catch {}
+    }
+    if (n.entity_type === 'task' && n.entity_id) {
+      onClose();
+      navigate('/tasks');
+    }
+  };
 
   return (
     <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
@@ -318,13 +334,20 @@ function NotifPanel({ onClose, onRead, unreadMentions }) {
             <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
           ) : (
             <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-              {notifs.map(n => (
-                <li key={n.id} className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'}`}>
-                  <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
-                  <p className="text-xs text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
-                </li>
-              ))}
+              {notifs.map(n => {
+                const clickable = n.entity_type === 'activity_note' || n.entity_type === 'task';
+                return (
+                  <li
+                    key={n.id}
+                    onClick={() => handleNotifClick(n)}
+                    className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'} ${clickable ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors' : ''}`}
+                  >
+                    <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                    <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

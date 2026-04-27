@@ -443,7 +443,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           await supabase.from('notifications').insert({
             organization_id: orgId, user_id: uid, type: 'mention.deal_activity',
             title: `${authorName} mentioned you`, body: `"${preview}"`,
-            entity_type: 'activity_note', entity_id: note.id,
+            entity_type: 'activity_note', entity_id: JSON.stringify({ dealId, noteId: note.id }),
           }).catch(e => console.warn('notification insert', e));
         }));
       }
