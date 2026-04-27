@@ -169,6 +169,34 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
     return () => { cancelled = true; };
   }, [deal?.id, activeOrgId]);
 
+  // Real-time: re-fetch deal-scoped data when tasks, documents, or allocations change
+  const rtId = useRef(Math.random().toString(36).slice(2));
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+
+    const refetch = () => {
+      if (!deal?.id) return;
+      Promise.all([
+        fetchTasks({ dealId: deal.id }).catch(() => []),
+        supabase.from('deal_documents').select('*').eq('deal_id', deal.id).order('created_at', { ascending: false }).then(({ data }) => data || []),
+        supabase.from('deal_allocations').select('*, investors(name)').eq('deal_id', deal.id).order('created_at', { ascending: false }).then(({ data }) => data || []),
+      ]).then(([t, docs, allocs]) => {
+        setTasks(t);
+        setDocuments(docs);
+        setAllocations(allocs);
+      });
+    };
+
+    const ch = supabase
+      .channel(`deal-right-${deal.id}-${rtId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks',            filter: `deal_id=eq.${deal.id}` }, refetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_documents',   filter: `deal_id=eq.${deal.id}` }, refetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_allocations', filter: `deal_id=eq.${deal.id}` }, refetch)
+      .subscribe();
+
+    return () => supabase.removeChannel(ch);
+  }, [deal?.id]);
+
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
   const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString()}`;
 

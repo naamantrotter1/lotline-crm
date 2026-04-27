@@ -5,6 +5,7 @@ import {
   Tag, User, ChevronDown, X, MoreHorizontal, Trash2,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   fetchContacts, deleteContact, updateContact,
@@ -207,6 +208,19 @@ export default function Contacts() {
   }, [activeOrgId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Real-time: re-fetch when any contact changes so all users stay in sync
+  const contactsChannelId = useRef(Math.random().toString(36).slice(2));
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    const ch = supabase
+      .channel(`contacts-list-${contactsChannelId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [activeOrgId, load]);
 
   // If navigated here after a delete, immediately remove the contact from state
   useEffect(() => {

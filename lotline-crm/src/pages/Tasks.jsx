@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 import { CheckSquare, Plus, Check, Trash2, Circle, CircleDot, Ban, AlertCircle, Calendar, User } from 'lucide-react';
 import {
   fetchTasks, updateTask, deleteTask,
@@ -130,6 +131,19 @@ export default function Tasks() {
   }, [filterStatus]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Real-time: re-fetch whenever any task changes so all users stay in sync
+  const instanceId = useRef(Math.random().toString(36).slice(2));
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel(`tasks-page-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [load]);
 
   const handleStatusChange = async (id, status) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
