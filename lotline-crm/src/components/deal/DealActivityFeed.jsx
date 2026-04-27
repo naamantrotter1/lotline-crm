@@ -697,14 +697,17 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
 
   useEffect(() => {
     if (!supabase || !deal?.id) return;
+    const dealId = deal.id;
     const ch = supabase
-      .channel(`activity-notes-${deal.id}-${instanceId.current}`)
+      .channel(`activity-notes-${dealId}-${instanceId.current}`)
       .on('postgres_changes', {
-        event:  'INSERT',
+        event:  '*',
         schema: 'public',
         table:  'activity_notes',
-        filter: `deal_id=eq.${deal.id}`,
-      }, () => loadDbNotesRef.current())
+      }, (payload) => {
+        const row = payload.new || payload.old;
+        if (row?.deal_id === dealId) loadDbNotesRef.current();
+      })
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
