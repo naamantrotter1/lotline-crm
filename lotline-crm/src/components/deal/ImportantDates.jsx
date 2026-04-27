@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 
 // ── Phase / milestone definitions ─────────────────────────────────────────────
 export const PHASES = [
@@ -70,6 +71,7 @@ function fmtDate(dateStr) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ImportantDates({ deal, readOnly }) {
+  const { activeOrgId } = useAuth();
   const [dates,   setDates]   = useState({}); // { [milestone_key]: 'YYYY-MM-DD' }
   const [editing, setEditing] = useState(null);
   const instanceId = useRef(Math.random().toString(36).slice(2));
@@ -116,10 +118,11 @@ export default function ImportantDates({ deal, readOnly }) {
     setEditing(null);
     if (!supabase) return;
 
-    const label = PHASES.flatMap(p => p.keys).find(k => k.key === key)?.label || key;
+    const label  = PHASES.flatMap(p => p.keys).find(k => k.key === key)?.label || key;
+    const orgId  = activeOrgId || deal.organizationId || deal.organization_id;
 
     if (value) {
-      // Upsert milestone, get back the id for linking to deal_events
+      // Save milestone, get back the row id
       const { data: ms } = await supabase
         .from('deal_milestones')
         .upsert(
@@ -129,23 +132,27 @@ export default function ImportantDates({ deal, readOnly }) {
         .select('id')
         .single();
 
-      // Sync directly to deal_events so it shows on the calendar immediately
-      if (ms?.id && deal.organization_id) {
-        await supabase.from('deal_events').upsert(
-          {
-            organization_id: deal.organization_id,
-            deal_id:         deal.id,
-            title:           label,
-            event_type:      'milestone',
-            start_at:        `${value}T00:00:00`,
-            all_day:         true,
-            color:           '#3b82f6',
-            source_table:    'deal_milestones',
-            source_id:       ms.id,
-            deleted_at:      null,
-          },
-          { onConflict: 'source_table,source_id', ignoreDuplicates: false }
-        );
+      // Write to deal_events directly (no trigger dependency, no unique constraint needed)
+      if (ms?.id && orgId) {
+        // Soft-delete any existing event for this milestone first
+        await supabase.from('deal_events')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('source_table', 'deal_milestones')
+          .eq('source_id', ms.id)
+          .is('deleted_at', null);
+
+        // Insert fresh
+        await supabase.from('deal_events').insert({
+          organization_id: orgId,
+          deal_id:         deal.id,
+          title:           label,
+          event_type:      'milestone',
+          start_at:        `${value}T00:00:00`,
+          all_day:         true,
+          color:           '#3b82f6',
+          source_table:    'deal_milestones',
+          source_id:       ms.id,
+        });
       }
     } else {
       const { data: ms } = await supabase
@@ -156,7 +163,6 @@ export default function ImportantDates({ deal, readOnly }) {
         .select('id')
         .single();
 
-      // Soft-delete the calendar event
       if (ms?.id) {
         await supabase.from('deal_events')
           .update({ deleted_at: new Date().toISOString() })
