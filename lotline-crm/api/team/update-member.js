@@ -69,15 +69,27 @@ export default async function handler(req, res) {
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
     if (!fullName) return res.status(400).json({ error: 'Name cannot be empty.' });
 
-    // Use upsert so members without an existing profile row still get saved
-    const { error: profErr } = await adminClient
+    // Update the profile; if no row existed yet, create it with auth email
+    const { data: updated, error: profErr } = await adminClient
       .from('profiles')
-      .upsert(
-        { id: target.user_id, name: fullName, first_name: firstName || null, last_name: lastName || null },
-        { onConflict: 'id' }
-      );
+      .update({ name: fullName, first_name: firstName || null, last_name: lastName || null })
+      .eq('id', target.user_id)
+      .select('id');
 
     if (profErr) return res.status(500).json({ error: profErr.message });
+
+    if (!updated || updated.length === 0) {
+      // No existing profile row — fetch email from auth and insert
+      const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(target.user_id);
+      const { error: insertErr } = await adminClient.from('profiles').insert({
+        id: target.user_id,
+        email: authUser?.email || '',
+        name: fullName,
+        first_name: firstName || null,
+        last_name: lastName || null,
+      });
+      if (insertErr) return res.status(500).json({ error: insertErr.message });
+    }
   }
 
   return res.status(200).json({ membership });
