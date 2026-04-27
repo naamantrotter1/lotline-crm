@@ -259,7 +259,7 @@ function ReplyComposer({ parentDbId, dealId, orgId, currentUserName, usersById, 
 }
 
 // ── NoteComposer ──────────────────────────────────────────────────────────────
-function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) {
+function NoteComposer({ dealId, orgId, onSaved, currentUser, currentUserName, mentionsEnabled }) {
   const [open,  setOpen]  = useState(false);
   const [text,  setText]  = useState('');
   const [saving, setSaving] = useState(false);
@@ -427,28 +427,25 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 
       const notifyIds = validMentionedIds.filter(uid => uid !== authorId);
       if (notifyIds.length > 0) {
-        const authorName =
-          allMembersRef.current.find(m => m.id === authorId)?.name || currentUser || 'Someone';
+        const authorName = currentUserName || currentUser || 'Someone';
         const { data: mutes } = await supabase
           .from('deal_notification_mutes').select('user_id')
           .eq('deal_id', dealId).in('user_id', notifyIds);
         const mutedSet = new Set((mutes || []).map(m => m.user_id));
         await Promise.all(notifyIds.map(async (uid) => {
-          try {
-            await supabase.from('mentions').insert({
-              org_id: orgId, mentioned_user_id: uid, mentioned_by_user_id: authorId,
-              target_type: 'activity_note', target_id: note.id, deal_id: dealId,
-            });
-          } catch (e) { console.warn('mention insert', e); }
+          const { error: mentionErr } = await supabase.from('mentions').insert({
+            org_id: orgId, mentioned_user_id: uid, mentioned_by_user_id: authorId,
+            target_type: 'activity_note', target_id: note.id, deal_id: dealId,
+          });
+          if (mentionErr) console.warn('mention insert failed:', mentionErr.message);
           if (mutedSet.has(uid)) return;
           const preview = body.replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/gi, '@$1').slice(0, 140);
-          try {
-            await supabase.from('notifications').insert({
-              organization_id: orgId, user_id: uid, type: 'mention.deal_activity',
-              title: `${authorName} mentioned you`, body: `"${preview}"`,
-              entity_type: 'activity_note', entity_id: JSON.stringify({ dealId, noteId: note.id }),
-            });
-          } catch (e) { console.warn('notification insert', e); }
+          const { error: notifErr } = await supabase.from('notifications').insert({
+            organization_id: orgId, user_id: uid, type: 'mention.deal_activity',
+            title: `${authorName} mentioned you`, body: `"${preview}"`,
+            entity_type: 'activity_note', entity_id: JSON.stringify({ dealId, noteId: note.id }),
+          });
+          if (notifErr) console.error('notification insert failed:', notifErr.message, notifErr);
         }));
       }
 
@@ -990,6 +987,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
           orgId={activeOrgId}
           onSaved={handleNoteAdded}
           currentUser={currentUser}
+          currentUserName={currentUserName}
           mentionsEnabled={mentionsEnabled}
         />
       )}
