@@ -14,6 +14,11 @@ import {
   eventColor, eventTypeLabel, fmtEventDate, EVENT_TYPES,
 } from '../../lib/dealEvents';
 import AddEventModal from './AddEventModal';
+import { PHASES, ALL_MILESTONE_KEYS } from './ImportantDates';
+
+const MILESTONE_LABEL_MAP = Object.fromEntries(
+  PHASES.flatMap(p => p.keys.map(k => [k.key, k.label]))
+);
 
 const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June',
@@ -288,8 +293,35 @@ export default function DealEventsTab({ deal, readOnly }) {
   const load = useCallback(async () => {
     if (!deal?.id) return;
     setLoading(true);
-    const data = await fetchDealEvents(deal.id);
-    setEvents(data);
+
+    // Fetch manually-created events (exclude milestone-sourced rows to avoid duplication)
+    const dealEventsData = await fetchDealEvents(deal.id);
+    const nonMilestoneEvents = dealEventsData.filter(e => e.source_table !== 'deal_milestones');
+
+    // Read milestone dates directly from deal_milestones (source of truth)
+    let milestoneEvents = [];
+    if (supabase) {
+      const { data: milestones } = await supabase
+        .from('deal_milestones')
+        .select('id, milestone_key, eta')
+        .eq('deal_id', deal.id)
+        .in('milestone_key', ALL_MILESTONE_KEYS)
+        .not('eta', 'is', null);
+      if (milestones) {
+        milestoneEvents = milestones.map(m => ({
+          id: `milestone-${m.id}`,
+          title: MILESTONE_LABEL_MAP[m.milestone_key] || m.milestone_key,
+          event_type: 'milestone',
+          start_at: `${m.eta}T00:00:00`,
+          all_day: true,
+          color: '#3b82f6',
+          source_table: 'deal_milestones',
+          source_id: m.id,
+        }));
+      }
+    }
+
+    setEvents([...nonMilestoneEvents, ...milestoneEvents]);
     setLoading(false);
   }, [deal?.id]);
 
