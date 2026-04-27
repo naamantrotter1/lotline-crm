@@ -500,7 +500,10 @@ export default function TeamSettings() {
                               onClick={canManage && !isMe ? () => { const nameParts = (prof.name || '').trim().split(/\s+/); const v = { memberId: member.id, firstName: prof.first_name || nameParts[0] || '', lastName: prof.last_name || nameParts.slice(1).join(' ') || '' }; editingNameRef.current = v; setEditingName(v); } : undefined}
                             >
                               <p className="text-xs font-semibold text-gray-800">
-                                {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ') || prof.email || '—'}
+                                {prof.name || [prof.first_name, prof.last_name].filter(Boolean).join(' ')
+                                  || (canManage && !isMe
+                                    ? <span className="text-gray-400 italic">No name set</span>
+                                    : prof.email || '—')}
                                 {isMe && <span className="ml-1.5 text-[10px] text-accent">(you)</span>}
                               </p>
                               <p className="text-xs text-gray-400">{prof.email}</p>
@@ -509,7 +512,11 @@ export default function TeamSettings() {
                               <button
                                 title="Edit name"
                                 onClick={() => { const nameParts = (prof.name || '').trim().split(/\s+/); const v = { memberId: member.id, firstName: prof.first_name || nameParts[0] || '', lastName: prof.last_name || nameParts.slice(1).join(' ') || '' }; editingNameRef.current = v; setEditingName(v); }}
-                                className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-500 hover:bg-gray-100 transition-all flex-shrink-0"
+                                className={`p-1 rounded hover:text-gray-500 hover:bg-gray-100 transition-all flex-shrink-0 ${
+                                  prof.name || prof.first_name
+                                    ? 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                    : 'text-accent opacity-70 hover:opacity-100'
+                                }`}
                               >
                                 <Edit3 size={12} />
                               </button>
