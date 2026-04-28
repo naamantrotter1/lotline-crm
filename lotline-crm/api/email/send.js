@@ -245,7 +245,16 @@ export default async function handler(req, res) {
 
   const sendSucceeded = !!result && !sendError;
 
-  // Log to deal_emails (activity note is created client-side by ComposeEmailModal)
+  // Log activity note server-side (service role bypasses RLS — reliable)
+  if (dealId && orgId && user && sendSucceeded) {
+    try {
+      await logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmail, toName, body, status: 'sent', sentVia });
+    } catch (err) {
+      console.error('activity note logging error:', err.message);
+    }
+  }
+
+  // Log to deal_emails
   if (dealId && orgId && user && sendSucceeded) {
     try {
       const fullName = user.user_metadata?.full_name || user.email || '';
