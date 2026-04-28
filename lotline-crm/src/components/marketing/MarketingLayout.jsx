@@ -51,13 +51,6 @@ function MarketingNav() {
                   : 'brightness(0) invert(1)',
               }}
             />
-            <span
-              className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                scrolled ? 'bg-accent/10 text-accent' : 'bg-white/20 text-white'
-              }`}
-            >
-              DealFlow Pro
-            </span>
           </Link>
 
           {/* Desktop links */}
