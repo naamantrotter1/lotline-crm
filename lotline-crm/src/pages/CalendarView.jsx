@@ -501,6 +501,26 @@ export default function CalendarView() {
 
   useEffect(() => { loadAll(); }, [activeOrgId, year, month]); // eslint-disable-line
 
+  // Auto-sync Google Calendar: on mount, every 5 min, and on tab focus
+  useEffect(() => {
+    if (!activeOrgId) return;
+    const runSync = () => {
+      syncOrgCalendars(activeOrgId).then(() => {
+        const from = new Date(year, month, 1).toISOString();
+        const to   = new Date(year, month + 1, 0, 23, 59).toISOString();
+        fetchGCalEvents(activeOrgId, { from, to }).then(setGcalEvents);
+      });
+    };
+    runSync();
+    const interval = setInterval(runSync, 5 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') runSync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [activeOrgId, year, month]); // eslint-disable-line
+
   // Real-time: deal_events
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
