@@ -459,47 +459,47 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   const [modalDeal, setModalDeal] = useState(null);
   const [dbDeals, setDbDeals] = useState(null); // null = loading
 
-  // Query Supabase directly — bypasses all localStorage caching so every user
-  // always sees the same real-time data from the database.
-  useEffect(() => {
+  const fetchNeedsFunding = async () => {
     if (!orgId || !supabase) return;
-    supabase
+    const { data, error } = await supabase
       .from('deals')
-      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived')
+      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
       .eq('organization_id', orgId)
       .eq('is_archived', false)
-      .then(({ data, error }) => {
-        if (error) { console.error('[NeedsFunding] Supabase query error:', error); return; }
-        const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-        const filtered = (data || []).filter(row => noInv(row.investor));
-        setDbDeals(filtered.map(row => ({
-          id: row.id,
-          address: row.address,
-          pipeline: row.stage,
-          stage: row.stage,
-          totalCapital: row.total_capital_required != null
-            ? Number(row.total_capital_required)
-            : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
-          landCost: Number(row.land) || 0,
-          arv: Number(row.arv) || 0,
-          closeDate: row.close_date || null,
-          _sourceId: row.id,
-        })));
-      });
-  }, [orgId]);
+      .not('contract_signed_at', 'is', null); // Deal Overview only
+    if (error) { console.error('[NeedsFunding] Supabase query error:', error); return; }
+    const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
+    setDbDeals((data || []).filter(row => noInv(row.investor)).map(row => ({
+      id: row.id,
+      address: row.address,
+      pipeline: row.stage,
+      stage: row.stage,
+      totalCapital: row.total_capital_required != null
+        ? Number(row.total_capital_required)
+        : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
+      landCost: Number(row.land) || 0,
+      arv: Number(row.arv) || 0,
+      closeDate: row.close_date || null,
+      _sourceId: row.id,
+    })));
+  };
+
+  // Query Supabase directly on mount — bypasses all localStorage caching so every
+  // user always sees the same real-time data. Only Deal Overview deals (contract_signed_at set).
+  useEffect(() => { fetchNeedsFunding(); }, [orgId]);
 
   // Re-query when an investor is assigned so the deal disappears immediately
   const refreshDbDeals = () => {
     if (!orgId || !supabase) return;
     supabase
       .from('deals')
-      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived')
+      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
       .eq('organization_id', orgId)
       .eq('is_archived', false)
+      .not('contract_signed_at', 'is', null)
       .then(({ data }) => {
         const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-        const filtered = (data || []).filter(row => noInv(row.investor));
-        setDbDeals(filtered.map(row => ({
+        setDbDeals((data || []).filter(row => noInv(row.investor)).map(row => ({
           id: row.id,
           address: row.address,
           pipeline: row.stage,
