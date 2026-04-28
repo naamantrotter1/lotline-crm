@@ -27,6 +27,7 @@ const EVENT_CONFIG = {
   created:      { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
   field_edit:   { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
   email:        { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
+  email_note:   { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
   call:         { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
 };
 
@@ -590,6 +591,44 @@ function EventCard({
     );
   }
 
+  // ── Email note card ─────────────────────────────────────────────────────────
+  if (event.type === 'email_note') {
+    const m      = event.metadata || {};
+    const status = m.status || 'sent';
+    const isFail = status === 'failed';
+    const toStr  = m.to_name ? `${m.to_name} (${m.to_email})` : (m.to_email || '');
+    return (
+      <div className="flex gap-3" id={`activity-${event.id}`}>
+        <div className="w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 mt-0.5 bg-indigo-50 text-indigo-600 border-indigo-200">
+          <Icon size={13} />
+        </div>
+        <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[13px] font-semibold text-gray-800">{m.subject || 'Email'}</p>
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                isFail ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
+              }`}>
+                {isFail ? 'Failed' : 'Sent'}
+              </span>
+            </div>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0">{timeAgo(event.date)}</span>
+          </div>
+          {toStr && (
+            <p className="text-[11px] text-gray-500 mb-1">To: {toStr}</p>
+          )}
+          {m.body_preview && (
+            <p className="text-[12px] text-gray-500 leading-relaxed italic border-l-2 border-gray-100 pl-2 mb-2">{m.body_preview}</p>
+          )}
+          <p className="text-[11px] text-gray-400">
+            {m.date && <span>{m.date} · </span>}
+            {m.sent_by && <span>Sent by <span className="font-medium text-gray-500">{m.sent_by}</span></span>}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Non-note system events (created, field_edit, etc.) ────────────────────
   if (event.type !== 'note') {
     return (
@@ -838,7 +877,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned')
+      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned, metadata')
       .eq('deal_id', deal.id)
       .order('created_at', { ascending: false })
       .limit(500);
@@ -919,9 +958,10 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
     const dbNoteEvents = dbNotes.map(n => ({
       id:          `db-note-${n.id}`,
       _dbId:       n.id,
-      type:        n.note_type === 'stage_change' ? 'stage_change' : 'note',
-      title:       n.note_type === 'stage_change' ? n.body : 'Note added',
+      type:        n.note_type === 'stage_change' ? 'stage_change' : (n.note_type === 'email' ? 'email_note' : 'note'),
+      title:       n.note_type === 'stage_change' ? n.body : (n.note_type === 'email' ? (n.metadata?.subject || 'Email sent') : 'Note added'),
       body:        n.note_type === 'stage_change' ? null : n.body,
+      metadata:    n.metadata || null,
       date:        n.created_at,
       pinned:      !!n.pinned,
       hasMentions: !!(n.mentioned_user_ids?.length),
