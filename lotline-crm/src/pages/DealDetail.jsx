@@ -3054,7 +3054,7 @@ function DealDetailContent({ deal }) {
             projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
             investorReturnType={investorReturnType} setInvestorReturnType={setInvestorReturnType}
             investorAssignmentStatus={investorAssignmentStatus} setInvestorAssignmentStatus={setInvestorAssignmentStatus}
-            readOnly={fromInvestorPortal || !canEdit}
+            readOnly={!canEdit}
           />
         )}
 
