@@ -222,22 +222,15 @@ function ReplyComposer({ parentDbId, dealId, orgId, currentUserName, usersById, 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const { data: reply, error: insertErr } = await supabase
-        .from('activity_notes')
-        .insert({
-          organization_id: orgId,
-          deal_id:         dealId,
-          author_id:       session.user.id,
-          author_name:     currentUserName || null,
-          body:            text.trim(),
-          parent_note_id:  parentDbId,
-        })
-        .select('id, author_id, author_name, body, created_at, parent_note_id, note_type')
-        .single();
-
-      if (insertErr) throw new Error(insertErr.message);
+      const r = await fetch('/api/activity-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ orgId, dealId, body: text.trim(), parentNoteId: parentDbId }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || 'Failed to save reply');
       setText('');
-      onSaved(reply);
+      onSaved(json.note);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -432,20 +425,14 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, currentUserName, me
         ? await validateMentions(extracted, orgId)
         : { valid: [] };
 
-      const { data: note, error: noteErr } = await supabase
-        .from('activity_notes')
-        .insert({
-          organization_id:    orgId,
-          deal_id:            dealId,
-          author_id:          authorId,
-          author_name:        currentUser || null,
-          body,
-          mentioned_user_ids: validMentionedIds,
-        })
-        .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type')
-        .single();
-
-      if (noteErr) throw new Error(noteErr.message);
+      const nr = await fetch('/api/activity-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ orgId, dealId, body, mentionedUserIds: validMentionedIds }),
+      });
+      const njson = await nr.json();
+      if (!nr.ok) throw new Error(njson.error || 'Failed to save note');
+      const note = njson.note;
 
       const notifyIds = validMentionedIds.filter(uid => uid !== authorId);
       if (notifyIds.length > 0) {
