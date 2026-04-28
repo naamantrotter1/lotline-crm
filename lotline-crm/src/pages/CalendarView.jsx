@@ -72,13 +72,11 @@ function fmtGCalTime(event) {
 }
 
 const FILTER_CHIPS = [
-  { key: 'all',          label: 'All'           },
-  { key: 'gcal',         label: 'Team Calendar' },
-  { key: 'meeting',      label: 'Meetings'      },
-  { key: 'task',         label: 'Tasks'         },
-  { key: 'milestone',    label: 'Milestones'    },
-  { key: 'stage_change', label: 'Stage Changes' },
-  { key: 'contractor',   label: 'Contractors'   },
+  { key: 'all',       label: 'All'           },
+  { key: 'gcal',      label: 'Team Calendar' },
+  { key: 'meeting',   label: 'Meetings'      },
+  { key: 'task',      label: 'Tasks'         },
+  { key: 'milestone', label: 'Milestones'    },
 ];
 
 // ── Meeting modal ──────────────────────────────────────────────────────────────
@@ -587,8 +585,9 @@ export default function CalendarView() {
   const taggedDealEvents = dealEvents
     .map(e => ({ ...e, _dealAddress: deals[e.deal_id]?.address || null }))
     .filter(e => {
+      if (e.event_type === 'stage_change' || e.event_type === 'contractor') return false;
       const cat = dealDateCategory(e);
-      if (!cat) return true; // tasks, stage_changes, manual — always shown
+      if (!cat) return true;
       return dealDateFilters[cat] !== false;
     });
 
