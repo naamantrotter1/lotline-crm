@@ -3084,6 +3084,8 @@ function DealDetailContent({ deal }) {
       <ComposeEmailModal
         contact={{ email: email, fullName: sellerName || ownerName || '' }}
         dealId={deal.id}
+        orgId={activeOrgId}
+        dealAddress={address}
         onClose={() => setShowSendEmail(false)}
         onSent={() => setShowSendEmail(false)}
       />
