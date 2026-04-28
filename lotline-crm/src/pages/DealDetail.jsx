@@ -3080,7 +3080,7 @@ function DealDetailContent({ deal }) {
         orgId={activeOrgId}
         dealAddress={address}
         onClose={() => setShowSendEmail(false)}
-        onSent={() => { setShowSendEmail(false); setTimeout(() => activityFeedRefreshRef.current?.(), 500); }}
+        onSent={() => { setShowSendEmail(false); setActiveTab('overview'); setTimeout(() => activityFeedRefreshRef.current?.(), 300); }}
       />
     )}
 
