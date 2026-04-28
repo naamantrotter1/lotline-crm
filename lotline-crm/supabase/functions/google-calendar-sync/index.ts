@@ -92,52 +92,42 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
   }
 
   const { items = [] } = await eventsRes.json();
-  const activeIds: string[] = [];
 
-  for (const event of items) {
-    if (event.status === 'cancelled') continue;
+  // Delete all existing events for this user in the sync window, then re-insert current ones.
+  // This ensures deleted events are always removed regardless of filter quirks.
+  await admin.from('google_calendar_events')
+    .delete()
+    .eq('user_id',         conn.user_id)
+    .eq('organization_id', orgId)
+    .gte('start_at',       timeMin)
+    .lte('start_at',       timeMax);
 
-    const allDay    = !event.start?.dateTime;
-    const startAt   = event.start?.dateTime ?? (event.start?.date  ? `${event.start.date}T00:00:00Z`  : null);
-    const endAt     = event.end?.dateTime   ?? (event.end?.date    ? `${event.end.date}T23:59:59Z`    : null);
-    const isPrivate = event.visibility === 'private' || event.visibility === 'confidential';
+  const rows = items
+    .filter((event: any) => event.status !== 'cancelled')
+    .map((event: any) => {
+      const allDay    = !event.start?.dateTime;
+      const startAt   = event.start?.dateTime ?? (event.start?.date ? `${event.start.date}T00:00:00Z` : null);
+      const endAt     = event.end?.dateTime   ?? (event.end?.date   ? `${event.end.date}T23:59:59Z`   : null);
+      const isPrivate = event.visibility === 'private' || event.visibility === 'confidential';
+      return {
+        organization_id: orgId,
+        user_id:         conn.user_id,
+        google_event_id: event.id,
+        calendar_id:     'primary',
+        title:           isPrivate ? '[Private Event]' : (event.summary    || '(No title)'),
+        description:     isPrivate ? null              : (event.description || null),
+        location:        isPrivate ? null              : (event.location    || null),
+        start_at:        startAt,
+        end_at:          endAt,
+        all_day:         allDay,
+        is_private:      isPrivate,
+        html_link:       event.htmlLink || null,
+        synced_at:       new Date().toISOString(),
+      };
+    });
 
-    activeIds.push(event.id);
-
-    await admin.from('google_calendar_events').upsert({
-      organization_id: orgId,
-      user_id:         conn.user_id,
-      google_event_id: event.id,
-      calendar_id:     'primary',
-      title:           isPrivate ? '[Private Event]' : (event.summary   || '(No title)'),
-      description:     isPrivate ? null              : (event.description || null),
-      location:        isPrivate ? null              : (event.location    || null),
-      start_at:        startAt,
-      end_at:          endAt,
-      all_day:         allDay,
-      is_private:      isPrivate,
-      html_link:       event.htmlLink || null,
-      synced_at:       new Date().toISOString(),
-    }, { onConflict: 'user_id,google_event_id' });
-  }
-
-  // Delete events removed from Google Calendar within the sync window
-  if (activeIds.length > 0) {
-    await admin.from('google_calendar_events')
-      .delete()
-      .eq('user_id',         conn.user_id)
-      .eq('organization_id', orgId)
-      .gte('start_at',       timeMin)
-      .lte('start_at',       timeMax)
-      .not('google_event_id', 'in', `(${activeIds.join(',')})`);
-  } else {
-    // Nothing returned — clear the entire sync window for this user
-    await admin.from('google_calendar_events')
-      .delete()
-      .eq('user_id',         conn.user_id)
-      .eq('organization_id', orgId)
-      .gte('start_at',       timeMin)
-      .lte('start_at',       timeMax);
+  if (rows.length > 0) {
+    await admin.from('google_calendar_events').insert(rows);
   }
 
   // Update last synced timestamp
