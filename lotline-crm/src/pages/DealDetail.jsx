@@ -2832,7 +2832,7 @@ function DealDetailContent({ deal }) {
             costOverrideCount={costBreakdownV2 && costSummary ? Number(costSummary.override_count ?? 0) : null}
             costLineCount={costBreakdownV2 && costSummary ? Number(costSummary.line_count ?? 0) : null}
           >
-            <div className={fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
+            <div className={fromInvestorPortal && activeTab !== 'financing' ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
       {/* Tab content */}
         {activeTab === 'overview' && (
           <DealActivityFeed
