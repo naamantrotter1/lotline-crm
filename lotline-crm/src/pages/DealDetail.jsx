@@ -3087,7 +3087,7 @@ function DealDetailContent({ deal }) {
         orgId={activeOrgId}
         dealAddress={address}
         onClose={() => setShowSendEmail(false)}
-        onSent={() => setShowSendEmail(false)}
+        onSent={() => { setShowSendEmail(false); setTimeout(() => activityFeedRefreshRef.current?.(), 500); }}
       />
     )}
 
