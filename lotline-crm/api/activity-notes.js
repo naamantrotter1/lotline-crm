@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
     const { data, error } = await supa
       .from('activity_notes')
-      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned, metadata')
+      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, metadata')
       .eq('deal_id', dealId)
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false })
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
     const { data: note, error } = await supa
       .from('activity_notes')
       .insert(payload)
-      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned, metadata')
+      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, metadata')
       .single();
 
     if (error) return res.status(500).json({ error: error.message });
