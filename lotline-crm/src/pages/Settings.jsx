@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard, Mail, PlugZap, Shield, ShieldCheck, ShieldOff, Smartphone, Copy } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, AlertCircle, Camera, Loader2, CreditCard, Mail, PlugZap, Shield, ShieldCheck, ShieldOff, Smartphone, Copy, RefreshCw, CalendarDays } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
+import { syncOrgCalendars } from '../lib/calendarData';
 import TeamSettings from '../components/settings/TeamSettings';
 import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
 import ApiWebhooksSettings from '../components/settings/ApiWebhooksSettings';
@@ -107,14 +108,31 @@ function GoogleIcon() {
   );
 }
 
+function timeAgo(dateStr) {
+  if (!dateStr) return null;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 function IntegrationsTab({ showToast }) {
   const { profile } = useAuth();
   const orgId = profile?.active_organization_id;
+  const userId = profile?.id;
 
   // Google state
   const [integration, setIntegration]     = useState(null);
   const [loading, setLoading]             = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  // Calendar sync state
+  const [calSyncing, setCalSyncing]             = useState(false);
+  const [calDisconnecting, setCalDisconnecting] = useState(false);
 
   // PandaDoc state
   const [pandaConn, setPandaConn]         = useState(null);
@@ -213,6 +231,39 @@ function IntegrationsTab({ showToast }) {
     setDisconnecting(false);
   };
 
+  const refreshIntegration = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('user_integrations').select('*').eq('provider', 'google').maybeSingle();
+    setIntegration(data);
+  };
+
+  const handleCalSync = async () => {
+    if (!orgId || !userId) return;
+    setCalSyncing(true);
+    const { error } = await syncOrgCalendars(orgId, userId);
+    if (error) showToast('Sync failed: ' + error, 'error');
+    else { showToast('Calendar synced.'); await refreshIntegration(); }
+    setCalSyncing(false);
+  };
+
+  const handleCalDisconnect = async () => {
+    if (!window.confirm('Disconnect Google Calendar? Your events will be removed from the team calendar.')) return;
+    setCalDisconnecting(true);
+    await supabase?.from('user_integrations').update({ calendar_is_active: false }).eq('provider', 'google');
+    if (orgId && userId) {
+      await supabase?.from('google_calendar_events').delete().eq('user_id', userId).eq('organization_id', orgId);
+    }
+    await refreshIntegration();
+    showToast('Calendar disconnected.');
+    setCalDisconnecting(false);
+  };
+
+  const handleCalEnable = async () => {
+    await supabase?.from('user_integrations').update({ calendar_is_active: true }).eq('provider', 'google');
+    await refreshIntegration();
+    showToast('Calendar sync enabled.');
+  };
+
   const handlePandaConnect = async () => {
     setPandaConnecting(true);
     try {
@@ -237,8 +288,9 @@ function IntegrationsTab({ showToast }) {
     setPandaDisconnecting(false);
   };
 
-  const isGoogleConnected = !!integration?.gmail_email;
-  const isPandaConnected  = !!pandaConn;
+  const isGoogleConnected  = !!integration?.gmail_email;
+  const isCalConnected     = isGoogleConnected && integration?.calendar_is_active !== false;
+  const isPandaConnected   = !!pandaConn;
 
   return (
     <div className="max-w-md space-y-4">
@@ -282,6 +334,59 @@ function IntegrationsTab({ showToast }) {
                 <p className="text-xs text-gray-400">
                   Emails sent from contact records will be delivered from this Gmail account.
                 </p>
+
+                {/* Calendar sync sub-section */}
+                <div className="border-t border-gray-100 pt-3 mt-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarDays size={13} className="text-gray-400" />
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Calendar Sync</span>
+                  </div>
+                  {integration.calendar_is_active !== false ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 font-medium">Syncing — {integration.gmail_email}</span>
+                      </div>
+                      {integration.calendar_synced_at && (
+                        <p className="text-xs text-gray-400 pl-4">Last synced {timeAgo(integration.calendar_synced_at)}</p>
+                      )}
+                      {!integration.calendar_synced_at && (
+                        <p className="text-xs text-gray-400 pl-4">Not yet synced</p>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={handleCalSync}
+                          disabled={calSyncing}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors disabled:opacity-50"
+                        >
+                          {calSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          {calSyncing ? 'Syncing…' : 'Sync Now'}
+                        </button>
+                        <button
+                          onClick={handleCalDisconnect}
+                          disabled={calDisconnecting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                          {calDisconnecting ? 'Disconnecting…' : 'Disconnect calendar'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
+                        <span className="text-sm text-gray-500">Calendar sync disabled</span>
+                      </div>
+                      <button
+                        onClick={handleCalEnable}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                      >
+                        Enable calendar sync
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleGoogleDisconnect}
                   disabled={disconnecting}

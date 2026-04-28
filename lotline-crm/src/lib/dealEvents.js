@@ -20,6 +20,31 @@ export const EVENT_TYPE_COLORS = {
   delivery:     '#f59e0b',
 };
 
+// Per-milestone-key colors (override the generic milestone blue)
+export const MILESTONE_KEY_COLORS = {
+  perc_tests_scheduled:        '#ea580c', // orange
+  land_survey_scheduled:       '#d97706', // amber
+  env_permits_submitted:       '#ca8a04', // yellow-dark
+  env_permits_approved:        '#65a30d', // lime
+  building_permits_submitted:  '#ea580c', // orange
+  building_permits_approved:   '#16a34a', // green
+  land_clearing_scheduled:     '#92400e', // brown
+  septic_install_scheduled:    '#dc2626', // red
+  septic_installs_completed:   '#dc2626', // red
+  well_install_scheduled:      '#9333ea', // purple
+  well_installs_completed:     '#9333ea', // purple
+  power_company_scheduled:     '#ca8a04', // yellow
+  power_connections_completed: '#ca8a04', // yellow
+  home_ordered:                '#3b82f6', // blue
+  setup_contractor_scheduled:  '#7c3aed', // violet
+  home_delivered:              '#0ea5e9', // sky
+  co_received:                 '#0d9488', // teal
+  home_listed:                 '#0284c7', // sky-blue
+  home_under_contract:         '#4f46e5', // indigo
+  home_closed:                 '#059669', // emerald
+  land_closed:                 '#10b981', // green
+};
+
 export const EVENT_TYPES = [
   { value: 'meeting',    label: 'Meeting'          },
   { value: 'inspection', label: 'Inspection'       },
@@ -30,7 +55,35 @@ export const EVENT_TYPES = [
 ];
 
 export function eventColor(event) {
+  if (event._milestoneKey && MILESTONE_KEY_COLORS[event._milestoneKey]) {
+    return MILESTONE_KEY_COLORS[event._milestoneKey];
+  }
   return event.color || EVENT_TYPE_COLORS[event.event_type] || '#8b5cf6';
+}
+
+/**
+ * Extract just the street portion of a full address string.
+ * "Blue Newkirk Rd, Magnolia, NC 28453" → "Blue Newkirk Rd"
+ */
+export function streetAddress(fullAddr) {
+  if (!fullAddr) return '';
+  return fullAddr.split(',')[0].trim();
+}
+
+/**
+ * Categorize a deal event for the Deal Dates filter panel.
+ * Returns: 'land_closing' | 'home_closing' | 'contract' | 'listed_delivery' | 'milestone' | null
+ * null means the event is not a deal date (e.g. task, stage_change) — always shown.
+ */
+export function dealDateCategory(event) {
+  const key = event._milestoneKey;
+  const src = event.source_table;
+  if (src === 'deals_close_date' || key === 'land_closed') return 'land_closing';
+  if (key === 'home_closed') return 'home_closing';
+  if (src === 'deals_contract_date') return 'contract';
+  if (['home_listed', 'home_delivered', 'co_received', 'home_under_contract'].includes(key)) return 'listed_delivery';
+  if (src === 'deal_milestones' || src === 'deals_close_date' || src === 'deals_contract_date') return 'milestone';
+  return null;
 }
 
 export function eventTypeLabel(type) {
@@ -61,8 +114,38 @@ export async function fetchOrgEvents(orgId, { from, to } = {}) {
     .order('start_at', { ascending: true });
   if (from) q = q.gte('start_at', from);
   if (to)   q = q.lte('start_at', to);
-  const { data } = await q;
-  return data || [];
+  const { data: events } = await q;
+  if (!events?.length) return [];
+
+  // Enrich milestone-sourced events with milestone_key, status, completed_at
+  const msIds = events
+    .filter(e => e.source_table === 'deal_milestones' && e.source_id)
+    .map(e => e.source_id);
+
+  let msMap = {};
+  if (msIds.length > 0) {
+    const { data: ms } = await supabase
+      .from('deal_milestones')
+      .select('id, milestone_key, status, completed_at')
+      .in('id', msIds);
+    (ms || []).forEach(m => { msMap[m.id] = m; });
+  }
+
+  const now = Date.now();
+  return events.map(e => {
+    const ms = msMap[e.source_id];
+    const isCompleted = e.source_table === 'deal_milestones'
+      ? (ms?.status === 'complete' || !!ms?.completed_at)
+      : false;
+    const isPast = new Date(e.start_at).getTime() < now;
+    return {
+      ...e,
+      _milestoneKey:    ms?.milestone_key || null,
+      _milestoneStatus: ms?.status || null,
+      _isCompleted:     isCompleted,
+      _isOverdue:       isPast && !isCompleted && e.source_table === 'deal_milestones',
+    };
+  });
 }
 
 export async function createDealEvent(orgId, dealId, userId, createdByName, fields) {

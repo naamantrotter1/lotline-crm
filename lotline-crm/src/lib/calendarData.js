@@ -81,6 +81,41 @@ export async function syncGoogleCalendar() {
   }
 }
 
+/**
+ * Sync Google Calendar events for all (or one) connected team member(s)
+ * into the google_calendar_events table via the edge function.
+ * @param {string} orgId
+ * @param {string} [userId] - if provided, only sync that user
+ */
+export async function syncOrgCalendars(orgId, userId = null) {
+  if (!supabase || !orgId) return { error: 'no supabase or orgId' };
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+      body: { orgId, ...(userId ? { userId } : {}) },
+    });
+    return { data, error };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * Fetch Google Calendar events from the shared cache table.
+ * Includes the profile (first_name, last_name, avatar_url) of the event owner.
+ */
+export async function fetchGCalEvents(orgId, { from, to } = {}) {
+  if (!supabase || !orgId) return [];
+  let q = supabase
+    .from('google_calendar_events')
+    .select('*, profiles!user_id(id, first_name, last_name, avatar_url)')
+    .eq('organization_id', orgId)
+    .order('start_at', { ascending: true });
+  if (from) q = q.gte('start_at', from);
+  if (to)   q = q.lte('start_at', to);
+  const { data } = await q;
+  return data || [];
+}
+
 // ── Meetings CRUD ─────────────────────────────────────────────────────────────
 
 export async function fetchMeetings(orgId, { from, to, contactId, dealId } = {}) {
