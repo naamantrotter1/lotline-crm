@@ -168,7 +168,7 @@ async function logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmai
     date:         today,
   };
 
-  await supa.from('activity_notes').insert({
+  const payload = {
     organization_id: orgId,
     deal_id:         dealId,
     author_id:       user.id,
@@ -176,7 +176,20 @@ async function logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmai
     note_type:       'email',
     body:            noteBody,
     metadata,
-  });
+  };
+
+  const { error } = await supa.from('activity_notes').insert(payload);
+
+  if (error) {
+    console.error('[activity_note] insert failed:', error.code, error.message);
+    // 23514 = check_violation — note_type constraint not yet updated; fall back to 'note' type
+    if (error.code === '23514') {
+      const { error: fallbackErr } = await supa.from('activity_notes').insert({ ...payload, note_type: 'note' });
+      if (fallbackErr) throw new Error(fallbackErr.message);
+    } else {
+      throw new Error(error.message);
+    }
+  }
 }
 
 export default async function handler(req, res) {
