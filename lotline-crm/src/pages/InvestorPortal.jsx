@@ -463,13 +463,17 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
     if (!orgId || !supabase) return;
     const { data, error } = await supabase
       .from('deals')
-      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
+      .select('id, address, stage, pipeline, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
       .eq('organization_id', orgId)
-      .eq('is_archived', false)
-      .not('contract_signed_at', 'is', null); // Deal Overview only
+      .eq('is_archived', false);
     if (error) { console.error('[NeedsFunding] Supabase query error:', error); return; }
     const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-    setDbDeals((data || []).filter(row => noInv(row.investor)).map(row => ({
+    // Deal Overview = has contract_signed_at set OR pipeline is a deal-overview variant
+    const isLandAcq = (row) => {
+      const p = (row.pipeline || '').toLowerCase();
+      return (p === 'land-acquisition' || p === 'land acquisition') && !row.contract_signed_at;
+    };
+    setDbDeals((data || []).filter(row => !isLandAcq(row) && noInv(row.investor)).map(row => ({
       id: row.id,
       address: row.address,
       pipeline: row.stage,
@@ -485,7 +489,7 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   };
 
   // Query Supabase directly on mount — bypasses all localStorage caching so every
-  // user always sees the same real-time data. Only Deal Overview deals (contract_signed_at set).
+  // user always sees the same real-time data. Only Deal Overview deals.
   useEffect(() => { fetchNeedsFunding(); }, [orgId]);
 
   // Re-query when an investor is assigned so the deal disappears immediately
@@ -493,13 +497,16 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
     if (!orgId || !supabase) return;
     supabase
       .from('deals')
-      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
+      .select('id, address, stage, pipeline, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
       .eq('organization_id', orgId)
       .eq('is_archived', false)
-      .not('contract_signed_at', 'is', null)
       .then(({ data }) => {
         const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-        setDbDeals((data || []).filter(row => noInv(row.investor)).map(row => ({
+        const isLandAcq = (row) => {
+          const p = (row.pipeline || '').toLowerCase();
+          return (p === 'land-acquisition' || p === 'land acquisition') && !row.contract_signed_at;
+        };
+        setDbDeals((data || []).filter(row => !isLandAcq(row) && noInv(row.investor)).map(row => ({
           id: row.id,
           address: row.address,
           pipeline: row.stage,
