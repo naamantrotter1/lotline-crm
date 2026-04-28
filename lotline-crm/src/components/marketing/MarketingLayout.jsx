@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { marketing } from '../../content/marketing';
-import { useAuth } from '../../lib/AuthContext';
 
 /* ─── Nav ─── */
 function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { session } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -83,21 +81,12 @@ function MarketingNav() {
             >
               Log in
             </Link>
-            {session ? (
-              <Link
-                to="/dashboard"
-                className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
-              >
-                Go to Dashboard →
-              </Link>
-            ) : (
-              <Link
-                to="/signup"
-                className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
-              >
-                Start free trial
-              </Link>
-            )}
+            <Link
+              to="/signup"
+              className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
+            >
+              Start free trial
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -133,21 +122,12 @@ function MarketingNav() {
               >
                 Log in
               </Link>
-              {session ? (
-                <Link
-                  to="/dashboard"
-                  className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
-                >
-                  Go to Dashboard →
-                </Link>
-              ) : (
-                <Link
-                  to="/signup"
-                  className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
-                >
-                  Start free trial
-                </Link>
-              )}
+              <Link
+                to="/signup"
+                className="text-sm font-semibold bg-accent text-white py-2.5 px-3 rounded-lg text-center hover:bg-accent/90 transition-colors"
+              >
+                Start free trial
+              </Link>
             </div>
           </div>
         </div>
