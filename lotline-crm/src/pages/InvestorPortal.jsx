@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
+import { supabase } from '../lib/supabase';
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -454,77 +455,84 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
-  const { jvScope } = useJv();
-  const UNFUNDED = ['Cash', 'None', '', null, undefined];
-  const allUnfunded = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
-
-  // Also include live context deals with no investor not already covered by a static unfunded entry
-  const staticUnfundedAddrs = new Set(allUnfunded.map(d => (d.address || '').trim().toLowerCase()));
-  const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
-  const liveUnfunded = contextDeals
-    .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticUnfundedAddrs.has((d.address || '').trim().toLowerCase()))
-    .map(d => {
-      const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
-      return {
-        address: d.address,
-        pipeline: d.stage,
-        stage: d.stage,
-        lender: '',
-        totalCapital,
-        landCost: d.land || 0,
-        construction: totalCapital - (d.land || 0),
-        arv: d.arv || 0,
-        closeDate: d.closeDate || null,
-        _isLive: true,
-      };
-    });
-
-  // Persist assignments & new investors across sessions
-  const [assignments, setAssignments] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nf_assignments') || '{}'); } catch { return {}; }
-  });
-  const [extraInvestors, setExtraInvestors] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nf_extra_investors') || '[]'); } catch { return []; }
-  });
   const [modalDeal, setModalDeal] = useState(null);
+  const [dbDeals, setDbDeals] = useState(null); // null = loading
 
-  // Once assigned, deal leaves the list
-  const deals = [
-    ...allUnfunded.filter(d => !assignments[d.address]),
-    ...liveUnfunded.filter(d => !assignments[d.address]),
-  ];
+  // Query Supabase directly — bypasses all localStorage caching so every user
+  // always sees the same real-time data from the database.
+  useEffect(() => {
+    if (!orgId || !supabase) return;
+    supabase
+      .from('deals')
+      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived')
+      .eq('organization_id', orgId)
+      .eq('is_archived', false)
+      .then(({ data, error }) => {
+        if (error) { console.error('[NeedsFunding] Supabase query error:', error); return; }
+        const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
+        const filtered = (data || []).filter(row => noInv(row.investor));
+        setDbDeals(filtered.map(row => ({
+          id: row.id,
+          address: row.address,
+          pipeline: row.stage,
+          stage: row.stage,
+          totalCapital: row.total_capital_required != null
+            ? Number(row.total_capital_required)
+            : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
+          landCost: Number(row.land) || 0,
+          arv: Number(row.arv) || 0,
+          closeDate: row.close_date || null,
+          _sourceId: row.id,
+        })));
+      });
+  }, [orgId]);
+
+  // Re-query when an investor is assigned so the deal disappears immediately
+  const refreshDbDeals = () => {
+    if (!orgId || !supabase) return;
+    supabase
+      .from('deals')
+      .select('id, address, stage, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived')
+      .eq('organization_id', orgId)
+      .eq('is_archived', false)
+      .then(({ data }) => {
+        const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
+        const filtered = (data || []).filter(row => noInv(row.investor));
+        setDbDeals(filtered.map(row => ({
+          id: row.id,
+          address: row.address,
+          pipeline: row.stage,
+          stage: row.stage,
+          totalCapital: row.total_capital_required != null
+            ? Number(row.total_capital_required)
+            : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
+          landCost: Number(row.land) || 0,
+          arv: Number(row.arv) || 0,
+          closeDate: row.close_date || null,
+          _sourceId: row.id,
+        })));
+      });
+  };
+
+  const deals = dbDeals ?? [];
   const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
-  const baseInvestors = investorsProp ?? loadInvestors(orgId, orgSlug);
-  const allInvestors = [
-    ...baseInvestors.filter(i => i.name !== 'Cash' && i.name !== 'None'),
-    ...extraInvestors.filter(e => !baseInvestors.find(i => i.name === e.name)),
-  ];
+  const allInvestors = (investorsProp ?? []).filter(i => i.name !== 'Cash' && i.name !== 'None');
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
     if (isNew && newInvestor) {
-      const updated = [...extraInvestors, newInvestor];
-      setExtraInvestors(updated);
-      localStorage.setItem('nf_extra_investors', JSON.stringify(updated));
-      // Add to the main investors list so they appear in future dropdowns
       storeAddInvestor({
         name: newInvestor.name,
         contact: newInvestor.contact || '',
         email: newInvestor.email || '',
         phone: newInvestor.phone || '',
-      }, activeOrgId, orgSlug);
-      setInvestors(loadInvestors(activeOrgId, orgSlug));
-      // Auto-create a Contact with type Investor
-      ensureInvestorContact(newInvestor.name, activeOrgId);
+      }, orgId, orgSlug);
+      ensureInvestorContact(newInvestor.name, orgId);
     }
-    const updated = { ...assignments, [modalDeal.address]: { funder: funderName, terms } };
-    setAssignments(updated);
-    localStorage.setItem('nf_assignments', JSON.stringify(updated));
 
-    // Write investor + financing back to the deal
-    const norm = a => (a || '').trim().toLowerCase();
-    const matchedDeal = contextDeals.find(d => norm(d.address) === norm(modalDeal.address));
+    // Save investor directly to the deal record (DB + context)
+    const matchedDeal = contextDeals.find(d => d.id === modalDeal._sourceId);
     if (matchedDeal) {
       const updatedDeal = {
         ...matchedDeal,
@@ -536,6 +544,8 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
     }
 
     setModalDeal(null);
+    // Re-query so the assigned deal disappears from the list
+    setTimeout(refreshDbDeals, 500);
   };
 
   return (
@@ -549,7 +559,11 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
         </p>
       </div>
 
-      {deals.length === 0 ? (
+      {dbDeals === null ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
+          Loading…
+        </div>
+      ) : deals.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
           All deals have a funder assigned.
         </div>

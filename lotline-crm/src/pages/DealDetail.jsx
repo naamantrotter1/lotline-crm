@@ -621,6 +621,9 @@ function FinancingScenarioPanel({
               </div>
               <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
+                {investor && !investorList.find(i => i.name === investor) && (
+                  <option value={investor}>{investor}</option>
+                )}
                 {investorList.map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
@@ -962,6 +965,9 @@ function OverviewTab({
                     className="w-full text-sm font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
                   >
                     <option value="">— Select investor —</option>
+                    {investor && !(investorList || []).find(i => i.name === investor) && (
+                      <option value={investor}>{investor}</option>
+                    )}
                     {(investorList || []).map(inv => (
                       <option key={inv.id} value={inv.name}>{inv.name}</option>
                     ))}
@@ -2270,9 +2276,18 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-      if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
+      // Merge Supabase investors with LS-stored investors so the dropdown
+      // always shows the assigned investor regardless of which store it came from
+      const lsInvestors = loadInvestors(activeOrgId, orgSlug);
+      const merged = [...(inv || [])];
+      for (const lsInv of lsInvestors) {
+        if (!merged.find(i => i.name === lsInv.name)) {
+          merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+        }
+      }
+      if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
     });
-  }, [activeOrgId]);
+  }, [activeOrgId, orgSlug]);
 
   // Close investor picker on outside click
   useEffect(() => {
@@ -3109,9 +3124,16 @@ function DealDetailContent({ deal }) {
             standard_terms: newInv.standardTerms || null,
             organization_id: activeOrgId,
           });
-          // Refresh Supabase investor list
+          // Refresh investor list (merge Supabase + LS)
           fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-            if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
+            const lsInvestors = loadInvestors(activeOrgId, orgSlug);
+            const merged = [...(inv || [])];
+            for (const lsInv of lsInvestors) {
+              if (!merged.find(i => i.name === lsInv.name)) {
+                merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+              }
+            }
+            if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
           });
           // Assign to this deal
           const name = saved?.name || newInv.name;

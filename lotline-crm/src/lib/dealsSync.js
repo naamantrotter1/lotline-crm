@@ -259,10 +259,10 @@ export async function loadAllDeals(orgIds) {
     const summaryRows = (await Promise.all(ids.map(id => fetchCostSummariesForOrg(id)))).flat();
     const summaryByDealId = Object.fromEntries(summaryRows.map(s => [String(s.deal_id), s]));
 
-    // LS is considered "fresh" if it was saved within the last 5 minutes.
+    // LS is considered "fresh" if it was saved within the last 30 seconds.
     // This handles the race condition where the Supabase write hasn't completed
     // before a hard refresh — LS is updated synchronously but Supabase is async.
-    const LS_FRESH_MS = 5 * 60 * 1000;
+    const LS_FRESH_MS = 30 * 1000;
 
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
@@ -289,9 +289,11 @@ export async function loadAllDeals(orgIds) {
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
         // For financing/investor fields: prefer fresh LS over potentially stale Supabase
-        // (covers the case where the Supabase async write hadn't finished before hard refresh)
+        // (covers the case where the Supabase async write hadn't finished before hard refresh).
+        // IMPORTANT: if Supabase explicitly has null for investor, always trust it — it means
+        // the investor was cleared and we must not keep stale LS data hiding deals from Needs Funding.
         ...(lsFresh && {
-          investor:              fromLS.investor              ?? fromSupabase.investor,
+          investor:              fromSupabase.investor !== null ? (fromLS.investor ?? fromSupabase.investor) : null,
           financing:             fromLS.financing             ?? fromSupabase.financing,
           financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
           scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
