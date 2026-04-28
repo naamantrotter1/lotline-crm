@@ -591,8 +591,20 @@ export default function CalendarView() {
       if (!cat) return true; // tasks, stage_changes, manual — always shown
       return dealDateFilters[cat] !== false;
     });
+
+  // Deduplicate gcal events against CRM meetings: if a gcal event has the same
+  // title (case-insensitive) on the same calendar day as a CRM meeting, skip it.
+  const meetingKeys = new Set(
+    taggedMeetings.map(m =>
+      `${(m.title || '').toLowerCase().trim()}|${m.starts_at?.slice(0, 10)}`
+    )
+  );
   const taggedGCal = gcalEvents
     .filter(e => visibleMembers[e.user_id] !== false)
+    .filter(e => {
+      const key = `${(e.title || '').toLowerCase().trim()}|${e.start_at?.slice(0, 10)}`;
+      return !meetingKeys.has(key);
+    })
     .map(e => ({ ...e, _isGCal: true }));
 
   const allCalendarEvents = [...taggedGCal, ...taggedMeetings, ...taggedDealEvents].filter(e => {
