@@ -37,7 +37,7 @@ function MarketingNav() {
 
   return (
     <nav className={`${navBase} ${navBg}`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
@@ -105,7 +105,7 @@ function MarketingNav() {
       {/* Mobile drawer */}
       {open && (
         <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-1">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
             {marketing.nav.links.map((l) => (
               <Link
                 key={l.href}
@@ -141,7 +141,7 @@ function MarketingFooter() {
   const { footer } = marketing;
   return (
     <footer className="bg-sidebar text-white/70">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
           {/* Brand col */}
           <div className="col-span-2 md:col-span-1">

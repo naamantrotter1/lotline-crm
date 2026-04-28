@@ -243,7 +243,7 @@ function Hero() {
         style={{ background: 'radial-gradient(circle,#c8613a 0%,transparent 70%)' }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 md:pt-40 md:pb-28">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 md:pt-40 md:pb-28">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Left: copy */}
           <div>
@@ -304,7 +304,7 @@ function Hero() {
 function Advantages() {
   return (
     <section className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-sidebar mb-3">
             Everything your acquisition team needs
@@ -337,7 +337,7 @@ function Advantages() {
 function HowItWorks() {
   return (
     <section id="how-it-works" className="py-20" style={{ background: '#f5f3ee' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-sidebar mb-3">How it works</h2>
           <p className="text-gray-500 max-w-xl mx-auto">
@@ -380,7 +380,7 @@ function Features() {
             key={f.title}
             className={`py-16 ${i % 2 !== 0 ? 'bg-cream' : 'bg-white'}`}
           >
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div
                 className={`grid md:grid-cols-2 gap-12 items-center ${
                   isEven ? '' : 'md:[direction:rtl]'
@@ -424,7 +424,7 @@ function Features() {
 function PricingPreview() {
   return (
     <section className="py-20" style={{ background: '#1a2332' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-3">Simple, transparent pricing</h2>
           <p className="text-white/50 max-w-md mx-auto">
@@ -490,7 +490,7 @@ function PricingPreview() {
 function Testimonials() {
   return (
     <section className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-sidebar mb-3">
             What land investors are saying

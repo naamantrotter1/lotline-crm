@@ -605,7 +605,7 @@ function PageHero() {
 function ModuleGrid() {
   return (
     <section className="py-12 border-b border-gray-100" style={{ background: '#F5F3EF' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <p className="text-center text-xs font-semibold uppercase tracking-widest text-gray-400 mb-6">Everything included</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {MODULE_TILES.map(({ label, icon: Icon }) => (
@@ -633,7 +633,7 @@ export default function Features() {
           const Icon = f.icon;
           return (
             <div key={f.label} className={`py-20 ${isEven ? 'bg-white' : ''}`} style={isEven ? {} : { background: '#F5F3EF' }}>
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className={`grid md:grid-cols-2 gap-12 items-center ${isEven ? '' : 'md:[direction:rtl]'}`}>
                   {/* Screenshot / mock */}
                   <div className={isEven ? '' : 'md:[direction:ltr]'}>

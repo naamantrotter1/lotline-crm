@@ -76,7 +76,7 @@ export default function About() {
 
       {/* Values */}
       <section className="py-20 bg-cream">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-sidebar mb-3">How we build</h2>
             <p className="text-gray-500 max-w-xl mx-auto">
