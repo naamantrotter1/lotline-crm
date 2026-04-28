@@ -874,13 +874,18 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
 
   // ── Load notes + replies ──────────────────────────────────────────────────
   const loadDbNotes = useCallback(async () => {
-    if (!supabase || !deal?.id) return;
-    const { data, error } = await supabase
-      .from('activity_notes')
-      .select('id, author_id, author_name, body, mentioned_user_ids, created_at, parent_note_id, note_type, pinned, metadata')
-      .eq('deal_id', deal.id)
-      .order('created_at', { ascending: false })
-      .limit(500);
+    if (!deal?.id || !activeOrgId) return;
+
+    // Fetch via server-side API (service role key — bypasses RLS reliably)
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const r = await fetch(`/api/activity-notes?dealId=${encodeURIComponent(deal.id)}&orgId=${encodeURIComponent(activeOrgId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!r.ok) return;
+    const json = await r.json();
+    const data = json.notes || [];
+    const error = null;
 
     if (!error && data) {
       const topLevel = data.filter(n => !n.parent_note_id);
@@ -918,7 +923,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
         }));
       }
     }
-  }, [deal?.id]);
+  }, [deal?.id, activeOrgId]);
 
   const loadLegacyNotes = useCallback(() => {
     try {
