@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react';
 import { X, Send, Mail, Loader2, AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { sendDealEmail } from '../../lib/dealEmailsData';
+import { supabase } from '../../lib/supabase';
+
+function buildBodyPreview(text) {
+  if (!text) return '';
+  const words = text.split(/\s+/);
+  if (words.length <= 100) return text;
+  const sentenceEnd = /[.!?]+\s+/g;
+  let match, count = 0, lastIdx = 0;
+  while ((match = sentenceEnd.exec(text)) !== null) {
+    count++;
+    lastIdx = match.index + match[0].length;
+    if (count >= 3) break;
+  }
+  return lastIdx > 0 ? text.slice(0, lastIdx).trim() + '…' : text.slice(0, 300) + '…';
+}
 
 const EMAIL_TEMPLATES = [
   {
@@ -100,6 +115,39 @@ export default function ComposeEmailModal({ contact, dealId, dealAddress, onClos
         dealId:   dealId || null,
         orgId:    activeOrgId,
       });
+
+      // Log activity note client-side so it reliably appears in the Activity feed
+      if (dealId && activeOrgId && supabase) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const sentBy    = profile?.name || session.user.email || '';
+            const toDisplay = toName.trim() ? `${toName.trim()} (${toEmail.trim()})` : toEmail.trim();
+            const today     = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            await supabase.from('activity_notes').insert({
+              organization_id: activeOrgId,
+              deal_id:         dealId,
+              author_id:       session.user.id,
+              author_name:     sentBy,
+              note_type:       'email',
+              body:            `📧 Email sent to ${toDisplay} — ${subject.trim()}`,
+              metadata: {
+                subject:      subject.trim(),
+                to_name:      toName.trim() || null,
+                to_email:     toEmail.trim(),
+                body_preview: buildBodyPreview(body.trim()),
+                sent_by:      sentBy,
+                sent_via:     data?.sentVia || null,
+                status:       'sent',
+                date:         today,
+              },
+            });
+          }
+        } catch (noteErr) {
+          console.warn('Activity note insert failed:', noteErr.message);
+        }
+      }
+
       setResult({ ok: true, message: 'Email sent successfully.' });
       if (onSent) onSent(data);
       setTimeout(onClose, 1500);

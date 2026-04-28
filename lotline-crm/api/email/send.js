@@ -245,39 +245,29 @@ export default async function handler(req, res) {
 
   const sendSucceeded = !!result && !sendError;
 
-  // Log to deal_emails + activity note
-  if (dealId && orgId && user) {
+  // Log to deal_emails (activity note is created client-side by ComposeEmailModal)
+  if (dealId && orgId && user && sendSucceeded) {
     try {
       const fullName = user.user_metadata?.full_name || user.email || '';
-
-      if (sendSucceeded) {
-        await supa.from('deal_emails').insert({
-          organization_id:   orgId,
-          deal_id:           dealId,
-          sent_by_user_id:   user.id,
-          sent_by_name:      fullName,
-          from_email:        fromEmail,
-          to_emails:         [toEmail],
-          cc_emails:         cc && cc.length > 0 ? cc : [],
-          subject,
-          body_html:         html,
-          body_text:         body,
-          gmail_message_id:  result.id || null,
-          gmail_thread_id:   result.threadId || null,
-          status:            'sent',
-          tracking_pixel_id: trackingPixelId,
-          sent_at:           new Date().toISOString(),
-        });
-      }
-
-      await logEmailActivityNote({
-        supa, orgId, dealId, user,
-        subject, toEmail, toName, body,
-        status:  sendSucceeded ? 'sent' : 'failed',
-        sentVia: sendSucceeded ? sentVia : null,
+      await supa.from('deal_emails').insert({
+        organization_id:   orgId,
+        deal_id:           dealId,
+        sent_by_user_id:   user.id,
+        sent_by_name:      fullName,
+        from_email:        fromEmail,
+        to_emails:         [toEmail],
+        cc_emails:         cc && cc.length > 0 ? cc : [],
+        subject,
+        body_html:         html,
+        body_text:         body,
+        gmail_message_id:  result.id || null,
+        gmail_thread_id:   result.threadId || null,
+        status:            'sent',
+        tracking_pixel_id: trackingPixelId,
+        sent_at:           new Date().toISOString(),
       });
     } catch (err) {
-      console.error('deal logging error:', err.message);
+      console.error('deal_emails logging error:', err.message);
     }
   }
 
