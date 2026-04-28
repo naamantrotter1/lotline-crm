@@ -129,7 +129,7 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
       .eq('organization_id', orgId)
       .gte('start_at',       timeMin)
       .lte('start_at',       timeMax)
-      .not('google_event_id', 'in', `(${activeIds.map(id => `"${id}"`).join(',')})`);
+      .not('google_event_id', 'in', `(${activeIds.join(',')})`);
   } else {
     // Nothing returned — clear the entire sync window for this user
     await admin.from('google_calendar_events')
