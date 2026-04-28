@@ -117,13 +117,15 @@ export default function ComposeEmailModal({ contact, dealId, dealAddress, onClos
       });
 
       // Log activity note client-side so it reliably appears in the Activity feed
+      console.log('[ComposeEmail] onSend: dealId=', dealId, 'orgId=', activeOrgId, 'supabase=', !!supabase);
       if (dealId && activeOrgId && supabase) {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('[ComposeEmail] session uid=', session?.user?.id);
         if (session) {
           const sentBy    = profile?.name || session.user.email || '';
           const toDisplay = toName.trim() ? `${toName.trim()} (${toEmail.trim()})` : toEmail.trim();
           const today     = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const { error: noteErr } = await supabase.from('activity_notes').insert({
+          const notePayload = {
             organization_id: activeOrgId,
             deal_id:         dealId,
             author_id:       session.user.id,
@@ -140,11 +142,23 @@ export default function ComposeEmailModal({ contact, dealId, dealAddress, onClos
               status:       'sent',
               date:         today,
             },
-          });
+          };
+          const { error: noteErr } = await supabase.from('activity_notes').insert(notePayload);
           if (noteErr) {
-            console.error('[ComposeEmail] activity_notes insert failed:', noteErr.message, noteErr);
+            console.error('[ComposeEmail] email note insert failed:', noteErr.message, noteErr);
+            // Fallback: insert as plain note if 'email' type is blocked by constraint
+            const { error: fallbackErr } = await supabase.from('activity_notes').insert({
+              ...notePayload,
+              note_type: 'note',
+              metadata:  null,
+            });
+            if (fallbackErr) {
+              console.error('[ComposeEmail] fallback note insert also failed:', fallbackErr.message, fallbackErr);
+            } else {
+              console.log('[ComposeEmail] fallback note inserted (note_type=note) for deal', dealId);
+            }
           } else {
-            console.log('[ComposeEmail] activity_notes insert succeeded for deal', dealId);
+            console.log('[ComposeEmail] email note inserted successfully for deal', dealId);
           }
         }
       }
