@@ -118,33 +118,34 @@ export default function ComposeEmailModal({ contact, dealId, dealAddress, onClos
 
       // Log activity note client-side so it reliably appears in the Activity feed
       if (dealId && activeOrgId && supabase) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const sentBy    = profile?.name || session.user.email || '';
-            const toDisplay = toName.trim() ? `${toName.trim()} (${toEmail.trim()})` : toEmail.trim();
-            const today     = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            await supabase.from('activity_notes').insert({
-              organization_id: activeOrgId,
-              deal_id:         dealId,
-              author_id:       session.user.id,
-              author_name:     sentBy,
-              note_type:       'email',
-              body:            `📧 Email sent to ${toDisplay} — ${subject.trim()}`,
-              metadata: {
-                subject:      subject.trim(),
-                to_name:      toName.trim() || null,
-                to_email:     toEmail.trim(),
-                body_preview: buildBodyPreview(body.trim()),
-                sent_by:      sentBy,
-                sent_via:     data?.sentVia || null,
-                status:       'sent',
-                date:         today,
-              },
-            });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const sentBy    = profile?.name || session.user.email || '';
+          const toDisplay = toName.trim() ? `${toName.trim()} (${toEmail.trim()})` : toEmail.trim();
+          const today     = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const { error: noteErr } = await supabase.from('activity_notes').insert({
+            organization_id: activeOrgId,
+            deal_id:         dealId,
+            author_id:       session.user.id,
+            author_name:     sentBy,
+            note_type:       'email',
+            body:            `📧 Email sent to ${toDisplay} — ${subject.trim()}`,
+            metadata: {
+              subject:      subject.trim(),
+              to_name:      toName.trim() || null,
+              to_email:     toEmail.trim(),
+              body_preview: buildBodyPreview(body.trim()),
+              sent_by:      sentBy,
+              sent_via:     data?.sentVia || null,
+              status:       'sent',
+              date:         today,
+            },
+          });
+          if (noteErr) {
+            console.error('[ComposeEmail] activity_notes insert failed:', noteErr.message, noteErr);
+          } else {
+            console.log('[ComposeEmail] activity_notes insert succeeded for deal', dealId);
           }
-        } catch (noteErr) {
-          console.warn('Activity note insert failed:', noteErr.message);
         }
       }
 
