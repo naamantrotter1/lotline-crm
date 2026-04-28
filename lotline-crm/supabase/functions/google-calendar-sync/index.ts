@@ -3,13 +3,10 @@
  *
  * Syncs Google Calendar events for all connected team members in an org
  * and upserts them into google_calendar_events for the shared team calendar.
+ * Also links CRM meetings to GCal events by title+date, and deletes CRM
+ * meetings whose linked GCal event has been removed.
  *
  * Body: { orgId: string, userId?: string }
- *   orgId   — required; which org to sync
- *   userId  — optional; if provided, sync only that user (e.g. after connect)
- *
- * Token source: user_integrations (populated by the /api/google/auth OAuth flow)
- * Event storage: google_calendar_events (shared, readable by all org members)
  *
  * Required env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
  *                    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -45,7 +42,11 @@ async function refreshToken(refreshToken: string): Promise<{ access_token: strin
 }
 
 // ── Sync one user's Google Calendar ───────────────────────────────────────────
-async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<string, unknown>, orgId: string): Promise<number> {
+async function syncUser(
+  admin: ReturnType<typeof createClient>,
+  conn: Record<string, unknown>,
+  orgId: string
+): Promise<{ count: number; activeIds: string[] }> {
   let accessToken = conn.access_token as string;
 
   // Refresh if expired or expiring within 60 s
@@ -53,16 +54,15 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
   if (expiry <= Date.now() + 60_000) {
     if (!conn.refresh_token) {
       console.log(`[gcal-sync] No refresh_token for user ${conn.user_id}, skipping`);
-      return 0;
+      return { count: 0, activeIds: [] };
     }
     const refreshed = await refreshToken(conn.refresh_token as string);
     if (!refreshed) {
-      // Token revoked — mark this connection inactive and notify by flag
       await admin.from('user_integrations')
         .update({ calendar_is_active: false })
         .eq('id', conn.id);
       console.warn(`[gcal-sync] Token revoked for user ${conn.user_id} — marked calendar_is_active=false`);
-      return 0;
+      return { count: 0, activeIds: [] };
     }
     accessToken = refreshed.access_token;
     const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
@@ -75,11 +75,11 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
   const timeMin = new Date(Date.now() -  7 * 86_400_000).toISOString();
   const timeMax = new Date(Date.now() + 60 * 86_400_000).toISOString();
   const gcalUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-  gcalUrl.searchParams.set('timeMin',       timeMin);
-  gcalUrl.searchParams.set('timeMax',       timeMax);
-  gcalUrl.searchParams.set('maxResults',    '250');
-  gcalUrl.searchParams.set('singleEvents',  'true');
-  gcalUrl.searchParams.set('orderBy',       'startTime');
+  gcalUrl.searchParams.set('timeMin',      timeMin);
+  gcalUrl.searchParams.set('timeMax',      timeMax);
+  gcalUrl.searchParams.set('maxResults',   '250');
+  gcalUrl.searchParams.set('singleEvents', 'true');
+  gcalUrl.searchParams.set('orderBy',      'startTime');
 
   const eventsRes = await fetch(gcalUrl.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -88,13 +88,31 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
   if (!eventsRes.ok) {
     const err = await eventsRes.json();
     console.error(`[gcal-sync] Google API error for user ${conn.user_id}:`, err?.error?.message);
-    return 0;
+    return { count: 0, activeIds: [] };
   }
 
   const { items = [] } = await eventsRes.json();
+  const activeItems = (items as any[]).filter((e: any) => e.status !== 'cancelled');
+  const activeIds   = activeItems.map((e: any) => e.id as string);
 
-  // Delete all existing events for this user in the sync window, then re-insert current ones.
-  // This ensures deleted events are always removed regardless of filter quirks.
+  // Link existing CRM meetings to GCal events by matching title + date.
+  // This allows us to detect and delete meetings when their GCal event is removed.
+  for (const event of activeItems) {
+    const title    = (event.summary || '').trim();
+    const gcalDate = event.start?.dateTime?.slice(0, 10) || event.start?.date;
+    if (!title || !gcalDate) continue;
+
+    await admin.from('meetings')
+      .update({ google_event_id: event.id })
+      .eq('organization_id', orgId)
+      .ilike('title', title)
+      .gte('starts_at', `${gcalDate}T00:00:00Z`)
+      .lte('starts_at', `${gcalDate}T23:59:59Z`)
+      .is('google_event_id', null);
+  }
+
+  // Wipe existing google_calendar_events for this user in the sync window,
+  // then re-insert current events — ensures deletions are always reflected.
   await admin.from('google_calendar_events')
     .delete()
     .eq('user_id',         conn.user_id)
@@ -102,29 +120,27 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
     .gte('start_at',       timeMin)
     .lte('start_at',       timeMax);
 
-  const rows = items
-    .filter((event: any) => event.status !== 'cancelled')
-    .map((event: any) => {
-      const allDay    = !event.start?.dateTime;
-      const startAt   = event.start?.dateTime ?? (event.start?.date ? `${event.start.date}T00:00:00Z` : null);
-      const endAt     = event.end?.dateTime   ?? (event.end?.date   ? `${event.end.date}T23:59:59Z`   : null);
-      const isPrivate = event.visibility === 'private' || event.visibility === 'confidential';
-      return {
-        organization_id: orgId,
-        user_id:         conn.user_id,
-        google_event_id: event.id,
-        calendar_id:     'primary',
-        title:           isPrivate ? '[Private Event]' : (event.summary    || '(No title)'),
-        description:     isPrivate ? null              : (event.description || null),
-        location:        isPrivate ? null              : (event.location    || null),
-        start_at:        startAt,
-        end_at:          endAt,
-        all_day:         allDay,
-        is_private:      isPrivate,
-        html_link:       event.htmlLink || null,
-        synced_at:       new Date().toISOString(),
-      };
-    });
+  const rows = activeItems.map((event: any) => {
+    const allDay    = !event.start?.dateTime;
+    const startAt   = event.start?.dateTime ?? (event.start?.date ? `${event.start.date}T00:00:00Z` : null);
+    const endAt     = event.end?.dateTime   ?? (event.end?.date   ? `${event.end.date}T23:59:59Z`   : null);
+    const isPrivate = event.visibility === 'private' || event.visibility === 'confidential';
+    return {
+      organization_id: orgId,
+      user_id:         conn.user_id,
+      google_event_id: event.id,
+      calendar_id:     'primary',
+      title:           isPrivate ? '[Private Event]' : (event.summary    || '(No title)'),
+      description:     isPrivate ? null              : (event.description || null),
+      location:        isPrivate ? null              : (event.location    || null),
+      start_at:        startAt,
+      end_at:          endAt,
+      all_day:         allDay,
+      is_private:      isPrivate,
+      html_link:       event.htmlLink || null,
+      synced_at:       new Date().toISOString(),
+    };
+  });
 
   if (rows.length > 0) {
     await admin.from('google_calendar_events').insert(rows);
@@ -135,7 +151,7 @@ async function syncUser(admin: ReturnType<typeof createClient>, conn: Record<str
     .update({ calendar_synced_at: new Date().toISOString(), calendar_is_active: true })
     .eq('id', conn.id);
 
-  return activeIds.length;
+  return { count: activeIds.length, activeIds };
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────────
@@ -148,12 +164,11 @@ serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Fetch all active Google integrations for this org (optionally filtered to one user)
     let q = admin
       .from('user_integrations')
       .select('*')
-      .eq('organization_id',   orgId)
-      .eq('provider',          'google')
+      .eq('organization_id',    orgId)
+      .eq('provider',           'google')
       .eq('calendar_is_active', true);
     if (userId) q = q.eq('user_id', userId);
 
@@ -166,17 +181,37 @@ serve(async (req) => {
       );
     }
 
-    let totalSynced = 0;
+    let totalSynced  = 0;
+    const allActiveIds = new Set<string>();
+
     for (const conn of connections) {
       try {
-        totalSynced += await syncUser(admin, conn, orgId);
+        const { count, activeIds } = await syncUser(admin, conn, orgId);
+        totalSynced += count;
+        activeIds.forEach(id => allActiveIds.add(id));
       } catch (e: any) {
         console.error(`[gcal-sync] Failed for user ${conn.user_id}:`, e.message);
       }
     }
 
+    // Delete CRM meetings that were linked to a GCal event that no longer exists
+    const { data: linkedMeetings } = await admin
+      .from('meetings')
+      .select('id, google_event_id')
+      .eq('organization_id', orgId)
+      .not('google_event_id', 'is', null);
+
+    const toDelete = (linkedMeetings || [])
+      .filter((m: any) => !allActiveIds.has(m.google_event_id))
+      .map((m: any) => m.id);
+
+    if (toDelete.length > 0) {
+      await admin.from('meetings').delete().in('id', toDelete);
+      console.log(`[gcal-sync] Deleted ${toDelete.length} CRM meetings removed from GCal`);
+    }
+
     return new Response(
-      JSON.stringify({ synced: totalSynced, users: connections.length }),
+      JSON.stringify({ synced: totalSynced, users: connections.length, meetingsDeleted: toDelete.length }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
