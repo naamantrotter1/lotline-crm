@@ -37,7 +37,7 @@ ALTER TABLE google_calendar_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "org members can view gcal events" ON google_calendar_events
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM org_members
+      SELECT organization_id FROM memberships
       WHERE user_id = auth.uid() AND status = 'active'
     )
   );
