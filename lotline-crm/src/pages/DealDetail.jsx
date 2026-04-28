@@ -28,7 +28,6 @@ import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
 import DealEventsTab from '../components/deal/DealEventsTab';
-import DealEmailsTab from '../components/deal/DealEmailsTab';
 import AddEventModal from '../components/deal/AddEventModal';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
@@ -2809,7 +2808,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'emails', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
@@ -2831,12 +2830,6 @@ function DealDetailContent({ deal }) {
           <DealEventsTab
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
-          />
-        )}
-        {activeTab === 'emails' && (
-          <DealEmailsTab
-            deal={deal}
-            contact={deal ? { email: deal.email || deal.seller_email, first_name: deal.seller_name || deal.sellerName || deal.ownerName } : null}
           />
         )}
         {activeTab === 'threads' && (
