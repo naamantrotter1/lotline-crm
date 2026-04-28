@@ -140,7 +140,7 @@ export default function Pricing() {
 
       {/* Plan cards */}
       <section className="pb-16 pt-12" style={{ background: '#f5f3ee' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
           <div className="grid md:grid-cols-3 gap-6 items-start">
             {marketing.pricing.map((plan) => {
               const displayPrice = plan.monthlyPrice
