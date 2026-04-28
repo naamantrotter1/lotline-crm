@@ -2041,6 +2041,7 @@ function DealDetailContent({ deal }) {
   }, [searchParams]);
 
   const activityFeedRefreshRef = useRef(null);
+  const [activityFeedKey, setActivityFeedKey] = useState(0);
 
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
@@ -2820,6 +2821,7 @@ function DealDetailContent({ deal }) {
       {/* Tab content */}
         {activeTab === 'overview' && (
           <DealActivityFeed
+            key={activityFeedKey}
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
@@ -3080,7 +3082,7 @@ function DealDetailContent({ deal }) {
         orgId={activeOrgId}
         dealAddress={address}
         onClose={() => setShowSendEmail(false)}
-        onSent={() => { setShowSendEmail(false); setActiveTab('overview'); setTimeout(() => activityFeedRefreshRef.current?.(), 300); }}
+        onSent={() => { setShowSendEmail(false); setActiveTab('overview'); setActivityFeedKey(k => k + 1); }}
       />
     )}
 
