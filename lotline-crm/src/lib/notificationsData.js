@@ -57,18 +57,44 @@ export async function clearAllNotifs() {
  * Insert a notification for a specific user.
  * Requires the caller to be an active member of orgId.
  */
-export async function createNotification({ orgId, userId, type, title, body, entityType, entityId }) {
+export async function createNotification({
+  orgId, userId, type, title, body,
+  entityType, entityId,
+  dealId, dealAddress, sourceUserId, sourceUserName, actionUrl,
+}) {
   if (!supabase || !orgId || !userId) return;
   const { error } = await supabase.from('notifications').insert({
-    organization_id: orgId,
-    user_id:         userId,
-    type:            type || 'general',
+    organization_id:  orgId,
+    user_id:          userId,
+    type:             type || 'general',
     title,
-    body:            body        || null,
-    entity_type:     entityType  || null,
-    entity_id:       entityId    || null,
+    body:             body            || null,
+    entity_type:      entityType      || null,
+    entity_id:        entityId        || null,
+    deal_id:          dealId          || null,
+    deal_address:     dealAddress     || null,
+    source_user_id:   sourceUserId    || null,
+    source_user_name: sourceUserName  || null,
+    action_url:       actionUrl       || null,
   });
   if (error) console.error('createNotification', error);
+}
+
+/** Fetch the current user's notification preferences from their profile. */
+export async function fetchNotifPrefs(userId) {
+  if (!supabase || !userId) return null;
+  const { data } = await supabase
+    .from('profiles')
+    .select('notification_prefs')
+    .eq('id', userId)
+    .single();
+  return data?.notification_prefs || null;
+}
+
+/** Save notification preferences to the user's profile. */
+export async function saveNotifPrefs(userId, prefs) {
+  if (!supabase || !userId) return;
+  await supabase.from('profiles').update({ notification_prefs: prefs }).eq('id', userId);
 }
 
 /**

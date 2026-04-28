@@ -16,6 +16,8 @@ import { supabase } from './supabase';
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
   'openid',
   'email',
 ].join(' ');

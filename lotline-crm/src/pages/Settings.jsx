@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getNotifPrefs, setNotifPrefs, requestNotifPermission } from '../lib/notify';
 import { syncOrgCalendars } from '../lib/calendarData';
+import { fetchNotifPrefs, saveNotifPrefs } from '../lib/notificationsData';
 import TeamSettings from '../components/settings/TeamSettings';
 import CustomFieldsSettings from '../components/settings/CustomFieldsSettings';
 import ApiWebhooksSettings from '../components/settings/ApiWebhooksSettings';
@@ -24,15 +25,36 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+const DEFAULT_NOTIF_PREFS = {
+  email_notifications: true,
+  mentions:     true,
+  task_assigned: true,
+  task_due:     true,
+  stage_change: true,
+  new_note:     true,
+  new_document: true,
+};
+
 function NotificationsTab({ showToast }) {
-  const prefs = getNotifPrefs();
-  const [pipelineMove, setPipelineMove] = useState(prefs.pipelineMove || false);
-  const [stageMove, setStageMove] = useState(prefs.stageMove || false);
+  const { profile } = useAuth();
+  // Browser push prefs (legacy localStorage)
+  const browserPrefs = getNotifPrefs();
+  const [pipelineMove, setPipelineMove] = useState(browserPrefs.pipelineMove || false);
+  const [stageMove, setStageMove]       = useState(browserPrefs.stageMove || false);
   const [permissionStatus, setPermissionStatus] = useState(
     'Notification' in window ? Notification.permission : 'unsupported'
   );
 
-  const handleToggle = async (key, value, setter) => {
+  // DB-backed in-app notification prefs
+  const [dbPrefs, setDbPrefs] = useState(DEFAULT_NOTIF_PREFS);
+  const [savingDbPrefs, setSavingDbPrefs] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    fetchNotifPrefs(profile.id).then(p => { if (p) setDbPrefs({ ...DEFAULT_NOTIF_PREFS, ...p }); });
+  }, [profile?.id]);
+
+  const handleBrowserToggle = async (key, value, setter) => {
     if (value && permissionStatus !== 'granted') {
       const result = await requestNotifPermission();
       setPermissionStatus(result);
@@ -45,41 +67,84 @@ function NotificationsTab({ showToast }) {
     setNotifPrefs({ ...getNotifPrefs(), [key]: value });
   };
 
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-6 max-w-md space-y-1">
-      <h3 className="font-semibold text-sidebar mb-1">Notification Preferences</h3>
-      {permissionStatus === 'denied' && (
-        <p className="text-xs text-red-500 mb-3">Notifications are blocked in your browser. Enable them in browser settings to use this feature.</p>
-      )}
-      {permissionStatus === 'unsupported' && (
-        <p className="text-xs text-gray-400 mb-3">Your browser doesn't support notifications.</p>
-      )}
+  const handleDbToggle = async (key, value) => {
+    const next = { ...dbPrefs, [key]: value };
+    setDbPrefs(next);
+    setSavingDbPrefs(true);
+    await saveNotifPrefs(profile.id, next);
+    setSavingDbPrefs(false);
+  };
 
-      <div className="divide-y divide-gray-100">
-        <div className="flex items-center justify-between py-4">
-          <div>
-            <p className="text-sm font-medium text-sidebar">Deal moves pipelines</p>
-            <p className="text-xs text-gray-400 mt-0.5">Notify when a deal moves from Land Acquisition to Deal Overview (or back)</p>
-          </div>
-          <Toggle
-            checked={pipelineMove}
-            onChange={() => handleToggle('pipelineMove', !pipelineMove, setPipelineMove)}
-          />
+  const IN_APP_PREFS = [
+    { key: 'mentions',      label: '@Mentions in notes',       desc: 'When someone @mentions you in a deal note' },
+    { key: 'task_assigned', label: 'Tasks assigned to me',     desc: 'When a task is assigned to you' },
+    { key: 'task_due',      label: 'Task due reminders',       desc: 'When a task is due tomorrow or overdue' },
+    { key: 'stage_change',  label: 'Deal stage changes',       desc: 'When a deal moves to a new stage' },
+    { key: 'new_note',      label: 'New notes on my deals',    desc: 'When someone posts a note on a deal you manage' },
+    { key: 'new_document',  label: 'New documents on my deals',desc: 'When a document is uploaded to a deal you manage' },
+  ];
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      {/* In-app notifications */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-sidebar">In-App Notifications</h3>
+          {savingDbPrefs && <span className="text-xs text-gray-400">Saving…</span>}
         </div>
-        <div className="flex items-center justify-between py-4">
+        <div className="divide-y divide-gray-100">
+          {IN_APP_PREFS.map(({ key, label, desc }) => (
+            <div key={key} className="flex items-center justify-between py-3">
+              <div>
+                <p className="text-sm font-medium text-sidebar">{label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+              </div>
+              <Toggle checked={!!dbPrefs[key]} onChange={() => handleDbToggle(key, !dbPrefs[key])} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Email notifications */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <h3 className="font-semibold text-sidebar mb-4">Email Notifications</h3>
+        <div className="flex items-center justify-between py-1">
           <div>
-            <p className="text-sm font-medium text-sidebar">Deal moves stages in Deal Overview</p>
-            <p className="text-xs text-gray-400 mt-0.5">Notify when a deal moves between Contract Signed, Due Diligence, Development, or Complete</p>
+            <p className="text-sm font-medium text-sidebar">Send me email notifications</p>
+            <p className="text-xs text-gray-400 mt-0.5">Receive an email for all in-app notifications above</p>
           </div>
           <Toggle
-            checked={stageMove}
-            onChange={() => handleToggle('stageMove', !stageMove, setStageMove)}
+            checked={!!dbPrefs.email_notifications}
+            onChange={() => handleDbToggle('email_notifications', !dbPrefs.email_notifications)}
           />
         </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <PushNotificationSettings />
+      {/* Browser push */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <h3 className="font-semibold text-sidebar mb-4">Browser Push Notifications</h3>
+        {permissionStatus === 'denied' && (
+          <p className="text-xs text-red-500 mb-3">Notifications are blocked in your browser. Enable them in browser settings.</p>
+        )}
+        <div className="divide-y divide-gray-100">
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-sm font-medium text-sidebar">Deal moves pipelines</p>
+              <p className="text-xs text-gray-400 mt-0.5">Desktop alert when a deal moves pipelines</p>
+            </div>
+            <Toggle checked={pipelineMove} onChange={() => handleBrowserToggle('pipelineMove', !pipelineMove, setPipelineMove)} />
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-sm font-medium text-sidebar">Deal stage changes</p>
+              <p className="text-xs text-gray-400 mt-0.5">Desktop alert when a deal moves stages</p>
+            </div>
+            <Toggle checked={stageMove} onChange={() => handleBrowserToggle('stageMove', !stageMove, setStageMove)} />
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <PushNotificationSettings />
+        </div>
       </div>
     </div>
   );
