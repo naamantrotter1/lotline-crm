@@ -2001,6 +2001,36 @@ function DealDetailContent({ deal }) {
       contractDate: s.contractDate, manufacturer: s.manufacturer, deliveryDate: s.deliveryDate,
       holdingMonths: s.holdPeriod, holdingPerMonth: s.monthlyHoldCost,
       arv: s.arv, listingUrl: s.listingUrl, ...s.costs,
+      // Financing fields — written immediately to LS so hard-refresh doesn't lose them
+      financingScenarioType: s.financingScenarioType,
+      capitalDeployedDate: s.capitalDeployedDate,
+      capitalReturnedDate: s.capitalReturnedDate,
+      investorCapitalContributed: s.investorCapitalContributed,
+      investorEquityPct: s.investorEquityPct,
+      projectedPayoutDate: s.projectedPayoutDate,
+      scenarioData: {
+        interestRate: s.interestRate, originationFeeType: s.originationFeeType,
+        originationFeePct: s.originationFeePct, originationFeeFlat: s.originationFeeFlat,
+        servicingFeeType: s.servicingFeeType, servicingFeeFlat: s.servicingFeeFlat,
+        servicingFeePct: s.servicingFeePct, balloonTerm: s.balloonTerm,
+        holdPeriod: s.holdPeriod, monthlyHoldCost: s.monthlyHoldCost,
+        profitSharePct: s.profitSharePct, investorProfitSplitPct: s.investorProfitSplitPct,
+        loanAmountOverride: s.loanAmountOverride, ltcPct: s.ltcPct,
+        originationPoints: s.originationPoints, creditLimit: s.creditLimit,
+        drawPct: s.drawPct, annualFeePct: s.annualFeePct,
+        ccpInvestorId: s.ccpInvestorId, ccpCommitmentId: s.ccpCommitmentId,
+        ccpAllocationAmount: s.ccpAllocationAmount, ccpPrefReturnPct: s.ccpPrefReturnPct,
+        ccpProfitSharePct: s.ccpProfitSharePct, ccpPrefPaymentTiming: s.ccpPrefPaymentTiming,
+        ccpPosition: s.ccpPosition, ccpTranches: s.ccpTranches,
+        ccpAllocationId: s.ccpAllocationId, ccpScheduleId: s.ccpScheduleId,
+        hmcb: s.hmcbData,
+        lenderName: s.lenderName, drawAmount: s.drawAmount,
+        extensionAvailable: s.extensionAvailable, extensionFee: s.extensionFee,
+        extensionMonths: s.extensionMonths, drawFeeHm: s.drawFeeHm,
+        underwritingFee: s.underwritingFee, attorneyDocFee: s.attorneyDocFee,
+        cashSource: s.cashSource,
+        investorReturnType: s.investorReturnType, investorAssignmentStatus: s.investorAssignmentStatus,
+      },
       ...overrides,
     };
     // Save to localStorage + context immediately, and fire Supabase write
@@ -2406,6 +2436,18 @@ function DealDetailContent({ deal }) {
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
+    // Financing tab fields — included so saveNow can write them to LS immediately on change
+    financingScenarioType, capitalDeployedDate, capitalReturnedDate,
+    investorCapitalContributed, investorEquityPct, projectedPayoutDate,
+    interestRate, originationFeeType, originationFeePct, originationFeeFlat,
+    servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
+    profitSharePct, loanAmountOverride, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+    ccpInvestorId, ccpCommitmentId, ccpAllocationAmount, ccpPrefReturnPct, ccpProfitSharePct,
+    ccpPrefPaymentTiming, ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
+    investorProfitSplitPct, hmcbData,
+    lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
+    drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
+    investorReturnType, investorAssignmentStatus,
   };
 
   // ── One-time hydration save: push investor position to DB on mount when scenario active ─
@@ -2421,6 +2463,19 @@ function DealDetailContent({ deal }) {
         : (deal.investorEquityPct ?? null);
     // Always flush to DB — local state may already be correct but DB could be stale
     flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Flush to LS on hard-refresh / tab close ───────────────────────────────────
+  // The auto-save useEffect fires after render+paint (~16ms). If the user hard-
+  // refreshes before that paint, the new values never reach LS. The beforeunload
+  // handler fires synchronously before the page unloads, guaranteeing LS is always
+  // written so data survives an immediate hard refresh.
+  const saveNowRef = useRef(saveNow);
+  saveNowRef.current = saveNow;
+  useEffect(() => {
+    const flush = () => saveNowRef.current?.();
+    window.addEventListener('beforeunload', flush);
+    return () => window.removeEventListener('beforeunload', flush);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-save: fires on every field change, awaits Supabase write ─────────────
