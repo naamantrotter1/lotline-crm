@@ -383,46 +383,6 @@ function FinancingScenarioPanel({
       {/* ── Hard Money Loan / Hard Money (Land + Home) ── */}
       {!!selectedScenario && isHardMoney && (
         <>
-          {/* Cost of Capital Summary — top */}
-          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Total Loan Amount</span>
-                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
-                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Origination Fee</span>
-                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
-              </div>
-              {(totalClosingCosts - originationFee) > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Other Closing Costs</span>
-                  <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                <span className="font-semibold text-white">Total Cost of Capital</span>
-                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
-              </div>
-              {(() => {
-                const netAfter = netProfitEst - totalCostOfCapital;
-                return (
-                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                    <span className="font-semibold text-white">Net Profit After Financing</span>
-                    <span className={`font-bold ${netAfter >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${Math.round(netAfter).toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
           {/* Lender & Loan Terms */}
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
@@ -552,6 +512,46 @@ function FinancingScenarioPanel({
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Closing Costs (calc)</p>
                 <span className="text-sm font-bold text-accent">${Math.round(totalClosingCosts).toLocaleString()}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Cost of Capital Summary — bottom */}
+          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Total Loan Amount</span>
+                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
+                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Origination Fee</span>
+                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
+              </div>
+              {(totalClosingCosts - originationFee) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">Other Closing Costs</span>
+                  <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                <span className="font-semibold text-white">Total Cost of Capital</span>
+                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
+              </div>
+              {(() => {
+                const netAfter = netProfitEst - totalCostOfCapital;
+                return (
+                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                    <span className="font-semibold text-white">Net Profit After Financing</span>
+                    <span className={`font-bold ${netAfter >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${Math.round(netAfter).toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>
