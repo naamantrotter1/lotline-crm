@@ -401,6 +401,17 @@ function FinancingScenarioPanel({
                 <span className="font-semibold text-white">Total Cost of Capital</span>
                 <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
               </div>
+              {(() => {
+                const netAfter = netProfitEst - totalCostOfCapital;
+                return (
+                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                    <span className="font-semibold text-white">Net Profit After Financing</span>
+                    <span className={`font-bold ${netAfter >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${Math.round(netAfter).toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -2656,7 +2667,26 @@ function DealDetailContent({ deal }) {
 
   const sellingCosts = (arv || 0) * 0.045 + 4000;
   const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
-  const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
+
+  // Cost of Capital deduction for deal header — mirrors FinancingScenarioPanel math
+  const activeFinancingMain = selectedScenario
+    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType ?? null
+    : null;
+  const isHardMoneyMain = activeFinancingMain === 'Hard Money Loan' || activeFinancingMain === 'Hard Money (Land + Home)';
+  const totalLentMain = (costs?.land || 0) + (costs?.mobileHome || 0);
+  const effectiveLoanMain = loanAmountOverride || totalLentMain;
+  const monthlyInterestMain = effectiveLoanMain * (interestRate / 100) / 12;
+  const originationFeeMain = originationFeeType === 'percentage'
+    ? effectiveLoanMain * (originationFeePct / 100)
+    : (originationFeeFlat || 0);
+  const servicingFeeMain = servicingFeeType === 'percentage'
+    ? effectiveLoanMain * (servicingFeePct / 100)
+    : (servicingFeeFlat || 0);
+  const otherFeesMain = (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
+  const totalCoCMain = (!!selectedScenario && isHardMoneyMain)
+    ? (monthlyInterestMain * holdPeriod) + originationFeeMain + servicingFeeMain + otherFeesMain
+    : 0;
+  const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts - totalCoCMain;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
 
@@ -2880,6 +2910,8 @@ function DealDetailContent({ deal }) {
             investor={investor} setInvestor={setInvestor}
             onAddInvestor={() => setShowAddInvestor(true)}
             netProfit={netProfit}
+            totalCostOfCapital={totalCoCMain}
+            activeFinancing={activeFinancingMain}
             allIn={allIn}
             roi={allIn > 0 ? ((netProfit / allIn) * 100) : 0}
             costSummary={costBreakdownV2 ? costSummary : null}

@@ -1,10 +1,38 @@
 /**
+ * Compute the Total Cost of Capital for a deal when a Hard Money financing
+ * scenario is active. Returns 0 for Cash / no scenario / missing data.
+ * Reads from deal.scenarioData (populated by the Financing tab).
+ */
+export function computeCostOfCapital(deal) {
+  const sd = deal?.scenarioData;
+  if (!sd) return 0;
+  const financing = (deal?.financing || '').toLowerCase();
+  if (!financing.includes('hard money')) return 0;
+  const loanFallback = (deal.land || 0) + (deal.mobileHome || 0);
+  const loan = sd.loanAmountOverride || loanFallback;
+  if (!loan) return 0;
+  const monthlyInterest = loan * ((sd.interestRate || 0) / 100) / 12;
+  const holdMonths = sd.holdPeriod || 0;
+  const origFee = (sd.originationFeeType === 'percentage' || !sd.originationFeeType)
+    ? loan * ((sd.originationFeePct || 0) / 100)
+    : (sd.originationFeeFlat || 0);
+  const servicingFee = sd.servicingFeeType === 'percentage'
+    ? loan * ((sd.servicingFeePct || 0) / 100)
+    : (sd.servicingFeeFlat || 0);
+  const otherFees = (sd.drawFeeHm || 0) + (sd.underwritingFee || 0) + (sd.attorneyDocFee || 0);
+  return (monthlyInterest * holdMonths) + origFee + servicingFee + otherFees;
+}
+
+/**
  * Calculate net profit for a deal.
  *
  * When costBreakdownV2 is enabled and actual cost data is available,
  * pass totalActualOverride (= deal_cost_summary_view.total_actual).
  * When not provided, falls back to legacy column sum (pre-migration behavior,
  * or when the feature flag is off — guaranteed identical math).
+ *
+ * When a Hard Money financing scenario is active, Total Cost of Capital
+ * (interest + origination + closing fees) is deducted from net profit.
  */
 export function calcNetProfit(deal, totalActualOverride) {
   const totalCosts = totalActualOverride != null
@@ -38,8 +66,9 @@ export function calcNetProfit(deal, totalActualOverride) {
       (deal.staging || 0);
 
   const arv = deal.arv || 0;
+  const coc = computeCostOfCapital(deal);
 
-  return arv - totalCosts - arv * ((deal.sellingCostPct || 4.5) / 100) - (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
+  return arv - totalCosts - arv * ((deal.sellingCostPct || 4.5) / 100) - (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250) - coc;
 }
 
 export const DEAL_OVERVIEW_DEALS = [

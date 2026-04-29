@@ -344,6 +344,8 @@ export default function DealLeftColumn({
   investorList,
   onAddInvestor,
   netProfit,
+  totalCostOfCapital = 0,
+  activeFinancing = null,
   allIn,
   roi,
 
@@ -468,18 +470,34 @@ export default function DealLeftColumn({
       </div>
 
       {/* Quick stats bar */}
-      <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 flex-shrink-0">
-        {[
-          { label: 'All-In',    value: fmt(allIn),     color: 'text-[#1a2332]'  },
-          { label: 'ARV',       value: fmt(arv),       color: 'text-[#1a2332]'  },
-          { label: 'Net Profit',value: fmt(netProfit), color: netProfit > 0 ? 'text-green-600' : netProfit < 0 ? 'text-red-500' : 'text-gray-400' },
-        ].map(s => (
-          <div key={s.label} className="py-2.5 px-2 text-center">
-            <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">{s.label}</p>
-            <p className={`text-[13px] font-bold ${s.color} leading-none`}>{s.value}</p>
+      {(() => {
+        const isHardMoneyActive = activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)';
+        const profitColor = netProfit > 0 ? 'text-green-600' : netProfit < 0 ? 'text-red-500' : 'text-gray-400';
+        const tooltip = isHardMoneyActive
+          ? `ARV ${fmt(arv)} − All-In ${fmt(allIn)} − Cost of Capital ${fmt(totalCostOfCapital)}`
+          : null;
+        return (
+          <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 flex-shrink-0">
+            {[
+              { label: 'All-In', value: fmt(allIn), color: 'text-[#1a2332]' },
+              { label: 'ARV',    value: fmt(arv),   color: 'text-[#1a2332]' },
+            ].map(s => (
+              <div key={s.label} className="py-2.5 px-2 text-center">
+                <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">{s.label}</p>
+                <p className={`text-[13px] font-bold ${s.color} leading-none`}>{s.value}</p>
+              </div>
+            ))}
+            <div className="py-2.5 px-2 text-center" title={tooltip || undefined}>
+              <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">Net Profit</p>
+              <p className={`text-[13px] font-bold ${profitColor} leading-none`}>{fmt(netProfit)}</p>
+              {isHardMoneyActive && (
+                <p className="text-[8px] text-gray-400 leading-none mt-0.5">↓ After financing costs</p>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
+
 
       {/* Quick action row */}
       {!readOnly && (
