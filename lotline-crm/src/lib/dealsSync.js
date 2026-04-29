@@ -279,6 +279,10 @@ export async function loadAllDeals(orgIds) {
         // and all dashboard / analytics surfaces instead of legacy flat columns.
         totalActual:     summary ? Number(summary.total_actual    ?? 0) : null,
         totalEstimated:  summary ? Number(summary.total_estimated ?? 0) : null,
+        // Preserve _lsSavedAt so LS-prefer blocks remain active across multiple page loads.
+        // Without this, lsSet(toCache) would strip _lsSavedAt and financing/scenarioData
+        // preferences would stop applying after the first refresh.
+        ...(fromLS._lsSavedAt && { _lsSavedAt: fromLS._lsSavedAt }),
         // Seeded deals use the hardcoded date (overrides stale LS migration values)
         // User-created deals fall back to LS then null
         contractSignedAt: fromSupabase.contractSignedAt
@@ -306,6 +310,9 @@ export async function loadAllDeals(orgIds) {
           closingAttorneyAddress: fromLS.closingAttorneyAddress ?? fromSupabase.closingAttorneyAddress,
           closeDate:              fromLS.closeDate              ?? fromSupabase.closeDate,
           contractDate:           fromLS.contractDate           ?? fromSupabase.contractDate,
+          // Financing tab date fields — prefer fresh LS to survive Supabase async write race
+          capitalDeployedDate:    fromLS.capitalDeployedDate    ?? fromSupabase.capitalDeployedDate,
+          capitalReturnedDate:    fromLS.capitalReturnedDate    ?? fromSupabase.capitalReturnedDate,
         }),
       };
     });
