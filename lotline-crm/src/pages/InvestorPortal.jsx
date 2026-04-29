@@ -100,6 +100,28 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
     }));
   const allInvestorDeals = [...staticDeals, ...liveDeals];
 
+  // Compute stats live from context deals when investor has no pre-computed values
+  const rawLiveDeals = contextDeals.filter(d => (d.investor || '').trim() === investor.name.trim());
+  const computedCapital = rawLiveDeals.reduce((s, d) => {
+    const loan = d.scenarioData?.loanAmountOverride || d.totalActual || 0;
+    return s + Number(loan);
+  }, 0);
+  const computedRoiDollars = rawLiveDeals.reduce((s, d) => {
+    const loan = d.scenarioData?.loanAmountOverride || d.totalActual || 0;
+    const rate = (d.scenarioData?.interestRate || 0) / 100;
+    const hold = d.scenarioData?.holdPeriod || 12;
+    const origPct = (d.scenarioData?.originationFeePct || 0) / 100;
+    return s + (loan * rate * (hold / 12)) + (loan * origPct);
+  }, 0);
+  const displayCapital = investor.capitalInvested > 0 ? investor.capitalInvested : computedCapital;
+  const displayRoiDollars = investor.roiDollars > 0 ? investor.roiDollars : Math.round(computedRoiDollars);
+  const displayRoiPct = investor.roiPct > 0 ? investor.roiPct : (displayCapital > 0 ? (displayRoiDollars / displayCapital) * 100 : 0);
+  const avgHold = rawLiveDeals.length > 0
+    ? rawLiveDeals.reduce((s, d) => s + (d.scenarioData?.holdPeriod || 12), 0) / rawLiveDeals.length
+    : 12;
+  const displayAnnRoi = investor.avgAnnualizedRoi > 0 ? investor.avgAnnualizedRoi : (displayCapital > 0 && avgHold > 0 ? (displayRoiPct / avgHold) * 12 : 0);
+  const displayReturns = investor.totalReturns > 0 ? investor.totalReturns : 0;
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       {/* Card header */}
@@ -123,26 +145,26 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{isCash ? 'Total Build Cost' : 'Capital Invested'}</p>
-            <p className="text-base font-bold text-[#1a2332]">${investor.capitalInvested.toLocaleString()}</p>
+            <p className="text-base font-bold text-[#1a2332]">${displayCapital.toLocaleString()}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">Total Returns</p>
-            <p className="text-base font-bold text-gray-400">${investor.totalReturns.toLocaleString()}</p>
+            <p className="text-base font-bold text-gray-400">${displayReturns.toLocaleString()}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="text-center p-2 bg-green-50 rounded-lg">
             <p className="text-xs text-gray-400">ROI %</p>
-            <p className="text-sm font-bold text-green-600">{investor.roiPct.toFixed(2)}%</p>
+            <p className="text-sm font-bold text-green-600">{displayRoiPct.toFixed(2)}%</p>
           </div>
           <div className="text-center p-2 bg-blue-50 rounded-lg">
             <p className="text-xs text-gray-400">ROI</p>
-            <p className="text-sm font-bold text-blue-600">${investor.roiDollars.toLocaleString()}</p>
+            <p className="text-sm font-bold text-blue-600">${displayRoiDollars.toLocaleString()}</p>
           </div>
           <div className="text-center p-2 bg-purple-50 rounded-lg">
             <p className="text-xs text-gray-400">Ann. ROI</p>
-            <p className="text-sm font-bold text-purple-600">{investor.avgAnnualizedRoi.toFixed(2)}%</p>
+            <p className="text-sm font-bold text-purple-600">{displayAnnRoi.toFixed(2)}%</p>
           </div>
         </div>
 
