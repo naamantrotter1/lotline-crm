@@ -636,67 +636,6 @@ function FinancingScenarioPanel({
         />
       )}
 
-      {/* ── Investor Assignment (all non-cash scenarios) ── */}
-      {!!selectedScenario && !isCash && (
-        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Investor Assignment</p>
-          <div className="grid grid-cols-2 gap-x-6">
-            {!isHardMoney && (
-              <div className="py-2 col-span-2">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
-                  {!readOnly && (
-                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
-                      + Add New Investor
-                    </button>
-                  )}
-                </div>
-                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
-                  <option value="">— No Investor —</option>
-                  {investor && !investorList.find(i => i.name === investor) && (
-                    <option value={investor}>{investor}</option>
-                  )}
-                  {investorList.map(inv => (
-                    <option key={inv.id} value={inv.name}>{inv.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
-              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
-              <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
-                <option>Interest Only</option>
-                <option>Profit Split %</option>
-                <option>Flat Fee</option>
-                <option>Pooled</option>
-              </select>
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Status</p>
-              <select value={investorAssignmentStatus} onChange={e => setInvestorAssignmentStatus(e.target.value)} className={iCls} disabled={readOnly}>
-                <option>Committed</option>
-                <option>Funded</option>
-                <option>Returned</option>
-              </select>
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
-              <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
-            </div>
-            {!isHardMoney && investorReturnType === 'Profit Split %' && (
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
-                <input type="number" value={investorEquityPct ?? ''} onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 25" className={iCls} readOnly={readOnly} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       
     </div>
   );
