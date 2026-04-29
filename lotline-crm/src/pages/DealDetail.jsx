@@ -294,6 +294,7 @@ function FinancingScenarioPanel({
   const isLoC = activeFinancing === 'Line of Credit';
   const isProfitSplit = activeFinancing === 'Profit Split';
   const isCCP = activeFinancing === 'Committed Capital Partner';
+  const isPooled = activeFinancing === 'Pooled Loan';
 
   const iCls = "text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full";
 
@@ -619,6 +620,37 @@ function FinancingScenarioPanel({
           ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
           ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
         />
+      )}
+
+      {/* ── Pooled Loan ── */}
+      {!!selectedScenario && isPooled && (
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Pooled Loan Terms</p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <div className="py-2 col-span-2">
+              <div className="flex items-center gap-2 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500 flex-shrink-0"><rect x="2" y="3" width="6" height="18"/><rect x="9" y="3" width="6" height="18"/><rect x="16" y="3" width="6" height="18"/></svg>
+                <p className="text-xs text-purple-700">This deal is funded through a pooled loan. Loan details and allocations are managed in the <a href="/lending/pooled-loans" className="font-semibold underline">Lending → Pooled Loans</a> section. Linked loans appear above.</p>
+              </div>
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
+              <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+              <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
+              <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
+              <input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
+            </div>
+          </div>
+        </div>
       )}
 
       
