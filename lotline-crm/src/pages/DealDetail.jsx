@@ -2387,6 +2387,8 @@ function DealDetailContent({ deal }) {
     const scenario = FINANCING_SCENARIOS.find(s => s.id === scenarioId);
     setFinancing(scenario?.financingType || '');
     setFinancingScenarioType(scenario?.dbType || null);
+    // Save immediately so hard-refresh preserves the new scenario before React re-renders
+    saveNow({ financing: scenario?.financingType || '', financingScenarioType: scenario?.dbType || null });
   }
 
   async function saveCCPToStack() {
@@ -3133,17 +3135,17 @@ function DealDetailContent({ deal }) {
             ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
             ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
             ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
-            capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
-            capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
-            cashSource={cashSource} setCashSource={setCashSource}
-            investor={investor} setInvestor={setInvestor}
+            capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={v => { setCapitalDeployedDate(v); stateRef.current = { ...stateRef.current, capitalDeployedDate: v }; saveNow(); }}
+            capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={v => { setCapitalReturnedDate(v); stateRef.current = { ...stateRef.current, capitalReturnedDate: v }; saveNow(); }}
+            cashSource={cashSource} setCashSource={v => { setCashSource(v); stateRef.current = { ...stateRef.current, cashSource: v }; saveNow(); }}
+            investor={investor} setInvestor={v => { setInvestor(v); stateRef.current = { ...stateRef.current, investor: v }; saveNow(); }}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
             onAddInvestor={() => setShowAddInvestor(true)}
-            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
-            investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
-            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
-            investorReturnType={investorReturnType} setInvestorReturnType={setInvestorReturnType}
-            investorAssignmentStatus={investorAssignmentStatus} setInvestorAssignmentStatus={setInvestorAssignmentStatus}
+            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={v => { setInvestorCapitalContributed(v); stateRef.current = { ...stateRef.current, investorCapitalContributed: v }; saveNow(); }}
+            investorEquityPct={investorEquityPct} setInvestorEquityPct={v => { setInvestorEquityPct(v); stateRef.current = { ...stateRef.current, investorEquityPct: v }; saveNow(); }}
+            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={v => { setProjectedPayoutDate(v); stateRef.current = { ...stateRef.current, projectedPayoutDate: v }; saveNow(); }}
+            investorReturnType={investorReturnType} setInvestorReturnType={v => { setInvestorReturnType(v); stateRef.current = { ...stateRef.current, investorReturnType: v }; saveNow(); }}
+            investorAssignmentStatus={investorAssignmentStatus} setInvestorAssignmentStatus={v => { setInvestorAssignmentStatus(v); stateRef.current = { ...stateRef.current, investorAssignmentStatus: v }; saveNow(); }}
             readOnly={!canEdit}
           />
         )}
