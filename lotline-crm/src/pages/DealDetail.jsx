@@ -2487,7 +2487,7 @@ function DealDetailContent({ deal }) {
         ? investorProfitSplitPct
         : (deal.investorEquityPct ?? null);
     // Always flush to DB — local state may already be correct but DB could be stale
-    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
+    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity }, activeOrgId);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Flush to LS on hard-refresh / tab close ───────────────────────────────────
