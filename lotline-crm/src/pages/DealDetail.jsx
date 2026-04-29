@@ -2290,6 +2290,15 @@ function DealDetailContent({ deal }) {
     const v = deal?.financingScenarioType;
     if (v && !financingScenarioType) setFinancingScenarioType(v);
   }, [deal?.financingScenarioType]); // eslint-disable-line
+  useEffect(() => {
+    if (deal?.investor && !investor) setInvestor(deal.investor);
+  }, [deal?.investor]); // eslint-disable-line
+  useEffect(() => {
+    if (deal?.investorCapitalContributed != null && investorCapitalContributed == null) setInvestorCapitalContributed(deal.investorCapitalContributed);
+  }, [deal?.investorCapitalContributed]); // eslint-disable-line
+  useEffect(() => {
+    if (deal?.projectedPayoutDate && !projectedPayoutDate) setProjectedPayoutDate(deal.projectedPayoutDate);
+  }, [deal?.projectedPayoutDate]); // eslint-disable-line
 
   // Load investors from Supabase for Investor Assignment dropdown
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);

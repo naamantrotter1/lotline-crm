@@ -300,17 +300,22 @@ export async function loadAllDeals(orgIds) {
         // meaning Supabase writes silently failed and the values were lost after the
         // 30-second LS-fresh window expired.
         ...( fromLS._lsSavedAt && {
-          financing:             fromLS.financing             ?? fromSupabase.financing,
-          financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
-          scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
-          capitalDeployedDate:   fromLS.capitalDeployedDate   ?? fromSupabase.capitalDeployedDate,
-          capitalReturnedDate:   fromLS.capitalReturnedDate   ?? fromSupabase.capitalReturnedDate,
+          financing:                   fromLS.financing                   ?? fromSupabase.financing,
+          financingScenarioType:        fromLS.financingScenarioType        ?? fromSupabase.financingScenarioType,
+          scenarioData:                 fromLS.scenarioData                 ?? fromSupabase.scenarioData,
+          capitalDeployedDate:          fromLS.capitalDeployedDate          ?? fromSupabase.capitalDeployedDate,
+          capitalReturnedDate:          fromLS.capitalReturnedDate          ?? fromSupabase.capitalReturnedDate,
+          // Investor assignment fields — also previously failing to write to Supabase due to
+          // missing columns (or silently dropped). Move to permanent block so they are never
+          // overwritten by a stale Supabase null after the 30-second lsFresh window expires.
+          investor:                     fromLS.investor                     ?? fromSupabase.investor,
+          investorCapitalContributed:   fromLS.investorCapitalContributed   ?? fromSupabase.investorCapitalContributed,
+          investorEquityPct:            fromLS.investorEquityPct            ?? fromSupabase.investorEquityPct,
+          projectedPayoutDate:          fromLS.projectedPayoutDate          ?? fromSupabase.projectedPayoutDate,
         }),
-        // Investor + closing fields: prefer fresh LS over potentially stale Supabase
+        // Closing fields: prefer fresh LS over potentially stale Supabase
         // (covers the Supabase async write race condition on hard refresh).
         ...(lsFresh && {
-          investor:              fromLS.investor              ?? fromSupabase.investor,
-          // Closing fields — also prefer fresh LS so data isn't lost if DB column was missing
           closingAttorney:        fromLS.closingAttorney        ?? fromSupabase.closingAttorney,
           closingAttorneyPhone:   fromLS.closingAttorneyPhone   ?? fromSupabase.closingAttorneyPhone,
           closingAttorneyAddress: fromLS.closingAttorneyAddress ?? fromSupabase.closingAttorneyAddress,
