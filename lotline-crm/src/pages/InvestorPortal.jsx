@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
-import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
+import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
@@ -964,19 +964,18 @@ export default function InvestorPortal() {
   // Reload investor list whenever JV scope changes.
   // Own-org investors always come from localStorage (pre-computed stats).
   // Partner investors are fetched from Supabase and merged in.
+  // Own-org investors also sync from Supabase so DB-only entries (added outside LS) show up.
   useEffect(() => {
-    if (jvScope.mode === 'own_only') {
-      setInvestors(loadInvestors(activeOrgId, orgSlug));
-      return;
-    }
     const ownInvestors = jvScope.includeOwn !== false ? loadInvestors(activeOrgId, orgSlug) : [];
     const partnerIds = scopeIds.filter(id => id !== activeOrgId);
-    if (partnerIds.length === 0) {
-      setInvestors(ownInvestors);
-      return;
-    }
-    fetchInvestors(partnerIds).then(rows => {
-      const partnerInvestors = rows.map(r => ({
+    const ownIds = activeOrgId ? [activeOrgId] : [];
+    const fetchIds = jvScope.mode === 'own_only' ? ownIds : [...ownIds, ...partnerIds];
+
+    if (!fetchIds.length) { setInvestors(ownInvestors); return; }
+
+    fetchInvestors(fetchIds).then(rows => {
+      const lsNames = new Set(ownInvestors.map(i => i.name));
+      const toInvestorShape = r => ({
         id: r.id,
         name: r.name,
         contact: r.contact || '',
@@ -993,7 +992,23 @@ export default function InvestorPortal() {
         roiDollars: 0,
         avgAnnualizedRoi: 0,
         deals: [],
-      }));
+      });
+      // DB-only own-org investors (not in LS) — merge into LS so stats get computed on next load
+      const dbOwnOnly = rows
+        .filter(r => r.organization_id === activeOrgId && !lsNames.has(r.name))
+        .map(toInvestorShape);
+      if (dbOwnOnly.length > 0) {
+        const merged = [...ownInvestors, ...dbOwnOnly];
+        saveInvestors(merged, activeOrgId);
+        ownInvestors.push(...dbOwnOnly);
+      }
+      if (jvScope.mode === 'own_only') {
+        setInvestors(ownInvestors);
+        return;
+      }
+      const partnerInvestors = rows
+        .filter(r => r.organization_id !== activeOrgId)
+        .map(toInvestorShape);
       setInvestors([...ownInvestors, ...partnerInvestors]);
     });
   }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
