@@ -290,10 +290,8 @@ export async function loadAllDeals(orgIds) {
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
         // For financing/investor fields: prefer fresh LS over potentially stale Supabase
         // (covers the case where the Supabase async write hadn't finished before hard refresh).
-        // IMPORTANT: if Supabase explicitly has null for investor, always trust it — it means
-        // the investor was cleared and we must not keep stale LS data hiding deals from Needs Funding.
         ...(lsFresh && {
-          investor:              fromSupabase.investor !== null ? (fromLS.investor ?? fromSupabase.investor) : null,
+          investor:              fromLS.investor              ?? fromSupabase.investor,
           financing:             fromLS.financing             ?? fromSupabase.financing,
           financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
           scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
