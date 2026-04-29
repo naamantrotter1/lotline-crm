@@ -426,26 +426,17 @@ function FinancingScenarioPanel({
                   ))}
                 </select>
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land <span className="normal-case font-normal">(from Cost Breakdown)</span></p>
-                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${(costs.land || 0).toLocaleString()}</p>
-              </div>
+
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
                 <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Home <span className="normal-case font-normal">(from Cost Breakdown)</span></p>
-                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${(costs.mobileHome || 0).toLocaleString()}</p>
-              </div>
+
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
                 <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${Math.round(monthlyInterestHm).toLocaleString()}</p>
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total All-In (calc)</p>
-                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${allIn.toLocaleString()}</p>
-              </div>
+
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
                 <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
