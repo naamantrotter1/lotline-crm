@@ -295,10 +295,16 @@ export async function loadAllDeals(orgIds) {
         // Financing/scenario fields: LS is always authoritative if it has been saved.
         // scenarioData is only written from the frontend so LS is the most reliable source.
         // We only fall back to Supabase if LS has no value at all.
+        // capitalDeployedDate / capitalReturnedDate are also included here (not in the
+        // lsFresh block) because they were missing from the deals table until migration 087,
+        // meaning Supabase writes silently failed and the values were lost after the
+        // 30-second LS-fresh window expired.
         ...( fromLS._lsSavedAt && {
           financing:             fromLS.financing             ?? fromSupabase.financing,
           financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
           scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
+          capitalDeployedDate:   fromLS.capitalDeployedDate   ?? fromSupabase.capitalDeployedDate,
+          capitalReturnedDate:   fromLS.capitalReturnedDate   ?? fromSupabase.capitalReturnedDate,
         }),
         // Investor + closing fields: prefer fresh LS over potentially stale Supabase
         // (covers the Supabase async write race condition on hard refresh).
@@ -310,9 +316,6 @@ export async function loadAllDeals(orgIds) {
           closingAttorneyAddress: fromLS.closingAttorneyAddress ?? fromSupabase.closingAttorneyAddress,
           closeDate:              fromLS.closeDate              ?? fromSupabase.closeDate,
           contractDate:           fromLS.contractDate           ?? fromSupabase.contractDate,
-          // Financing tab date fields — prefer fresh LS to survive Supabase async write race
-          capitalDeployedDate:    fromLS.capitalDeployedDate    ?? fromSupabase.capitalDeployedDate,
-          capitalReturnedDate:    fromLS.capitalReturnedDate    ?? fromSupabase.capitalReturnedDate,
         }),
       };
     });
