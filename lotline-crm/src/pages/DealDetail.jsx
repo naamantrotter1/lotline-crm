@@ -216,7 +216,7 @@ function DecimalInput({ value, onChange, className }) {
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
 function FinancingScenarioPanel({
-  deal, costs, arv,
+  deal, costs, arv, allInOverride,
   selectedScenario, applyScenario,
   financingSaveStatus,
   // General loan terms
@@ -272,7 +272,7 @@ function FinancingScenarioPanel({
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
 
-  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+  const allIn = allInOverride ?? COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const arvVal = arv ?? deal.arv ?? 0;
 
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
@@ -3322,7 +3322,7 @@ function DealDetailContent({ deal }) {
 
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
-            deal={deal} costs={costs} arv={arv}
+            deal={deal} costs={costs} arv={arv} allInOverride={allIn}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             financingSaveStatus={financingSaveStatus}
             lenderName={lenderName} setLenderName={setLenderName}
