@@ -2530,9 +2530,15 @@ function DealDetailContent({ deal }) {
       // always shows the assigned investor regardless of which store it came from
       const lsInvestors = loadInvestors(activeOrgId, orgSlug);
       const merged = [...(inv || [])];
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       for (const lsInv of lsInvestors) {
         if (!merged.find(i => i.name === lsInv.name)) {
-          merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+          // Skip LS investors that have a real Supabase UUID but aren't in the
+          // Supabase results — they were archived and should stay hidden.
+          const hasSupabaseId = lsInv.id && uuidRe.test(lsInv.id);
+          if (!hasSupabaseId) {
+            merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+          }
         }
       }
       if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
@@ -3448,9 +3454,13 @@ function DealDetailContent({ deal }) {
           fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
             const lsInvestors = loadInvestors(activeOrgId, orgSlug);
             const merged = [...(inv || [])];
+            const uuidRe2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             for (const lsInv of lsInvestors) {
               if (!merged.find(i => i.name === lsInv.name)) {
-                merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+                const hasSupabaseId = lsInv.id && uuidRe2.test(lsInv.id);
+                if (!hasSupabaseId) {
+                  merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
+                }
               }
             }
             if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
