@@ -113,7 +113,7 @@ function dealToRow(deal) {
     deal_owner:              deal.dealOwner || null,
     listing_url:             deal.listingUrl || null,
     contract_signed_at:      deal.contractSignedAt || null,
-    scenario_data:           deal.scenarioData ? JSON.stringify(deal.scenarioData) : null,
+    scenario_data:           deal.scenarioData ?? null,
     total_capital_required:  deal.totalCapitalRequired ?? null,
     funded_to_date:          deal.fundedToDate ?? 0,
     scheduled_to_date:       deal.scheduledToDate ?? 0,
@@ -288,13 +288,18 @@ export async function loadAllDeals(orgIds) {
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
-        // For financing/investor fields: prefer fresh LS over potentially stale Supabase
-        // (covers the case where the Supabase async write hadn't finished before hard refresh).
-        ...(lsFresh && {
-          investor:              fromLS.investor              ?? fromSupabase.investor,
+        // Financing/scenario fields: LS is always authoritative if it has been saved.
+        // scenarioData is only written from the frontend so LS is the most reliable source.
+        // We only fall back to Supabase if LS has no value at all.
+        ...( fromLS._lsSavedAt && {
           financing:             fromLS.financing             ?? fromSupabase.financing,
           financingScenarioType: fromLS.financingScenarioType ?? fromSupabase.financingScenarioType,
           scenarioData:          fromLS.scenarioData          ?? fromSupabase.scenarioData,
+        }),
+        // Investor + closing fields: prefer fresh LS over potentially stale Supabase
+        // (covers the Supabase async write race condition on hard refresh).
+        ...(lsFresh && {
+          investor:              fromLS.investor              ?? fromSupabase.investor,
           // Closing fields — also prefer fresh LS so data isn't lost if DB column was missing
           closingAttorney:        fromLS.closingAttorney        ?? fromSupabase.closingAttorney,
           closingAttorneyPhone:   fromLS.closingAttorneyPhone   ?? fromSupabase.closingAttorneyPhone,

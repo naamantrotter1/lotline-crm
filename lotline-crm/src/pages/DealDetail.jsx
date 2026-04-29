@@ -2521,22 +2521,22 @@ function DealDetailContent({ deal }) {
     fetchPooledLoansForDeal(deal.id, activeOrgId).then(links => setPooledLoanLinks(links));
   }, [deal?.id, activeOrgId]);
 
-  // ── Load cost summary when feature flag is on ─────────────────────────────
+  // ── Load cost summary (always — drives the All-In stat in the header) ────────
   useEffect(() => {
-    if (!costBreakdownV2 || !deal?.id) return;
+    if (!deal?.id) return;
     fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
-  }, [costBreakdownV2, deal?.id]);
+  }, [deal?.id]);
 
   // Refresh summary whenever user switches to the cost breakdown tab
   useEffect(() => {
-    if (activeTab === 'realized' && costBreakdownV2 && deal?.id) {
+    if (activeTab === 'realized' && deal?.id) {
       fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
     }
-  }, [activeTab, costBreakdownV2, deal?.id]);
+  }, [activeTab, deal?.id]);
 
   // Realtime: re-fetch cost summary whenever any cost line for this deal changes
   useEffect(() => {
-    if (!costBreakdownV2 || !deal?.id) return;
+    if (!deal?.id) return;
     const ch = supabase
       .channel(`deal-detail-cost-${deal.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines',
@@ -2544,10 +2544,10 @@ function DealDetailContent({ deal }) {
         () => { fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); }); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [costBreakdownV2, deal?.id]);
+  }, [deal?.id]);
 
-  // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
-  const allIn = costBreakdownV2 && costSummary
+  // allIn: always use total_actual from deal_cost_lines summary (mirrors the cost breakdown tab Total Actual)
+  const allIn = costSummary
     ? Number(costSummary.total_actual ?? 0)
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 

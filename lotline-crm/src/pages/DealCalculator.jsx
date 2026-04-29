@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
-import { saveDeal } from '../lib/dealsSync';
+import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
+import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -28,7 +29,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
   const [stage,       setStage]       = useState('New Lead');
   const [saved,       setSaved]       = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!address.trim()) return;
     const id = 'custom-' + Date.now();
 
@@ -81,10 +82,36 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
       staging:      0,
     };
 
-    saveDeal(deal, activeOrgId);
+    saveToLS(deal, activeOrgId);
     onDealSaved(deal);
     setSaved(true);
     setTimeout(onClose, 1200);
+    // Await Supabase insert so the DB trigger fn_seed_deal_cost_lines fires first,
+    // then overwrite the seeded default amounts with the actual calculator values.
+    const { error } = await flushToSupabaseAsync(deal, activeOrgId);
+    if (!error) {
+      await updateCostLinesFromCalc(id, {
+        land_purchase_price:      vals.land,
+        mobile_home:              vals.mobileHome,
+        hud_engineer:             vals.hudEngineer,
+        perc_test:                vals.percTest,
+        land_survey:              vals.survey,
+        foundation_footers:       vals.footers,
+        set_up:                   vals.setup,
+        land_clearing:            vals.landClearing,
+        well:                     vals.water,
+        septic:                   vals.septic,
+        utility_power_connection: vals.electric,
+        hvac:                     vals.hvac,
+        skirting:                 vals.underpinning,
+        decks_installed:          vals.decks,
+        driveway:                 vals.driveway,
+        final_grade:              vals.landscaping,
+        public_water:             vals.waterSewer,
+        mailbox:                  vals.mailbox,
+        miscellaneous:            vals.mobileTax,
+      });
+    }
   };
 
   return (

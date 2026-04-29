@@ -139,6 +139,26 @@ export async function bulkOverrideActuals(rows, userId) {
   return error ? { error: error.message } : { ok: true };
 }
 
+// ── Bulk-update estimated amounts from calculator import ──────────────────────
+// costMap: { category_key: amount }
+// Called after a deal is inserted so the seeded default_amounts are replaced
+// with the actual values the user entered in the Deal Calculator.
+
+export async function updateCostLinesFromCalc(dealId, costMap) {
+  if (!supabase || !dealId || !costMap) return;
+  const entries = Object.entries(costMap).filter(([, v]) => v != null);
+  if (!entries.length) return;
+  await Promise.all(
+    entries.map(([category_key, estimated_amount]) =>
+      supabase
+        .from('deal_cost_lines')
+        .update({ estimated_amount })
+        .eq('deal_id', dealId)
+        .eq('category_key', category_key)
+    )
+  );
+}
+
 // ── Update notes on a line ────────────────────────────────────────────────────
 
 export async function updateLineNotes(lineId, notes) {
