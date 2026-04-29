@@ -265,6 +265,7 @@ function FinancingScenarioPanel({
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
+  const [showAdvancedFees, setShowAdvancedFees] = useState(false);
 
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -373,6 +374,35 @@ function FinancingScenarioPanel({
       {/* ── Hard Money Loan / Hard Money (Land + Home) ── */}
       {!!selectedScenario && isHardMoney && (
         <>
+          {/* Cost of Capital Summary — top */}
+          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Total Loan Amount</span>
+                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
+                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Origination Fee</span>
+                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
+              </div>
+              {(totalClosingCosts - originationFee) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">Other Closing Costs</span>
+                  <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                <span className="font-semibold text-white">Total Cost of Capital</span>
+                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Lender & Loan Terms */}
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
@@ -397,18 +427,30 @@ function FinancingScenarioPanel({
                 </select>
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
-                <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land <span className="normal-case font-normal">(from Cost Breakdown)</span></p>
+                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${(costs.land || 0).toLocaleString()}</p>
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Home</p>
-                <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+                <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total All-In</p>
-                <span className="text-sm font-medium text-gray-800">${allIn.toLocaleString()}</span>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Home <span className="normal-case font-normal">(from Cost Breakdown)</span></p>
+                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${(costs.mobileHome || 0).toLocaleString()}</p>
               </div>
-              <div className="py-2 col-span-2">
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
+                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${Math.round(monthlyInterestHm).toLocaleString()}</p>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total All-In (calc)</p>
+                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${allIn.toLocaleString()}</p>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
+                <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+              </div>
+              <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
                 <input
                   type="number"
@@ -420,36 +462,47 @@ function FinancingScenarioPanel({
                 />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
-                <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestHm).toLocaleString()}</span>
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
-                <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
-              </div>
-              <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
                 <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Maturity Date</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Maturity Date (calc)</p>
                 {capitalDeployedDate && holdPeriod ? (() => {
                   const d = new Date(capitalDeployedDate); d.setMonth(d.getMonth() + holdPeriod);
-                  return <span className="text-sm font-medium text-gray-800">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>;
-                })() : <span className="text-sm text-gray-400">—</span>}
+                  return <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>;
+                })() : <p className="text-xs text-gray-400 italic mt-1">Set capital deployed date to calculate.</p>}
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
                 <input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
               </div>
+              <div className="py-2" />
+              <div className="col-span-2 border-t border-gray-100 pt-2 mt-1 flex items-center justify-between">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Extension Option</p>
+                <button
+                  type="button"
+                  onClick={() => !readOnly && setExtensionAvailable(v => !v)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${extensionAvailable ? 'bg-accent' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${extensionAvailable ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              {extensionAvailable && (
+                <>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Fee (points)</p>
+                    <DecimalInput value={extensionFee || 0} onChange={setExtensionFee} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Months</p>
+                    <input type="text" inputMode="numeric" value={extensionMonths || ''} onChange={e => setExtensionMonths(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Fees */}
+          {/* Fees & Closing Costs */}
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees & Closing Costs</p>
             <div className="grid grid-cols-2 gap-x-6">
@@ -459,87 +512,47 @@ function FinancingScenarioPanel({
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Amount (calc)</p>
-                <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
+                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${Math.round(originationFee).toLocaleString()}</p>
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
-                <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
+              <div className="col-span-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedFees(v => !v)}
+                  className="text-[10px] text-accent hover:text-accent/80 font-semibold"
+                >
+                  {showAdvancedFees ? '▴ Hide advanced fees' : '+ Show advanced fees'}
+                </button>
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
-                <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
-                <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
-                <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
-              </div>
+              {showAdvancedFees && (
+                <>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
+                    <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
+                    <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
+                    <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
+                    <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
+                  </div>
+                </>
+              )}
               <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Closing Costs (calc)</p>
                 <span className="text-sm font-bold text-accent">${Math.round(totalClosingCosts).toLocaleString()}</span>
               </div>
             </div>
           </div>
-
-          {/* Extension */}
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extension Option</p>
-              <button
-                type="button"
-                onClick={() => !readOnly && setExtensionAvailable(v => !v)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${extensionAvailable ? 'bg-accent' : 'bg-gray-200'}`}
-              >
-                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${extensionAvailable ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-            {extensionAvailable && (
-              <div className="grid grid-cols-2 gap-x-6 mt-3">
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Fee (points)</p>
-                  <DecimalInput value={extensionFee || 0} onChange={setExtensionFee} className={iCls} />
-                </div>
-                <div className="py-2">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Months</p>
-                  <input type="text" inputMode="numeric" value={extensionMonths || ''} onChange={e => setExtensionMonths(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Cost of Capital Summary (dark) */}
-          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Total Loan Amount</span>
-                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
-                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Origination Fee</span>
-                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Other Closing Costs</span>
-                <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                <span className="font-semibold text-white">Total Cost of Capital</span>
-                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
-      {/* ── Line of Credit ── */}
+            {/* ── Line of Credit ── */}
       {!!selectedScenario && isLoC && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Line of Credit Terms</p>
@@ -627,27 +640,28 @@ function FinancingScenarioPanel({
       {!!selectedScenario && !isCash && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Investor Assignment</p>
-          <p className="text-[10px] text-gray-400 mb-3">Assign an investor to this deal. Once assigned, this deal will appear in their Investor Portal with the numbers below.</p>
           <div className="grid grid-cols-2 gap-x-6">
-            <div className="py-2 col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
-                {!readOnly && (
-                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
-                    + Add New Investor
-                  </button>
-                )}
+            {!isHardMoney && (
+              <div className="py-2 col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
+                  {!readOnly && (
+                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
+                      + Add New Investor
+                    </button>
+                  )}
+                </div>
+                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                  <option value="">— No Investor —</option>
+                  {investor && !investorList.find(i => i.name === investor) && (
+                    <option value={investor}>{investor}</option>
+                  )}
+                  {investorList.map(inv => (
+                    <option key={inv.id} value={inv.name}>{inv.name}</option>
+                  ))}
+                </select>
               </div>
-              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
-                <option value="">— No Investor —</option>
-                {investor && !investorList.find(i => i.name === investor) && (
-                  <option value={investor}>{investor}</option>
-                )}
-                {investorList.map(inv => (
-                  <option key={inv.id} value={inv.name}>{inv.name}</option>
-                ))}
-              </select>
-            </div>
+            )}
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
               <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
@@ -661,16 +675,6 @@ function FinancingScenarioPanel({
                 <option>Pooled</option>
               </select>
             </div>
-            {investorReturnType === 'Profit Split %' && (
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
-                <input type="number" value={investorEquityPct ?? ''} onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 25" className={iCls} readOnly={readOnly} />
-              </div>
-            )}
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
-              <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
-            </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Status</p>
               <select value={investorAssignmentStatus} onChange={e => setInvestorAssignmentStatus(e.target.value)} className={iCls} disabled={readOnly}>
@@ -679,12 +683,21 @@ function FinancingScenarioPanel({
                 <option>Returned</option>
               </select>
             </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
+              <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
+            </div>
+            {!isHardMoney && investorReturnType === 'Profit Split %' && (
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
+                <input type="number" value={investorEquityPct ?? ''} onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 25" className={iCls} readOnly={readOnly} />
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── Capital Stack ── */}
-      <CapitalStackModule deal={deal} readOnly={readOnly} />
+      
     </div>
   );
 }
