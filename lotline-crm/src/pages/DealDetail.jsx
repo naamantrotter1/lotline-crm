@@ -276,7 +276,7 @@ function FinancingScenarioPanel({
   const arvVal = arv ?? deal.arv ?? 0;
 
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const effectiveLoanAmount = loanAmountOverride || allIn || totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
   const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
   const monthlyInterestHm = effectiveLoanAmount * (interestRate / 100) / 12;
@@ -465,7 +465,7 @@ function FinancingScenarioPanel({
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
                 <input
                   type="number"
-                  value={loanAmountOverride || totalLent}
+                  value={loanAmountOverride || allIn || totalLent}
                   onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
                   onFocus={e => e.target.select()}
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
@@ -743,7 +743,7 @@ function OverviewTab({
 
   // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const effectiveLoanAmount = loanAmountOverride || allIn || totalLent;
   const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
   const originationFee = originationFeeType === 'percentage'
     ? effectiveLoanAmount * (originationFeePct / 100)
@@ -2844,7 +2844,7 @@ function DealDetailContent({ deal }) {
     : null;
   const isHardMoneyMain = activeFinancingMain === 'Hard Money Loan' || activeFinancingMain === 'Hard Money (Land + Home)';
   const totalLentMain = (costs?.land || 0) + (costs?.mobileHome || 0);
-  const effectiveLoanMain = loanAmountOverride || totalLentMain;
+  const effectiveLoanMain = loanAmountOverride || allIn || totalLentMain;
   const monthlyInterestMain = effectiveLoanMain * (interestRate / 100) / 12;
   const originationFeeMain = originationFeeType === 'percentage'
     ? effectiveLoanMain * (originationFeePct / 100)
