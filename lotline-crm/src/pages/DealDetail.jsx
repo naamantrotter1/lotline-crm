@@ -499,13 +499,7 @@ function FinancingScenarioPanel({
                   </div>
                 </>
               )}
-            </div>
-          </div>
-
-          {/* Fees & Closing Costs */}
-          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees & Closing Costs</p>
-            <div className="grid grid-cols-2 gap-x-6">
+              <div className="col-span-2 border-t border-gray-100 my-3" />
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Fee (%)</p>
                 <DecimalInput value={originationFeePct} onChange={setOriginationFeePct} className={iCls} />
