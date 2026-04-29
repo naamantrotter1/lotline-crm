@@ -28,7 +28,7 @@ const DUMMY_PARTNERSHIPS = [
 // ── Empty forms ────────────────────────────────────────────────────────────
 const COST_FIELDS = [
   { key: 'land',         label: 'Land' },
-  { key: 'mobileHome',   label: 'Mobile Home' },
+  { key: 'mobileHome',   label: 'Manufactured Home' },
   { key: 'hudEngineer',  label: 'HUD Engineer' },
   { key: 'percTest',     label: 'Perc Test / Permit' },
   { key: 'survey',       label: 'Land Survey' },

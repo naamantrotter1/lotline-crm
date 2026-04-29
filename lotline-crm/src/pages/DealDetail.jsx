@@ -92,7 +92,7 @@ const COST_FIELDS = [
   { key: 'land',         label: 'Land / Purchase Price' },
   { key: 'percTest',     label: 'Perc Test / Permit' },
   { key: 'survey',       label: 'Land Survey' },
-  { key: 'mobileHome',   label: 'Mobile Home' },
+  { key: 'mobileHome',   label: 'Manufactured Home' },
   { key: 'clearLand',    label: 'Land Clearing' },
   { key: 'septic',       label: 'Septic' },
   { key: 'water',        label: 'Well' },

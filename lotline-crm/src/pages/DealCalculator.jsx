@@ -279,7 +279,7 @@ const costFields = [
   { key: 'constructionAuth',  label: 'Construction Authorization' },
   { key: 'improvementPermit', label: 'Improvement Permit' },
   { key: 'wellPermit',        label: 'Well Permit' },
-  { key: 'mobileHome',        label: 'Mobile Home' },
+  { key: 'mobileHome',        label: 'Manufactured Home' },
   { key: 'landClearing',      label: 'Land Clearing' },
   { key: 'roughGrade',        label: 'Rough Grade' },
   { key: 'septic',            label: 'Septic' },
