@@ -378,8 +378,23 @@ function FinancingScenarioPanel({
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
             <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2 col-span-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Lender Name</p>
-                <input type="text" value={lenderName} onChange={e => setLenderName(e.target.value)} placeholder="e.g. Low Tide Private Lending" className={iCls} readOnly={readOnly} />
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</p>
+                  {!readOnly && (
+                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
+                      + Add New Investor
+                    </button>
+                  )}
+                </div>
+                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                  <option value="">— Select Lender —</option>
+                  {investor && !investorList.find(i => i.name === investor) && (
+                    <option value={investor}>{investor}</option>
+                  )}
+                  {investorList.map(inv => (
+                    <option key={inv.id} value={inv.name}>{inv.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
