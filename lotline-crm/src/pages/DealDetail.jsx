@@ -2216,8 +2216,8 @@ function DealDetailContent({ deal }) {
   const [holdPeriod, setHoldPeriod] = useState(sd.holdPeriod ?? deal?.holdingMonths ?? 6);
   const [monthlyHoldCost, setMonthlyHoldCost] = useState(sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
   const [profitSharePct, setProfitSharePct] = useState(sd.profitSharePct ?? (deal?.investor === 'Atium Build Group LLC' ? 5 : 0));
-  const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
-  const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
+  const [capitalDeployedDate, setCapitalDeployedDate] = useState(deal?.capitalDeployedDate ?? '');
+  const [capitalReturnedDate, setCapitalReturnedDate] = useState(deal?.capitalReturnedDate ?? '');
   const [investorCapitalContributed, setInvestorCapitalContributed] = useState(deal?.investorCapitalContributed ?? null);
   const [investorEquityPct, setInvestorEquityPct] = useState(deal?.investorEquityPct ?? null);
   const [projectedPayoutDate, setProjectedPayoutDate] = useState(deal?.projectedPayoutDate ?? null);
@@ -2422,6 +2422,8 @@ function DealDetailContent({ deal }) {
           ? investorProfitSplitPct
           : investorEquityPct,
       projectedPayoutDate,
+      capitalDeployedDate: capitalDeployedDate || null,
+      capitalReturnedDate: capitalReturnedDate || null,
       financingScenarioType,
       // Pack all scenario-specific inputs so they survive page reload
       scenarioData: {
@@ -2478,6 +2480,7 @@ function DealDetailContent({ deal }) {
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate,
+    capitalDeployedDate, capitalReturnedDate,
     loanAmountOverride, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
