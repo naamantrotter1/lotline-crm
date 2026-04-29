@@ -228,64 +228,56 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
           {/* All rows in ONE scroll container — keeps all 3 columns in sync */}
           <div className="flex-1 overflow-y-auto">
             <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 9rem' }}>
-              {grouped.map(({ group, lines: gl }) => (
-                <React.Fragment key={group}>
-                  {/* Group header spans all 3 columns */}
-                  <div className="col-span-3 bg-gray-50 border-y border-gray-100 px-3 py-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
-                  </div>
-                  {gl.map(l => {
-                    const resolvedVal = resolveActual(l);
-                    return (
-                      <React.Fragment key={l.line_id}>
-                        {/* Actual cell */}
-                        <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center gap-1.5">
-                          <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
-                          <div className="w-28 flex-shrink-0">
-                            <NumCell
-                              value={resolvedVal}
-                              muted={!l.actual_overridden}
-                              onCommit={v => handleActual(l.line_id, v)}
-                              disabled={!canEditAct}
-                            />
-                          </div>
-                          {l.actual_overridden && canEditAct ? (
-                            <button
-                              onClick={() => handleReset(l.line_id)}
-                              title="Click to reset to estimated"
-                              className="flex-shrink-0 p-0.5 rounded text-green-500 hover:text-red-400 transition-colors"
-                            >
-                              <CheckCircle2 size={13} />
-                            </button>
-                          ) : l.actual_overridden ? (
-                            <CheckCircle2
-                              size={13}
-                              className="flex-shrink-0 text-green-500"
-                              title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
-                            />
-                          ) : (
-                            <span className="w-[17px] flex-shrink-0" />
-                          )}
-                        </div>
-                        {/* Estimated cell */}
-                        <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center justify-end gap-2">
-                          <div className="w-28 flex-shrink-0">
-                            <NumCell
-                              value={Number(l.estimated_amount ?? 0)}
-                              onCommit={v => handleEstimated(l.line_id, v)}
-                              disabled={!canEditEst}
-                            />
-                          </div>
-                        </div>
-                        {/* Difference cell */}
-                        <div className="border-b border-gray-50 px-1 py-1.5 flex items-center justify-end">
-                          <DiffCell line={l} />
-                        </div>
-                      </React.Fragment>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+              {visibleLines.map(l => {
+                const resolvedVal = resolveActual(l);
+                return (
+                  <React.Fragment key={l.line_id}>
+                    {/* Actual cell */}
+                    <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center gap-1.5">
+                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                      <div className="w-28 flex-shrink-0">
+                        <NumCell
+                          value={resolvedVal}
+                          muted={!l.actual_overridden}
+                          onCommit={v => handleActual(l.line_id, v)}
+                          disabled={!canEditAct}
+                        />
+                      </div>
+                      {l.actual_overridden && canEditAct ? (
+                        <button
+                          onClick={() => handleReset(l.line_id)}
+                          title="Click to reset to estimated"
+                          className="flex-shrink-0 p-0.5 rounded text-green-500 hover:text-red-400 transition-colors"
+                        >
+                          <CheckCircle2 size={13} />
+                        </button>
+                      ) : l.actual_overridden ? (
+                        <CheckCircle2
+                          size={13}
+                          className="flex-shrink-0 text-green-500"
+                          title={`Overridden ${l.actual_overridden_at ? new Date(l.actual_overridden_at).toLocaleDateString() : ''}`}
+                        />
+                      ) : (
+                        <span className="w-[17px] flex-shrink-0" />
+                      )}
+                    </div>
+                    {/* Estimated cell */}
+                    <div className="border-b border-r border-gray-50 px-3 py-1.5 flex items-center justify-end gap-2">
+                      <div className="w-28 flex-shrink-0">
+                        <NumCell
+                          value={Number(l.estimated_amount ?? 0)}
+                          onCommit={v => handleEstimated(l.line_id, v)}
+                          disabled={!canEditEst}
+                        />
+                      </div>
+                    </div>
+                    {/* Difference cell */}
+                    <div className="border-b border-gray-50 px-1 py-1.5 flex items-center justify-end">
+                      <DiffCell line={l} />
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
 
@@ -334,33 +326,26 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
           <div>
             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Actual Expenses</h4>
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              {grouped.map(({ group, lines: gl }) => (
-                <div key={group}>
-                  <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+              {visibleLines.map(l => (
+                <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
+                  <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                  <div className="w-24 flex-shrink-0">
+                    <NumCell
+                      value={resolveActual(l)}
+                      muted={!l.actual_overridden}
+                      onCommit={v => handleActual(l.line_id, v)}
+                      disabled={!canEditAct}
+                    />
                   </div>
-                  {gl.map(l => (
-                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center gap-1.5">
-                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
-                      <div className="w-24 flex-shrink-0">
-                        <NumCell
-                          value={resolveActual(l)}
-                          muted={!l.actual_overridden}
-                          onCommit={v => handleActual(l.line_id, v)}
-                          disabled={!canEditAct}
-                        />
-                      </div>
-                      {l.actual_overridden && canEditAct ? (
-                        <button onClick={() => handleReset(l.line_id)} title="Click to reset to estimated" className="p-0.5 rounded text-green-500 hover:text-red-400 transition-colors flex-shrink-0">
-                          <CheckCircle2 size={13} />
-                        </button>
-                      ) : l.actual_overridden ? (
-                        <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
-                      ) : (
-                        <span className="w-[17px] flex-shrink-0" />
-                      )}
-                    </div>
-                  ))}
+                  {l.actual_overridden && canEditAct ? (
+                    <button onClick={() => handleReset(l.line_id)} title="Click to reset to estimated" className="p-0.5 rounded text-green-500 hover:text-red-400 transition-colors flex-shrink-0">
+                      <CheckCircle2 size={13} />
+                    </button>
+                  ) : l.actual_overridden ? (
+                    <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                  ) : (
+                    <span className="w-[17px] flex-shrink-0" />
+                  )}
                 </div>
               ))}
               <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
@@ -374,19 +359,12 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
           <div>
             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Estimated Expenses</h4>
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              {grouped.map(({ group, lines: gl }) => (
-                <div key={group}>
-                  <div className="bg-gray-50 border-y border-gray-100 px-3 py-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group}</span>
+              {visibleLines.map(l => (
+                <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
+                  <div className="w-24 flex-shrink-0">
+                    <NumCell value={Number(l.estimated_amount ?? 0)} onCommit={v => handleEstimated(l.line_id, v)} disabled={!canEditEst} />
                   </div>
-                  {gl.map(l => (
-                    <div key={l.line_id} className="border-b border-gray-50 last:border-0 px-3 py-1.5 flex items-center justify-between gap-2">
-                      <span className="text-[12px] text-gray-600 flex-1 min-w-0 truncate">{l.label}</span>
-                      <div className="w-24 flex-shrink-0">
-                        <NumCell value={Number(l.estimated_amount ?? 0)} onCommit={v => handleEstimated(l.line_id, v)} disabled={!canEditEst} />
-                      </div>
-                    </div>
-                  ))}
                 </div>
               ))}
               <div className="bg-[#1a2332] text-white px-3 py-2 flex justify-between">
