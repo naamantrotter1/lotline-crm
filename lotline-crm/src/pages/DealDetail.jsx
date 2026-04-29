@@ -2329,6 +2329,29 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (deal?.projectedPayoutDate && !projectedPayoutDate) setProjectedPayoutDate(deal.projectedPayoutDate);
   }, [deal?.projectedPayoutDate]); // eslint-disable-line
+  // Self-correct financing state when deal prop updates after initial mount
+  useEffect(() => {
+    if (deal?.financing && !financing) setFinancing(deal.financing);
+  }, [deal?.financing]); // eslint-disable-line
+  // Self-correct selectedScenario when deal data arrives after initial mount.
+  // Handles the race condition where the component mounts before LS/Supabase
+  // data is available and useState initializes to '' (empty), then deal.financing
+  // arrives via loadAllDeals — without this effect the dropdown stays blank.
+  useEffect(() => {
+    if (selectedScenario) return; // user already picked a scenario — don't overwrite
+    const f = deal?.financing || '';
+    const exact = FINANCING_SCENARIOS.find(s => s.financingType === f);
+    let derived = '';
+    if (exact) derived = exact.id;
+    else if (f === 'Hard Money') derived = 'hard-money-loan';
+    else if (f === 'Cash') derived = 'cash';
+    else if (f === 'Line of Credit') derived = 'loc';
+    else if (deal?.financingScenarioType) {
+      const byDb = FINANCING_SCENARIOS.find(s => s.dbType === deal.financingScenarioType);
+      if (byDb) derived = byDb.id;
+    }
+    if (derived) setSelectedScenario(derived);
+  }, [deal?.financing, deal?.financingScenarioType]); // eslint-disable-line
 
   // Load investors from Supabase for Investor Assignment dropdown
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);

@@ -295,19 +295,17 @@ export async function loadAllDeals(orgIds) {
         // Financing/scenario fields: LS is always authoritative if it has been saved.
         // scenarioData is only written from the frontend so LS is the most reliable source.
         // We only fall back to Supabase if LS has no value at all.
-        // capitalDeployedDate / capitalReturnedDate are also included here (not in the
-        // lsFresh block) because they were missing from the deals table until migration 087,
-        // meaning Supabase writes silently failed and the values were lost after the
-        // 30-second LS-fresh window expired.
-        ...( fromLS._lsSavedAt && {
+        // The condition is intentionally broad: apply LS-prefer whenever LS has
+        // _lsSavedAt OR any financing/investor field. This handles the edge case
+        // where _lsSavedAt is stripped by lsSet(toCache) on a reload (e.g. when
+        // the deal just moved from unsynced→Supabase but LS was not yet re-stamped)
+        // while the user's financing data is still correctly in LS.
+        ...((fromLS._lsSavedAt || fromLS.financing || fromLS.financingScenarioType || fromLS.scenarioData || fromLS.investor) && {
           financing:                   fromLS.financing                   ?? fromSupabase.financing,
           financingScenarioType:        fromLS.financingScenarioType        ?? fromSupabase.financingScenarioType,
           scenarioData:                 fromLS.scenarioData                 ?? fromSupabase.scenarioData,
           capitalDeployedDate:          fromLS.capitalDeployedDate          ?? fromSupabase.capitalDeployedDate,
           capitalReturnedDate:          fromLS.capitalReturnedDate          ?? fromSupabase.capitalReturnedDate,
-          // Investor assignment fields — also previously failing to write to Supabase due to
-          // missing columns (or silently dropped). Move to permanent block so they are never
-          // overwritten by a stale Supabase null after the 30-second lsFresh window expires.
           investor:                     fromLS.investor                     ?? fromSupabase.investor,
           investorCapitalContributed:   fromLS.investorCapitalContributed   ?? fromSupabase.investorCapitalContributed,
           investorEquityPct:            fromLS.investorEquityPct            ?? fromSupabase.investorEquityPct,
