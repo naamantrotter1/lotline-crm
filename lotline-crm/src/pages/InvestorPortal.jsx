@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2 } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
+import { archiveInvestor } from '../lib/investorPortalData';
 import { supabase } from '../lib/supabase';
 
 const INVESTOR_COLORS = {
@@ -678,8 +679,9 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
 }
 
 // ── Tab: Directory ───────────────────────────────────────────────────────────
-function DirectoryTab({ investors }) {
-  const contacts = investors.filter(i => i.contact && i.name !== 'Cash');
+function DirectoryTab({ investors, onDelete }) {
+  const [confirmId, setConfirmId] = useState(null);
+  const allInvestors = investors.filter(i => i.name !== 'Cash');
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -691,10 +693,11 @@ function DirectoryTab({ investors }) {
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
+            <th className="px-4 py-3" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
-          {contacts.map(inv => (
+          {allInvestors.map(inv => (
             <tr key={inv.id} className="hover:bg-gray-50">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -722,6 +725,29 @@ function DirectoryTab({ investors }) {
               <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
               <td className="px-4 py-3">
                 <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                {confirmId === inv.id ? (
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-xs text-gray-500">Remove investor?</span>
+                    <button
+                      onClick={() => { onDelete(inv.id); setConfirmId(null); }}
+                      className="text-xs font-semibold text-red-500 hover:text-red-700"
+                    >Yes</button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(inv.id)}
+                    className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
+                    title="Remove investor"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -1123,7 +1149,10 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} />}
+        {activeTab === 'directory' && <DirectoryTab investors={investors} onDelete={async (id) => {
+          await archiveInvestor(id);
+          setInvestors(prev => prev.filter(i => i.id !== id));
+        }} />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
 

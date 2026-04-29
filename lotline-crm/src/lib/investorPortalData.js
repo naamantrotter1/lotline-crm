@@ -391,10 +391,18 @@ export async function logImpersonationEnd(logId) {
 // ─────────────────────────────────────────────────────────────
 
 export async function fetchAllInvestors(orgId) {
-  let q = supabase.from('investors').select('*').order('name');
+  let q = supabase.from('investors').select('*').neq('is_archived', true).order('name');
   if (orgId) q = q.eq('organization_id', orgId);
   const { data, error } = await q;
   return { investors: data ?? [], error };
+}
+
+export async function archiveInvestor(id) {
+  const { error } = await supabase
+    .from('investors')
+    .update({ is_archived: true })
+    .eq('id', id);
+  return { error };
 }
 
 export async function upsertInvestor(investor) {
