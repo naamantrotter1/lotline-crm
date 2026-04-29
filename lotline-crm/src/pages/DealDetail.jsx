@@ -218,6 +218,7 @@ function DecimalInput({ value, onChange, className }) {
 function FinancingScenarioPanel({
   deal, costs, arv,
   selectedScenario, applyScenario,
+  financingSaveStatus,
   // General loan terms
   lenderName, setLenderName,
   interestRate, setInterestRate,
@@ -300,7 +301,14 @@ function FinancingScenarioPanel({
 
   return (
     <div className="space-y-4">
-      <SectionHeader>Financing Scenario</SectionHeader>
+      <div className="flex items-end justify-between border-b border-gray-200 pb-1.5 mb-3">
+        <h3 className="text-sm font-semibold text-[#1a2332] uppercase tracking-wide leading-none">Financing Scenario</h3>
+        <span className="text-[10px] leading-none">
+          {financingSaveStatus === 'saving' && <span className="text-gray-400">Saving...</span>}
+          {financingSaveStatus === 'saved'  && <span className="text-green-500">Saved ✓</span>}
+          {financingSaveStatus === 'error'  && <span className="text-red-500">Save failed — retry?</span>}
+        </span>
+      </div>
 
       {/* Scenario selector */}
       <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
@@ -2297,6 +2305,164 @@ function DealDetailContent({ deal }) {
   const [investorReturnType, setInvestorReturnType] = useState(sd.investorReturnType ?? 'Interest Only');
   const [investorAssignmentStatus, setInvestorAssignmentStatus] = useState(sd.investorAssignmentStatus ?? 'Committed');
 
+  // ── deal_financing_scenarios table sync ───────────────────────────────────────
+  // Primary persistence layer for the Financing tab. Reads/writes to a dedicated
+  // Supabase table so data survives hard refresh and syncs in real-time for all
+  // users viewing the same deal.
+
+  // Cache of all saved scenario rows keyed by scenario_type (e.g. 'hard_money_loan')
+  const financingSavedRef = useRef({});
+  const [financingSaveStatus, setFinancingSaveStatus] = useState('idle'); // 'idle'|'saving'|'saved'|'error'
+
+  // Apply a DB row from deal_financing_scenarios into local React state
+  function applyFinancingRow(row) {
+    if (!row) return;
+    if (row.lender_name != null) setLenderName(row.lender_name);
+    if (row.annual_interest_rate != null) setInterestRate(Number(row.annual_interest_rate));
+    if (row.hold_period_months != null) setHoldPeriod(Number(row.hold_period_months));
+    if (row.total_loan_amount != null) setLoanAmountOverride(Number(row.total_loan_amount));
+    if (row.capital_deployed_date != null) setCapitalDeployedDate(row.capital_deployed_date);
+    if (row.capital_returned_date != null) setCapitalReturnedDate(row.capital_returned_date);
+    if (row.extension_option_enabled != null) setExtensionAvailable(row.extension_option_enabled);
+    if (row.extension_period_months != null) setExtensionMonths(Number(row.extension_period_months));
+    if (row.extension_fee_percent != null) setExtensionFee(Number(row.extension_fee_percent));
+    if (row.origination_fee_percent != null) setOriginationFeePct(Number(row.origination_fee_percent));
+    if (row.servicing_fee != null) setServicingFeeFlat(Number(row.servicing_fee));
+    if (row.draw_fee_per_draw != null) setDrawFeeHm(Number(row.draw_fee_per_draw));
+    if (row.underwriting_admin_fee != null) setUnderwritingFee(Number(row.underwriting_admin_fee));
+    if (row.attorney_doc_prep_fee != null) setAttorneyDocFee(Number(row.attorney_doc_prep_fee));
+    if (row.cash_source != null) setCashSource(row.cash_source);
+    if (row.credit_limit != null) setCreditLimit(Number(row.credit_limit));
+    if (row.draw_amount != null) setDrawAmount(Number(row.draw_amount));
+    if (row.annual_fee_pct != null) setAnnualFeePct(Number(row.annual_fee_pct));
+    if (row.investor_name != null) setInvestor(row.investor_name);
+    if (row.investor_capital_contributed != null) setInvestorCapitalContributed(Number(row.investor_capital_contributed));
+    if (row.investor_return_type != null) setInvestorReturnType(row.investor_return_type);
+    if (row.investor_projected_payout_date != null) setProjectedPayoutDate(row.investor_projected_payout_date);
+    if (row.investor_assignment_status != null) setInvestorAssignmentStatus(row.investor_assignment_status);
+    if (row.investor_profit_split_pct != null) setInvestorProfitSplitPct(Number(row.investor_profit_split_pct));
+  }
+
+  // Build the upsert row for the current scenario
+  function buildFinancingRow(dbType) {
+    return {
+      deal_id: String(deal.id),
+      organization_id: activeOrgId,
+      scenario_type: dbType,
+      lender_name: lenderName || null,
+      annual_interest_rate: interestRate || null,
+      hold_period_months: holdPeriod || null,
+      total_loan_amount: loanAmountOverride || null,
+      capital_deployed_date: capitalDeployedDate || null,
+      capital_returned_date: capitalReturnedDate || null,
+      extension_option_enabled: extensionAvailable,
+      extension_period_months: extensionMonths || null,
+      extension_fee_percent: extensionFee || null,
+      origination_fee_percent: originationFeePct || null,
+      servicing_fee: servicingFeeFlat || null,
+      draw_fee_per_draw: drawFeeHm || null,
+      underwriting_admin_fee: underwritingFee || null,
+      attorney_doc_prep_fee: attorneyDocFee || null,
+      cash_source: cashSource || null,
+      credit_limit: creditLimit || null,
+      draw_amount: drawAmount || null,
+      annual_fee_pct: annualFeePct || null,
+      investor_name: investor || null,
+      investor_capital_contributed: investorCapitalContributed ?? null,
+      investor_return_type: investorReturnType || null,
+      investor_projected_payout_date: projectedPayoutDate || null,
+      investor_assignment_status: investorAssignmentStatus || null,
+      investor_profit_split_pct: investorProfitSplitPct || null,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  // Load all saved scenarios for this deal on mount
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    supabase
+      .from('deal_financing_scenarios')
+      .select('*')
+      .eq('deal_id', String(deal.id))
+      .then(({ data, error }) => {
+        if (error) { console.warn('[financing-load]', error.message); return; }
+        if (!data || data.length === 0) return;
+        // Cache all rows keyed by scenario_type
+        financingSavedRef.current = Object.fromEntries(data.map(r => [r.scenario_type, r]));
+        // Apply the currently-selected scenario's saved values
+        const currentDbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
+        if (currentDbType && financingSavedRef.current[currentDbType]) {
+          applyFinancingRow(financingSavedRef.current[currentDbType]);
+        }
+      });
+  }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save financing fields to deal_financing_scenarios on any change
+  const financingAutoSaveMounted = useRef(false);
+  useEffect(() => {
+    if (!financingAutoSaveMounted.current) { financingAutoSaveMounted.current = true; return; }
+    if (!supabase || !deal?.id || !selectedScenario) return;
+    if (!canEdit && !isAgent) return;
+
+    const dbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
+    if (!dbType) return;
+
+    setFinancingSaveStatus('saving');
+    let cancelled = false;
+    const row = buildFinancingRow(dbType);
+
+    supabase
+      .from('deal_financing_scenarios')
+      .upsert(row, { onConflict: 'deal_id,scenario_type' })
+      .then(({ error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('[financing-save]', error.message);
+          setFinancingSaveStatus('error');
+          setTimeout(() => { if (!cancelled) setFinancingSaveStatus('idle'); }, 4000);
+        } else {
+          financingSavedRef.current[dbType] = { ...row };
+          setFinancingSaveStatus('saved');
+          setTimeout(() => { if (!cancelled) setFinancingSaveStatus('idle'); }, 2000);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    selectedScenario,
+    lenderName, interestRate, holdPeriod, loanAmountOverride,
+    capitalDeployedDate, capitalReturnedDate,
+    extensionAvailable, extensionMonths, extensionFee,
+    originationFeePct, servicingFeeFlat, drawFeeHm, underwritingFee, attorneyDocFee,
+    cashSource, creditLimit, drawAmount, annualFeePct,
+    investor, investorCapitalContributed, investorReturnType, projectedPayoutDate,
+    investorAssignmentStatus, investorProfitSplitPct,
+  ]);
+
+  // Real-time: update state when another user saves financing changes for this deal
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    const ch = supabase
+      .channel(`deal-financing-${deal.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'deal_financing_scenarios',
+        filter: `deal_id=eq.${deal.id}`,
+      }, payload => {
+        const row = payload.new;
+        if (!row) return;
+        financingSavedRef.current[row.scenario_type] = row;
+        // Only update UI if this matches the currently-selected scenario
+        const currentDbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
+        if (row.scenario_type === currentDbType) {
+          applyFinancingRow(row);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [deal?.id, selectedScenario]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Financing state self-correction ───────────────────────────────────────────
   // When deal prop updates (e.g. loadAllDeals resolves with Supabase data after
   // initial LS-cache mount), re-sync financing fields if state is still empty.
@@ -2411,6 +2577,10 @@ function DealDetailContent({ deal }) {
     setFinancingScenarioType(scenario?.dbType || null);
     // Save immediately so hard-refresh preserves the new scenario before React re-renders
     saveNow({ financing: scenario?.financingType || '', financingScenarioType: scenario?.dbType || null });
+    // Restore previously saved values for this scenario (if any were saved)
+    if (scenario?.dbType && financingSavedRef.current[scenario.dbType]) {
+      applyFinancingRow(financingSavedRef.current[scenario.dbType]);
+    }
   }
 
   async function saveCCPToStack() {
@@ -3154,6 +3324,7 @@ function DealDetailContent({ deal }) {
           <FinancingScenarioPanel
             deal={deal} costs={costs} arv={arv}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
+            financingSaveStatus={financingSaveStatus}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
             holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
