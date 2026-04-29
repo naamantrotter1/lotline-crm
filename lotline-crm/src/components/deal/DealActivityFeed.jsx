@@ -584,6 +584,8 @@ function EventCard({
     const status = m.status || 'sent';
     const isFail = status === 'failed';
     const toStr  = m.to_name ? `${m.to_name} (${m.to_email})` : (m.to_email || '');
+    const emailReplies = replies.filter(r => r.metadata?.direction === 'received' || r.note_type === 'email_reply');
+    const isOwnEmail = event._dbId && currentUserId && event.author_id === currentUserId;
     return (
       <div className="flex gap-3" id={`activity-${event.id}`}>
         <div className="w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 mt-0.5 bg-indigo-50 text-indigo-600 border-indigo-200">
@@ -599,7 +601,18 @@ function EventCard({
                 {isFail ? 'Failed' : 'Sent'}
               </span>
             </div>
-            <span className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0">{timeAgo(event.date)}</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-[11px] text-gray-400 whitespace-nowrap">{timeAgo(event.date)}</span>
+              {isOwnEmail && onDeleteNote && !readOnly && (
+                <button
+                  onClick={() => onDeleteNote(event.id)}
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+                  title="Delete email"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
           </div>
           {toStr && (
             <p className="text-[11px] text-gray-500 mb-1">To: {toStr}</p>
@@ -611,6 +624,47 @@ function EventCard({
             {m.date && <span>{m.date} · </span>}
             {m.sent_by && <span>Sent by <span className="font-medium text-gray-500">{m.sent_by}</span></span>}
           </p>
+
+          {/* Gmail replies */}
+          {emailReplies.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-50">
+              <button
+                onClick={() => setShowReplies(v => !v)}
+                className="flex items-center gap-1 text-[11px] text-accent hover:text-accent/80 transition-colors font-medium"
+              >
+                <MessageSquare size={11} />
+                {showReplies
+                  ? `Hide ${emailReplies.length} ${emailReplies.length === 1 ? 'reply' : 'replies'}`
+                  : `${emailReplies.length} ${emailReplies.length === 1 ? 'reply' : 'replies'}`
+                }
+              </button>
+              {showReplies && (
+                <div className="mt-2 space-y-2 pl-2 border-l-2 border-indigo-100">
+                  {emailReplies.map(reply => {
+                    const rm       = reply.metadata || {};
+                    const fromName = reply.author_name || rm.from || 'Unknown';
+                    return (
+                      <div key={reply.id} className="flex gap-2">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-indigo-50 border border-indigo-100">
+                          <Mail size={10} className="text-indigo-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-[12px] font-semibold text-gray-800">{fromName}</span>
+                            <span className="text-[10px] text-indigo-400 font-medium">replied</span>
+                            <span className="text-[10px] text-gray-400">{timeAgo(reply.created_at)}</span>
+                          </div>
+                          {rm.snippet && (
+                            <p className="text-[12px] text-gray-500 leading-relaxed mt-0.5 italic">{rm.snippet}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -930,6 +984,21 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshR
     loadDbNotesRef.current = loadDbNotes;
     if (refreshRef) refreshRef.current = loadDbNotes;
   }, [loadDbNotes, refreshRef]);
+
+  // ── Periodic Gmail reply sync (every 2 min while page is open) ─────────────
+  useEffect(() => {
+    if (!deal?.id || !activeOrgId) return;
+    const sync = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      fetch(`/api/sync-gmail-replies?dealId=${encodeURIComponent(deal.id)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }).catch(() => {}); // fire-and-forget; realtime handles the refresh
+    };
+    sync(); // run immediately on mount
+    const interval = setInterval(sync, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [deal?.id, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   useEffect(() => {
