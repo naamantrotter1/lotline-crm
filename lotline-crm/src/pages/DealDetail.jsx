@@ -3284,7 +3284,7 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
-            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} readOnly={fromInvestorPortal || !canEdit} />
+            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} onCostSave={() => fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); })} readOnly={fromInvestorPortal || !canEdit} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (

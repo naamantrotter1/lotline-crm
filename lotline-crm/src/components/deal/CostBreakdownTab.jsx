@@ -129,7 +129,7 @@ function DiffCell({ line }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, readOnly = false }) {
+export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostSave, readOnly = false }) {
   const { profile } = useAuth();
   const { can }     = usePermissions();
 
@@ -153,7 +153,8 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, readOnl
     // Optimistic update
     setLines(prev => prev.map(l => l.line_id === lineId ? { ...l, estimated_amount: amount } : l));
     await updateEstimated(lineId, amount, profile?.id);
-  }, [profile?.id]);
+    onCostSave?.();
+  }, [profile?.id, onCostSave]);
 
   // ── Actual override ─────────────────────────────────────────────────────────
   const handleActual = useCallback(async (lineId, amount) => {
@@ -163,7 +164,8 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, readOnl
         : l
     ));
     await overrideActual(lineId, amount, profile?.id);
-  }, [profile?.id]);
+    onCostSave?.();
+  }, [profile?.id, onCostSave]);
 
   // ── Reset to mirror ─────────────────────────────────────────────────────────
   const handleReset = useCallback(async (lineId) => {
@@ -173,7 +175,8 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, readOnl
         : l
     ));
     await resetActualToMirror(lineId);
-  }, []);
+    onCostSave?.();
+  }, [onCostSave]);
 
   const visibleLines = lines.filter(l => !HIDDEN_KEYS.has(l.category_key));
   const grouped = groupLines(visibleLines);
