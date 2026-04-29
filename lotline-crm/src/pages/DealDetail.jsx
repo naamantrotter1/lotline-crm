@@ -32,7 +32,7 @@ import AddEventModal from '../components/deal/AddEventModal';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
-import { fetchCostSummary } from '../lib/costBreakdownData';
+import { fetchCostSummary, resolveActual } from '../lib/costBreakdownData';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
@@ -2818,17 +2818,31 @@ function DealDetailContent({ deal }) {
     }
   }, [activeTab, deal?.id]);
 
-  // Realtime: re-fetch cost summary whenever any cost line for this deal changes
+  // Realtime: update All-In instantly when any cost line changes, then confirm with re-fetch
   useEffect(() => {
     if (!deal?.id) return;
     const ch = supabase
       .channel(`deal-detail-cost-${deal.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines',
           filter: `deal_id=eq.${deal.id}` },
-        () => { fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); }); })
+        (payload) => {
+          // Optimistic immediate update: apply the delta from the changed row
+          // so the All-In stat updates the instant the change is saved, not after a round-trip.
+          const newVal = resolveActual(payload.new);
+          const oldVal = resolveActual(payload.old);
+          const delta = payload.eventType === 'DELETE' ? -oldVal
+                      : payload.eventType === 'INSERT' ? newVal
+                      : newVal - oldVal;
+          setCostSummary(prev => prev
+            ? { ...prev, total_actual: Math.max(0, Number(prev.total_actual || 0) + delta) }
+            : prev
+          );
+          // Re-fetch the authoritative total from the view to correct any drift
+          fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
+        })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [deal?.id]);
+  }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // allIn: always use total_actual from deal_cost_lines summary (mirrors the cost breakdown tab Total Actual)
   const allIn = costSummary
