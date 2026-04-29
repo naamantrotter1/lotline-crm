@@ -2798,7 +2798,7 @@ function DealDetailContent({ deal }) {
                       localStorage.setItem(lsKey, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
                     } catch {}
                     // Navigate back
-                    if (fromInvestorPortal) navigate('/investor-portal');
+                    if (fromInvestorPortal) navigate('/investors');
                     else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
                     else navigate('/deal-overview');
                   }}

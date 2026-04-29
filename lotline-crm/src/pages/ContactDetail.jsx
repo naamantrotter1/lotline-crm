@@ -584,7 +584,7 @@ function InvestorSummaryCard({ investor }) {
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Investor Profile</p>
         <button
-          onClick={() => navigate('/investor-portal')}
+          onClick={() => navigate('/investors')}
           className="flex items-center gap-1 text-xs text-accent hover:underline"
         >
           View Portal <ExternalLink size={11} />
