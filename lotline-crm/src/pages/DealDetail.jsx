@@ -2268,6 +2268,29 @@ function DealDetailContent({ deal }) {
   const [investorReturnType, setInvestorReturnType] = useState(sd.investorReturnType ?? 'Interest Only');
   const [investorAssignmentStatus, setInvestorAssignmentStatus] = useState(sd.investorAssignmentStatus ?? 'Committed');
 
+  // ── Financing state self-correction ───────────────────────────────────────────
+  // When deal prop updates (e.g. loadAllDeals resolves with Supabase data after
+  // initial LS-cache mount), re-sync financing fields if state is still empty.
+  // This fixes the case where the LS cache was stale/missing and state was
+  // initialized with empty defaults.  If state already has a user-set value,
+  // the condition is false so nothing is overwritten.
+  // The resulting state change also triggers the auto-save, writing the freshly
+  // loaded value back to LS + Supabase to keep everything in sync.
+  useEffect(() => {
+    const v = deal?.scenarioData?.cashSource;
+    if (v && !cashSource) setCashSource(v);
+  }, [deal?.scenarioData?.cashSource]); // eslint-disable-line
+  useEffect(() => {
+    if (deal?.capitalDeployedDate && !capitalDeployedDate) setCapitalDeployedDate(deal.capitalDeployedDate);
+  }, [deal?.capitalDeployedDate]); // eslint-disable-line
+  useEffect(() => {
+    if (deal?.capitalReturnedDate && !capitalReturnedDate) setCapitalReturnedDate(deal.capitalReturnedDate);
+  }, [deal?.capitalReturnedDate]); // eslint-disable-line
+  useEffect(() => {
+    const v = deal?.financingScenarioType;
+    if (v && !financingScenarioType) setFinancingScenarioType(v);
+  }, [deal?.financingScenarioType]); // eslint-disable-line
+
   // Load investors from Supabase for Investor Assignment dropdown
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);
   const [showInvestorPicker, setShowInvestorPicker] = useState(false);
