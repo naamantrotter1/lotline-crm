@@ -115,7 +115,7 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
             </div>
           </div>
           <span className="bg-accent/10 text-accent text-xs font-bold px-2.5 py-1 rounded-full">
-            {investor.activeDeals} {investor.activeDeals === 1 ? 'deal' : 'deals'}
+            {allInvestorDeals.length} {allInvestorDeals.length === 1 ? 'deal' : 'deals'}
           </span>
         </div>
 
