@@ -242,11 +242,10 @@ function InvestorPortalEntry() {
   );
   // Public investor landing page
   if (location.pathname === '/investor') return <InvestorLanding />;
-  // Sub-pages require a session
+  // Sub-pages require a session; any authenticated user can access the investor portal
+  // (investors see their own data; operators can impersonate)
   if (!session) return <Navigate to="/investor" replace />;
-  // Only investors and operators (for impersonation) may access sub-pages
-  if (isInvestor || canEdit || canAdmin) return <InvestorLayout />;
-  return <Navigate to="/dashboard" replace />;
+  return <InvestorLayout />;
 }
 
 /** @deprecated kept for reference */

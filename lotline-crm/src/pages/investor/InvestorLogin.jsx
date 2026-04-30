@@ -81,17 +81,14 @@ export default function InvestorLogin() {
       return;
     }
 
-    // Check account type — operators must use /login, not this portal
+    // Block explicit operator accounts — they must use /login
     const { data: { user } } = await supabase.auth.getUser();
     const { data: profileData } = await supabase
       .from('profiles')
       .select('account_type, role')
       .eq('id', user?.id)
       .single();
-    const isOperatorAccount =
-      profileData?.account_type === 'operator' ||
-      (profileData?.account_type == null && profileData?.role !== 'investor');
-    if (isOperatorAccount) {
+    if (profileData?.account_type === 'operator') {
       await supabase.auth.signOut();
       skipNavRef.current = false;
       setError('This portal is for investors only. LotLine operators sign in at /login.');
