@@ -233,6 +233,12 @@ export default function Login() {
                 Don't have an account?{' '}
                 <a href="/signup" className="text-accent hover:underline font-medium">Sign up free →</a>
               </p>
+              <div className="mt-6 pt-5 border-t border-gray-200 text-center">
+                <p className="text-xs text-gray-400">
+                  Are you an investor?{' '}
+                  <a href="/investor/login" className="text-gray-500 hover:text-accent hover:underline font-medium">Sign in to the investor portal →</a>
+                </p>
+              </div>
             </>
           )}
 

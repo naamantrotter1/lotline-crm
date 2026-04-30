@@ -58,6 +58,8 @@ class DealErrorBoundary extends Component {
     return this.props.children;
   }
 }
+import InvestorLogin from './pages/investor/InvestorLogin';
+import InvestorSignup from './pages/investor/InvestorSignup';
 import Landing from './pages/marketing/Landing';
 import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
@@ -154,12 +156,12 @@ function ProtectedRoute({ children }) {
  * Investors are excluded — they don't own an org.
  */
 function OnboardingGuard({ children }) {
-  const { profile, loading } = useAuth();
+  const { profile, accountType, loading } = useAuth();
   if (loading) return null;
-  const role = profile?.role;
   const needsOnboarding =
     profile &&
-    role !== 'investor' &&
+    accountType !== 'investor' &&
+    profile?.role !== 'investor' &&
     !profile.active_organization_id;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
   return children;
@@ -206,14 +208,38 @@ const INVESTOR_PERMITTED = new Set([
   '/investor/account',
 ]);
 
-/** Gate for investor-only routes: operators can also enter via impersonation */
-function InvestorRoute({ children }) {
+/**
+ * RequireOperator — blocks investor accounts from all CRM routes.
+ * Investors are redirected to /investor/home.
+ * Agents, operators, admins, owners all pass through.
+ */
+function RequireOperator({ children }) {
+  const { accountType, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (accountType === 'investor') return <Navigate to="/investor/home" replace />;
+  return children;
+}
+
+/**
+ * RequireInvestor — wraps /investor/* routes.
+ * Operators who visit these routes are redirected to /dashboard (not blocked — they
+ * use the investor portal for impersonation/preview, so canEdit/canAdmin still pass).
+ */
+function RequireInvestor({ children }) {
   const { isInvestor, canEdit, canAdmin } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  // Operators are allowed in (they may be impersonating)
   if (isInvestor || canEdit || canAdmin) return children;
   return <Navigate to="/dashboard" replace />;
+}
+
+/** @deprecated Use RequireInvestor — kept for reference only */
+function InvestorRoute({ children }) {
+  return <RequireInvestor>{children}</RequireInvestor>;
 }
 
 /** Redirects agents/investors away from pages they have no access to */
@@ -246,10 +272,14 @@ export default function App() {
             <Route path="/terms"    element={<Terms />} />
             <Route path="/privacy"  element={<Privacy />} />
 
-            {/* Auth routes */}
+            {/* Auth routes — CRM / operator */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Auth routes — investor portal */}
+            <Route path="/investor/login"  element={<InvestorLogin />} />
+            <Route path="/investor/signup" element={<InvestorSignup />} />
 
             {/* Invitation acceptance — public but session-aware */}
             <Route path="/invite/:token" element={<AcceptInvite />} />
@@ -278,14 +308,16 @@ export default function App() {
               }
             />
 
-            {/* All other routes require authentication + completed onboarding */}
+            {/* All other routes require authentication + completed onboarding + operator account */}
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Layout />
-                  </OnboardingGuard>
+                  <RequireOperator>
+                    <OnboardingGuard>
+                      <Layout />
+                    </OnboardingGuard>
+                  </RequireOperator>
                 </ProtectedRoute>
               }
             >
@@ -342,14 +374,14 @@ export default function App() {
               />
             </Route>
 
-            {/* ── Investor Portal (dual-mode: investor login or operator impersonation) */}
+            {/* ── Investor Portal (investor accounts + operator impersonation) */}
             <Route
               path="/investor"
               element={
                 <ProtectedRoute>
-                  <InvestorRoute>
+                  <RequireInvestor>
                     <InvestorLayout />
-                  </InvestorRoute>
+                  </RequireInvestor>
                 </ProtectedRoute>
               }
             >

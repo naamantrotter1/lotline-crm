@@ -147,6 +147,10 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = (userId) => fetchProfile(userId);
 
+  // Derive accountType: prefer the new column, fall back to role for backward compat
+  const accountType = profile?.account_type
+    ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+
   return (
     <ImpersonationContext.Provider value={{ impersonating, setImpersonating }}>
       <AuthContext.Provider value={{
@@ -154,6 +158,8 @@ export function AuthProvider({ children }) {
         profile,
         // profile.role — used for investor / realtor detection (NOT org-level permissions)
         role: profile?.role ?? null,
+        // accountType: 'operator' | 'investor' | null — canonical account type discriminator
+        accountType,
         activeOrgId: profile?.active_organization_id ?? null,
         orgSlug,          // slug of the active org, e.g. 'lotline-homes'
         // ── Org-level permission fields ──────────────────────────────────────

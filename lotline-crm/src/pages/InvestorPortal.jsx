@@ -925,8 +925,61 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
     }
   });
   const allInvestors = investors.filter(i => i.name !== 'Cash');
+
+  // ── Pending self-registered investors (not yet linked to this org) ──────────
+  const [pendingInvestors, setPendingInvestors] = useState([]);
+  const [linkingId, setLinkingId] = useState(null);
+
+  useEffect(() => {
+    if (!activeOrgId) return;
+    supabase
+      .from('investors')
+      .select('id, name, email, created_at')
+      .eq('status', 'self_registered')
+      .is('organization_id', null)
+      .then(({ data }) => setPendingInvestors(data ?? []));
+  }, [activeOrgId]);
+
+  const handleLinkInvestor = async (inv) => {
+    setLinkingId(inv.id);
+    await supabase
+      .from('investors')
+      .update({ organization_id: activeOrgId, status: 'linked' })
+      .eq('id', inv.id);
+    setPendingInvestors(prev => prev.filter(i => i.id !== inv.id));
+    setLinkingId(null);
+  };
+
   return (
     <div className="space-y-3">
+      {/* ── Pending self-registered investors banner ── */}
+      {pendingInvestors.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={15} className="text-amber-600 flex-shrink-0" />
+            <p className="text-xs font-semibold text-amber-800">
+              {pendingInvestors.length} pending investor{pendingInvestors.length !== 1 ? 's' : ''} — signed up via the investor portal, not yet linked to your organization
+            </p>
+          </div>
+          <div className="space-y-2">
+            {pendingInvestors.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-100">
+                <div>
+                  <p className="text-xs font-semibold text-gray-800">{inv.name}</p>
+                  {inv.email && <p className="text-[10px] text-gray-400">{inv.email}</p>}
+                </div>
+                <button
+                  onClick={() => handleLinkInvestor(inv)}
+                  disabled={linkingId === inv.id}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                >
+                  {linkingId === inv.id ? '…' : 'Link to organization'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Header with Invite button */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">{allInvestors.length} investor{allInvestors.length !== 1 ? 's' : ''}</p>
