@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
 import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
 import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
@@ -243,15 +243,15 @@ const defaultValues = {
   constructionAuth: 400,
   improvementPermit: 400,
   wellPermit: 400,
-  mobileHome: 75000,
-  landClearing: 3500,
+  mobileHome: 78000,
+  landClearing: 0,
   roughGrade: 1500,
   septic: 7500,
   water: 10000,
-  waterSewer: 1500,
+  waterSewer: 0,
   publicSewer: 0,
   electric: 2000,
-  footers: 6000,
+  footers: 1500,
   setup: 9000,
   trimOut: 2800,
   hvac: 4500,
@@ -264,7 +264,7 @@ const defaultValues = {
   decks: 3500,
   hudEngineer: 500,
   mailbox: 170,
-  mobileTax: 300,
+  mobileTax: 0,
   arv: 230000,
   sellingCostPct: 4.5,
   holdingPerMonth: 250,
@@ -307,6 +307,40 @@ function fmt(n) {
   return `$${Number(n || 0).toLocaleString()}`;
 }
 
+/** Number input that displays with commas (e.g. 78,000) but accepts raw numbers while typing. */
+function FmtInput({ value, onChange, className }) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState('');
+  const ref = useRef(null);
+
+  const handleFocus = () => {
+    setDraft(value === 0 ? '' : String(value));
+    setFocused(true);
+  };
+
+  useEffect(() => { if (focused) ref.current?.select(); }, [focused]);
+
+  const handleBlur = () => {
+    setFocused(false);
+    onChange(parseFloat(draft) || 0);
+  };
+
+  return (
+    <input
+      ref={ref}
+      type={focused ? 'number' : 'text'}
+      inputMode="decimal"
+      value={focused ? draft : (value === 0 ? '' : Number(value).toLocaleString())}
+      placeholder="0"
+      onChange={e => setDraft(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.blur(); } }}
+      className={className}
+    />
+  );
+}
+
 export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
@@ -314,7 +348,7 @@ export default function DealCalculator() {
   const { setDeals } = useDeals();
   const { profile, activeOrgId } = useAuth();
 
-  const set = (key, val) => setVals((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }));
+  const set = (key, val) => setVals((prev) => ({ ...prev, [key]: typeof val === 'number' ? val : (parseFloat(val) || 0) }));
 
   const buildCost = costFields.reduce((sum, f) => sum + (vals[f.key] || 0), 0);
   const sellingCosts = vals.arv * (vals.sellingCostPct / 100);
@@ -382,11 +416,9 @@ export default function DealCalculator() {
                   <label className="text-sm text-gray-600 flex-1">{f.label}</label>
                   <div className="relative w-32">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                    <input
-                      type="number"
-                      value={vals[f.key] === 0 ? '' : vals[f.key]}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      placeholder="0"
+                    <FmtInput
+                      value={vals[f.key]}
+                      onChange={(v) => set(f.key, v)}
                       className="w-full pl-5 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
                     />
                   </div>
@@ -399,9 +431,9 @@ export default function DealCalculator() {
             <h3 className="font-semibold text-sidebar mb-3">Deal Parameters</h3>
             <div className="space-y-2">
               {[
-                { key: 'arv', label: 'Estimated ARV', prefix: '$' },
+                { key: 'arv', label: 'Estimated ARV', prefix: '$', fmt: true },
                 { key: 'sellingCostPct', label: 'Selling Costs %', suffix: '%' },
-                { key: 'holdingPerMonth', label: 'Holding Cost / Month', prefix: '$' },
+                { key: 'holdingPerMonth', label: 'Holding Cost / Month', prefix: '$', fmt: true },
                 { key: 'holdingMonths', label: 'Est. Months to Sell', suffix: 'mo' },
                 { key: 'desiredProfitPct', label: 'Desired Profit Margin %', suffix: '%' },
               ].map((f) => (
@@ -409,13 +441,21 @@ export default function DealCalculator() {
                   <label className="text-sm text-gray-600 flex-1">{f.label}</label>
                   <div className="relative w-32">
                     {f.prefix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.prefix}</span>}
-                    <input
-                      type="number"
-                      value={vals[f.key] === 0 ? '' : vals[f.key]}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      placeholder="0"
-                      className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
-                    />
+                    {f.fmt ? (
+                      <FmtInput
+                        value={vals[f.key]}
+                        onChange={(v) => set(f.key, v)}
+                        className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        value={vals[f.key] === 0 ? '' : vals[f.key]}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        placeholder="0"
+                        className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
+                      />
+                    )}
                     {f.suffix && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.suffix}</span>}
                   </div>
                 </div>

@@ -67,13 +67,13 @@ function NumCell({ value, muted, onCommit, disabled, placeholder = '0' }) {
 
   const start = () => {
     if (disabled) return;
-    setDraft(value === 0 ? '' : String(value));
+    setDraft(value === 0 ? '' : Number(value).toLocaleString());
     setEditing(true);
   };
 
   const commit = () => {
     setEditing(false);
-    const n = parseFloat(draft) || 0;
+    const n = parseFloat(draft.replace(/,/g, '')) || 0;
     onCommit(n);
   };
 
@@ -83,9 +83,10 @@ function NumCell({ value, muted, onCommit, disabled, placeholder = '0' }) {
     return (
       <input
         ref={inputRef}
-        type="number"
+        type="text"
+        inputMode="decimal"
         value={draft}
-        onChange={e => setDraft(e.target.value)}
+        onChange={e => setDraft(e.target.value.replace(/[^0-9.,]/g, ''))}
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') setEditing(false); }}
         className="w-full text-right text-sm font-medium bg-white border border-accent/60 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-accent/20"
