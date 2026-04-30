@@ -53,7 +53,9 @@ export default function YourPosition({ deal, totalDistributed }) {
   if (isHardMoney && deal.investor_capital_contributed) {
     const rate = sd.interestRate ?? 13;
     const months = sd.holdPeriod ?? 6;
-    projReturn = deal.investor_capital_contributed * (rate / 100 / 12) * months;
+    const interest = deal.investor_capital_contributed * (rate / 100 / 12) * months;
+    const originationFee = sd.originationFee ?? 0;
+    projReturn = interest + originationFee;
   } else if (isProfitSplit && deal.investor_equity_pct) {
     // Prefer canonical cost total; fall back to partial legacy sum
     const totalCost = deal.total_actual != null
