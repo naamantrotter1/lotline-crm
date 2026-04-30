@@ -702,6 +702,7 @@ function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
           phone: phone.trim(),
           organizationId: activeOrgId,
           invitedByName: profile?.name ?? 'LotLine',
+          appUrl: window.location.origin,
         }),
       });
       const data = await res.json();

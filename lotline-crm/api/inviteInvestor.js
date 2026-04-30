@@ -10,8 +10,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server misconfigured: missing Supabase credentials' });
   }
 
-  const { name, email, phone, organizationId, invitedByName } = req.body ?? {};
+  const { name, email, phone, organizationId, invitedByName, appUrl } = req.body ?? {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required' });
+
+  // Where Supabase redirects after the user clicks the invite link.
+  // Falls back to the production URL so links work from any environment.
+  const redirectTo = (appUrl || process.env.APP_URL || 'https://lotline-crm.vercel.app') + '/investor/account';
 
   const headers = {
     'Content-Type':  'application/json',
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
   const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, redirect_to: redirectTo }),
   });
   const inviteData = await inviteRes.json();
   if (!inviteRes.ok && !inviteData.id) {
