@@ -1003,7 +1003,7 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
                             <CheckCircle size={11} /> Invited
                           </span>
                         ) : sentIds[inv.id] ? (
-                          <span className="text-[10px] text-red-500 px-1" title={sentIds[inv.id]}>Failed</span>
+                          <span className="text-[10px] text-red-500 px-1 max-w-[200px] truncate" title={sentIds[inv.id]}>Failed: {sentIds[inv.id]}</span>
                         ) : (
                           <button
                             onClick={() => handleSendInvite(inv)}
