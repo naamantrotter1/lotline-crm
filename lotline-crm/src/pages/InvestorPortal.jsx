@@ -686,7 +686,7 @@ function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
   const [phone,   setPhone]   = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [inviteResult, setInviteResult] = useState(null); // { email, inviteUrl } | null
 
   const handleInvite = async () => {
     if (!name.trim() || !email.trim()) { setError('Name and email are required.'); return; }
@@ -707,9 +707,8 @@ function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Invite failed');
-      setSuccess(true);
+      setInviteResult({ email: email.trim(), inviteUrl: data.inviteUrl ?? null });
       onInvited?.({ name: name.trim(), email: email.trim(), phone: phone.trim() });
-      setTimeout(onClose, 2000);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -728,11 +727,28 @@ function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded"><X size={18} /></button>
         </div>
 
-        {success ? (
+        {inviteResult ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle className="text-green-500" size={36} />
-            <p className="text-sm font-semibold text-gray-800">Invitation sent to {email}</p>
-            <p className="text-xs text-gray-500">They'll receive a login link via email.</p>
+            <p className="text-sm font-semibold text-gray-800">Invitation sent to {inviteResult.email}</p>
+            <p className="text-xs text-gray-500">They'll receive an email with a link to set their password.</p>
+            {inviteResult.inviteUrl && (
+              <div className="w-full mt-2">
+                <p className="text-xs text-gray-400 mb-1">Activation link (copy if email is delayed):</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={inviteResult.inviteUrl}
+                    className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 truncate"
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(inviteResult.inviteUrl)}
+                    className="px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-gray-600 whitespace-nowrap"
+                  >Copy</button>
+                </div>
+              </div>
+            )}
+            <button onClick={onClose} className="mt-2 text-xs text-accent hover:underline">Close</button>
           </div>
         ) : (
           <div className="space-y-4">

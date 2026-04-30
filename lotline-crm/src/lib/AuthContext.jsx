@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
         }
 
         // If investor role, resolve their linked investor record
-        if (data.role === 'investor') {
+        if (data.role === 'investor' || data.account_type === 'investor') {
           const { data: link } = await supabase
             .from('investor_users')
             .select('investor_id, investors(*)')

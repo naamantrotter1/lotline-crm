@@ -110,6 +110,23 @@ export default function Login() {
       setLoading(false);
       return;
     }
+    // Block investor accounts — they must use /investor/login
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('account_type, role')
+      .eq('id', user?.id)
+      .single();
+    const isInvestorAccount =
+      profileData?.account_type === 'investor' || profileData?.role === 'investor';
+    if (isInvestorAccount) {
+      await supabase.auth.signOut();
+      skipNavRef.current = false;
+      setError('Investor accounts use the investor portal. Sign in at /investor/login.');
+      setLoading(false);
+      return;
+    }
+
     // Check Authenticator Assurance Level
     const { data: aalData } = await supabase.auth.getAuthenticatorAssuranceLevel();
     if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {

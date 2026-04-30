@@ -58,7 +58,7 @@ export default function InvestorLayout() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    navigate('/investor/login', { replace: true });
   };
 
   const stopImpersonating = async () => {
