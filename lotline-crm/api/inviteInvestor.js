@@ -1,7 +1,7 @@
 // Sends a branded investor portal invite email via Resend.
 async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) return false;
 
   const inviterText = invitedByName ? `${invitedByName} has invited you` : 'You have been invited';
 
@@ -46,17 +46,41 @@ async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'LotLine Homes <invites@lotlinehomes.com>',
-      to:   [to],
+      from:    'LotLine Homes <invites@lotlinehomes.com>',
+      to:      [to],
       subject: `You've been invited to your LotLine Investor Portal`,
       html,
     }),
   });
+  return true;
+}
+
+/**
+ * Extracts the token_hash from a Supabase action_link and builds a direct
+ * /investor/activate URL.  This lets us bypass both the Supabase email template
+ * and the redirect-URL allowlist — the email link goes straight to our branded
+ * activation page, which calls verifyOtp itself.
+ *
+ * action_link looks like:
+ *   https://PROJECT.supabase.co/auth/v1/verify?token=TOKEN_HASH&type=invite&redirect_to=…
+ */
+function buildActivateUrl(actionLink, baseUrl) {
+  if (!actionLink) return null;
+  try {
+    const url       = new URL(actionLink);
+    const tokenHash = url.searchParams.get('token');
+    const type      = url.searchParams.get('type') ?? 'invite';
+    if (tokenHash) {
+      return `${baseUrl}/investor/activate?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`;
+    }
+  } catch {}
+  // Fallback: use the raw Supabase verification URL
+  return actionLink;
 }
 
 // POST /api/inviteInvestor
-// Upserts the investor record, creates/finds the auth user, sends an activation
-// email with a link to /investor/activate so the invitee can set their password.
+// Upserts the investor record, creates/finds the auth user, and sends a branded
+// activation email whose link goes directly to /investor/activate.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -66,11 +90,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server misconfigured: missing Supabase credentials' });
   }
 
-  const { name, email, phone, organizationId, invitedByName, appUrl, mode } = req.body ?? {};
+  const { name, email, phone, organizationId, invitedByName, appUrl } = req.body ?? {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required' });
 
-  // Where the invite link lands — the activation page, not the marketing site
-  const baseUrl   = appUrl || process.env.APP_URL || 'https://lotline-crm.vercel.app';
+  const baseUrl    = appUrl || process.env.APP_URL || 'https://lotline-crm.vercel.app';
   const redirectTo = `${baseUrl}/investor/activate`;
 
   const headers = {
@@ -79,31 +102,23 @@ export default async function handler(req, res) {
     'Authorization': `Bearer ${serviceKey}`,
   };
 
-  // ── 1. Upsert investor record BEFORE sending invite ──────────────────────────
-  // This ensures investor_id is known and can be embedded in the auth user metadata.
-  const investorUpsertBody = {
-    name:            name.trim(),
-    email:           email.toLowerCase().trim(),
-    phone:           phone ?? '',
-    status:          'invited',
-    invited_by_name: invitedByName ?? null,
-    invited_at:      new Date().toISOString(),
-    ...(organizationId ? { organization_id: organizationId } : {}),
-  };
-
+  // ── 1. Upsert investor record ──────────────────────────────────────────────
   const investorUpsertRes = await fetch(`${supabaseUrl}/rest/v1/investors`, {
     method:  'POST',
     headers: { ...headers, 'Prefer': 'return=representation,resolution=merge-duplicates' },
-    body:    JSON.stringify(investorUpsertBody),
+    body:    JSON.stringify({
+      name:            name.trim(),
+      email:           email.toLowerCase().trim(),
+      phone:           phone ?? '',
+      status:          'invited',
+      invited_by_name: invitedByName ?? null,
+      invited_at:      new Date().toISOString(),
+      ...(organizationId ? { organization_id: organizationId } : {}),
+    }),
   });
   const investorArr = await investorUpsertRes.json();
   const investor    = Array.isArray(investorArr) ? investorArr[0] : investorArr;
   const investorId  = investor?.id ?? null;
-
-  // ── 2. Invite user (new) or look up existing user ────────────────────────────
-  let userId       = null;
-  let isExistingUser = false;
-  let magicLink    = null;
 
   const inviteMeta = {
     account_type:    'investor',
@@ -113,143 +128,156 @@ export default async function handler(req, res) {
     invited_by:      invitedByName ?? null,
   };
 
-  const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
+  // ── 2. Generate invite link — no Supabase email sent ──────────────────────
+  // generateLink(type='invite') creates the auth user (if new) and returns
+  // action_link WITHOUT triggering Supabase's own email.  We extract the
+  // token_hash and build a direct /investor/activate URL ourselves.
+  let userId         = null;
+  let isExistingUser = false;
+  let activateUrl    = null;
+
+  // Path A: invite token (creates new user or refreshes invite for existing)
+  const inviteGenRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ email, redirect_to: redirectTo, data: inviteMeta }),
+    body: JSON.stringify({
+      type:    'invite',
+      email,
+      options: { redirect_to: redirectTo },
+    }),
   });
-  const inviteData = await inviteRes.json();
-  if (inviteRes.ok && inviteData.id) {
-    userId = inviteData.id;
-    // Supabase already sent the invite email for new users
-  } else {
-    // User already exists — find their ID and send a custom invite email.
+  if (inviteGenRes.ok) {
+    const d  = await inviteGenRes.json();
+    userId   = d.user?.id ?? d.properties?.user_id ?? null;
+    activateUrl = buildActivateUrl(
+      d.properties?.action_link ?? d.action_link ?? null,
+      baseUrl,
+    );
+  }
 
-    // Approach A: generateLink (works for email/password accounts, also returns action_link)
-    if (!userId) {
-      const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          type:    'magiclink',
-          email,
-          options: { redirect_to: redirectTo },
-        }),
-      });
-      if (genRes.ok) {
-        const genData = await genRes.json();
-        userId    = genData.user?.id ?? genData.properties?.user_id ?? null;
-        magicLink = genData.properties?.action_link ?? genData.action_link ?? null;
-        if (userId) isExistingUser = true;
-      }
-    }
-
-    // Approach B: admin users list search (works for Google SSO / OAuth accounts)
-    if (!userId) {
-      const listRes = await fetch(
-        `${supabaseUrl}/auth/v1/admin/users?per_page=1000&page=1`,
-        { headers },
+  // Path B: existing user that can't get a new invite token — try magic link
+  if (!userId) {
+    isExistingUser = true;
+    const mlRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        type:    'magiclink',
+        email,
+        options: { redirect_to: redirectTo },
+      }),
+    });
+    if (mlRes.ok) {
+      const d  = await mlRes.json();
+      userId   = d.user?.id ?? d.properties?.user_id ?? null;
+      activateUrl = buildActivateUrl(
+        d.properties?.action_link ?? d.action_link ?? null,
+        baseUrl,
       );
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        const users    = Array.isArray(listData) ? listData : (listData.users ?? []);
-        const found    = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-        if (found?.id) { userId = found.id; isExistingUser = true; }
-      }
     }
+  }
 
-    // Approach C: last resort — create a new auth user
-    if (!userId) {
-      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ email, email_confirm: true, user_metadata: inviteMeta }),
-      });
-      const createData = await createRes.json();
-      if (!createRes.ok) {
-        return res.status(400).json({
-          error: createData.message ?? createData.msg ?? 'Failed to create or find user',
-        });
-      }
-      userId = createData.id;
+  // Path C: search admin users list (Google SSO / OAuth accounts)
+  if (!userId) {
+    const listRes = await fetch(
+      `${supabaseUrl}/auth/v1/admin/users?per_page=1000&page=1`,
+      { headers },
+    );
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const users    = Array.isArray(listData) ? listData : (listData.users ?? []);
+      const found    = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      if (found?.id) { userId = found.id; isExistingUser = true; }
     }
+  }
 
-    // Update auth user metadata with investor info so the activate page can read it
-    if (userId) {
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-        method:  'PUT',
-        headers,
-        body:    JSON.stringify({ user_metadata: inviteMeta }),
+  // Path D: last resort — create user then generate magic link
+  if (!userId) {
+    const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ email, email_confirm: true, user_metadata: inviteMeta }),
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) {
+      return res.status(400).json({
+        error: createData.message ?? createData.msg ?? 'Failed to create or find user',
       });
     }
-
-    // For existing users: generate a magic link if we don't have one yet
-    if (isExistingUser && !magicLink) {
-      const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          type:    'magiclink',
-          email,
-          options: { redirect_to: redirectTo },
-        }),
-      });
-      if (genRes.ok) {
-        const genData = await genRes.json();
-        magicLink = genData.properties?.action_link ?? genData.action_link ?? null;
-      }
-    }
-
-    // Send invite email: Resend (branded) → Supabase OTP (fallback)
-    let emailSent = false;
-    if (magicLink && process.env.RESEND_API_KEY) {
-      await sendInvestorInviteEmail({ to: email, name, inviteUrl: magicLink, invitedByName });
-      emailSent = true;
-    }
-    if (!emailSent) {
-      // Supabase native OTP — works for all providers including Google SSO
-      const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
-        method:  'POST',
-        headers,
-        body:    JSON.stringify({
-          email,
-          create_user: false,
-          options: { redirect_to: redirectTo },
-        }),
-      });
-      emailSent = otpRes.ok;
+    userId = createData.id;
+    // Generate a magic link for the newly created user
+    const mlRes2 = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        type:    'magiclink',
+        email,
+        options: { redirect_to: redirectTo },
+      }),
+    });
+    if (mlRes2.ok) {
+      const d2 = await mlRes2.json();
+      activateUrl = buildActivateUrl(
+        d2.properties?.action_link ?? d2.action_link ?? null,
+        baseUrl,
+      );
     }
   }
 
   if (!userId) return res.status(500).json({ error: 'Could not resolve user ID' });
 
-  // ── 3. Wait for profile trigger ──────────────────────────────────────────────
+  // ── 3. Stamp investor metadata on the auth user ────────────────────────────
+  await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    method:  'PUT',
+    headers,
+    body:    JSON.stringify({ user_metadata: inviteMeta }),
+  });
+
+  // ── 4. Send branded invite email ──────────────────────────────────────────
+  // Resend (investor-branded HTML) → Supabase OTP plain-text fallback
+  let emailSent = false;
+  if (activateUrl) {
+    emailSent = await sendInvestorInviteEmail({
+      to: email, name, inviteUrl: activateUrl, invitedByName,
+    });
+  }
+  if (!emailSent) {
+    // Supabase native OTP — plain email but delivers reliably
+    const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+      method:  'POST',
+      headers,
+      body:    JSON.stringify({
+        email,
+        create_user: false,
+        options: { redirect_to: redirectTo },
+      }),
+    });
+    emailSent = otpRes.ok;
+  }
+
+  // ── 5. Wait for profile trigger ───────────────────────────────────────────
   await new Promise(r => setTimeout(r, 900));
 
-  // ── 4. Patch profile: name, phone, mark as investor ──────────────────────────
-  const profilePatch = {
-    name:         name.trim(),
-    phone:        phone ?? '',
-    account_type: 'investor',
-    // Don't overwrite role for existing users who may be operators/admins
-    ...(!isExistingUser ? { role: 'investor' } : {}),
-    ...(organizationId ? { active_organization_id: organizationId } : {}),
-  };
+  // ── 6. Patch profile ──────────────────────────────────────────────────────
   await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
     method:  'PATCH',
     headers: { ...headers, 'Prefer': 'return=minimal' },
-    body:    JSON.stringify(profilePatch),
+    body:    JSON.stringify({
+      name:         name.trim(),
+      phone:        phone ?? '',
+      account_type: 'investor',
+      ...(!isExistingUser ? { role: 'investor' } : {}),
+      ...(organizationId ? { active_organization_id: organizationId } : {}),
+    }),
   });
 
-  // ── 5. Link investor_users (if investor record was created) ──────────────────
+  // ── 7. Link investor_users ────────────────────────────────────────────────
   if (investorId) {
-    // Set auth_user_id on the investor row now that we know the userId
     await fetch(`${supabaseUrl}/rest/v1/investors?id=eq.${investorId}`, {
       method:  'PATCH',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body:    JSON.stringify({ auth_user_id: userId }),
     });
-
     await fetch(`${supabaseUrl}/rest/v1/investor_users`, {
       method:  'POST',
       headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
@@ -261,8 +289,6 @@ export default async function handler(req, res) {
     success:    true,
     userId,
     investorId,
-    // inviteUrl is only set when we generated a link (existing users)
-    // For new users, Supabase sends the email directly — no URL to return
-    inviteUrl:  magicLink ?? null,
+    inviteUrl:  activateUrl ?? null,
   });
 }
