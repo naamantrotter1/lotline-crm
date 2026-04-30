@@ -74,6 +74,8 @@ import InvestorUpdates from './pages/investor/InvestorUpdates';
 import InvestorDistributions from './pages/investor/InvestorDistributions';
 import InvestorOpportunities from './pages/investor/InvestorOpportunities';
 import InvestorMessages from './pages/investor/InvestorMessages';
+import InvestorPerformance from './pages/investor/InvestorPerformance';
+import InvestorAccount from './pages/investor/InvestorAccount';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -200,6 +202,8 @@ const INVESTOR_PERMITTED = new Set([
   '/investor/documents',
   '/investor/opportunities',
   '/investor/messages',
+  '/investor/performance',
+  '/investor/account',
 ]);
 
 /** Gate for investor-only routes: operators can also enter via impersonation */
@@ -358,6 +362,8 @@ export default function App() {
               <Route path="documents"             element={<InvestorDocuments />} />
               <Route path="opportunities"         element={<InvestorOpportunities />} />
               <Route path="messages"              element={<InvestorMessages />} />
+              <Route path="performance"           element={<InvestorPerformance />} />
+              <Route path="account"               element={<InvestorAccount />} />
             </Route>
           </Routes>
         </DealsProvider>

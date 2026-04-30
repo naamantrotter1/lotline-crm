@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2 } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2 } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -679,80 +679,212 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
 }
 
 // ── Tab: Directory ───────────────────────────────────────────────────────────
-function DirectoryTab({ investors, onDelete }) {
-  const [confirmId, setConfirmId] = useState(null);
+function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
+  const { profile } = useAuth();
+  const [name,    setName]    = useState('');
+  const [email,   setEmail]   = useState('');
+  const [phone,   setPhone]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleInvite = async () => {
+    if (!name.trim() || !email.trim()) { setError('Name and email are required.'); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/inviteInvestor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          organizationId: activeOrgId,
+          invitedByName: profile?.name ?? 'LotLine',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Invite failed');
+      setSuccess(true);
+      onInvited?.({ name: name.trim(), email: email.trim(), phone: phone.trim() });
+      setTimeout(onClose, 2000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Invite Investor</h2>
+            <p className="text-xs text-gray-500 mt-0.5">They'll receive a magic-link to set their password and access their portal.</p>
+          </div>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded"><X size={18} /></button>
+        </div>
+
+        {success ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <CheckCircle className="text-green-500" size={36} />
+            <p className="text-sm font-semibold text-gray-800">Invitation sent to {email}</p>
+            <p className="text-xs text-gray-500">They'll receive a login link via email.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Nick Gorden"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="nick@example.com"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="(555) 000-0000"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
+              />
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                <AlertCircle size={13} /> {error}
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleInvite}
+                disabled={loading}
+                className="flex-1 px-4 py-2.5 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Sending…' : 'Send Invite'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function DirectoryTab({ investors, onDelete, activeOrgId }) {
+  const [confirmId,    setConfirmId]    = useState(null);
+  const [showInvite,   setShowInvite]   = useState(false);
   const allInvestors = investors.filter(i => i.name !== 'Cash');
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Investor</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {allInvestors.map(inv => (
-            <tr key={inv.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Users size={13} className="text-accent" />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-800">{inv.name}</span>
-                </div>
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-700">{inv.contact || '—'}</td>
-              <td className="px-4 py-3">
-                {inv.email ? (
-                  <a href={`mailto:${inv.email}`} className="text-xs text-accent hover:underline flex items-center gap-1">
-                    <Mail size={11} /> {inv.email}
-                  </a>
-                ) : <span className="text-xs text-gray-400">—</span>}
-              </td>
-              <td className="px-4 py-3">
-                {inv.phone ? (
-                  <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
-                    <Phone size={11} /> {inv.phone}
-                  </a>
-                ) : <span className="text-xs text-gray-400">—</span>}
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
-              <td className="px-4 py-3">
-                <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                {confirmId === inv.id ? (
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-xs text-gray-500">Remove investor?</span>
-                    <button
-                      onClick={() => { onDelete(inv.id); setConfirmId(null); }}
-                      className="text-xs font-semibold text-red-500 hover:text-red-700"
-                    >Yes</button>
-                    <button
-                      onClick={() => setConfirmId(null)}
-                      className="text-xs text-gray-400 hover:text-gray-600"
-                    >Cancel</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmId(inv.id)}
-                    className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
-                    title="Remove investor"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </td>
+    <div className="space-y-3">
+      {/* Header with Invite button */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">{allInvestors.length} investor{allInvestors.length !== 1 ? 's' : ''}</p>
+        <button
+          onClick={() => setShowInvite(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-lg hover:bg-accent/90 transition-colors"
+        >
+          <UserPlus size={13} /> Invite Investor
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Investor</th>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
+              <th className="px-4 py-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {allInvestors.map(inv => (
+              <tr key={inv.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                      <Users size={13} className="text-accent" />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-800">{inv.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-700">{inv.contact || '—'}</td>
+                <td className="px-4 py-3">
+                  {inv.email ? (
+                    <a href={`mailto:${inv.email}`} className="text-xs text-accent hover:underline flex items-center gap-1">
+                      <Mail size={11} /> {inv.email}
+                    </a>
+                  ) : <span className="text-xs text-gray-400">—</span>}
+                </td>
+                <td className="px-4 py-3">
+                  {inv.phone ? (
+                    <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
+                      <Phone size={11} /> {inv.phone}
+                    </a>
+                  ) : <span className="text-xs text-gray-400">—</span>}
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {confirmId === inv.id ? (
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-xs text-gray-500">Remove investor?</span>
+                      <button
+                        onClick={() => { onDelete(inv.id); setConfirmId(null); }}
+                        className="text-xs font-semibold text-red-500 hover:text-red-700"
+                      >Yes</button>
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmId(inv.id)}
+                      className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
+                      title="Remove investor"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showInvite && (
+        <InviteInvestorModal
+          activeOrgId={activeOrgId}
+          onClose={() => setShowInvite(false)}
+          onInvited={() => {}}
+        />
+      )}
     </div>
   );
 }
@@ -1162,7 +1294,7 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} onDelete={async (id) => {
+        {activeTab === 'directory' && <DirectoryTab investors={investors} activeOrgId={activeOrgId} onDelete={async (id) => {
           await archiveInvestor(id);
           setInvestors(prev => {
             const updated = prev.filter(i => i.id !== id);

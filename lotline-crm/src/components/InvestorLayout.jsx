@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Briefcase, FileText, Bell, DollarSign,
   TrendingUp, MessageSquare, LogOut, Menu, X,
-  Eye, EyeOff, ChevronDown, Sun, Moon,
+  Eye, EyeOff, ChevronDown, Sun, Moon, BarChart2, UserCircle,
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -11,13 +11,14 @@ import { logImpersonationEnd, fetchAllInvestors, fetchInvestorNamesFromDeals } f
 import NotificationsBell from './investor/NotificationsBell';
 
 const NAV = [
-  { to: '/investor/home',           icon: LayoutDashboard, label: 'Dashboard'       },
+  { to: '/investor/home',           icon: LayoutDashboard, label: 'Overview'        },
   { to: '/investor/deals',          icon: Briefcase,       label: 'My Deals'        },
   { to: '/investor/distributions',  icon: DollarSign,      label: 'Distributions'   },
-  { to: '/investor/updates',        icon: Bell,            label: 'Updates'         },
   { to: '/investor/documents',      icon: FileText,        label: 'Documents'       },
+  { to: '/investor/performance',    icon: BarChart2,       label: 'Performance'     },
   { to: '/investor/opportunities',  icon: TrendingUp,      label: 'Opportunities'   },
   { to: '/investor/messages',       icon: MessageSquare,   label: 'Messages'        },
+  { to: '/investor/account',        icon: UserCircle,      label: 'Account'         },
 ];
 
 export default function InvestorLayout() {
