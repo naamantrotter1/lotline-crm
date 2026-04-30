@@ -1022,6 +1022,19 @@ export default function InvestorPortal() {
     if (!fetchIds.length) { setInvestors(ownInvestors); return; }
 
     fetchInvestors(fetchIds).then(rows => {
+      // Filter out any LS investors that have a Supabase UUID but are no longer
+      // in the active DB results (i.e. they were archived)
+      const activeDbNames = new Set(rows.filter(r => r.organization_id === activeOrgId).map(r => r.name));
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const filteredOwn = ownInvestors.filter(inv => {
+        const hasUUID = inv.id && uuidRe.test(inv.id);
+        return !hasUUID || activeDbNames.has(inv.name);
+      });
+      if (filteredOwn.length < ownInvestors.length) {
+        saveInvestors(filteredOwn, activeOrgId);
+        ownInvestors.splice(0, ownInvestors.length, ...filteredOwn);
+      }
+
       const lsNames = new Set(ownInvestors.map(i => i.name));
       const toInvestorShape = r => ({
         id: r.id,
@@ -1151,7 +1164,11 @@ export default function InvestorPortal() {
         {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} onDelete={async (id) => {
           await archiveInvestor(id);
-          setInvestors(prev => prev.filter(i => i.id !== id));
+          setInvestors(prev => {
+            const updated = prev.filter(i => i.id !== id);
+            saveInvestors(updated, activeOrgId);
+            return updated;
+          });
         }} />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
