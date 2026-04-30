@@ -31,15 +31,27 @@ export default async function handler(req, res) {
   });
   const inviteData = await inviteRes.json();
   if (!inviteRes.ok && !inviteData.id) {
-    // Already-registered user: try creating directly instead
-    const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ email, email_confirm: true, password: crypto.randomUUID() }),
-    });
-    const createData = await createRes.json();
-    if (!createRes.ok) return res.status(400).json({ error: createData.message ?? 'Failed to create user' });
-    inviteData.id = createData.id;
+    // User already exists — look up their ID via admin users list
+    const lookupRes = await fetch(
+      `${supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(`email eq "${email}"`)}`,
+      { headers },
+    );
+    if (lookupRes.ok) {
+      const lookupData = await lookupRes.json();
+      const existing = (lookupData.users ?? []).find(u => u.email === email);
+      if (existing?.id) inviteData.id = existing.id;
+    }
+    // If still no ID, try creating as a last resort
+    if (!inviteData.id) {
+      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email, email_confirm: true, password: crypto.randomUUID() }),
+      });
+      const createData = await createRes.json();
+      if (!createRes.ok) return res.status(400).json({ error: createData.message ?? 'Failed to create user' });
+      inviteData.id = createData.id;
+    }
   }
 
   const userId = inviteData.id;
