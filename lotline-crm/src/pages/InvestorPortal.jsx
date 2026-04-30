@@ -884,9 +884,38 @@ function EditInvestorModal({ investor, onClose, onSaved }) {
 }
 
 function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
+  const { profile } = useAuth();
   const [confirmId,    setConfirmId]    = useState(null);
   const [showInvite,   setShowInvite]   = useState(false);
   const [editInvestor, setEditInvestor] = useState(null);
+  const [sendingId,    setSendingId]    = useState(null);   // id currently sending invite
+  const [sentIds,      setSentIds]      = useState({});     // id → true/errorMsg
+
+  const handleSendInvite = async (inv) => {
+    if (!inv.email) return;
+    setSendingId(inv.id);
+    try {
+      const res = await fetch('/api/inviteInvestor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:           inv.name,
+          email:          inv.email,
+          phone:          inv.phone || '',
+          organizationId: activeOrgId,
+          invitedByName:  profile?.name ?? 'LotLine',
+          appUrl:         window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Invite failed');
+      setSentIds(prev => ({ ...prev, [inv.id]: true }));
+    } catch (e) {
+      setSentIds(prev => ({ ...prev, [inv.id]: e.message }));
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   // Compute live deal counts from actual deals data, matched by investor name
   const dealCountByName = {};
@@ -967,6 +996,25 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 justify-end">
+                      {/* Portal invite button — only shown when investor has an email */}
+                      {inv.email && (
+                        sentIds[inv.id] === true ? (
+                          <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
+                            <CheckCircle size={11} /> Invited
+                          </span>
+                        ) : sentIds[inv.id] ? (
+                          <span className="text-[10px] text-red-500 px-1" title={sentIds[inv.id]}>Failed</span>
+                        ) : (
+                          <button
+                            onClick={() => handleSendInvite(inv)}
+                            disabled={sendingId === inv.id}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 disabled:opacity-50 transition-colors"
+                            title="Send portal invite email"
+                          >
+                            {sendingId === inv.id ? '…' : <><Mail size={10} /> Invite to Portal</>}
+                          </button>
+                        )
+                      )}
                       <button
                         onClick={() => setEditInvestor(inv)}
                         className="p-1 text-gray-300 hover:text-accent transition-colors rounded"
