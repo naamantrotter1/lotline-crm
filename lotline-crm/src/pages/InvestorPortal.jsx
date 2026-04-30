@@ -882,10 +882,18 @@ function EditInvestorModal({ investor, onClose, onSaved }) {
   );
 }
 
-function DirectoryTab({ investors, onDelete, onEdit, activeOrgId }) {
+function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
   const [confirmId,    setConfirmId]    = useState(null);
   const [showInvite,   setShowInvite]   = useState(false);
   const [editInvestor, setEditInvestor] = useState(null);
+
+  // Compute live deal counts from actual deals data, matched by investor name
+  const dealCountByName = {};
+  (deals || []).forEach(d => {
+    if (d.investor && !d.isArchived) {
+      dealCountByName[d.investor] = (dealCountByName[d.investor] || 0) + 1;
+    }
+  });
   const allInvestors = investors.filter(i => i.name !== 'Cash');
   return (
     <div className="space-y-3">
@@ -941,7 +949,7 @@ function DirectoryTab({ investors, onDelete, onEdit, activeOrgId }) {
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
+                  {(() => { const n = dealCountByName[inv.name] || 0; return <span className="text-xs font-medium text-accent">{n} {n === 1 ? 'deal' : 'deals'}</span>; })()}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {confirmId === inv.id ? (
@@ -1405,7 +1413,7 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} activeOrgId={activeOrgId}
+        {activeTab === 'directory' && <DirectoryTab investors={investors} deals={customDeals} activeOrgId={activeOrgId}
           onDelete={async (id) => {
             await archiveInvestor(id);
             setInvestors(prev => {
