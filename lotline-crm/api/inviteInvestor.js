@@ -36,18 +36,37 @@ export default async function handler(req, res) {
   if (inviteRes.ok && inviteData.id) {
     userId = inviteData.id;
   } else {
-    // User already exists — use generateLink to retrieve their ID
-    const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: redirectTo } }),
-    });
-    if (genRes.ok) {
-      const genData = await genRes.json();
-      userId = genData.user?.id ?? genData.properties?.user_id ?? null;
-      isExistingUser = true;
+    // User already exists. Try three approaches to retrieve their ID:
+
+    // Approach A: generateLink (works for password accounts)
+    if (!userId) {
+      const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: redirectTo } }),
+      });
+      if (genRes.ok) {
+        const genData = await genRes.json();
+        userId = genData.user?.id ?? genData.properties?.user_id ?? null;
+        if (userId) isExistingUser = true;
+      }
     }
-    // Last resort: create the user
+
+    // Approach B: admin users list search by email (works for Google SSO / OAuth accounts)
+    if (!userId) {
+      const listRes = await fetch(
+        `${supabaseUrl}/auth/v1/admin/users?per_page=1000&page=1`,
+        { headers },
+      );
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const users = Array.isArray(listData) ? listData : (listData.users ?? []);
+        const found = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (found?.id) { userId = found.id; isExistingUser = true; }
+      }
+    }
+
+    // Approach C: last resort — create a new auth user
     if (!userId) {
       const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
         method: 'POST',
@@ -55,7 +74,11 @@ export default async function handler(req, res) {
         body: JSON.stringify({ email, email_confirm: true, password: crypto.randomUUID() }),
       });
       const createData = await createRes.json();
-      if (!createRes.ok) return res.status(400).json({ error: createData.message ?? 'Failed to create user' });
+      if (!createRes.ok) {
+        return res.status(400).json({
+          error: createData.message ?? createData.msg ?? 'Failed to create or find user',
+        });
+      }
       userId = createData.id;
     }
   }
