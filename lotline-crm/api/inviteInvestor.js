@@ -155,9 +155,25 @@ export default async function handler(req, res) {
       }
     }
 
-    // Send invite email for existing users (Supabase only emails new users automatically)
-    if (magicLink) {
+    // Send invite email for existing users (Supabase only emails new users automatically).
+    // Try Resend first (custom branded), then fall back to Supabase OTP (always available).
+    let emailSent = false;
+    if (magicLink && process.env.RESEND_API_KEY) {
       await sendInvestorInviteEmail({ to: email, name, inviteUrl: magicLink, invitedByName });
+      emailSent = true;
+    }
+    if (!emailSent) {
+      // Supabase OTP — works for all providers including Google SSO, no external key needed
+      const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email,
+          create_user: false,
+          options: { redirect_to: redirectTo },
+        }),
+      });
+      emailSent = otpRes.ok;
     }
   }
 
