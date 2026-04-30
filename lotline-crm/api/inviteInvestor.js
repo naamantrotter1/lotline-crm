@@ -1,3 +1,59 @@
+// Sends a custom investor portal invite email via Resend.
+async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const inviterText = invitedByName ? `${invitedByName} has invited you` : 'You have been invited';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:system-ui,-apple-system,sans-serif;background:#f5f3ee;margin:0;padding:40px 16px;">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div style="background:#1a2332;padding:32px 32px 24px;">
+      <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">LotLine Homes</p>
+      <p style="color:rgba(255,255,255,0.5);font-size:13px;margin:6px 0 0;">Investor Portal</p>
+    </div>
+    <div style="padding:32px;">
+      <h1 style="font-size:20px;font-weight:700;color:#1a2332;margin:0 0 12px;">You're invited to the Investor Portal</h1>
+      <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 24px;">
+        Hi ${name}, ${inviterText} to access the LotLine Homes Investor Portal,
+        where you can view deals, track your investments, and stay up to date.
+        Click the button below to sign in.
+      </p>
+      <a href="${inviteUrl}"
+         style="display:inline-block;background:#c8613a;color:#ffffff;font-size:14px;font-weight:700;
+                padding:14px 28px;border-radius:12px;text-decoration:none;margin-bottom:24px;">
+        Access Investor Portal
+      </a>
+      <p style="font-size:12px;color:#9ca3af;margin:0;">
+        This link expires shortly. If you didn't expect this email, you can safely ignore it.
+      </p>
+      <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0;">
+      <p style="font-size:11px;color:#d1d5db;margin:0;">
+        Or copy this link: <a href="${inviteUrl}" style="color:#c8613a;">${inviteUrl}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'LotLine Homes <invites@lotlinehomes.com>',
+      to:   [to],
+      subject: 'You\'ve been invited to the LotLine Investor Portal',
+      html,
+    }),
+  });
+}
+
 // POST /api/inviteInvestor
 // Creates a Supabase auth user with role='investor', upserts their investor record,
 // links investor_users, and sends a magic-link / invite email.
@@ -26,6 +82,7 @@ export default async function handler(req, res) {
   // ── 1. Invite user (new) or look up existing user ───────────────────────────
   let userId = null;
   let isExistingUser = false;
+  let magicLink = null;
 
   const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
     method: 'POST',
@@ -35,10 +92,12 @@ export default async function handler(req, res) {
   const inviteData = await inviteRes.json();
   if (inviteRes.ok && inviteData.id) {
     userId = inviteData.id;
+    // Supabase already sent the invite email for new users
   } else {
     // User already exists. Try three approaches to retrieve their ID:
 
     // Approach A: generateLink (works for password accounts)
+    // Also captures action_link so we can email existing users
     if (!userId) {
       const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
         method: 'POST',
@@ -48,6 +107,7 @@ export default async function handler(req, res) {
       if (genRes.ok) {
         const genData = await genRes.json();
         userId = genData.user?.id ?? genData.properties?.user_id ?? null;
+        magicLink = genData.properties?.action_link ?? genData.action_link ?? null;
         if (userId) isExistingUser = true;
       }
     }
@@ -80,6 +140,24 @@ export default async function handler(req, res) {
         });
       }
       userId = createData.id;
+    }
+
+    // For existing users found via Approach B or C, generate a magic link now
+    if (isExistingUser && !magicLink) {
+      const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: redirectTo } }),
+      });
+      if (genRes.ok) {
+        const genData = await genRes.json();
+        magicLink = genData.properties?.action_link ?? genData.action_link ?? null;
+      }
+    }
+
+    // Send invite email for existing users (Supabase only emails new users automatically)
+    if (magicLink) {
+      await sendInvestorInviteEmail({ to: email, name, inviteUrl: magicLink, invitedByName });
     }
   }
 
