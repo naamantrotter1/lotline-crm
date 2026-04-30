@@ -9,6 +9,44 @@ export function lsKey(orgId) {
   return orgId ? `lotline_deals_${orgId}` : 'lotline_custom_deals';
 }
 
+function tombstoneKey(orgId) {
+  return `lotline_deleted_deal_ids_${orgId}`;
+}
+
+const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/** Read the tombstone list for an org. Returns a Set of deal ID strings. */
+export function getTombstones(orgId) {
+  if (!orgId) return new Set();
+  try {
+    const raw = JSON.parse(localStorage.getItem(tombstoneKey(orgId)) || '[]');
+    const now = Date.now();
+    // Garbage-collect entries older than 30 days
+    const fresh = raw.filter(e => now - e.ts < TOMBSTONE_TTL_MS);
+    if (fresh.length !== raw.length) {
+      localStorage.setItem(tombstoneKey(orgId), JSON.stringify(fresh));
+    }
+    return new Set(fresh.map(e => String(e.id)));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Record a deal ID as deleted so loadAllDeals won't re-flush it. */
+function addTombstone(dealId, orgId) {
+  if (!orgId) return;
+  try {
+    const raw = JSON.parse(localStorage.getItem(tombstoneKey(orgId)) || '[]');
+    const now = Date.now();
+    // Keep only fresh entries + the new one (dedup by id)
+    const updated = [
+      ...raw.filter(e => String(e.id) !== String(dealId) && now - e.ts < TOMBSTONE_TTL_MS),
+      { id: String(dealId), ts: now },
+    ];
+    localStorage.setItem(tombstoneKey(orgId), JSON.stringify(updated));
+  } catch {}
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function lsGet(orgId) {
@@ -326,9 +364,14 @@ export async function loadAllDeals(orgIds) {
     // Keep any LS-only deals (created locally but not yet synced to Supabase)
     // and re-flush them so they eventually land in the DB.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
+    // Tombstones: deal IDs deleted by this client — must NOT be re-flushed even if
+    // they're in localStorage (e.g. from another tab that had a stale LS cache).
+    const tombstones = getTombstones(orgId);
     // Exclude stale partner deals that were cached from a previous broader scope
+    // and deals that have been locally deleted (tombstoned) to prevent resurrection.
     const unsynced = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
+      !tombstones.has(String(d.id)) &&
       !d.isArchived &&
       (!d.organizationId || String(d.organizationId) === String(orgId))
     );
@@ -453,13 +496,22 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Delete a deal from both localStorage and Supabase */
-export function deleteDeal(dealId, orgId) {
+/** Delete a deal from both localStorage and Supabase.
+ *  orgId is required — throws synchronously if missing to prevent silent data loss. */
+export async function deleteDeal(dealId, orgId) {
+  if (!orgId) throw new Error('deleteDeal: orgId is required');
+  // 1. Remove from localStorage immediately
   const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
   lsSet(all, orgId);
+  // 2. Record tombstone so loadAllDeals won't re-flush this deal if it's not yet in Supabase
+  addTombstone(dealId, orgId);
+  // 3. Delete from Supabase and surface errors
   if (supabase) {
-    supabase.from('deals').delete().eq('id', String(dealId))
-      .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
+    const { error } = await supabase.from('deals').delete().eq('id', String(dealId));
+    if (error) {
+      console.warn('[dealsSync] deleteDeal error:', error.message);
+      throw new Error(error.message);
+    }
   }
 }
 

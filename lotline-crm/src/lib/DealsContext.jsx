@@ -107,7 +107,7 @@ export function DealsProvider({ children }) {
 
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
-  const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
+  const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId).catch(e => console.error('[DealsContext] deleteDeal failed:', e.message)), [activeOrgId]);
   const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
 
   return (
