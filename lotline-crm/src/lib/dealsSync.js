@@ -291,6 +291,25 @@ export async function loadAllDeals(orgIds) {
     const lsDeals = lsGet(orgId);
     console.log('[dealsSync] loadAllDeals: orgId =', orgId, '| supabase rows =', data.length, '| ls deals =', lsDeals.length);
     const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
+
+    // ── Tombstone filter: remove any Supabase rows the user has deleted ──────
+    // The Supabase DELETE may have been blocked silently by RLS (returns no error
+    // but leaves the row). Tombstones are the authoritative "this user deleted it"
+    // signal, so we strip those rows here AND retry the delete in the background.
+    const tombstonesEarly = getTombstones(orgId);
+    const tombstonedInSupabase = data.filter(row => tombstonesEarly.has(String(row.id)));
+    if (tombstonedInSupabase.length > 0) {
+      console.log('[dealsSync] loadAllDeals: suppressing', tombstonedInSupabase.length, 'tombstoned row(s) from Supabase and retrying delete');
+      tombstonedInSupabase.forEach(row => {
+        supabase.from('deals').delete().eq('id', String(row.id))
+          .then(({ error }) => {
+            if (error) console.warn('[dealsSync] tombstone retry-delete failed for', row.id, error.message);
+            else console.log('[dealsSync] tombstone retry-delete succeeded for', row.id);
+          });
+      });
+    }
+    const filteredData = data.filter(row => !tombstonesEarly.has(String(row.id)));
+
     // Batch-fetch cost summaries for all orgs in scope and build a lookup map.
     // This is the canonical source of truth for total costs — always use
     // deal.totalActual in downstream consumers instead of legacy flat columns.
@@ -302,7 +321,7 @@ export async function loadAllDeals(orgIds) {
     // before a hard refresh — LS is updated synchronously but Supabase is async.
     const LS_FRESH_MS = 30 * 1000;
 
-    const deals = data.map(row => {
+    const deals = filteredData.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
