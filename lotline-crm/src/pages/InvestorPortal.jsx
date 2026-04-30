@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2 } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2, Pencil } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -9,7 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
-import { archiveInvestor } from '../lib/investorPortalData';
+import { archiveInvestor, upsertInvestor } from '../lib/investorPortalData';
 import { supabase } from '../lib/supabase';
 
 const INVESTOR_COLORS = {
@@ -789,9 +789,103 @@ function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
   );
 }
 
-function DirectoryTab({ investors, onDelete, activeOrgId }) {
+function EditInvestorModal({ investor, onClose, onSaved }) {
+  const [firstName,     setFirstName]     = useState(() => { const parts = (investor.name || '').split(' '); return parts[0] || ''; });
+  const [lastName,      setLastName]      = useState(() => { const parts = (investor.name || '').split(' '); return parts.slice(1).join(' '); });
+  const [company,       setCompany]       = useState(investor.contact || '');
+  const [email,         setEmail]         = useState(investor.email || '');
+  const [phone,         setPhone]         = useState(investor.phone || '');
+  const [standardTerms, setStandardTerms] = useState(investor.standardTerms || '');
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+
+  const handleSave = async () => {
+    const derivedName = company.trim() || [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+    if (!derivedName) { setError('Name or company is required.'); return; }
+    setLoading(true);
+    setError('');
+    const updated = {
+      ...investor,
+      name:          derivedName,
+      contact:       company.trim(),
+      email:         email.trim(),
+      phone:         phone.trim(),
+      standardTerms: standardTerms.trim(),
+    };
+    // Persist to Supabase if this investor has a UUID (not a local inv-* id)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(investor.id));
+    if (isUuid) {
+      const { error: err } = await upsertInvestor({
+        id:             investor.id,
+        name:           updated.name,
+        contact:        updated.contact,
+        email:          updated.email,
+        phone:          updated.phone,
+        standard_terms: updated.standardTerms,
+      });
+      if (err) { setError(err.message); setLoading(false); return; }
+    }
+    onSaved(updated);
+    onClose();
+  };
+
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30';
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-[#1a2332]">Edit Investor</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">First Name</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Last Name</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last" className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Company</label>
+            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Company name" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 000-0000" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Standard Terms</label>
+            <input value={standardTerms} onChange={e => setStandardTerms(e.target.value)} placeholder="e.g. 10% / 12 months" className={inputCls} />
+          </div>
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="px-5 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          >
+            {loading ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DirectoryTab({ investors, onDelete, onEdit, activeOrgId }) {
   const [confirmId,    setConfirmId]    = useState(null);
   const [showInvite,   setShowInvite]   = useState(false);
+  const [editInvestor, setEditInvestor] = useState(null);
   const allInvestors = investors.filter(i => i.name !== 'Cash');
   return (
     <div className="space-y-3">
@@ -863,13 +957,22 @@ function DirectoryTab({ investors, onDelete, activeOrgId }) {
                       >Cancel</button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setConfirmId(inv.id)}
-                      className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
-                      title="Remove investor"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-1 justify-end">
+                      <button
+                        onClick={() => setEditInvestor(inv)}
+                        className="p-1 text-gray-300 hover:text-accent transition-colors rounded"
+                        title="Edit investor"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(inv.id)}
+                        className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
+                        title="Remove investor"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -883,6 +986,14 @@ function DirectoryTab({ investors, onDelete, activeOrgId }) {
           activeOrgId={activeOrgId}
           onClose={() => setShowInvite(false)}
           onInvited={() => {}}
+        />
+      )}
+
+      {editInvestor && (
+        <EditInvestorModal
+          investor={editInvestor}
+          onClose={() => setEditInvestor(null)}
+          onSaved={(updated) => { onEdit(updated); setEditInvestor(null); }}
         />
       )}
     </div>
@@ -1294,14 +1405,23 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} activeOrgId={activeOrgId} onDelete={async (id) => {
-          await archiveInvestor(id);
-          setInvestors(prev => {
-            const updated = prev.filter(i => i.id !== id);
-            saveInvestors(updated, activeOrgId);
-            return updated;
-          });
-        }} />}
+        {activeTab === 'directory' && <DirectoryTab investors={investors} activeOrgId={activeOrgId}
+          onDelete={async (id) => {
+            await archiveInvestor(id);
+            setInvestors(prev => {
+              const updated = prev.filter(i => i.id !== id);
+              saveInvestors(updated, activeOrgId);
+              return updated;
+            });
+          }}
+          onEdit={(updated) => {
+            setInvestors(prev => {
+              const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
+              saveInvestors(next, activeOrgId);
+              return next;
+            });
+          }}
+        />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
 
