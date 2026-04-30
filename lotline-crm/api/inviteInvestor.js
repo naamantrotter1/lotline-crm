@@ -23,26 +23,32 @@ export default async function handler(req, res) {
     'Authorization': `Bearer ${serviceKey}`,
   };
 
-  // ── 1. Invite user via Supabase magic-link (sends welcome email automatically) ──
+  // ── 1. Invite user (new) or look up existing user ───────────────────────────
+  let userId = null;
+  let isExistingUser = false;
+
   const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ email, redirect_to: redirectTo }),
   });
   const inviteData = await inviteRes.json();
-  if (!inviteRes.ok && !inviteData.id) {
-    // User already exists — look up their ID via admin users list
-    const lookupRes = await fetch(
-      `${supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(`email eq "${email}"`)}`,
-      { headers },
-    );
-    if (lookupRes.ok) {
-      const lookupData = await lookupRes.json();
-      const existing = (lookupData.users ?? []).find(u => u.email === email);
-      if (existing?.id) inviteData.id = existing.id;
+  if (inviteRes.ok && inviteData.id) {
+    userId = inviteData.id;
+  } else {
+    // User already exists — use generateLink to retrieve their ID
+    const genRes = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: redirectTo } }),
+    });
+    if (genRes.ok) {
+      const genData = await genRes.json();
+      userId = genData.user?.id ?? genData.properties?.user_id ?? null;
+      isExistingUser = true;
     }
-    // If still no ID, try creating as a last resort
-    if (!inviteData.id) {
+    // Last resort: create the user
+    if (!userId) {
       const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
         method: 'POST',
         headers,
@@ -50,31 +56,28 @@ export default async function handler(req, res) {
       });
       const createData = await createRes.json();
       if (!createRes.ok) return res.status(400).json({ error: createData.message ?? 'Failed to create user' });
-      inviteData.id = createData.id;
+      userId = createData.id;
     }
   }
 
-  const userId = inviteData.id;
   if (!userId) return res.status(500).json({ error: 'Could not resolve user ID' });
 
   // ── 2. Wait for profile trigger ─────────────────────────────────────────────
   await new Promise(r => setTimeout(r, 900));
 
-  // ── 3. Update profile: name, phone, role = 'investor', org ─────────────────
+  // ── 3. Update profile: name, phone, role = 'investor' (skip role for existing users) ──
   const profilePatch = {
     name:  name.trim(),
     phone: phone ?? '',
-    role:  'investor',
+    // Don't overwrite role for already-registered users (they may be admins)
+    ...(!isExistingUser ? { role: 'investor' } : {}),
     ...(organizationId ? { active_organization_id: organizationId } : {}),
   };
-  const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
+  await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
     method: 'PATCH',
     headers: { ...headers, 'Prefer': 'return=minimal' },
     body: JSON.stringify(profilePatch),
   });
-  if (!profileRes.ok) {
-    return res.status(500).json({ error: 'User created but profile update failed' });
-  }
 
   // ── 4. Upsert investor record ────────────────────────────────────────────────
   const investorBody = {
