@@ -45,15 +45,13 @@ export default function InvestorLogin() {
   const navigate = useNavigate();
   const skipNavRef = useRef(false);
 
-  // Once logged in, redirect based on account type
+  // If already authenticated as an investor, redirect to portal home
   useEffect(() => {
     if (session && !skipNavRef.current) {
-      const accountType = profile?.account_type ?? (profile?.role === 'investor' ? 'investor' : null);
-      if (accountType === 'operator') {
-        navigate('/dashboard', { replace: true });
-      } else if (session) {
-        navigate('/investor/home', { replace: true });
-      }
+      const accountType = profile?.account_type ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+      if (accountType === null) return; // profile still loading
+      if (accountType === 'investor') navigate('/investor/home', { replace: true });
+      // Operators visiting this page intentionally: leave them on the sign-in form
     }
   }, [session, profile]);
 
@@ -83,8 +81,24 @@ export default function InvestorLogin() {
       return;
     }
 
-    // Read account_type from the freshly-loaded profile to decide where to send user
-    // Use a small delay to let onAuthStateChange + fetchProfile complete
+    // Check account type — operators must use /login, not this portal
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('account_type, role')
+      .eq('id', user?.id)
+      .single();
+    const isOperatorAccount =
+      profileData?.account_type === 'operator' ||
+      (profileData?.account_type == null && profileData?.role !== 'investor');
+    if (isOperatorAccount) {
+      await supabase.auth.signOut();
+      skipNavRef.current = false;
+      setError('This portal is for investors only. LotLine operators sign in at /login.');
+      setLoading(false);
+      return;
+    }
+
     skipNavRef.current = false;
     setTimeout(() => navigate('/investor/home', { replace: true }), 0);
     setLoading(false);

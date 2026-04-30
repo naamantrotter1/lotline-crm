@@ -58,6 +58,7 @@ class DealErrorBoundary extends Component {
     return this.props.children;
   }
 }
+import InvestorLanding from './pages/investor/InvestorLanding';
 import InvestorLogin from './pages/investor/InvestorLogin';
 import InvestorActivate from './pages/investor/InvestorActivate';
 import InvestorResetPassword from './pages/investor/InvestorResetPassword';
@@ -178,13 +179,12 @@ function AdminRoute({ children }) {
   return children;
 }
 
-/** Agent/Investor landing: redirect to role landing page */
+/** Agent landing: redirect agents to their deal overview */
 function AgentIndexRoute() {
-  const { isAgent, isInvestor } = usePermissions();
+  const { isAgent } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (isAgent)    return <Navigate to="/pipelines/deal-overview" replace />;
-  if (isInvestor) return <Navigate to="/investor/home" replace />;
+  if (isAgent) return <Navigate to="/pipelines/deal-overview" replace />;
   return <Dashboard />;
 }
 
@@ -227,10 +227,29 @@ function RequireOperator({ children }) {
 }
 
 /**
- * RequireInvestor — wraps /investor/* routes.
- * Operators who visit these routes are redirected to /dashboard (not blocked — they
- * use the investor portal for impersonation/preview, so canEdit/canAdmin still pass).
+ * InvestorPortalEntry — single element for the /investor parent route.
+ * - /investor exactly: always shows the public InvestorLanding (no auth required)
+ * - /investor/* sub-pages: requires auth + investor/operator access
  */
+function InvestorPortalEntry() {
+  const { session, loading } = useAuth();
+  const { isInvestor, canEdit, canAdmin } = usePermissions();
+  const location = useLocation();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  // Public investor landing page
+  if (location.pathname === '/investor') return <InvestorLanding />;
+  // Sub-pages require a session
+  if (!session) return <Navigate to="/investor" replace />;
+  // Only investors and operators (for impersonation) may access sub-pages
+  if (isInvestor || canEdit || canAdmin) return <InvestorLayout />;
+  return <Navigate to="/dashboard" replace />;
+}
+
+/** @deprecated kept for reference */
 function RequireInvestor({ children }) {
   const { isInvestor, canEdit, canAdmin } = usePermissions();
   const { loading } = useAuth();
@@ -378,17 +397,8 @@ export default function App() {
               />
             </Route>
 
-            {/* ── Investor Portal (investor accounts + operator impersonation) */}
-            <Route
-              path="/investor"
-              element={
-                <ProtectedRoute>
-                  <RequireInvestor>
-                    <InvestorLayout />
-                  </RequireInvestor>
-                </ProtectedRoute>
-              }
-            >
+            {/* ── Investor Portal (public landing + authenticated sub-pages) */}
+            <Route path="/investor" element={<InvestorPortalEntry />}>
               <Route index element={<Navigate to="/investor/home" replace />} />
               <Route path="home"                  element={<InvestorHome />} />
               <Route path="deals"                 element={<InvestorDeals />} />
