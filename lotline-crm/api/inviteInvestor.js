@@ -184,8 +184,9 @@ export default async function handler(req, res) {
 
   // ── 3. Update profile: name, phone, role = 'investor' (skip role for existing users) ──
   const profilePatch = {
-    name:  name.trim(),
-    phone: phone ?? '',
+    name:         name.trim(),
+    phone:        phone ?? '',
+    account_type: 'investor',            // always mark as investor so portal guards work
     // Don't overwrite role for already-registered users (they may be admins)
     ...(!isExistingUser ? { role: 'investor' } : {}),
     ...(organizationId ? { active_organization_id: organizationId } : {}),
