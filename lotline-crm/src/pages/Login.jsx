@@ -108,46 +108,46 @@ export default function Login() {
     setLoading(true);
     // Block auto-nav until we know if MFA is required
     setSkipNav(true);
-    const { error } = await signIn(email.trim(), password);
-    if (error) {
-      setSkipNav(false);
-      setError(error.message === 'Invalid login credentials'
-        ? 'Incorrect email or password. Please try again.'
-        : error.message);
-      setLoading(false);
-      return;
-    }
-    // Block investor accounts — they must use /investor/login
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('account_type, role')
-      .eq('id', user?.id)
-      .single();
-    const isInvestorAccount =
-      profileData?.account_type === 'investor' || profileData?.role === 'investor';
-    if (isInvestorAccount) {
-      await supabase.auth.signOut();
-      setSkipNav(false);
-      setError('Investor accounts use the investor portal. Sign in at /investor/login.');
-      setLoading(false);
-      return;
-    }
+    try {
+      const { error } = await signIn(email.trim(), password);
+      if (error) {
+        setError(error.message === 'Invalid login credentials'
+          ? 'Incorrect email or password. Please try again.'
+          : error.message);
+        return;
+      }
 
-    // Check Authenticator Assurance Level
-    const { data: aalData } = await supabase.auth.getAuthenticatorAssuranceLevel();
-    if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
-      setMode('mfa-challenge');
-      setLoading(false);
-      return; // keep skipNav = true — nav blocked until MFA passed
-    }
+      // Block investor accounts — they must use /investor-login
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('account_type, role')
+        .eq('id', user?.id)
+        .single();
+      const isInvestorAccount =
+        profileData?.account_type === 'investor' || profileData?.role === 'investor';
+      if (isInvestorAccount) {
+        await supabase.auth.signOut();
+        setError('Investor accounts use the investor portal. Sign in at /investor-login.');
+        return;
+      }
 
-    // Navigate directly — by this point signIn + getUser + profile + AAL have
-    // all awaited, giving React time to commit the session from onAuthStateChange.
-    // setSkipNav(false) also so the useEffect doesn't fire a second redirect.
-    setSkipNav(false);
-    setLoading(false);
-    navigate('/dashboard', { replace: true });
+      // Check Authenticator Assurance Level
+      const { data: aalData } = await supabase.auth.getAuthenticatorAssuranceLevel();
+      if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
+        setMode('mfa-challenge');
+        return; // keep skipNav = true — nav blocked until MFA passed
+      }
+
+      // All checks passed — navigate to dashboard
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSkipNav(false);
+      setLoading(false);
+    }
   };
 
   // MFA challenge handler
