@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,18 +18,19 @@ function GoogleIcon() {
 export default function Login() {
   const { signIn, session, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  // Prevent auto-navigate while awaiting MFA challenge
-  const skipNavRef = useRef(false);
+  // When true, suppress auto-nav (e.g. during MFA challenge). Using state so
+  // setting it to false triggers the useEffect below to re-run.
+  const [skipNav, setSkipNav] = useState(false);
 
   // Auto-redirect operators who are already signed in.
   // Investors are left on the form — they may want to switch to an operator account.
   useEffect(() => {
-    if (!session || skipNavRef.current) return;
+    if (!session || skipNav) return;
     const accountType = profile?.account_type
       ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
     if (accountType === null) return; // profile still loading
     if (accountType !== 'investor') navigate('/dashboard', { replace: true });
-  }, [session, profile]);
+  }, [session, profile, skipNav]);
 
   // Mode: 'signin' | 'mfa-challenge' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
   const [mode,         setMode]         = useState('signin');
@@ -106,10 +107,10 @@ export default function Login() {
     setError('');
     setLoading(true);
     // Block auto-nav until we know if MFA is required
-    skipNavRef.current = true;
+    setSkipNav(true);
     const { error } = await signIn(email.trim(), password);
     if (error) {
-      skipNavRef.current = false;
+      setSkipNav(false);
       setError(error.message === 'Invalid login credentials'
         ? 'Incorrect email or password. Please try again.'
         : error.message);
@@ -127,7 +128,7 @@ export default function Login() {
       profileData?.account_type === 'investor' || profileData?.role === 'investor';
     if (isInvestorAccount) {
       await supabase.auth.signOut();
-      skipNavRef.current = false;
+      setSkipNav(false);
       setError('Investor accounts use the investor portal. Sign in at /investor/login.');
       setLoading(false);
       return;
@@ -138,12 +139,12 @@ export default function Login() {
     if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
       setMode('mfa-challenge');
       setLoading(false);
-      return; // keep skipNavRef.current = true — nav blocked until MFA passed
+      return; // keep skipNav = true — nav blocked until MFA passed
     }
-    skipNavRef.current = false;
-    // Defer navigation one tick so React commits the session state update
-    // from onAuthStateChange before ProtectedRoute checks it.
-    setTimeout(() => navigate('/dashboard', { replace: true }), 0);
+    // Release the nav block — the useEffect will navigate once session+profile
+    // are committed to React state (avoids the race where navigate fires before
+    // onAuthStateChange has propagated to ProtectedRoute).
+    setSkipNav(false);
     setLoading(false);
   };
 
@@ -169,8 +170,7 @@ export default function Login() {
       setLoading(false);
       return;
     }
-    skipNavRef.current = false;
-    setTimeout(() => navigate('/dashboard', { replace: true }), 0);
+    setSkipNav(false);
     setLoading(false);
   };
 
