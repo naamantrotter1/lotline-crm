@@ -16,14 +16,24 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const { signIn, session, refreshProfile } = useAuth();
+  const { signIn, session, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   // Prevent auto-navigate while awaiting MFA challenge
   const skipNavRef = useRef(false);
 
+  // Auto-redirect if already logged in. Wait for profile to load so we can
+  // send investors to their portal instead of bouncing them through /dashboard.
   useEffect(() => {
-    if (session && !skipNavRef.current) navigate('/dashboard', { replace: true });
-  }, [session]);
+    if (!session || skipNavRef.current) return;
+    const accountType = profile?.account_type
+      ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+    if (accountType === null) return; // profile still loading
+    if (accountType === 'investor') {
+      navigate('/investor/home', { replace: true });
+    } else {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [session, profile]);
 
   // Mode: 'signin' | 'mfa-challenge' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
   const [mode,         setMode]         = useState('signin');
