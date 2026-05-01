@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend,
 } from 'recharts';
 import {
-  fetchMyDeals, fetchMyDistributions,
+  fetchMyAllocations, fetchMyDistributions,
 } from '../../lib/investorPortalData';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ function xirr(cashFlows, guess = 0.1) {
 }
 
 function dealIrr(deal, dists) {
-  const contributed = deal.investor_capital ?? deal.min_check_size ?? 0;
+  const contributed = deal.allocation?.amount ?? deal.investor_capital ?? deal.min_check_size ?? 0;
   if (!contributed || contributed <= 0) return null;
   const dealDists = dists.filter(d => d.deal_id === deal.id);
   const startDate = deal.contract_signed_at ?? deal.created_at ?? new Date().toISOString();
@@ -103,7 +103,7 @@ export default function InvestorPerformance() {
     if (!investor) return;
     setLoading(true);
     Promise.all([
-      fetchMyDeals(investor.name),
+      fetchMyAllocations(investor.id),
       fetchMyDistributions(investor.id),
     ]).then(([{ deals: d }, { distributions: dist }]) => {
       setDeals(d);

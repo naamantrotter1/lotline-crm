@@ -4,7 +4,7 @@ import { DollarSign, Download, TrendingUp, BarChart2 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { fetchMyDistributions, fetchMyDeals, distributionsToCsv } from '../../lib/investorPortalData';
+import { fetchMyDistributions, fetchMyAllocations, distributionsToCsv } from '../../lib/investorPortalData';
 
 function fmt(n)    { return `$${Math.round(n ?? 0).toLocaleString()}`; }
 function fmtDate(d) {
@@ -25,7 +25,7 @@ export default function InvestorDistributions() {
     if (!investor) return;
     Promise.all([
       fetchMyDistributions(investor.id),
-      fetchMyDeals(investor.name),
+      fetchMyAllocations(investor.id),
     ]).then(([{ distributions: d }, { deals: dl }]) => {
       setDist(d);
       setDeals(dl);
@@ -35,9 +35,9 @@ export default function InvestorDistributions() {
 
   const totalDistributed = distributions.reduce((s, d) => s + (d.amount ?? 0), 0);
   const totalProjected   = deals.reduce((s, d) => {
-    const arv  = d.arv ?? 0;
-    const cost = (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0);
-    return s + Math.max(0, arv - cost - arv * 0.045);
+    const principal = d.allocation?.amount ?? 0;
+    const rate = (d.allocation?.preferredReturnPct ?? 0) / 100;
+    return s + principal * rate;
   }, 0);
 
   // Chart: cumulative distributions by month

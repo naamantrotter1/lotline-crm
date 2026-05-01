@@ -115,7 +115,8 @@ export async function fetchMyAllocations(investorId) {
       deals!deal_id (
         id, address, county, state, stage, arv, all_in_cost, net_profit,
         parcel_id, acreage, lead_source, close_date, projected_payout_date,
-        projected_irr, visible_to_investors
+        projected_irr, visible_to_investors, created_at, contract_signed_at,
+        min_check_size
       )
     `)
     .eq('investor_id', investorId)
