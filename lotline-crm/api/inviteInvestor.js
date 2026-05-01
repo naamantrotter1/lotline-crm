@@ -71,7 +71,7 @@ function buildActivateUrl(actionLink, baseUrl) {
     const tokenHash = url.searchParams.get('token');
     const type      = url.searchParams.get('type') ?? 'invite';
     if (tokenHash) {
-      return `${baseUrl}/investor/activate?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`;
+      return `${baseUrl}/investor-setup?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`;
     }
   } catch {}
   // Fallback: use the raw Supabase verification URL
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
   if (!name || !email) return res.status(400).json({ error: 'name and email are required' });
 
   const baseUrl    = appUrl || process.env.APP_URL || 'https://lotline-crm.vercel.app';
-  const redirectTo = `${baseUrl}/investor/activate`;
+  const redirectTo = `${baseUrl}/investor-setup`;
 
   const headers = {
     'Content-Type':  'application/json',

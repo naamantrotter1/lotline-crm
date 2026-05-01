@@ -59,6 +59,7 @@ class DealErrorBoundary extends Component {
   }
 }
 import InvestorLanding from './pages/investor/InvestorLanding';
+import InvestorSetup from './pages/investor/InvestorSetup';
 import InvestorLogin from './pages/investor/InvestorLogin';
 import InvestorActivate from './pages/investor/InvestorActivate';
 import InvestorResetPassword from './pages/investor/InvestorResetPassword';
@@ -296,6 +297,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Investor account setup — public landing target for invite emails */}
+            <Route path="/investor-setup" element={<InvestorSetup />} />
 
             {/* Auth routes — investor portal */}
             <Route path="/investor/login"  element={<InvestorLogin />} />
