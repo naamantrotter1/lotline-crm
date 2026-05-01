@@ -3,13 +3,12 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2, Pencil } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
-import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
-import { archiveInvestor, upsertInvestor } from '../lib/investorPortalData';
+import { archiveInvestor, upsertInvestor, fetchAllInvestors } from '../lib/investorPortalData';
 import { supabase } from '../lib/supabase';
 
 const INVESTOR_COLORS = {
@@ -552,12 +551,12 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
     if (isNew && newInvestor) {
-      storeAddInvestor({
-        name: newInvestor.name,
-        contact: newInvestor.contact || '',
-        email: newInvestor.email || '',
-        phone: newInvestor.phone || '',
-      }, orgId, orgSlug);
+      upsertInvestor({
+        name:            newInvestor.name,
+        email:           newInvestor.email || '',
+        phone:           newInvestor.phone || '',
+        organization_id: orgId,
+      });
       ensureInvestorContact(newInvestor.name, orgId);
     }
 
@@ -1376,72 +1375,37 @@ export default function InvestorPortal() {
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
   const [activeTab, setActiveTab] = useState('by-investor');
-  const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
+  const [investors, setInvestors] = useState([]);
 
-  // Reload investor list whenever JV scope changes.
-  // Own-org investors always come from localStorage (pre-computed stats).
-  // Partner investors are fetched from Supabase and merged in.
-  // Own-org investors also sync from Supabase so DB-only entries (added outside LS) show up.
+  const toInvestorShape = r => ({
+    id: r.id,
+    name: r.name,
+    contact: r.contact || '',
+    email: r.email || '',
+    phone: r.phone || '',
+    type: r.type || 'Private Lender',
+    preferredFinancing: r.preferred_financing || '',
+    standardTerms: r.standard_terms || '',
+    notes: r.notes || '',
+    activeDeals: 0,
+    capitalInvested: 0,
+    totalReturns: 0,
+    roiPct: 0,
+    roiDollars: 0,
+    avgAnnualizedRoi: 0,
+    deals: [],
+  });
+
+  // Load investor list from Supabase whenever JV scope changes.
   useEffect(() => {
-    const ownInvestors = jvScope.includeOwn !== false ? loadInvestors(activeOrgId, orgSlug) : [];
     const partnerIds = scopeIds.filter(id => id !== activeOrgId);
     const ownIds = activeOrgId ? [activeOrgId] : [];
     const fetchIds = jvScope.mode === 'own_only' ? ownIds : [...ownIds, ...partnerIds];
-
-    if (!fetchIds.length) { setInvestors(ownInvestors); return; }
-
+    if (!fetchIds.length) return;
     fetchInvestors(fetchIds).then(rows => {
-      // Filter out any LS investors that have a Supabase UUID but are no longer
-      // in the active DB results (i.e. they were archived)
-      const activeDbNames = new Set(rows.filter(r => r.organization_id === activeOrgId).map(r => r.name));
-      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const filteredOwn = ownInvestors.filter(inv => {
-        const hasUUID = inv.id && uuidRe.test(inv.id);
-        return !hasUUID || activeDbNames.has(inv.name);
-      });
-      if (filteredOwn.length < ownInvestors.length) {
-        saveInvestors(filteredOwn, activeOrgId);
-        ownInvestors.splice(0, ownInvestors.length, ...filteredOwn);
-      }
-
-      const lsNames = new Set(ownInvestors.map(i => i.name));
-      const toInvestorShape = r => ({
-        id: r.id,
-        name: r.name,
-        contact: r.contact || '',
-        email: r.email || '',
-        phone: r.phone || '',
-        type: r.type || 'Private Lender',
-        preferredFinancing: r.preferred_financing || '',
-        standardTerms: r.standard_terms || '',
-        notes: r.notes || '',
-        activeDeals: 0,
-        capitalInvested: 0,
-        totalReturns: 0,
-        roiPct: 0,
-        roiDollars: 0,
-        avgAnnualizedRoi: 0,
-        deals: [],
-      });
-      // DB-only own-org investors (not in LS) — merge into LS so stats get computed on next load
-      const dbOwnOnly = rows
-        .filter(r => r.organization_id === activeOrgId && !lsNames.has(r.name))
-        .map(toInvestorShape);
-      if (dbOwnOnly.length > 0) {
-        const merged = [...ownInvestors, ...dbOwnOnly];
-        saveInvestors(merged, activeOrgId);
-        ownInvestors.push(...dbOwnOnly);
-      }
-      if (jvScope.mode === 'own_only') {
-        setInvestors(ownInvestors);
-        return;
-      }
-      const partnerInvestors = rows
-        .filter(r => r.organization_id !== activeOrgId)
-        .map(toInvestorShape);
-      setInvestors([...ownInvestors, ...partnerInvestors]);
+      setInvestors((rows ?? []).map(toInvestorShape));
     });
-  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
+  }, [JSON.stringify(scopeIds), activeOrgId]);
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
@@ -1534,18 +1498,10 @@ export default function InvestorPortal() {
         {activeTab === 'directory' && <DirectoryTab investors={investors} deals={customDeals} activeOrgId={activeOrgId}
           onDelete={async (id) => {
             await archiveInvestor(id);
-            setInvestors(prev => {
-              const updated = prev.filter(i => i.id !== id);
-              saveInvestors(updated, activeOrgId);
-              return updated;
-            });
+            setInvestors(prev => prev.filter(i => i.id !== id));
           }}
           onEdit={(updated) => {
-            setInvestors(prev => {
-              const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
-              saveInvestors(next, activeOrgId);
-              return next;
-            });
+            setInvestors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
           }}
         />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}

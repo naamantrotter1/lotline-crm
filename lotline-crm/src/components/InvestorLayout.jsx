@@ -40,6 +40,18 @@ export default function InvestorLayout() {
 
   const isOperator = canEdit || canAdmin;
 
+  // Guard: investors who haven't completed account setup go back to /investor-setup
+  useEffect(() => {
+    if (
+      !impersonating &&
+      profile &&
+      (profile.role === 'investor' || profile.account_type === 'investor') &&
+      profile.has_set_password === false
+    ) {
+      navigate('/investor-setup', { replace: true });
+    }
+  }, [profile?.has_set_password, profile?.role, profile?.account_type, impersonating]);
+
   // Operators: fetch investor list for the picker — try investors table first, fall back to deal data
   useEffect(() => {
     if (!isOperator || investorRecord) return;

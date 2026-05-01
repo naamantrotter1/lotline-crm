@@ -15,7 +15,6 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
-import { loadInvestors } from '../lib/investorsStore';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -2526,24 +2525,9 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-      // Merge Supabase investors with LS-stored investors so the dropdown
-      // always shows the assigned investor regardless of which store it came from
-      const lsInvestors = loadInvestors(activeOrgId, orgSlug);
-      const merged = [...(inv || [])];
-      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      for (const lsInv of lsInvestors) {
-        if (!merged.find(i => i.name === lsInv.name)) {
-          // Skip LS investors that have a real Supabase UUID but aren't in the
-          // Supabase results — they were archived and should stay hidden.
-          const hasSupabaseId = lsInv.id && uuidRe.test(lsInv.id);
-          if (!hasSupabaseId) {
-            merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
-          }
-        }
-      }
-      if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
+      if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
     });
-  }, [activeOrgId, orgSlug]);
+  }, [activeOrgId]);
 
   // Close investor picker on outside click
   useEffect(() => {
@@ -3450,20 +3434,9 @@ function DealDetailContent({ deal }) {
             standard_terms: newInv.standardTerms || null,
             organization_id: activeOrgId,
           });
-          // Refresh investor list (merge Supabase + LS)
+          // Refresh investor list from Supabase
           fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-            const lsInvestors = loadInvestors(activeOrgId, orgSlug);
-            const merged = [...(inv || [])];
-            const uuidRe2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            for (const lsInv of lsInvestors) {
-              if (!merged.find(i => i.name === lsInv.name)) {
-                const hasSupabaseId = lsInv.id && uuidRe2.test(lsInv.id);
-                if (!hasSupabaseId) {
-                  merged.push({ ...lsInv, id: lsInv.id || `ls-${lsInv.name}` });
-                }
-              }
-            }
-            if (merged.length) { setSupabaseInvestors(merged); setInvestorList(merged); }
+            if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
           });
           // Assign to this deal
           const name = saved?.name || newInv.name;

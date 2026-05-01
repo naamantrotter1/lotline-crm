@@ -129,8 +129,9 @@ export default function InvestorSetup() {
           return;
         }
         // If they already completed setup, redirect straight to portal
-        const existingName = data.session.user.user_metadata?.full_name;
-        if (existingName) {
+        const { data: profileRow1 } = await supabase
+          .from('profiles').select('has_set_password').eq('id', data.session.user.id).single();
+        if (profileRow1?.has_set_password) {
           navigate('/investor/home', { replace: true });
           return;
         }
@@ -164,10 +165,10 @@ export default function InvestorSetup() {
           setPhase('expired');
           return;
         }
-        // Check if already set up (profile has a name) — send them directly to portal
+        // Check if already set up — send them directly to portal
         const { data: profileRow } = await supabase
-          .from('profiles').select('name').eq('id', data.session.user.id).single();
-        if (profileRow?.name) {
+          .from('profiles').select('has_set_password').eq('id', data.session.user.id).single();
+        if (profileRow?.has_set_password) {
           navigate('/investor/home', { replace: true });
           return;
         }
@@ -183,8 +184,8 @@ export default function InvestorSetup() {
       const { data: existing } = await supabase.auth.getSession();
       if (existing?.session?.user) {
         const { data: profileRow } = await supabase
-          .from('profiles').select('name').eq('id', existing.session.user.id).single();
-        if (profileRow?.name) {
+          .from('profiles').select('has_set_password').eq('id', existing.session.user.id).single();
+        if (profileRow?.has_set_password) {
           navigate('/investor/home', { replace: true });
           return;
         }
@@ -237,14 +238,15 @@ export default function InvestorSetup() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('profiles').upsert({
-        id:           user.id,
-        email:        user.email,
-        first_name:   firstName.trim(),
-        last_name:    lastName.trim(),
-        name:         `${firstName.trim()} ${lastName.trim()}`,
-        phone:        phone.trim(),
-        account_type: 'investor',
-        role:         'investor',
+        id:               user.id,
+        email:            user.email,
+        first_name:       firstName.trim(),
+        last_name:        lastName.trim(),
+        name:             `${firstName.trim()} ${lastName.trim()}`,
+        phone:            phone.trim(),
+        account_type:     'investor',
+        role:             'investor',
+        has_set_password: true,
       }, { onConflict: 'id' });
     }
 
