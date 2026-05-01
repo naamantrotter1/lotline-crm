@@ -271,7 +271,13 @@ function Hero() {
                 to="/login"
                 className="inline-flex items-center gap-2 bg-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/15 transition-colors"
               >
-                Log in
+                Team Login
+              </Link>
+              <Link
+                to="/investor-login"
+                className="inline-flex items-center gap-2 border border-accent/60 text-white font-semibold px-6 py-3 rounded-xl hover:border-accent hover:bg-accent/10 transition-colors"
+              >
+                Investor Login
               </Link>
             </div>
             {/* Metric badges */}

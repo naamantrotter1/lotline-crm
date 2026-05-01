@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { marketing } from '../../content/marketing';
 
 /* ─── Nav ─── */
 function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const loginRef = useRef(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -15,8 +17,16 @@ function MarketingNav() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close drawer on route change
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  // Close drawer and login dropdown on route change
+  useEffect(() => { setOpen(false); setLoginOpen(false); }, [location.pathname]);
+
+  // Close login dropdown on outside click
+  useEffect(() => {
+    if (!loginOpen) return;
+    const handler = (e) => { if (loginRef.current && !loginRef.current.contains(e.target)) setLoginOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [loginOpen]);
 
   const navBase =
     'fixed top-0 left-0 right-0 z-50 transition-all duration-200';
@@ -64,16 +74,36 @@ function MarketingNav() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              to="/login"
-              className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                scrolled
-                  ? 'text-sidebar hover:text-accent'
-                  : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Log in
-            </Link>
+            {/* Log in dropdown */}
+            <div className="relative" ref={loginRef}>
+              <button
+                onClick={() => setLoginOpen(v => !v)}
+                className={`flex items-center gap-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+                  scrolled
+                    ? 'text-sidebar hover:text-accent'
+                    : 'text-white/90 hover:text-white'
+                }`}
+              >
+                Log in
+                <ChevronDown size={14} className={`transition-transform ${loginOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {loginOpen && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-sidebar hover:bg-orange-50 hover:text-accent transition-colors border-l-2 border-transparent hover:border-accent"
+                  >
+                    Team Login
+                  </Link>
+                  <Link
+                    to="/investor-login"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-sidebar hover:bg-orange-50 hover:text-accent transition-colors border-l-2 border-transparent hover:border-accent"
+                  >
+                    Investor Portal
+                  </Link>
+                </div>
+              )}
+            </div>
             <Link
               to="/signup"
               className="text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
@@ -111,9 +141,15 @@ function MarketingNav() {
             <div className="border-t border-gray-100 pt-3 mt-2 flex flex-col gap-2">
               <Link
                 to="/login"
-                className="text-sm font-medium text-sidebar py-2.5 px-3 rounded-lg hover:bg-cream text-center"
+                className="text-sm font-medium text-sidebar py-2.5 px-3 rounded-lg hover:bg-cream hover:text-accent transition-colors text-center"
               >
-                Log in
+                Team Login
+              </Link>
+              <Link
+                to="/investor-login"
+                className="text-sm font-medium text-sidebar py-2.5 px-3 rounded-lg hover:bg-cream hover:text-accent transition-colors text-center"
+              >
+                Investor Portal
               </Link>
               <Link
                 to="/signup"
