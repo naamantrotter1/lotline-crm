@@ -590,11 +590,11 @@ function FinancingScenarioPanel({
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Line Limit ($)</p>
-              <input type="number" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+              <input type="number" value={creditLimit || ''} onChange={e => setCreditLimit(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Amount Drawn on This Deal ($)</p>
-              <input type="number" value={drawAmount} onChange={e => setDrawAmount(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+              <input type="number" value={drawAmount || ''} onChange={e => setDrawAmount(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
             </div>
             {creditLimit > 0 && (
               <div className="py-2">
@@ -628,7 +628,7 @@ function FinancingScenarioPanel({
               <div className="grid grid-cols-2 gap-x-6 mt-2">
                 <div className="py-2">
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
-                  <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+                  <input type="number" value={annualFeePct || ''} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
                 </div>
               </div>
             )}
@@ -663,7 +663,7 @@ function FinancingScenarioPanel({
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split (%)</p>
-              <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+              <input type="number" value={investorProfitSplitPct || ''} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split Amount (calc)</p>

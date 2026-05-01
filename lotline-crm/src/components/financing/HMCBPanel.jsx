@@ -326,11 +326,11 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         <Row>
           <div>
             {label('Annual Interest Rate (%)')}
-            <input type="number" step="0.01" className={inp} value={d.interestRate} onChange={e => set('interestRate', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" step="0.01" className={inp} value={d.interestRate || ''} onChange={e => set('interestRate', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
           <div>
             {label('Term Length (months)')}
-            <input type="number" className={inp} value={d.termMonths} onChange={e => set('termMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" className={inp} value={d.termMonths || ''} onChange={e => set('termMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         {/* Extension */}
@@ -350,15 +350,15 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           <Row cols={3}>
             <div>
               {label('Extension (months)')}
-              <input type="number" className={inp} value={d.extensionMonths} onChange={e => set('extensionMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
+              <input type="number" className={inp} value={d.extensionMonths || ''} onChange={e => set('extensionMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
             </div>
             <div>
               {label('Extension Fee (points)')}
-              <input type="number" step="0.25" className={inp} value={d.extensionFeePoints} onChange={e => set('extensionFeePoints', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+              <input type="number" step="0.25" className={inp} value={d.extensionFeePoints || ''} onChange={e => set('extensionFeePoints', parseFloat(e.target.value) || 0)} disabled={readOnly} />
             </div>
             <div>
               {label('Number of Extensions')}
-              <input type="number" className={inp} value={d.numExtensions} onChange={e => set('numExtensions', parseInt(e.target.value) || 1)} disabled={readOnly} />
+              <input type="number" className={inp} value={d.numExtensions || ''} onChange={e => set('numExtensions', parseInt(e.target.value) || 1)} disabled={readOnly} />
             </div>
           </Row>
         )}
@@ -369,11 +369,11 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         <Row>
           <div>
             {label('Purchase Price ($)')}
-            <input type="number" className={inp} value={d.purchasePrice} onChange={e => { const v = parseFloat(e.target.value) || 0; set('purchasePrice', v); if (!d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice) set('fundedAtClosing', v); }} disabled={readOnly} />
+            <input type="number" className={inp} value={d.purchasePrice || ''} onChange={e => { const v = parseFloat(e.target.value) || 0; set('purchasePrice', v); if (!d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice) set('fundedAtClosing', v); }} disabled={readOnly} />
           </div>
           <div>
             {label('Construction Holdback ($)')}
-            <input type="number" className={inp} value={d.holdbackAmount} onChange={e => set('holdbackAmount', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" className={inp} value={d.holdbackAmount || ''} onChange={e => set('holdbackAmount', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         <Row>
@@ -383,7 +383,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           </div>
           <div>
             {label('Amount Funded at Closing ($)')}
-            <input type="number" className={inp} value={d.fundedAtClosing} onChange={e => set('fundedAtClosing', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" className={inp} value={d.fundedAtClosing || ''} onChange={e => set('fundedAtClosing', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         <div className="flex items-center gap-2 pt-1">
@@ -407,7 +407,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
                 </div>
               )}
             </div>
-            <input type="number" step="0.01" className={inp} value={d.originationFee} onChange={e => set('originationFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" step="0.01" className={inp} value={d.originationFee || ''} onChange={e => set('originationFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
             {totalLoan > 0 && (
               d.originationFeeMode === 'pct'
                 ? <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveOriginationFee)}</p>
@@ -416,7 +416,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           </div>
           <div>
             {label('Per-Draw Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.drawFee} onChange={e => set('drawFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" step="0.01" className={inp} value={d.drawFee || ''} onChange={e => set('drawFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
@@ -447,30 +447,30 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
                       </div>
                     )}
                   </div>
-                  <input type="number" step="0.01" className={inp} value={d.brokerFee} onChange={e => set('brokerFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.brokerFee || ''} onChange={e => set('brokerFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                   {d.brokerFeeMode === 'pct' && totalLoan > 0 && (
                     <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveBrokerFee)}</p>
                   )}
                 </div>
                 <div>
                   {label('Underwriting / Admin Fee ($)')}
-                  <input type="number" step="0.01" className={inp} value={d.underwritingFee} onChange={e => set('underwritingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.underwritingFee || ''} onChange={e => set('underwritingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                 </div>
               </Row>
               <Row>
                 <div>
                   {label('Appraisal Fee ($)')}
-                  <input type="number" step="0.01" className={inp} value={d.appraisalFee} onChange={e => set('appraisalFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.appraisalFee || ''} onChange={e => set('appraisalFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                 </div>
                 <div>
                   {label('Attorney Document Prep ($)')}
-                  <input type="number" step="0.01" className={inp} value={d.attDocPrepFee} onChange={e => set('attDocPrepFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.attDocPrepFee || ''} onChange={e => set('attDocPrepFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                 </div>
               </Row>
               <Row>
                 <div>
                   {label('Servicing Fee ($)')}
-                  <input type="number" step="0.01" className={inp} value={d.servicingFee} onChange={e => set('servicingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.servicingFee || ''} onChange={e => set('servicingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                 </div>
                 <div>
                   {label('Monthly Payment (override)')}
