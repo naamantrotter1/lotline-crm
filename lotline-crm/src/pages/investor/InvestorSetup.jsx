@@ -238,41 +238,47 @@ export default function InvestorSetup() {
 
     setPhase('submitting');
 
-    // 1. Set password
-    const { error: pwError } = await supabase.auth.updateUser({ password });
-    if (pwError) {
-      setError(pwError.message);
+    try {
+      // 1. Set password
+      const { error: pwError } = await supabase.auth.updateUser({ password });
+      if (pwError) {
+        setError(pwError.message);
+        setPhase('setup');
+        return;
+      }
+
+      // 2. Upsert profile
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id:               user.id,
+          email:            user.email,
+          first_name:       firstName.trim(),
+          last_name:        lastName.trim(),
+          name:             `${firstName.trim()} ${lastName.trim()}`,
+          phone:            phone.trim(),
+          account_type:     'investor',
+          role:             'investor',
+          has_set_password: true,
+        }, { onConflict: 'id' });
+      }
+
+      // 3. Activate investor record (links auth_user_id, sets status='active')
+      if (investorId) {
+        const { error: rpcError } = await supabase.rpc('activate_investor_account', {
+          p_investor_id: investorId,
+        });
+        if (rpcError) console.warn('activate_investor_account:', rpcError.message);
+      }
+
+      // 4. Show success then redirect
+      setPhase('success');
+      setTimeout(() => navigate('/investor/home', { replace: true }), 2200);
+    } catch (err) {
+      setError(err?.message || 'Something went wrong. Please try again.');
       setPhase('setup');
-      return;
     }
-
-    // 2. Upsert profile
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').upsert({
-        id:               user.id,
-        email:            user.email,
-        first_name:       firstName.trim(),
-        last_name:        lastName.trim(),
-        name:             `${firstName.trim()} ${lastName.trim()}`,
-        phone:            phone.trim(),
-        account_type:     'investor',
-        role:             'investor',
-        has_set_password: true,
-      }, { onConflict: 'id' });
-    }
-
-    // 3. Activate investor record (links auth_user_id, sets status='active')
-    if (investorId) {
-      const { error: rpcError } = await supabase.rpc('activate_investor_account', {
-        p_investor_id: investorId,
-      });
-      if (rpcError) console.warn('activate_investor_account:', rpcError.message);
-    }
-
-    // 4. Show success then redirect
-    setPhase('success');
-    setTimeout(() => navigate('/investor/home', { replace: true }), 2200);
   };
 
   const strength = calcStrength(password);
