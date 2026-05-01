@@ -106,6 +106,8 @@ export async function fetchMyAllocations(investorId) {
     .eq('investor_id', investorId)
     .order('allocated_at', { ascending: false });
 
+  console.log('[fetchMyAllocations] investorId:', investorId, 'allocations:', allocations, 'error:', allocErr);
+
   if (allocErr) return { deals: [], error: allocErr };
   if (!allocations?.length) return { deals: [], error: null };
 
@@ -115,6 +117,8 @@ export async function fetchMyAllocations(investorId) {
     .from('deals')
     .select('id, address, county, state, stage, arv, all_in_cost, net_profit, parcel_id, acreage, lead_source, close_date, projected_payout_date, projected_irr, visible_to_investors, created_at, contract_signed_at, min_check_size')
     .in('id', dealIds);
+
+  console.log('[fetchMyAllocations] dealIds:', dealIds, 'dealsData:', dealsData, 'dealsErr:', dealsErr);
 
   if (dealsErr) return { deals: [], error: dealsErr };
 
