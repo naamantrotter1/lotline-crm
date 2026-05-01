@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { canUser } from './permissions';
+import { fetchMyInvestor } from './investorPortalData';
 
 const AuthContext = createContext(null);
 
@@ -66,14 +67,11 @@ export function AuthProvider({ children }) {
           setOrgSeatLimit(null);
         }
 
-        // If investor role, resolve their linked investor record
+        // If investor role, resolve their linked investor record using the
+        // 3-step fallback (auth_user_id → investor_users → email match).
         if (data.role === 'investor' || data.account_type === 'investor') {
-          const { data: link } = await supabase
-            .from('investor_users')
-            .select('investor_id, investors(*)')
-            .eq('user_id', userId)
-            .single();
-          setInvestorRecord(link?.investors ?? null);
+          const { investor } = await fetchMyInvestor();
+          setInvestorRecord(investor ?? null);
         } else {
           setInvestorRecord(null);
         }
