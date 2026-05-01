@@ -32,7 +32,9 @@ export const HMCB_DEFAULTS = {
   holdbackAmount: 0,
   fundedAtClosing: 0,
   originationFee: 0,
+  originationFeeMode: 'flat', // 'flat' | 'pct'
   brokerFee: 0,
+  brokerFeeMode: 'flat', // 'flat' | 'pct'
   underwritingFee: 0,
   appraisalFee: 0,
   attDocPrepFee: 0,
@@ -147,7 +149,13 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
     ? monthly * (d.termMonths + (d.extensionMonths * d.numExtensions))
     : null;
 
-  const totalFees = (d.originationFee || 0) + (d.brokerFee || 0) + (d.underwritingFee || 0)
+  const effectiveOriginationFee = d.originationFeeMode === 'pct'
+    ? (d.originationFee / 100) * totalLoan
+    : (d.originationFee || 0);
+  const effectiveBrokerFee = d.brokerFeeMode === 'pct'
+    ? (d.brokerFee / 100) * totalLoan
+    : (d.brokerFee || 0);
+  const totalFees = effectiveOriginationFee + effectiveBrokerFee + (d.underwritingFee || 0)
     + (d.appraisalFee || 0) + (d.attDocPrepFee || 0) + (d.servicingFee || 0);
   const cashToClose = fundedAtClosing - (d.purchasePrice) + totalFees;  // typically just fees since purchase is funded
 
@@ -390,9 +398,21 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees</p>
         <Row>
           <div>
-            {label('Origination Fee ($)')}
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Origination Fee</p>
+              {!readOnly && (
+                <div className="inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                  <button type="button" onClick={() => set('originationFeeMode', 'flat')} className={`px-1.5 py-0.5 transition-colors ${d.originationFeeMode !== 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>$</button>
+                  <button type="button" onClick={() => set('originationFeeMode', 'pct')} className={`px-1.5 py-0.5 transition-colors ${d.originationFeeMode === 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>%</button>
+                </div>
+              )}
+            </div>
             <input type="number" step="0.01" className={inp} value={d.originationFee} onChange={e => set('originationFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-            {totalLoan > 0 && <p className="text-[10px] text-gray-400 mt-0.5">{((d.originationFee / totalLoan) * 100).toFixed(3)}% of total loan</p>}
+            {totalLoan > 0 && (
+              d.originationFeeMode === 'pct'
+                ? <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveOriginationFee)}</p>
+                : <p className="text-[10px] text-gray-400 mt-0.5">{totalLoan > 0 ? ((effectiveOriginationFee / totalLoan) * 100).toFixed(3) : '0.000'}% of total loan</p>
+            )}
           </div>
           <div>
             {label('Per-Draw Fee ($)')}
@@ -418,8 +438,19 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
               {/* Advanced fee fields */}
               <Row>
                 <div>
-                  {label('Broker Fee ($)')}
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Broker Fee</p>
+                    {!readOnly && (
+                      <div className="inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                        <button type="button" onClick={() => set('brokerFeeMode', 'flat')} className={`px-1.5 py-0.5 transition-colors ${d.brokerFeeMode !== 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>$</button>
+                        <button type="button" onClick={() => set('brokerFeeMode', 'pct')} className={`px-1.5 py-0.5 transition-colors ${d.brokerFeeMode === 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>%</button>
+                      </div>
+                    )}
+                  </div>
                   <input type="number" step="0.01" className={inp} value={d.brokerFee} onChange={e => set('brokerFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  {d.brokerFeeMode === 'pct' && totalLoan > 0 && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveBrokerFee)}</p>
+                  )}
                 </div>
                 <div>
                   {label('Underwriting / Admin Fee ($)')}
