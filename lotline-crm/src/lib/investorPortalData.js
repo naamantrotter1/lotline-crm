@@ -118,7 +118,7 @@ export async function fetchMyAllocations(investorId) {
     .select('id, address, county, state, stage, arv, all_in_cost, net_profit, parcel_id, acreage, lead_source, close_date, projected_payout_date, projected_irr, visible_to_investors, created_at, contract_signed_at, min_check_size')
     .in('id', dealIds);
 
-  console.log('[fetchMyAllocations] dealIds:', dealIds, 'dealsData:', dealsData, 'dealsErr:', dealsErr);
+  console.log('[fetchMyAllocations] dealIds:', dealIds, 'dealsData:', dealsData, 'dealsErr:', JSON.stringify(dealsErr));
 
   if (dealsErr) return { deals: [], error: dealsErr };
 
