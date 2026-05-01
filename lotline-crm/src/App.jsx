@@ -149,8 +149,17 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  // Root always shows the marketing landing page (with "Dashboard" button for logged-in users)
-  if (location.pathname === '/') return <Landing />;
+  // If Supabase redirected an invite/recovery email link to / (because /investor-setup
+  // wasn't in the allowlist), rescue the token by forwarding to the correct page.
+  if (location.pathname === '/') {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const tokenType  = hashParams.get('type');
+    const token      = hashParams.get('access_token');
+    if (token && (tokenType === 'invite' || tokenType === 'recovery')) {
+      return <Navigate to={'/investor-setup' + window.location.hash} replace />;
+    }
+    return <Landing />;
+  }
   if (!session) return <Navigate to="/login" replace />;
   return children;
 }

@@ -128,6 +128,12 @@ export default function InvestorSetup() {
           setPhase('expired');
           return;
         }
+        // If they already completed setup, redirect straight to portal
+        const existingName = data.session.user.user_metadata?.full_name;
+        if (existingName) {
+          navigate('/investor/home', { replace: true });
+          return;
+        }
         setEmail(data.session.user.email ?? '');
         setInvestorId(data.session.user.user_metadata?.investor_id ?? null);
         setPhase('setup');
@@ -147,14 +153,22 @@ export default function InvestorSetup() {
           setPhase('expired');
           return;
         }
+        // Check if already set up (profile has a name) — send them directly to portal
+        const { data: profileRow } = await supabase
+          .from('profiles').select('name').eq('id', data.session.user.id).single();
+        if (profileRow?.name) {
+          navigate('/investor/home', { replace: true });
+          return;
+        }
         setEmail(data.session.user.email ?? '');
         setInvestorId(data.session.user.user_metadata?.investor_id ?? null);
         setPhase('setup');
         return;
       }
 
-      // No token — redirect to investor login
-      navigate('/investor/login', { replace: true });
+      // No token — show the expired/invalid state
+      setTokenError('No invite token found. Please use the link from your invitation email.');
+      setPhase('expired');
     }
     init();
   }, []);
