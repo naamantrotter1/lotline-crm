@@ -1023,7 +1023,6 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
               <th className="px-4 py-3" />
             </tr>
@@ -1054,7 +1053,6 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
                     </a>
                   ) : <span className="text-xs text-gray-400">—</span>}
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
                 <td className="px-4 py-3">
                   {(() => { const n = dealCountByName[inv.name] || 0; return <span className="text-xs font-medium text-accent">{n} {n === 1 ? 'deal' : 'deals'}</span>; })()}
                 </td>
