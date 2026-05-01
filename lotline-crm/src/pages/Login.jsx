@@ -22,8 +22,8 @@ export default function Login() {
   // setting it to false triggers the useEffect below to re-run.
   const [skipNav, setSkipNav] = useState(false);
 
-  // Auto-redirect operators who are already signed in.
-  // Investors are left on the form — they may want to switch to an operator account.
+  // Auto-redirect operators who are already signed in when this page loads.
+  // skipNav is true while a sign-in is in progress so this doesn't fire mid-flow.
   useEffect(() => {
     if (!session || skipNav) return;
     const accountType = profile?.account_type
@@ -141,11 +141,13 @@ export default function Login() {
       setLoading(false);
       return; // keep skipNav = true — nav blocked until MFA passed
     }
-    // Release the nav block — the useEffect will navigate once session+profile
-    // are committed to React state (avoids the race where navigate fires before
-    // onAuthStateChange has propagated to ProtectedRoute).
+
+    // Navigate directly — by this point signIn + getUser + profile + AAL have
+    // all awaited, giving React time to commit the session from onAuthStateChange.
+    // setSkipNav(false) also so the useEffect doesn't fire a second redirect.
     setSkipNav(false);
     setLoading(false);
+    navigate('/dashboard', { replace: true });
   };
 
   // MFA challenge handler
@@ -172,6 +174,7 @@ export default function Login() {
     }
     setSkipNav(false);
     setLoading(false);
+    navigate('/dashboard', { replace: true });
   };
 
   // Google SSO
