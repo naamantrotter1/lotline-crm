@@ -187,7 +187,20 @@ export default async function handler(req, res) {
       const listData = await listRes.json();
       const users    = Array.isArray(listData) ? listData : (listData.users ?? []);
       const found    = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      if (found?.id) { userId = found.id; isExistingUser = true; }
+      if (found?.id) {
+        userId = found.id;
+        isExistingUser = true;
+        // Generate a magic link so we have an activateUrl to send via Resend
+        const mlResC = await fetch(`${supabaseUrl}/auth/v1/admin/generateLink`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: redirectTo } }),
+        });
+        if (mlResC.ok) {
+          const dC = await mlResC.json();
+          activateUrl = buildActivateUrl(dC.properties?.action_link ?? dC.action_link ?? null, baseUrl);
+        }
+      }
     }
   }
 
@@ -242,12 +255,8 @@ export default async function handler(req, res) {
     });
   }
   if (!emailSent) {
-    // Fallback: Supabase built-in invite email via the admin /invite endpoint.
-    // Unlike /auth/v1/otp (public endpoint), /auth/v1/invite uses the service
-    // role key which bypasses the redirect URL allowlist — so redirect_to IS
-    // honored and the user lands on /investor-setup instead of the site root.
-    // The email button says "Accept the invitation" and the link redirects to
-    // /investor-setup#access_token=… which InvestorSetup.jsx handles via Path 2.
+    // Fallback A: /auth/v1/invite — admin endpoint, honors redirect_to, works for
+    // new/unconfirmed users. Fails if the user already has a confirmed account.
     const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
       method:  'POST',
       headers,
@@ -258,6 +267,16 @@ export default async function handler(req, res) {
       }),
     });
     emailSent = inviteRes.ok;
+  }
+  if (!emailSent) {
+    // Fallback B: /auth/v1/otp — works for all existing users (magic link email).
+    // redirect_to is subject to Supabase allowlist but the email reliably arrives.
+    const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+      method:  'POST',
+      headers,
+      body:    JSON.stringify({ email, create_user: false, options: { redirect_to: redirectTo } }),
+    });
+    emailSent = otpRes.ok;
   }
 
   // ── 5. Wait for profile trigger ───────────────────────────────────────────
