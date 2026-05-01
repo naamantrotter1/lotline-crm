@@ -121,7 +121,7 @@ export async function fetchInvestors(orgIds) {
   if (!supabase) return [];
   let q = supabase
     .from('investors')
-    .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes, organization_id')
+    .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes, organization_id, auth_user_id, invited_at, status')
     .neq('is_archived', true)
     .order('name');
   if (orgIds) {

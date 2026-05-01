@@ -920,6 +920,7 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
           organizationId: activeOrgId,
           invitedByName:  profile?.name ?? 'LotLine',
           appUrl:         window.location.origin,
+          investorId:     inv.id,  // prevents duplicate investor rows
         }),
       });
       const data = await res.json();
@@ -1064,25 +1065,38 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 justify-end">
-                      {/* Portal invite button — only shown when investor has an email */}
-                      {inv.email && (
-                        sentIds[inv.id] === true ? (
-                          <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
-                            <CheckCircle size={11} /> Invited
-                          </span>
-                        ) : sentIds[inv.id] ? (
-                          <span className="text-[10px] text-red-500 px-1 max-w-[200px] truncate" title={sentIds[inv.id]}>Failed: {sentIds[inv.id]}</span>
-                        ) : (
+                      {/* Portal invite button — status-aware */}
+                      {inv.email && (() => {
+                        const isActive  = inv.status === 'active' || (inv.authUserId && inv.status !== 'revoked');
+                        const isPending = !isActive && (inv.status === 'invited' || inv.authUserId);
+                        if (sentIds[inv.id] === true) {
+                          return (
+                            <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
+                              <CheckCircle size={11} /> Sent
+                            </span>
+                          );
+                        }
+                        if (sentIds[inv.id]) {
+                          return <span className="text-[10px] text-red-500 px-1 max-w-[200px] truncate" title={sentIds[inv.id]}>Failed</span>;
+                        }
+                        if (isActive) {
+                          return (
+                            <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
+                              <CheckCircle size={11} /> Portal Active
+                            </span>
+                          );
+                        }
+                        return (
                           <button
                             onClick={() => handleSendInvite(inv)}
                             disabled={sendingId === inv.id}
                             className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 disabled:opacity-50 transition-colors"
-                            title="Send portal invite email"
+                            title={isPending ? 'Resend portal invite email' : 'Send portal invite email'}
                           >
-                            {sendingId === inv.id ? '…' : <><Mail size={10} /> Invite to Portal</>}
+                            {sendingId === inv.id ? '…' : <><Mail size={10} /> {isPending ? 'Resend Invite' : 'Invite to Portal'}</>}
                           </button>
-                        )
-                      )}
+                        );
+                      })()}
                       <button
                         onClick={() => setEditInvestor(inv)}
                         className="p-1 text-gray-300 hover:text-accent transition-colors rounded"
@@ -1394,6 +1408,10 @@ export default function InvestorPortal() {
     roiDollars: 0,
     avgAnnualizedRoi: 0,
     deals: [],
+    // Portal access fields
+    authUserId: r.auth_user_id ?? null,
+    invitedAt:  r.invited_at  ?? null,
+    status:     r.status      ?? null,
   });
 
   // Load investor list from Supabase whenever JV scope changes.
@@ -1497,6 +1515,15 @@ export default function InvestorPortal() {
         {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && <DirectoryTab investors={investors} deals={customDeals} activeOrgId={activeOrgId}
           onDelete={async (id) => {
+            const inv = investors.find(i => i.id === id);
+            // Revoke portal access before archiving
+            if (inv?.authUserId) {
+              await fetch('/api/revokeInvestorAccess', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ investorId: id, authUserId: inv.authUserId }),
+              }).catch(() => {});
+            }
             await archiveInvestor(id);
             setInvestors(prev => prev.filter(i => i.id !== id));
           }}

@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server misconfigured: missing Supabase credentials' });
   }
 
-  const { name, email, phone, organizationId, invitedByName, appUrl } = req.body ?? {};
+  const { name, email, phone, organizationId, invitedByName, appUrl, investorId: bodyInvestorId } = req.body ?? {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required' });
 
   const baseUrl    = appUrl || process.env.APP_URL || 'https://lotline-crm.vercel.app';
@@ -103,23 +103,54 @@ export default async function handler(req, res) {
     'Authorization': `Bearer ${serviceKey}`,
   };
 
-  // ── 1. Upsert investor record ──────────────────────────────────────────────
-  const investorUpsertRes = await fetch(`${supabaseUrl}/rest/v1/investors`, {
-    method:  'POST',
-    headers: { ...headers, 'Prefer': 'return=representation,resolution=merge-duplicates' },
-    body:    JSON.stringify({
-      name:            name.trim(),
-      email:           email.toLowerCase().trim(),
-      phone:           phone ?? '',
-      status:          'invited',
-      invited_by_name: invitedByName ?? null,
-      invited_at:      new Date().toISOString(),
-      ...(organizationId ? { organization_id: organizationId } : {}),
-    }),
-  });
-  const investorArr = await investorUpsertRes.json();
-  const investor    = Array.isArray(investorArr) ? investorArr[0] : investorArr;
-  const investorId  = investor?.id ?? null;
+  // ── 1. Resolve investor record (never create duplicates) ──────────────────
+  // Priority: a) caller passed an investorId → reuse it
+  //           b) existing row with same email + org  → reuse it
+  //           c) no match → insert new row
+  let investorId = bodyInvestorId ?? null;
+
+  if (!investorId && organizationId) {
+    // Check for existing investor with this email in this org
+    const lookupRes = await fetch(
+      `${supabaseUrl}/rest/v1/investors?email=eq.${encodeURIComponent(email.toLowerCase().trim())}&organization_id=eq.${organizationId}&limit=1`,
+      { headers: { ...headers, 'Prefer': 'return=representation' } },
+    );
+    if (lookupRes.ok) {
+      const rows = await lookupRes.json();
+      if (Array.isArray(rows) && rows.length > 0) investorId = rows[0].id;
+    }
+  }
+
+  if (investorId) {
+    // Update invite metadata on the existing record
+    await fetch(`${supabaseUrl}/rest/v1/investors?id=eq.${investorId}`, {
+      method:  'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body:    JSON.stringify({
+        status:          'invited',
+        invited_by_name: invitedByName ?? null,
+        invited_at:      new Date().toISOString(),
+      }),
+    });
+  } else {
+    // Insert a brand-new investor record
+    const insertRes = await fetch(`${supabaseUrl}/rest/v1/investors`, {
+      method:  'POST',
+      headers: { ...headers, 'Prefer': 'return=representation' },
+      body:    JSON.stringify({
+        name:            name.trim(),
+        email:           email.toLowerCase().trim(),
+        phone:           phone ?? '',
+        status:          'invited',
+        invited_by_name: invitedByName ?? null,
+        invited_at:      new Date().toISOString(),
+        ...(organizationId ? { organization_id: organizationId } : {}),
+      }),
+    });
+    const insertArr = await insertRes.json();
+    const newRow    = Array.isArray(insertArr) ? insertArr[0] : insertArr;
+    investorId      = newRow?.id ?? null;
+  }
 
   const inviteMeta = {
     account_type:    'investor',
