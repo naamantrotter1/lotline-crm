@@ -141,9 +141,20 @@ export default function InvestorSetup() {
       }
 
       // Path 2: hash-based tokens (#access_token=… — Supabase default redirect)
-      const hash         = new URLSearchParams(window.location.hash.slice(1));
-      const accessToken  = hash.get('access_token');
-      const refreshToken = hash.get('refresh_token') ?? '';
+      // Supabase's initialize() microtask may strip the hash before this useEffect runs,
+      // so we also check the sessionStorage backup saved by main.jsx before React mounted.
+      const hash = new URLSearchParams(window.location.hash.slice(1));
+      let accessToken  = hash.get('access_token');
+      let refreshToken = hash.get('refresh_token') ?? '';
+      if (!accessToken) {
+        const backup = sessionStorage.getItem('ll_invite_hash');
+        if (backup) {
+          sessionStorage.removeItem('ll_invite_hash');
+          const b = new URLSearchParams(backup.slice(1));
+          accessToken  = b.get('access_token') ?? '';
+          refreshToken = b.get('refresh_token') ?? '';
+        }
+      }
 
       if (accessToken) {
         const { data, error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });

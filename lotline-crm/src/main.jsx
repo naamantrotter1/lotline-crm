@@ -9,13 +9,15 @@ if (localStorage.getItem('darkMode') === 'true') {
 }
 
 // Rescue Supabase invite/recovery tokens that land on / instead of /investor-setup.
-// This must run before React mounts — Supabase's implicit-flow client strips the hash
-// from the URL on initialization, so by the time any component renders it's already gone.
+// Must run before React mounts — Supabase's implicit-flow client runs initialize() as
+// a microtask and strips the hash BEFORE useEffect (a macrotask) can read it.
+// We save the hash to sessionStorage here so InvestorSetup can recover it either way.
 if (window.location.pathname === '/') {
   const hashParams = new URLSearchParams(window.location.hash.slice(1));
   const token = hashParams.get('access_token');
   const type  = hashParams.get('type');
-  if (token && (type === 'invite' || type === 'recovery')) {
+  if (token && (type === 'invite' || type === 'recovery' || type === 'magiclink')) {
+    sessionStorage.setItem('ll_invite_hash', window.location.hash);
     window.history.replaceState(null, '', '/investor-setup' + window.location.hash);
   }
 }
