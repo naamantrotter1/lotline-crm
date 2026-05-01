@@ -21,18 +21,14 @@ export default function Login() {
   // Prevent auto-navigate while awaiting MFA challenge
   const skipNavRef = useRef(false);
 
-  // Auto-redirect if already logged in. Wait for profile to load so we can
-  // send investors to their portal instead of bouncing them through /dashboard.
+  // Auto-redirect operators who are already signed in.
+  // Investors are left on the form — they may want to switch to an operator account.
   useEffect(() => {
     if (!session || skipNavRef.current) return;
     const accountType = profile?.account_type
       ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
     if (accountType === null) return; // profile still loading
-    if (accountType === 'investor') {
-      navigate('/investor/home', { replace: true });
-    } else {
-      navigate('/dashboard', { replace: true });
-    }
+    if (accountType !== 'investor') navigate('/dashboard', { replace: true });
   }, [session, profile]);
 
   // Mode: 'signin' | 'mfa-challenge' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
