@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2, Pencil } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { useDeals } from '../lib/DealsContext';
@@ -1394,7 +1394,10 @@ export default function InvestorPortal() {
 
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
-  const [activeTab, setActiveTab] = useState('by-investor');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'commitments', 'directory', 'available-investments'];
+  const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'by-investor';
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [investors, setInvestors] = useState([]);
 
   const toInvestorShape = r => ({

@@ -2060,8 +2060,10 @@ function DealDetailContent({ deal }) {
   // Dev tasks — initialized all false; Supabase load in useEffect below overwrites
   const totalDevTasks = DEV_GROUPS.flatMap(g => g.tasks).length;
 
-  const [activeTab, setActiveTab] = useState('overview');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_DEAL_TABS = ['overview', 'events', 'threads', 'details', 'dd', 'dev', 'realized', 'financing'];
+  const activeTab = VALID_DEAL_TABS.includes(searchParams.get('dealTab')) ? searchParams.get('dealTab') : 'overview';
+  const setActiveTab = (tab) => setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('dealTab', tab); return next; }, { replace: true });
 
   // If ?activity=noteId is in the URL (from a mention notification), scroll to that note
   useEffect(() => {
