@@ -39,7 +39,7 @@ async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
 </body>
 </html>`;
 
-  await fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -52,7 +52,7 @@ async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
       html,
     }),
   });
-  return true;
+  return res.ok;
 }
 
 /**
