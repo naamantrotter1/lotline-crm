@@ -11,6 +11,14 @@ import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from 
 import { archiveInvestor, upsertInvestor, fetchAllInvestors } from '../lib/investorPortalData';
 import { supabase } from '../lib/supabase';
 
+function formatPhone(raw) {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits[0] === '1') return `${digits.slice(1,4)}-${digits.slice(4,7)}-${digits.slice(7)}`;
+  return raw;
+}
+
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
   'Louis Isom': 'bg-purple-100 text-purple-700',
@@ -1042,7 +1050,7 @@ function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
                 <td className="px-4 py-3">
                   {inv.phone ? (
                     <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
-                      <Phone size={11} /> {inv.phone}
+                      <Phone size={11} /> {formatPhone(inv.phone)}
                     </a>
                   ) : <span className="text-xs text-gray-400">—</span>}
                 </td>
