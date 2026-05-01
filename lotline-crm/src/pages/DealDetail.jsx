@@ -266,6 +266,7 @@ function FinancingScenarioPanel({
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
   const [showAdvancedFees, setShowAdvancedFees] = useState(false);
+  const [showLocAdvanced, setShowLocAdvanced] = useState(false);
 
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -354,13 +355,20 @@ function FinancingScenarioPanel({
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cash Deal</p>
           <div className="grid grid-cols-2 gap-x-6">
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Source</p>
-              <select value={cashSource} onChange={e => setCashSource(e.target.value)} className={iCls} disabled={readOnly}>
-                <option value="">— Select —</option>
-                <option>Own Cash</option>
-                <option>Partner Cash</option>
-                <option>Business LOC</option>
+            <div className="py-2 col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor / Funder</p>
+                {!readOnly && (
+                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                    + Add New Investor
+                  </button>
+                )}
+              </div>
+              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                <option value="">— No Investor —</option>
+                {(investorList || []).map(inv => (
+                  <option key={inv.id} value={inv.name}>{inv.name}</option>
+                ))}
               </select>
             </div>
             <div className="py-2">
@@ -430,6 +438,9 @@ function FinancingScenarioPanel({
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                   readOnly={readOnly}
                 />
+                {activeFinancing === 'Hard Money (Land + Home)' && (
+                  <p className="text-[10px] text-gray-400 mt-1">Land cost + home cost combined</p>
+                )}
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
@@ -556,14 +567,26 @@ function FinancingScenarioPanel({
         </>
       )}
 
-            {/* ── Line of Credit ── */}
+      {/* ── Line of Credit ── */}
       {!!selectedScenario && isLoC && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Line of Credit Terms</p>
           <div className="grid grid-cols-2 gap-x-6">
             <div className="py-2 col-span-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Lender Name</p>
-              <input type="text" value={lenderName} onChange={e => setLenderName(e.target.value)} placeholder="e.g. First National Bank" className={iCls} readOnly={readOnly} />
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</p>
+                {!readOnly && (
+                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                    + Add New Investor
+                  </button>
+                )}
+              </div>
+              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                <option value="">— No Investor —</option>
+                {(investorList || []).map(inv => (
+                  <option key={inv.id} value={inv.name}>{inv.name}</option>
+                ))}
+              </select>
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Line Limit ($)</p>
@@ -588,13 +611,27 @@ function FinancingScenarioPanel({
               <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestLoc).toLocaleString()}</span>
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
-              <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
-            </div>
-            <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
               <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
             </div>
+          </div>
+          {/* Advanced fees toggle */}
+          <div className="mt-2 border-t border-gray-100 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowLocAdvanced(v => !v)}
+              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-accent font-medium transition-colors"
+            >
+              {showLocAdvanced ? '− Hide advanced fees' : '+ Show advanced fees'}
+            </button>
+            {showLocAdvanced && (
+              <div className="grid grid-cols-2 gap-x-6 mt-2">
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Fee (%)</p>
+                  <input type="number" value={annualFeePct} onChange={e => setAnnualFeePct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -604,6 +641,26 @@ function FinancingScenarioPanel({
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Profit Split Terms</p>
           <div className="grid grid-cols-2 gap-x-6">
+            <div className="py-2 col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
+                {!readOnly && (
+                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                    + Add New Investor
+                  </button>
+                )}
+              </div>
+              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                <option value="">— No Investor —</option>
+                {(investorList || []).map(inv => (
+                  <option key={inv.id} value={inv.name}>{inv.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
+            </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split (%)</p>
               <input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
@@ -613,12 +670,25 @@ function FinancingScenarioPanel({
               <span className="text-sm font-medium text-accent">${Math.round(profitSplitAmount).toLocaleString()}</span>
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
-              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
-            </div>
-            <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
               <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
+              <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
+                <option>Interest Only</option>
+                <option>Profit Split %</option>
+                <option>Flat Fee</option>
+                <option>Pooled</option>
+              </select>
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Status</p>
+              <select value={investorAssignmentStatus} onChange={e => setInvestorAssignmentStatus(e.target.value)} className={iCls} disabled={readOnly}>
+                <option>Committed</option>
+                <option>Funded</option>
+                <option>Returned</option>
+              </select>
             </div>
           </div>
         </div>
