@@ -91,6 +91,18 @@ const labelStyle = {
   marginBottom: 6,
 };
 
+// ── Shared shell ───────────────────────────────────────────────────────────
+// Must be defined OUTSIDE InvestorSetup so it doesn't get recreated on every
+// render (which would remount children, steal input focus, and hide the keyboard).
+
+function Shell({ children }) {
+  return (
+    <div style={{ background: '#0F1117', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+      {children}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function InvestorSetup() {
@@ -264,13 +276,6 @@ export default function InvestorSetup() {
   };
 
   const strength = calcStrength(password);
-
-  // ── Shared shell ───────────────────────────────────────────────────────────
-  const Shell = ({ children }) => (
-    <div style={{ background: '#0F1117', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
-      {children}
-    </div>
-  );
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (phase === 'loading') return (
