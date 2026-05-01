@@ -68,14 +68,15 @@ function buildActivateUrl(actionLink, baseUrl) {
   if (!actionLink) return null;
   try {
     const url       = new URL(actionLink);
-    const tokenHash = url.searchParams.get('token');
+    // Supabase uses 'token' in older versions and 'token_hash' in newer ones
+    const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
     const type      = url.searchParams.get('type') ?? 'invite';
     if (tokenHash) {
       return `${baseUrl}/investor-setup?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`;
     }
   } catch {}
-  // Fallback: use the raw Supabase verification URL
-  return actionLink;
+  // Could not extract token — return null so callers fall back to Supabase email
+  return null;
 }
 
 // POST /api/inviteInvestor

@@ -177,6 +177,23 @@ export default function InvestorSetup() {
         return;
       }
 
+      // Last resort: Supabase may have auto-processed the hash token and already
+      // established a session before useEffect ran. If a session exists and the
+      // user hasn't completed setup yet, show the form using that session.
+      const { data: existing } = await supabase.auth.getSession();
+      if (existing?.session?.user) {
+        const { data: profileRow } = await supabase
+          .from('profiles').select('name').eq('id', existing.session.user.id).single();
+        if (profileRow?.name) {
+          navigate('/investor/home', { replace: true });
+          return;
+        }
+        setEmail(existing.session.user.email ?? '');
+        setInvestorId(existing.session.user.user_metadata?.investor_id ?? null);
+        setPhase('setup');
+        return;
+      }
+
       // No token — show the expired/invalid state
       setTokenError('No invite token found. Please use the link from your invitation email.');
       setPhase('expired');
