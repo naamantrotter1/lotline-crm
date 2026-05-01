@@ -242,17 +242,22 @@ export default async function handler(req, res) {
     });
   }
   if (!emailSent) {
-    // Supabase native OTP — plain email but delivers reliably
-    const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+    // Fallback: Supabase built-in invite email via the admin /invite endpoint.
+    // Unlike /auth/v1/otp (public endpoint), /auth/v1/invite uses the service
+    // role key which bypasses the redirect URL allowlist — so redirect_to IS
+    // honored and the user lands on /investor-setup instead of the site root.
+    // The email button says "Accept the invitation" and the link redirects to
+    // /investor-setup#access_token=… which InvestorSetup.jsx handles via Path 2.
+    const inviteRes = await fetch(`${supabaseUrl}/auth/v1/invite`, {
       method:  'POST',
       headers,
       body:    JSON.stringify({
         email,
-        create_user: false,
-        options: { redirect_to: redirectTo },
+        data:        { account_type: 'investor', investor_id: investorId, organization_id: organizationId ?? null },
+        redirect_to: redirectTo,
       }),
     });
-    emailSent = otpRes.ok;
+    emailSent = inviteRes.ok;
   }
 
   // ── 5. Wait for profile trigger ───────────────────────────────────────────
