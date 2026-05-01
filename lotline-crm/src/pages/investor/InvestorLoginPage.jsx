@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -34,26 +34,52 @@ function PasswordInput({ value, onChange, show, onToggle }) {
   );
 }
 
+function friendlyError(msg, isOperator) {
+  if (isOperator) {
+    return (
+      <>
+        This login is for investors only.{' '}
+        <Link to="/login" className="underline text-red-300 hover:text-red-200">Team members sign in here →</Link>
+      </>
+    );
+  }
+  if (!msg) return 'Something went wrong. Please try again.';
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login credentials') || m.includes('invalid email or password')) {
+    return 'Incorrect email or password. Please try again.';
+  }
+  if (m.includes('email not confirmed')) {
+    return 'Please check your email and confirm your account before signing in.';
+  }
+  if (m.includes('user not found') || m.includes('no user found')) {
+    return 'No investor account found with that email. Contact LotLine to verify your access.';
+  }
+  if (m.includes('too many requests') || m.includes('rate limit')) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 export default function InvestorLoginPage() {
   const { session, profile, signIn } = useAuth();
   const navigate = useNavigate();
-  const skipNavRef = useRef(false);
+  // Using state (not ref) so changing it re-triggers the useEffect below.
+  const [skipNav, setSkipNav] = useState(false);
 
   useEffect(() => {
-    if (session && !skipNavRef.current) {
-      const accountType = profile?.account_type
-        ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
-      if (accountType === null) return;
-      if (accountType === 'investor') navigate('/investor/home', { replace: true });
-      else navigate('/dashboard', { replace: true });
-    }
-  }, [session, profile]);
+    if (!session || skipNav) return;
+    const accountType = profile?.account_type
+      ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+    if (accountType === null) return; // profile still loading
+    if (accountType === 'investor') navigate('/investor/home', { replace: true });
+    // Operators who land here while logged in: leave them on the page (they should use /login)
+  }, [session, profile, skipNav]);
 
   const [mode,         setMode]         = useState('signin');
   const [email,        setEmail]        = useState('');
   const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error,        setError]        = useState('');
+  const [error,        setError]        = useState(null); // null | string | JSX
   const [loading,      setLoading]      = useState(false);
 
   const inputCls = "w-full border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 bg-white/5 text-white placeholder-white/30";
@@ -61,16 +87,14 @@ export default function InvestorLoginPage() {
 
   const handleSignIn = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
-    skipNavRef.current = true;
+    setSkipNav(true);
 
     const { error: signInError } = await signIn(email.trim(), password);
     if (signInError) {
-      skipNavRef.current = false;
-      setError(signInError.message === 'Invalid login credentials'
-        ? 'Incorrect email or password. Please try again.'
-        : signInError.message);
+      setSkipNav(false);
+      setError(friendlyError(signInError.message, false));
       setLoading(false);
       return;
     }
@@ -82,29 +106,42 @@ export default function InvestorLoginPage() {
       .eq('id', user?.id)
       .single();
 
-    skipNavRef.current = false;
-    setLoading(false);
-
     const accountType = profileData?.account_type
       ?? (profileData?.role === 'investor' ? 'investor' : (profileData ? 'operator' : null));
 
-    if (accountType === 'investor' || accountType === null) {
-      navigate('/investor/home', { replace: true });
-    } else {
-      // operator/admin/member — send to CRM dashboard
-      navigate('/dashboard', { replace: true });
+    if (accountType === 'operator') {
+      // Team member used the wrong login — sign them out and show a clear error
+      await supabase.auth.signOut();
+      setSkipNav(false);
+      setError(friendlyError(null, true));
+      setLoading(false);
+      return;
     }
+
+    if (accountType === null) {
+      // No profile found — don't grant access
+      await supabase.auth.signOut();
+      setSkipNav(false);
+      setError('No investor account found with that email. Contact LotLine to verify your access.');
+      setLoading(false);
+      return;
+    }
+
+    // Investor confirmed — release nav block; useEffect will navigate
+    // once onAuthStateChange has propagated session to AuthContext.
+    setSkipNav(false);
+    setLoading(false);
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/investor/reset-password`,
     });
     setLoading(false);
-    if (error) setError(error.message);
+    if (error) setError(friendlyError(error.message, false));
     else setMode('forgot-sent');
   };
 
@@ -149,7 +186,7 @@ export default function InvestorLoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className={labelCls} style={{ marginBottom: 0 }}>Password</label>
-                  <button type="button" onClick={() => { setMode('forgot-password'); setError(''); }} className="text-xs text-accent hover:underline">
+                  <button type="button" onClick={() => { setMode('forgot-password'); setError(null); }} className="text-xs text-accent hover:underline">
                     Forgot password?
                   </button>
                 </div>
@@ -168,9 +205,12 @@ export default function InvestorLoginPage() {
               </button>
             </form>
 
+            {/* Invitation-only notice — no self-signup */}
             <p className="text-center text-xs text-white/30 mt-6">
-              Don't have an account?{' '}
-              <Link to="/investor/signup" className="text-accent hover:underline font-medium">Create investor account →</Link>
+              Investor accounts are created by invitation only.{' '}
+              <a href="mailto:naaman@lotlinehomes.com" className="text-white/40 hover:text-accent transition-colors">
+                Contact LotLine for access.
+              </a>
             </p>
 
             <div className="mt-8 pt-6 border-t border-white/10 text-center">
@@ -200,7 +240,7 @@ export default function InvestorLoginPage() {
               </button>
             </form>
             <p className="text-center text-xs text-white/30 mt-6">
-              <button onClick={() => { setMode('signin'); setError(''); }} className="text-accent hover:underline font-medium">Back to sign in</button>
+              <button onClick={() => { setMode('signin'); setError(null); }} className="text-accent hover:underline font-medium">Back to sign in</button>
             </p>
           </>
         )}
@@ -221,7 +261,7 @@ export default function InvestorLoginPage() {
               We sent a reset link to <span className="font-medium text-white/70">{email}</span>.
             </p>
             <p className="text-center text-xs text-white/30">
-              <button onClick={() => { setMode('signin'); setError(''); }} className="text-accent hover:underline font-medium">Back to sign in</button>
+              <button onClick={() => { setMode('signin'); setError(null); }} className="text-accent hover:underline font-medium">Back to sign in</button>
             </p>
           </>
         )}
