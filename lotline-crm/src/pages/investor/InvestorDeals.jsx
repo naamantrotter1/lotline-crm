@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Briefcase, Search, ChevronRight } from 'lucide-react';
-import { fetchMyDeals } from '../../lib/investorPortalData';
+import { fetchMyAllocations } from '../../lib/investorPortalData';
 
 const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
 const STAGE_COLORS = {
@@ -25,8 +25,8 @@ export default function InvestorDeals() {
 
   useEffect(() => {
     if (!investor) return;
-    fetchMyDeals(investor.name).then(({ deals: d }) => { setDeals(d); setLoading(false); });
-  }, [investor]);
+    fetchMyAllocations(investor.id).then(({ deals: d }) => { setDeals(d ?? []); setLoading(false); });
+  }, [investor?.id]);
 
   const filtered = deals.filter(d =>
     (d.address ?? '').toLowerCase().includes(query.toLowerCase()) ||
@@ -73,8 +73,24 @@ export default function InvestorDeals() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white dark:bg-[#1c2130] rounded-xl p-12 text-center border border-gray-200 dark:border-white/8">
-          <Briefcase size={32} className="mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm">{query ? 'No matching deals.' : 'No deals assigned yet.'}</p>
+          {query ? (
+            <>
+              <Briefcase size={32} className="mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No matching deals.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-4xl mb-4">🏠</p>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-2">No deals linked yet</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                Your investment manager hasn't linked any deals to your account yet.<br />
+                Deals you're invested in will appear here once they're assigned.
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Questions? <a href="mailto:naaman@lotlinehomes.com" className="text-accent hover:underline">naaman@lotlinehomes.com</a>
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
@@ -82,11 +98,6 @@ export default function InvestorDeals() {
             const stageIdx = STAGE_ORDER.indexOf(deal.stage);
             const pct = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
             const { bg, text } = STAGE_COLORS[deal.stage] ?? { bg: 'bg-gray-100', text: 'text-gray-500' };
-            const totalCost = deal.total_actual != null
-              ? Number(deal.total_actual)
-              : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
-                (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
-                (deal.hvac ?? 0) + (deal.clear_land ?? 0);
             return (
               <Link
                 key={deal.id}
@@ -108,8 +119,8 @@ export default function InvestorDeals() {
                 <div className="flex-shrink-0 text-right mr-3">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">ARV</p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">{fmt(deal.arv)}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Capital</p>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{fmt(totalCost)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">My Position</p>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{fmt(deal.allocation?.amount)}</p>
                 </div>
                 <ChevronRight size={14} className="text-gray-400 dark:text-gray-500 group-hover:text-accent transition-colors flex-shrink-0" />
               </Link>

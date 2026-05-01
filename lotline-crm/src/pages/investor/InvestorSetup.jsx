@@ -264,12 +264,44 @@ export default function InvestorSetup() {
         }, { onConflict: 'id' });
       }
 
-      // 3. Activate investor record (links auth_user_id, sets status='active')
-      if (investorId) {
+      // 3. Link investor record — find by metadata ID first, then fall back to email.
+      //    This ensures auth_user_id and investor_users are always populated even
+      //    when user_metadata.investor_id wasn't set by the invite flow.
+      let resolvedInvestorId = investorId;
+
+      if (resolvedInvestorId) {
+        // Primary: use the ID from invite metadata — call the RPC which links everything
         const { error: rpcError } = await supabase.rpc('activate_investor_account', {
-          p_investor_id: investorId,
+          p_investor_id: resolvedInvestorId,
         });
         if (rpcError) console.warn('activate_investor_account:', rpcError.message);
+      }
+
+      // Fallback: find investor by email and manually link (covers cases where
+      // user_metadata.investor_id was missing or the RPC failed).
+      if (!resolvedInvestorId || true) {
+        const { data: invRecord } = await supabase
+          .from('investors')
+          .select('id, organization_id')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (invRecord) {
+          resolvedInvestorId = invRecord.id;
+          // Update auth_user_id + status on investors
+          await supabase.from('investors').update({
+            auth_user_id: user.id,
+            status:       'active',
+            activated_at: new Date().toISOString(),
+          }).eq('id', invRecord.id);
+
+          // Upsert investor_users join row
+          await supabase.from('investor_users').upsert({
+            user_id:         user.id,
+            investor_id:     invRecord.id,
+            organization_id: invRecord.organization_id,
+          }, { onConflict: 'user_id,investor_id' });
+        }
       }
 
       // 4. Show success then redirect
