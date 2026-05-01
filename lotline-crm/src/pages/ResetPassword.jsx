@@ -12,11 +12,20 @@ export default function ResetPassword() {
   const [done, setDone]                 = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
 
-  // Supabase puts the recovery token in the URL hash.
-  // When the user lands here, the SDK automatically exchanges it for a session.
+  // Supabase exchanges the recovery token in the URL hash asynchronously.
+  // AuthContext's onAuthStateChange listener fires first (before this component's
+  // useEffect runs), so we can't rely solely on catching PASSWORD_RECOVERY here.
+  // Fix: also check getSession() immediately on mount — if the token was already
+  // exchanged, the session will be present right away.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    // Case 1: token already exchanged before this effect ran
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setSessionReady(true);
+    });
+
+    // Case 2: token exchange completes after this effect ran
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setSessionReady(true);
       }
     });
