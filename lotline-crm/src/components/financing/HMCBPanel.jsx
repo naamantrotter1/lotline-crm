@@ -128,7 +128,7 @@ export function HMCBSummaryCard({ data, draws = [] }) {
 }
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) {
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
@@ -284,8 +284,32 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
       <SectionCard title="Lender Information">
         <Row>
           <div>
-            {label('Lender Name')}
-            <input className={inp} value={d.lenderName} onChange={e => set('lenderName', e.target.value)} placeholder="Low Tide Private Lending" disabled={readOnly} />
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</span>
+              {!readOnly && onAddInvestor && (
+                <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                  + Add New Investor
+                </button>
+              )}
+            </div>
+            {investorList.length > 0 ? (
+              <select
+                className={inp}
+                value={d.lenderName}
+                onChange={e => set('lenderName', e.target.value)}
+                disabled={readOnly}
+              >
+                <option value="">— Select Lender —</option>
+                {d.lenderName && !investorList.find(i => i.name === d.lenderName) && (
+                  <option value={d.lenderName}>{d.lenderName}</option>
+                )}
+                {investorList.map(inv => (
+                  <option key={inv.id} value={inv.name}>{inv.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input className={inp} value={d.lenderName} onChange={e => set('lenderName', e.target.value)} placeholder="Low Tide Private Lending" disabled={readOnly} />
+            )}
           </div>
           <div>
             {label('Loan Number (optional)')}

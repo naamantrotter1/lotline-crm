@@ -3376,6 +3376,8 @@ function DealDetailContent({ deal }) {
             data={hmcbData}
             onChange={setHmcbData}
             readOnly={fromInvestorPortal || !canEdit}
+            investorList={investorList}
+            onAddInvestor={() => setShowInvestorPicker(true)}
           />
         )}
 
