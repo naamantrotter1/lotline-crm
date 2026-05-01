@@ -99,45 +99,44 @@ export async function fetchMyDeals(investorName) {
 export async function fetchMyAllocations(investorId) {
   if (!investorId) return { deals: [], error: null };
 
-  const { data: allocations, error } = await supabase
+  // Step 1: fetch allocations (avoid PostgREST FK join hint — use two queries instead)
+  const { data: allocations, error: allocErr } = await supabase
     .from('deal_allocations')
-    .select(`
-      id,
-      deal_id,
-      amount,
-      percent_of_deal,
-      position,
-      preferred_return_pct,
-      profit_share_pct,
-      status,
-      funding_status,
-      allocated_at,
-      deals!deal_id (
-        id, address, county, state, stage, arv, all_in_cost, net_profit,
-        parcel_id, acreage, lead_source, close_date, projected_payout_date,
-        projected_irr, visible_to_investors, created_at, contract_signed_at,
-        min_check_size
-      )
-    `)
+    .select('id, deal_id, amount, percent_of_deal, position, preferred_return_pct, profit_share_pct, status, funding_status, allocated_at')
     .eq('investor_id', investorId)
     .order('allocated_at', { ascending: false });
 
-  if (error) return { deals: [], error };
+  if (allocErr) return { deals: [], error: allocErr };
+  if (!allocations?.length) return { deals: [], error: null };
 
-  const deals = (allocations ?? [])
-    .filter(a => a.deals !== null && a.deals.visible_to_investors !== false)
+  // Step 2: fetch deals by the IDs from allocations
+  const dealIds = [...new Set(allocations.map(a => a.deal_id).filter(Boolean))];
+  const { data: dealsData, error: dealsErr } = await supabase
+    .from('deals')
+    .select('id, address, county, state, stage, arv, all_in_cost, net_profit, parcel_id, acreage, lead_source, close_date, projected_payout_date, projected_irr, visible_to_investors, created_at, contract_signed_at, min_check_size')
+    .in('id', dealIds);
+
+  if (dealsErr) return { deals: [], error: dealsErr };
+
+  // Step 3: merge allocation data onto each deal
+  const dealMap = Object.fromEntries((dealsData ?? []).map(d => [d.id, d]));
+  const deals = allocations
+    .filter(a => {
+      const deal = dealMap[a.deal_id];
+      return deal != null && deal.visible_to_investors !== false;
+    })
     .map(a => ({
-      ...a.deals,
+      ...dealMap[a.deal_id],
       allocation: {
-        id:               a.id,
-        amount:           a.amount,
-        percentOfDeal:    a.percent_of_deal,
-        position:         a.position,
+        id:                 a.id,
+        amount:             a.amount,
+        percentOfDeal:      a.percent_of_deal,
+        position:           a.position,
         preferredReturnPct: a.preferred_return_pct,
-        profitSharePct:   a.profit_share_pct,
-        status:           a.status,
-        fundingStatus:    a.funding_status,
-        allocatedAt:      a.allocated_at,
+        profitSharePct:     a.profit_share_pct,
+        status:             a.status,
+        fundingStatus:      a.funding_status,
+        allocatedAt:        a.allocated_at,
       },
     }));
 
