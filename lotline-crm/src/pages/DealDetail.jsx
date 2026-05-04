@@ -386,8 +386,20 @@ function FinancingScenarioPanel({
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
             <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2 col-span-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Lender Name</p>
-                <input type="text" value={lenderName} onChange={e => setLenderName(e.target.value)} placeholder="e.g. Low Tide Private Lending" className={iCls} readOnly={readOnly} />
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender Name</p>
+                  {!readOnly && (
+                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                      + Add New
+                    </button>
+                  )}
+                </div>
+                <select value={lenderName} onChange={e => setLenderName(e.target.value)} className={iCls} disabled={readOnly}>
+                  <option value="">— Select Lender —</option>
+                  {(investorList || []).map(inv => (
+                    <option key={inv.id} value={inv.name}>{inv.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
@@ -1982,7 +1994,7 @@ function DealDetailContent({ deal }) {
       closingAttorneyAddress: s.closingAttorneyAddress, closeDate: s.closeDate,
       contractDate: s.contractDate, manufacturer: s.manufacturer, deliveryDate: s.deliveryDate,
       holdingMonths: s.holdPeriod, holdingPerMonth: s.monthlyHoldCost,
-      arv: s.arv, listingUrl: s.listingUrl, ...s.costs,
+      arv: s.arv, listingUrl: s.listingUrl, is_starred: s.starred, ...s.costs,
       ...overrides,
     };
     // Save to localStorage + context immediately, and fire Supabase write
@@ -2020,15 +2032,16 @@ function DealDetailContent({ deal }) {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [costSummary, setCostSummary] = useState(null);
+  const [clientTotalActual, setClientTotalActual] = useState(null);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const { hasFlag } = useAuth();
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
-  const [starred, setStarred] = useState(false);
+  const [starred, setStarred] = useState(deal?.is_starred ?? false);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-  const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
+  const currentStageVal = deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
@@ -2070,26 +2083,21 @@ function DealDetailContent({ deal }) {
   const [sewerCompany, setSewerCompany] = useState(deal?.sewerCompany || '');
   const [electricCompany, setElectricCompany] = useState(deal?.electricCompany || '');
   const [homeModel, setHomeModel] = useState(deal?.homeModel || '');
-  const [subdividable, setSubdividable] = useState(() => {
-    const saved = localStorage.getItem(`lotline_subdivide_${deal?.id}`);
-    if (saved !== null) return saved;
-    return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
-  });
-  const [landClearing, setLandClearing] = useState(() => {
-    const saved = localStorage.getItem(`lotline_land_clearing_${deal?.id}`);
-    if (saved !== null) return saved;
-    return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
-  });
+  const [subdividable, setSubdividable] = useState(
+    deal?.subdividable || ((deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No')
+  );
+  const [landClearing, setLandClearing] = useState(
+    deal?.landClearing || ((deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No')
+  );
 
-  // Persist subdivide state so the kanban card reflects it
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
-    if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
+    saveNow({ subdividable: val });
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
-    if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
+    saveNow({ landClearing: val });
   };
 
   const handleSendToLandAcq = () => {
@@ -2100,7 +2108,6 @@ function DealDetailContent({ deal }) {
       stage: 'Waiting on Contract',
       contractSignedAt: null,
     };
-    localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
     saveDeal(updated, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updated.id));
@@ -2113,7 +2120,6 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
-      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
       const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       const isMovingToContractSigned = val === 'Contract Signed';
       // Auto-fill Contract Signed Date when moving to Deal Overview
@@ -2460,9 +2466,11 @@ function DealDetailContent({ deal }) {
     return () => { supabase.removeChannel(ch); };
   }, [costBreakdownV2, deal?.id]);
 
-  // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
-  const allIn = costBreakdownV2 && costSummary
-    ? Number(costSummary.total_actual ?? 0)
+  // allIn: when flag on, prefer client-computed total (matches CostBreakdownTab display,
+  // excludes HIDDEN_KEYS). Falls back to DB summary while tab hasn't loaded yet, then
+  // to old COST_FIELDS sum when feature flag is off.
+  const allIn = costBreakdownV2
+    ? (clientTotalActual !== null ? clientTotalActual : Number(costSummary?.total_actual ?? 0))
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 
   const sellingCosts = (arv || 0) * 0.045 + 4000;
@@ -2580,7 +2588,7 @@ function DealDetailContent({ deal }) {
                 </span>
               )}
               <button
-                onClick={() => setStarred(s => !s)}
+                onClick={() => { const next = !starred; setStarred(next); saveNow({ is_starred: next }); }}
                 className={`p-2 rounded-lg transition-colors ${starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
               >
                 <Star size={18} fill={starred ? 'currentColor' : 'none'} />
@@ -2596,17 +2604,21 @@ function DealDetailContent({ deal }) {
               {canEdit && (
                 <button
                   onClick={() => {
-                    saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage }, activeOrgId);
-                    // Remove from active localStorage list (org-scoped key)
+                    const archivedDeal = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage };
+                    saveDeal(archivedDeal, activeOrgId);
+                    // Update context immediately so pipeline removes it and ArchivedDeals shows it
+                    setDeals(prev => prev.filter(d => String(d.id) !== String(deal.id)));
+                    setArchivedDeals(prev => {
+                      const idx = prev.findIndex(d => String(d.id) === String(deal.id));
+                      if (idx >= 0) { const next = [...prev]; next[idx] = archivedDeal; return next; }
+                      return [...prev, archivedDeal];
+                    });
                     try {
-                      const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
-                      const all = JSON.parse(localStorage.getItem(lsKey) || '[]');
-                      localStorage.setItem(lsKey, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
+                      const lsK = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
+                      const all = JSON.parse(localStorage.getItem(lsK) || '[]');
+                      localStorage.setItem(lsK, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
                     } catch {}
-                    // Navigate back
-                    if (fromInvestorPortal) navigate('/investor-portal');
-                    else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
-                    else navigate('/deal-overview');
+                    navigate('/archived');
                   }}
                   className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
                 >
@@ -2935,7 +2947,7 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
-            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} canEdit={canEdit} />
+            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} onTotalActualChange={setClientTotalActual} canEdit={canEdit} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (

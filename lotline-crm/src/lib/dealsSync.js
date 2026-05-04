@@ -120,6 +120,7 @@ function dealToRow(deal) {
     financing_scenario_type: deal.financingScenarioType || null,
     dead_deal:               deal.deadDeal || false,
     dead_deal_date:          deal.deadDealDate || null,
+    is_starred:              deal.is_starred || false,
   };
 }
 
@@ -212,6 +213,7 @@ function rowToDeal(row) {
     financingScenarioType:  row.financing_scenario_type ?? null,
     deadDeal:               row.dead_deal ?? false,
     deadDealDate:           row.dead_deal_date ?? null,
+    is_starred:             row.is_starred ?? false,
   };
 }
 

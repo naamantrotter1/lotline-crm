@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import LiveBadge from '../components/UI/LiveBadge';
-import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
+import { CheckCircle2, Calendar, User, ChevronDown } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -17,7 +19,7 @@ const DD_COLUMNS = [
 
 const TOTAL_TASKS = DD_COLUMNS.length;
 
-// Map legacy ddTasksCompleted names → column keys for initialization
+// Map legacy ddTasksCompleted names → column keys for seeding
 const INIT_MAP = {
   'Perk Test': 'perc_test', 'Perc Test / Soil Report': 'perc_test',
   'Survey': 'survey', 'Title Search': 'title_search',
@@ -27,46 +29,10 @@ const INIT_MAP = {
 };
 
 const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-function loadDDDeals() {
-  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  return all
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))
-    .sort((a, b) => {
-      // Deals with a closing date sort before those without
-      if (!a.closeDate && !b.closeDate) return 0;
-      if (!a.closeDate) return 1;
-      if (!b.closeDate) return -1;
-      return new Date(a.closeDate) - new Date(b.closeDate);
-    });
-}
-// ── localStorage helpers ──────────────────────────────────────────────────────
-const lsGet  = (k)      => localStorage.getItem(k) || '';
-const lsSet  = (k, v)   => localStorage.setItem(k, v);
+
+// Legacy localStorage helpers — read-only, used only for one-time migration
+const lsGet  = (k) => localStorage.getItem(k) || '';
 const taskKey = (id, col) => `dd_${id}_${col}`;
-
-function getTaskStatus(dealId, colKey) {
-  return lsGet(taskKey(dealId, colKey)) || 'not_started';
-}
-function setTaskStatus(dealId, colKey, status) {
-  lsSet(taskKey(dealId, colKey), status);
-}
-function getCompletedCount(dealId) {
-  return DD_COLUMNS.filter(c => getTaskStatus(dealId, c.key) === 'complete').length;
-}
-
-// Seed from deal.ddTasksCompleted (called inside the component after deals load)
-function seedInitialState(deals) {
-  for (const deal of deals) {
-    for (const name of (deal.ddTasksCompleted || [])) {
-      const k = INIT_MAP[name];
-      if (k) {
-        const lk = taskKey(deal.id, k);
-        if (!localStorage.getItem(lk)) lsSet(lk, 'complete');
-      }
-    }
-  }
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatCloseDate(str) {
@@ -86,49 +52,49 @@ function getDayCount(contractDate) {
 }
 
 // ── Task card ─────────────────────────────────────────────────────────────────
-function DDTaskCard({ deal, column, onUpdate }) {
+function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange }) {
   const navigate = useNavigate();
 
-  const [status,     setStatus]     = useState(() => getTaskStatus(deal.id, column.key));
-  const [date,       setDate]       = useState(() => lsGet(`${taskKey(deal.id, column.key)}_date`));
-  const [contractor, setContractor] = useState(() => lsGet(`${taskKey(deal.id, column.key)}_cont`));
+  const [status,     setStatus]     = useState(milestone?.status     || 'not_started');
+  const [date,       setDate]       = useState(milestone?.date        || '');
+  const [contractor, setContractor] = useState(milestone?.contractor  || '');
   const [editingCont, setEditingCont] = useState(false);
+
+  // Sync when parent data arrives (Supabase load / migration)
+  useEffect(() => {
+    setStatus(milestone?.status     || 'not_started');
+    setDate(milestone?.date        || '');
+    setContractor(milestone?.contractor  || '');
+  }, [milestone?.status, milestone?.date, milestone?.contractor]);
 
   if (status === 'complete') return null;
 
-  const completed   = getCompletedCount(deal.id);
+  const completed   = DD_COLUMNS.filter(c => dealMilestones?.[c.key]?.status === 'complete').length;
   const netProfit   = calcNetProfit(deal);
   const days        = getDayCount(deal.contractDate);
   const isInProgress = status === 'in_progress';
 
   const markComplete = (e) => {
     e.stopPropagation();
-    setTaskStatus(deal.id, column.key, 'complete');
     setStatus('complete');
-    onUpdate();
+    onMilestoneChange(deal.id, column.key, { status: 'complete', date, contractor });
   };
 
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
-    lsSet(`${taskKey(deal.id, column.key)}_date`, val);
     setDate(val);
-    if (status === 'not_started' && val) {
-      setTaskStatus(deal.id, column.key, 'in_progress');
-      setStatus('in_progress');
-      onUpdate();
-    }
+    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
+    if (newStatus !== status) setStatus(newStatus);
+    onMilestoneChange(deal.id, column.key, { status: newStatus, date: val, contractor });
   };
 
   const saveContractor = (val) => {
-    lsSet(`${taskKey(deal.id, column.key)}_cont`, val);
     setContractor(val);
     setEditingCont(false);
-    if (status === 'not_started' && val) {
-      setTaskStatus(deal.id, column.key, 'in_progress');
-      setStatus('in_progress');
-      onUpdate();
-    }
+    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
+    if (newStatus !== status) setStatus(newStatus);
+    onMilestoneChange(deal.id, column.key, { status: newStatus, date, contractor: val });
   };
 
   return (
@@ -237,22 +203,119 @@ function DDTaskCard({ deal, column, onUpdate }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
   const { deals, realtimeStatus } = useDeals();
-  const [tick, setTick] = useState(0);
+  const { activeOrgId } = useAuth();
 
-  const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+  // milestones: { [dealId]: { [colKey]: { status, date, contractor } } }
+  const [milestones, setMilestones] = useState({});
 
-  const ddDeals = useMemo(() => {
-    const filtered = deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived);
-    seedInitialState(filtered);
-    return filtered;
-  }, [deals]);
+  const ddDeals = useMemo(() => (
+    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
+  ), [deals]);
 
-  const sortedDeals = [...ddDeals].sort((a, b) => {
-    if (!a.closeDate && !b.closeDate) return 0;
-    if (!a.closeDate) return 1;
-    if (!b.closeDate) return -1;
-    return new Date(a.closeDate) - new Date(b.closeDate);
-  });
+  const sortedDeals = useMemo(() => (
+    [...ddDeals].sort((a, b) => {
+      if (!a.closeDate && !b.closeDate) return 0;
+      if (!a.closeDate) return 1;
+      if (!b.closeDate) return -1;
+      return new Date(a.closeDate) - new Date(b.closeDate);
+    })
+  ), [ddDeals]);
+
+  // Load milestones from Supabase; migrate legacy localStorage data on first load
+  useEffect(() => {
+    if (!ddDeals.length || !supabase || !activeOrgId) return;
+    const dealIds = ddDeals.map(d => String(d.id));
+
+    supabase
+      .from('deal_milestones')
+      .select('deal_id, milestone_key, status, completed_date, notes')
+      .in('deal_id', dealIds)
+      .then(({ data }) => {
+        const map = {};
+        for (const row of (data || [])) {
+          if (!map[row.deal_id]) map[row.deal_id] = {};
+          map[row.deal_id][row.milestone_key] = {
+            status:     row.status || 'not_started',
+            date:       row.completed_date || '',
+            contractor: row.notes || '',
+          };
+        }
+
+        // One-time migration: seed Supabase from localStorage + ddTasksCompleted
+        const toMigrate = [];
+        for (const deal of ddDeals) {
+          const sid = String(deal.id);
+
+          // Seed from deal.ddTasksCompleted array
+          for (const name of (deal.ddTasksCompleted || [])) {
+            const k = INIT_MAP[name];
+            if (k && !map[sid]?.[k]) {
+              if (!map[sid]) map[sid] = {};
+              map[sid][k] = { status: 'complete', date: '', contractor: '' };
+              toMigrate.push({
+                organization_id: activeOrgId,
+                deal_id: sid,
+                milestone_key: k,
+                status: 'complete',
+                completed_date: null,
+                notes: null,
+              });
+            }
+          }
+
+          // Seed from raw localStorage keys
+          for (const col of DD_COLUMNS) {
+            if (map[sid]?.[col.key]) continue;
+            const lsStatus = lsGet(taskKey(deal.id, col.key));
+            const lsDate   = lsGet(`${taskKey(deal.id, col.key)}_date`);
+            const lsCont   = lsGet(`${taskKey(deal.id, col.key)}_cont`);
+            if (lsStatus || lsDate || lsCont) {
+              if (!map[sid]) map[sid] = {};
+              map[sid][col.key] = {
+                status:     lsStatus || 'not_started',
+                date:       lsDate   || '',
+                contractor: lsCont   || '',
+              };
+              toMigrate.push({
+                organization_id: activeOrgId,
+                deal_id: sid,
+                milestone_key: col.key,
+                status: lsStatus || 'not_started',
+                completed_date: lsDate  || null,
+                notes:          lsCont  || null,
+              });
+            }
+          }
+        }
+
+        if (toMigrate.length) {
+          supabase
+            .from('deal_milestones')
+            .upsert(toMigrate, { onConflict: 'deal_id,milestone_key' })
+            .then(() => {});
+        }
+
+        setMilestones(map);
+      });
+  }, [ddDeals, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const upsertMilestone = useCallback(async (dealId, colKey, data) => {
+    const sid = String(dealId);
+    setMilestones(prev => ({
+      ...prev,
+      [sid]: { ...(prev[sid] || {}), [colKey]: data },
+    }));
+
+    if (!supabase || !activeOrgId) return;
+    await supabase.from('deal_milestones').upsert({
+      organization_id: activeOrgId,
+      deal_id:         sid,
+      milestone_key:   colKey,
+      status:          data.status,
+      completed_date:  data.date || null,
+      notes:           data.contractor || null,
+    }, { onConflict: 'deal_id,milestone_key' });
+  }, [activeOrgId]);
 
   return (
     <div className="space-y-0">
@@ -273,7 +336,9 @@ export default function DueDiligence() {
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
         {DD_COLUMNS.map(col => {
-          const colDeals = sortedDeals.filter(d => getTaskStatus(d.id, col.key) !== 'complete');
+          const colDeals = sortedDeals.filter(
+            d => milestones[String(d.id)]?.[col.key]?.status !== 'complete'
+          );
           return (
             <div key={col.key} className="flex-shrink-0 w-60">
               {/* Column header */}
@@ -293,7 +358,9 @@ export default function DueDiligence() {
                     key={`${deal.id}-${col.key}`}
                     deal={deal}
                     column={col}
-                    onUpdate={forceUpdate}
+                    milestone={milestones[String(deal.id)]?.[col.key]}
+                    dealMilestones={milestones[String(deal.id)]}
+                    onMilestoneChange={upsertMilestone}
                   />
                 ))}
                 {colDeals.length === 0 && (

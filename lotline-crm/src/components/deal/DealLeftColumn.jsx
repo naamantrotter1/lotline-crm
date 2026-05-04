@@ -167,12 +167,27 @@ const DEFAULT_PROBABILITIES = {
 
 // ── Note compose mini modal ───────────────────────────────────────────────────
 function NoteComposer({ dealId, onClose }) {
+  const { session, activeOrgId } = useAuth();
   const [text, setText] = useState('');
-  const save = () => {
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
     if (!text.trim()) { onClose(); return; }
-    const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
-    notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
-    localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
+    if (supabase && session && activeOrgId) {
+      setSaving(true);
+      await supabase.from('activity_notes').insert({
+        organization_id:    activeOrgId,
+        deal_id:            dealId,
+        author_id:          session.user.id,
+        body:               text.trim(),
+        mentioned_user_ids: [],
+      });
+      setSaving(false);
+    } else {
+      // Fallback: write to localStorage when Supabase unavailable
+      const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
+      notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
+      localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
+    }
     onClose();
   };
   return (
@@ -187,7 +202,7 @@ function NoteComposer({ dealId, onClose }) {
       />
       <div className="flex justify-end gap-2 mt-2">
         <button onClick={onClose} className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100">Cancel</button>
-        <button onClick={save} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold">Save Note</button>
+        <button onClick={save} disabled={saving} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold disabled:opacity-60">{saving ? 'Saving…' : 'Save Note'}</button>
       </div>
     </div>
   );

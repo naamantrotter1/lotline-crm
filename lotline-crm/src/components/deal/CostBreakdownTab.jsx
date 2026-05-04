@@ -129,7 +129,7 @@ function DiffCell({ line }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, canEdit }) {
+export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onTotalActualChange, canEdit }) {
   const { profile } = useAuth();
   const { can }     = usePermissions();
 
@@ -181,6 +181,8 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, canEdit
   const totalEst = computeTotalEstimated(visibleLines);
   const totalAct = computeTotalActual(visibleLines);
   const totalDiff = totalAct - totalEst;
+
+  useEffect(() => { onTotalActualChange?.(totalAct); }, [totalAct, onTotalActualChange]);
 
   if (loading) {
     return (

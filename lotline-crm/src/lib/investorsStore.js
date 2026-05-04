@@ -1,4 +1,5 @@
 import { INVESTORS } from '../data/investors';
+import { supabase } from './supabase';
 
 function lsKey(orgId) {
   return orgId ? `lotline_investors_${orgId}` : 'lotline_investors';
@@ -49,5 +50,21 @@ export function addInvestor(newInv, orgId, orgSlug) {
   };
   const updated = [...all, investor];
   saveInvestors(updated, orgId);
+
+  // Also persist to Supabase so new investors are visible to all org members
+  if (supabase && orgId) {
+    supabase.from('investors').insert({
+      organization_id:    orgId,
+      name:               investor.name,
+      contact:            investor.contact,
+      email:              investor.email,
+      phone:              investor.phone,
+      type:               investor.type,
+      preferred_financing: investor.preferredFinancing,
+      standard_terms:     investor.standardTerms,
+      notes:              investor.notes,
+    }).then(() => {});
+  }
+
   return updated;
 }

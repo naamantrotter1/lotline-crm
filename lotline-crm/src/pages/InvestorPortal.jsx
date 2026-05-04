@@ -444,13 +444,8 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
       };
     });
 
-  // Persist assignments & new investors across sessions
-  const [assignments, setAssignments] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nf_assignments') || '{}'); } catch { return {}; }
-  });
-  const [extraInvestors, setExtraInvestors] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nf_extra_investors') || '[]'); } catch { return []; }
-  });
+  const [assignments, setAssignments] = useState({});
+  const [extraInvestors, setExtraInvestors] = useState([]);
   const [modalDeal, setModalDeal] = useState(null);
 
   // Once assigned, deal leaves the list
@@ -468,13 +463,9 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
     if (isNew && newInvestor) {
-      const updated = [...extraInvestors, newInvestor];
-      setExtraInvestors(updated);
-      localStorage.setItem('nf_extra_investors', JSON.stringify(updated));
+      setExtraInvestors(prev => [...prev, newInvestor]);
     }
-    const updated = { ...assignments, [modalDeal.address]: { funder: funderName, terms } };
-    setAssignments(updated);
-    localStorage.setItem('nf_assignments', JSON.stringify(updated));
+    setAssignments(prev => ({ ...prev, [modalDeal.address]: { funder: funderName, terms } }));
 
     // Write investor + financing back to the deal
     const norm = a => (a || '').trim().toLowerCase();

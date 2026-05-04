@@ -23,15 +23,13 @@ const TAG_STYLES = {
 };
 
 function isSubdividable(deal) {
-  const saved = localStorage.getItem(`lotline_subdivide_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
-  return (deal.tags || []).includes('Subdivide') || deal.subdividable === true;
+  if (deal.subdividable === 'Yes' || deal.subdividable === true) return true;
+  return (deal.tags || []).includes('Subdivide');
 }
 
 function isLandClearing(deal) {
-  const saved = localStorage.getItem(`lotline_land_clearing_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
-  return (deal.tags || []).includes('Land Clearing') || deal.landClearing === true;
+  if (deal.landClearing === 'Yes' || deal.landClearing === true) return true;
+  return (deal.tags || []).includes('Land Clearing');
 }
 
 function formatCloseDate(dateStr) {
@@ -695,8 +693,8 @@ function DealModal({ deal, onClose }) {
 }
 
 // ── Deal Card ─────────────────────────────────────────────────────────────────
-function LandCard({ deal, onClick, onDelete }) {
-  const [starred, setStarred] = useState(false);
+function LandCard({ deal, onClick, onDelete, onStar }) {
+  const [starred, setStarred] = useState(deal.is_starred ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const netProfit    = calcNetProfit(deal);
   const subdivide    = isSubdividable(deal);
@@ -719,7 +717,7 @@ function LandCard({ deal, onClick, onDelete }) {
         <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={e => { e.stopPropagation(); setStarred(p => !p); }}
+            onClick={e => { e.stopPropagation(); const next = !starred; setStarred(next); onStar?.(deal.id, next); }}
             className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
           >
             <Star size={13} fill={starred ? 'currentColor' : 'none'} />
@@ -834,6 +832,12 @@ export default function LandAcquisition() {
     setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
   };
 
+  const handleStar = (id, val) => {
+    setCustomDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: val } : d));
+    const deal = customDeals.find(d => String(d.id) === String(id));
+    if (deal) saveDeal({ ...deal, is_starred: val }, activeOrgId);
+  };
+
   const handleAddLead = () => {
     const newDeal = {
       id: `land-${Date.now()}`,
@@ -888,7 +892,7 @@ export default function LandAcquisition() {
               {/* Cards */}
               <div>
                 {deals.map(deal => (
-                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })} onDelete={handleDelete} />
+                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })} onDelete={handleDelete} onStar={handleStar} />
                 ))}
                 {deals.length === 0 && (
                   <div className="rounded-2xl p-6 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
