@@ -2025,7 +2025,6 @@ function DealDetailContent({ deal }) {
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
-  const [starred, setStarred] = useState(deal?.is_starred ?? false);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
@@ -2581,19 +2580,17 @@ function DealDetailContent({ deal }) {
               )}
               <button
                 onClick={async () => {
-                  const next = !starred;
-                  setStarred(next);
+                  const next = !(deal?.is_starred ?? false);
                   setDeals(prev => prev.map(d => String(d.id) === String(deal.id) ? { ...d, is_starred: next } : d));
                   const { error } = await supabase.from('deals').update({ is_starred: next }).eq('id', String(deal.id));
                   if (error) {
                     console.error('Star save failed:', error);
-                    setStarred(!next);
                     setDeals(prev => prev.map(d => String(d.id) === String(deal.id) ? { ...d, is_starred: !next } : d));
                   }
                 }}
-                className={`p-2 rounded-lg transition-colors ${starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
+                className={`p-2 rounded-lg transition-colors ${deal?.is_starred ? 'text-yellow-500' : 'text-gray-300 hover:text-gray-500'}`}
               >
-                <Star size={18} fill={starred ? 'currentColor' : 'none'} />
+                <Star size={18} fill={deal?.is_starred ? 'currentColor' : 'none'} />
               </button>
               {canEdit && !isLandAcq && (
                 <button

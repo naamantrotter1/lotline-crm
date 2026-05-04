@@ -52,7 +52,6 @@ function isLandClearing(deal) {
 }
 
 function DealCard({ deal, onClick, isAgent, onStar }) {
-  const [starred, setStarred] = useState(deal.is_starred ?? false);
   const netProfit    = calcNetProfit(deal);
   const closing      = closingCountdown(deal.closeDate);
   const subdivide    = isSubdividable(deal);
@@ -75,10 +74,10 @@ function DealCard({ deal, onClick, isAgent, onStar }) {
         <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={e => { e.stopPropagation(); const next = !starred; setStarred(next); onStar?.(deal.id, next); }}
-            className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
+            onClick={e => { e.stopPropagation(); onStar?.(deal.id, !(deal.is_starred ?? false)); }}
+            className={`transition-colors ${deal.is_starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
           >
-            <Star size={13} fill={starred ? 'currentColor' : 'none'} />
+            <Star size={13} fill={deal.is_starred ? 'currentColor' : 'none'} />
           </button>
           {deal.grade && (
             <span className={`text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center ${
