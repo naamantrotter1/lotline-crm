@@ -107,6 +107,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const [allocations, setAllocations] = useState([]);
   const [loading,     setLoading]     = useState(true);
 
+  const [assigneeProfiles, setAssigneeProfiles] = useState({});
   const [documents,    setDocuments]    = useState([]);
   const [docCategory,  setDocCategory]  = useState('Other');
   const [docUploading, setDocUploading] = useState(false);
@@ -158,6 +159,21 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
     ]).then(([t, c, e, a, docs]) => {
       if (cancelled) return;
       setTasks(t);
+      // Resolve assignee names from profiles
+      const assigneeIds = [...new Set(t.filter(task => task.assigned_to).map(task => task.assigned_to))];
+      if (assigneeIds.length > 0 && supabase) {
+        supabase
+          .from('profiles')
+          .select('id, name, first_name, last_name')
+          .in('id', assigneeIds)
+          .then(({ data: profiles }) => {
+            if (profiles) {
+              setAssigneeProfiles(Object.fromEntries(
+                profiles.map(p => [p.id, p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || '?'])
+              ));
+            }
+          });
+      }
       setContacts(c);
       setEnvelopes(e);
       setAllocations(a);
@@ -263,19 +279,38 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
           addLabel="Add task"
         >
           {tasks.length > 0
-            ? tasks.slice(0, 8).map(t => (
-              <div key={t.id} className="flex items-center gap-2 py-1.5">
-                <TaskStatusIcon status={t.status} />
-                <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
-                  {t.title}
-                </span>
-                {t.due_date && (
-                  <span className={`text-[10px] flex-shrink-0 ${new Date(t.due_date) < new Date() && t.status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
-                    {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-              </div>
-            ))
+            ? tasks.slice(0, 8).map(t => {
+                const assigneeName = t.assigned_to ? (assigneeProfiles[t.assigned_to] || null) : null;
+                return (
+                  <div key={t.id} className="flex items-center gap-2 py-1.5">
+                    <TaskStatusIcon status={t.status} />
+                    <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
+                      {t.title}
+                    </span>
+                    {t.due_date && (
+                      <span className={`text-[10px] flex-shrink-0 ${new Date(t.due_date) < new Date() && t.status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                        {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    {/* Assignee avatar */}
+                    {assigneeName ? (
+                      <div
+                        title={`Assigned to ${assigneeName}`}
+                        className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[9px] font-bold text-accent flex-shrink-0 cursor-default"
+                      >
+                        {assigneeName.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                    ) : (
+                      <div
+                        title="Unassigned"
+                        className="w-5 h-5 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-[9px] text-gray-300 flex-shrink-0 cursor-default"
+                      >
+                        +
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             : <p className="text-[12px] text-gray-300 italic">No tasks yet</p>
           }
           {tasks.length > 8 && (

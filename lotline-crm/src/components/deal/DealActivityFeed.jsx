@@ -19,7 +19,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  StickyNote, RefreshCw, CheckCircle2, Mail, Phone,
+  StickyNote, RefreshCw, CheckCircle2, CheckSquare, Mail, Phone,
   FileEdit, X, AtSign, BellOff, Bell,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -35,6 +35,9 @@ const EVENT_CONFIG = {
   field_edit:   { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
   email:        { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
   call:         { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
+  task:          { icon: CheckSquare,  color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_complete: { icon: CheckCircle2,  color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_update:   { icon: CheckSquare,  color: 'bg-blue-50 text-blue-600 border-blue-200'      },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -357,7 +360,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           body,
           mentioned_user_ids: validMentionedIds,
         })
-        .select('id, author_id, body, mentioned_user_ids, created_at')
+        .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at')
         .single();
 
       if (noteErr) throw new Error(noteErr.message);
@@ -500,7 +503,7 @@ function EventCard({ event, usersById, onDeleteNote }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+      <div className={`flex-1 min-w-0 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm${event.isTask ? ' border-l-2 border-l-green-300' : ''}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-gray-800">{event.title}</p>
@@ -512,7 +515,7 @@ function EventCard({ event, usersById, onDeleteNote }) {
             <span className="text-[11px] text-gray-400 whitespace-nowrap">
               {timeAgo(event.date)}
             </span>
-            {event.type === 'note' && onDeleteNote && (
+            {event.type === 'note' && !event.isTask && onDeleteNote && (
               <button
                 onClick={() => onDeleteNote(event.id)}
                 className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
@@ -711,16 +714,28 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
 
   // ── Build unified event list ───────────────────────────────────────────────
   useEffect(() => {
-    const dbNoteEvents = dbNotes.map(n => ({
-      id:          `db-note-${n.id}`,
-      _dbId:       n.id,
-      type:        'note',
-      title:       'Note added',
-      body:        n.body,
-      date:        n.created_at,
-      hasMentions: !!(n.mentioned_user_ids?.length),
-      meta:        { author: usersById[n.author_id]?.name || 'Unknown' },
-    }));
+    const dbNoteEvents = dbNotes.map(n => {
+      const isTask = n.note_type && n.note_type !== 'note';
+      const authorName = isTask && n.author_name
+        ? n.author_name
+        : (usersById[n.author_id]?.name || 'Unknown');
+      const titles = {
+        task:          'Task created',
+        task_complete: 'Task completed',
+        task_update:   'Task updated',
+      };
+      return {
+        id:          `db-note-${n.id}`,
+        _dbId:       n.id,
+        type:        n.note_type || 'note',
+        title:       titles[n.note_type] || 'Note added',
+        body:        n.body,
+        date:        n.created_at,
+        hasMentions: !!(n.mentioned_user_ids?.length),
+        isTask,
+        meta:        { author: authorName },
+      };
+    });
 
     const legacyEvents = legacyNotes.map(note => ({
       id:      `legacy-note-${note.id}`,

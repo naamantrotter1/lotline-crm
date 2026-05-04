@@ -86,3 +86,20 @@ export async function deleteTask(id) {
   if (!supabase) return { error: 'no supabase' };
   return supabase.from('tasks').update({ deleted_at: new Date().toISOString() }).eq('id', id);
 }
+
+/**
+ * Log a task event to activity_notes so it appears in the deal Activity tab.
+ * note_type: 'task' | 'task_complete' | 'task_update'
+ */
+export async function logTaskActivity({ orgId, dealId, authorId, authorName, noteType, body }) {
+  if (!supabase || !dealId) return;
+  await supabase.from('activity_notes').insert({
+    organization_id:    orgId,
+    deal_id:            dealId,
+    author_id:          authorId,
+    author_name:        authorName || null,
+    note_type:          noteType,
+    body,
+    mentioned_user_ids: [],
+  }).catch(e => console.warn('logTaskActivity', e));
+}
