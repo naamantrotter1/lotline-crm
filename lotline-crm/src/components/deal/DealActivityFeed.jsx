@@ -515,7 +515,7 @@ function EventCard({ event, usersById, onDeleteNote }) {
             <span className="text-[11px] text-gray-400 whitespace-nowrap">
               {timeAgo(event.date)}
             </span>
-            {event.type === 'note' && !event.isTask && onDeleteNote && (
+            {['note', 'task', 'task_complete', 'task_update'].includes(event.type) && onDeleteNote && (
               <button
                 onClick={() => onDeleteNote(event.id)}
                 className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
