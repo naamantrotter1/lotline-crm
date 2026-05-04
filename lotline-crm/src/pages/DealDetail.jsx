@@ -1908,20 +1908,25 @@ function DealDetailContent({ deal }) {
 
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
-    supabase
-      .from('memberships')
-      .select('profiles(name, first_name, last_name)')
-      .eq('organization_id', activeOrgId)
-      .eq('status', 'active')
-      .then(({ data }) => {
-        if (data) {
-          const names = data
-            .map(m => m.profiles?.name || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' '))
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b));
-          setAllUsers(names);
-        }
-      });
+    (async () => {
+      const { data: mems } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('organization_id', activeOrgId)
+        .eq('status', 'active');
+      if (!mems?.length) return;
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('name, first_name, last_name')
+        .in('id', mems.map(m => m.user_id));
+      if (profiles) {
+        const names = profiles
+          .map(p => p.name || [p.first_name, p.last_name].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+        setAllUsers(names);
+      }
+    })();
   }, [activeOrgId]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
