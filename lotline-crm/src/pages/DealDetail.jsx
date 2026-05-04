@@ -1920,18 +1920,19 @@ function DealDetailContent({ deal }) {
           });
           if (res.ok) {
             const { members } = await res.json();
-            const names = (members || [])
+            const users = (members || [])
               .filter(m => m.status === 'active' || m.status === 'disabled')
               .map(m => {
                 const p = m.profiles || {};
-                return p.name
+                const name = p.name
                   || [p.first_name, p.last_name].filter(Boolean).join(' ')
                   || p.email
                   || null;
+                return name ? { id: m.user_id, name } : null;
               })
               .filter(Boolean)
-              .sort((a, b) => a.localeCompare(b));
-            if (names.length > 0) { setAllUsers(names); return; }
+              .sort((a, b) => a.name.localeCompare(b.name));
+            if (users.length > 0) { setAllUsers(users); return; }
           }
         } catch { /* fall through */ }
       }
@@ -1944,14 +1945,17 @@ function DealDetailContent({ deal }) {
       if (!mems?.length) return;
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('name, first_name, last_name, email')
+        .select('id, name, first_name, last_name, email')
         .in('id', mems.map(m => m.user_id));
       if (profiles) {
-        const names = profiles
-          .map(p => p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email)
+        const users = profiles
+          .map(p => {
+            const name = p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email;
+            return name ? { id: p.id, name } : null;
+          })
           .filter(Boolean)
-          .sort((a, b) => a.localeCompare(b));
-        setAllUsers(names);
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setAllUsers(users);
       }
     })();
   }, [activeOrgId]);
@@ -2714,7 +2718,7 @@ function DealDetailContent({ deal }) {
                   className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
                 >
                   <option value="">Unassigned</option>
-                  {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                  {allUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                 </select>
               : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
@@ -2788,6 +2792,8 @@ function DealDetailContent({ deal }) {
             saveNow={saveNow}
             onOpenMapSearch={() => setShowMapModal(true)}
             investorList={investorList}
+            dealOwner={dealOwner} setDealOwner={setDealOwner}
+            allUsers={allUsers}
             onCreateTask={() => setShowCreateTask(true)}
             onLogCall={() => setShowLogCall(true)}
             onSendEmail={() => setShowSendEmail(true)}
