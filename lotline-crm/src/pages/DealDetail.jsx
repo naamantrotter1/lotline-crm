@@ -1909,6 +1909,29 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
     (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      // Try the server API first — uses admin client, bypasses RLS
+      if (token) {
+        try {
+          const res = await fetch('/api/team/members', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const { members } = await res.json();
+            const names = (members || [])
+              .filter(m => m.status === 'active')
+              .map(m => m.profiles?.name || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' '))
+              .filter(Boolean)
+              .sort((a, b) => a.localeCompare(b));
+            setAllUsers(names);
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+
+      // Fallback: direct Supabase query (may be limited by RLS)
       const { data: mems } = await supabase
         .from('memberships')
         .select('user_id')
