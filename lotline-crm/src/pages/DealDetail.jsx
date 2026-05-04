@@ -216,7 +216,7 @@ function DecimalInput({ value, onChange, className }) {
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
 function FinancingScenarioPanel({
-  deal, costs, arv,
+  deal, costs, arv, allIn,
   selectedScenario, applyScenario,
   // General loan terms
   lenderName, setLenderName,
@@ -271,7 +271,6 @@ function FinancingScenarioPanel({
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
 
-  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const arvVal = arv ?? deal.arv ?? 0;
 
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
@@ -739,7 +738,7 @@ function FinancingScenarioPanel({
 
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
 function OverviewTab({
-  deal, costs, setCosts, notes, setNotes,
+  deal, costs, setCosts, allIn, notes, setNotes,
   arv, setArv,
   listingUrl, setListingUrl,
   address, setAddress, county, setCounty, dealState, setDealState, zip, setZip, acreage, setAcreage,
@@ -796,7 +795,6 @@ function OverviewTab({
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
-  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const arvVal = arv ?? deal.arv ?? 0;
   const sellingCosts = arvVal * 0.045 + 4000;
   const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
@@ -2857,7 +2855,7 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'details' && (
           <OverviewTab
-            deal={deal} costs={costs} setCosts={setCosts} notes={notes} setNotes={setNotes}
+            deal={deal} costs={costs} setCosts={setCosts} allIn={allIn} notes={notes} setNotes={setNotes}
             arv={arv} setArv={setArv}
             listingUrl={listingUrl} setListingUrl={setListingUrl}
             address={address} setAddress={setAddress} county={county} setCounty={setCounty}
@@ -2994,7 +2992,7 @@ function DealDetailContent({ deal }) {
 
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
-            deal={deal} costs={costs} arv={arv}
+            deal={deal} costs={costs} arv={arv} allIn={allIn}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
