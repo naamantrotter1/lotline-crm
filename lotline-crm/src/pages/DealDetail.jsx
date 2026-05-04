@@ -1973,6 +1973,7 @@ function DealDetailContent({ deal }) {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [costSummary, setCostSummary] = useState(null);
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const { hasFlag } = useAuth();
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
@@ -2789,6 +2790,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
+            refreshKey={activityRefreshKey}
           />
         )}
         {activeTab === 'threads' && (
@@ -3006,12 +3008,12 @@ function DealDetailContent({ deal }) {
       <CreateTaskModal
         defaultDealId={deal.id}
         onClose={() => setShowCreateTask(false)}
-        onCreated={(task, assignedToName, assignedToId) => {
+        onCreated={async (task, assignedToName, assignedToId) => {
           setShowCreateTask(false);
           if (task?.deal_id) {
             const authorName = profile?.name || profile?.first_name || 'Someone';
             const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
-            logTaskActivity({
+            await logTaskActivity({
               orgId:      activeOrgId,
               dealId:     task.deal_id,
               authorId:   profile?.id,
@@ -3019,6 +3021,8 @@ function DealDetailContent({ deal }) {
               noteType:   'task',
               body:       `Task created: "${task.title}"${assigneePart}`,
             });
+            // Force the activity feed to reload now that the note is inserted
+            setActivityRefreshKey(k => k + 1);
           }
           // Notify the assignee (skip if they assigned it to themselves)
           if (task && assignedToId && assignedToId !== profile?.id) {

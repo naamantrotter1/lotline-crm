@@ -627,7 +627,7 @@ function MuteToggle({ dealId }) {
 }
 
 // ── Main feed component ───────────────────────────────────────────────────────
-export default function DealActivityFeed({ deal, readOnly, currentUser }) {
+export default function DealActivityFeed({ deal, readOnly, currentUser, refreshKey }) {
   const { profile, activeOrgId, hasFlag } = useAuth();
   // Stable unique ID per component instance — prevents channel-name collisions when
   // DealPageLayout mounts this component twice (desktop + mobile) in the same tick.
@@ -644,7 +644,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, body, mentioned_user_ids, created_at')
+      .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at')
       .eq('deal_id', deal.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -692,7 +692,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser }) {
   useEffect(() => {
     loadDbNotes();
     loadLegacyNotes();
-  }, [loadDbNotes, loadLegacyNotes]);
+  }, [loadDbNotes, loadLegacyNotes, refreshKey]);
 
   // ── Realtime: new notes from other users ───────────────────────────────────
   const loadDbNotesRef = useRef(loadDbNotes);
