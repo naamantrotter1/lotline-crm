@@ -5,6 +5,7 @@ import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 import { deleteDeal as syncDeleteDeal, saveDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
+import LiveBadge from '../components/UI/LiveBadge';
 import { useAuth } from '../lib/AuthContext';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
@@ -822,7 +823,7 @@ function loadCustomDeals() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
   const navigate = useNavigate();
-  const { deals: customDeals, setDeals: setCustomDeals } = useDeals();
+  const { deals: customDeals, setDeals: setCustomDeals, realtimeStatus } = useDeals();
   const { profile, activeOrgId } = useAuth();
 
   const allDeals = customDeals
@@ -852,7 +853,10 @@ export default function LandAcquisition() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Land Acquisition</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Land Acquisition</h1>
+            <LiveBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-gray-500 mt-1">{allDeals.length} leads across acquisition pipeline</p>
         </div>
         <button

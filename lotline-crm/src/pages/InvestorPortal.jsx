@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
@@ -9,6 +9,14 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
+
+function formatPhone(raw) {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits[0] === '1') return `${digits.slice(1,4)}-${digits.slice(4,7)}-${digits.slice(7)}`;
+  return raw;
+}
 
 const INVESTOR_COLORS = {
   'Atium Build Group LLC': 'bg-blue-100 text-blue-700',
@@ -592,7 +600,6 @@ function DirectoryTab({ investors }) {
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
-            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
           </tr>
         </thead>
@@ -618,11 +625,10 @@ function DirectoryTab({ investors }) {
               <td className="px-4 py-3">
                 {inv.phone ? (
                   <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
-                    <Phone size={11} /> {inv.phone}
+                    <Phone size={11} /> {formatPhone(inv.phone)}
                   </a>
                 ) : <span className="text-xs text-gray-400">—</span>}
               </td>
-              <td className="px-4 py-3 text-xs text-gray-600">{inv.standardTerms || '—'}</td>
               <td className="px-4 py-3">
                 <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
               </td>
@@ -883,7 +889,10 @@ export default function InvestorPortal() {
 
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
-  const [activeTab, setActiveTab] = useState('by-investor');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'commitments', 'directory', 'available-investments'];
+  const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'by-investor';
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
 
   // Reload investor list whenever JV scope changes.

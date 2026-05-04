@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import LiveBadge from '../components/UI/LiveBadge';
 import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
@@ -235,7 +236,7 @@ function DDTaskCard({ deal, column, onUpdate }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
-  const { deals } = useDeals();
+  const { deals, realtimeStatus } = useDeals();
   const [tick, setTick] = useState(0);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -258,7 +259,10 @@ export default function DueDiligence() {
       {/* Header bar */}
       <div className="flex items-center mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
+            <LiveBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-gray-500">{ddDeals.length} deals</p>
         </div>
       </div>

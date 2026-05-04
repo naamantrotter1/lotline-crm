@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import LiveBadge from '../components/UI/LiveBadge';
 import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
@@ -265,7 +266,7 @@ function DevTaskCard({ deal, column, onUpdate }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Development() {
-  const { deals } = useDeals();
+  const { deals, realtimeStatus } = useDeals();
   const [tick, setTick] = useState(0);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -286,7 +287,10 @@ export default function Development() {
       {/* Header */}
       <div className="flex items-center mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Development</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Development</h1>
+            <LiveBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-gray-500">{devDeals.length} deals in pipeline</p>
         </div>
       </div>

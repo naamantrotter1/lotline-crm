@@ -441,25 +441,49 @@ export function saveCountyData(countyName, state, data) {
 
 /**
  * Subscribe to live deal changes from Supabase.
- * @param {function} onUpdate - called with the updated deal object on INSERT/UPDATE
- * @param {function} onDelete - called with the deleted deal id on DELETE
+ *
+ * @param {function} onUpdate        - called with the updated deal object on INSERT/UPDATE
+ * @param {function} onDelete        - called with the deleted deal id on DELETE
+ * @param {object}   [opts]
+ * @param {string}   [opts.orgId]    - when provided, server-side filter scopes to this org
+ * @param {function} [opts.onStatus] - called with 'connecting'|'live'|'error'|'closed'
  * @returns {function} unsubscribe - call to stop listening
  */
-export function subscribeToDeals(onUpdate, onDelete) {
+export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   if (!supabase) return () => {};
 
+  const { orgId, onStatus } = opts;
+
+  // Unique channel name per org prevents channel collisions across sessions
+  const channelName = orgId ? `deals-realtime-${orgId}` : 'deals-realtime';
+
+  // Server-side row filter — requires REPLICA IDENTITY FULL (migration 058)
+  const filter = orgId ? `organization_id=eq.${orgId}` : undefined;
+  const baseOpts = { schema: 'public', table: 'deals', ...(filter ? { filter } : {}) };
+
+  onStatus?.('connecting');
+
   const channel = supabase
-    .channel('deals-realtime')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'deals' }, payload => {
+    .channel(channelName)
+    .on('postgres_changes', { ...baseOpts, event: 'INSERT' }, payload => {
       onUpdate(rowToDeal(payload.new));
     })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deals' }, payload => {
+    .on('postgres_changes', { ...baseOpts, event: 'UPDATE' }, payload => {
       onUpdate(rowToDeal(payload.new));
     })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'deals' }, payload => {
+    .on('postgres_changes', { ...baseOpts, event: 'DELETE' }, payload => {
       onDelete(String(payload.old.id));
     })
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        onStatus?.('live');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[dealsSync] Realtime subscription error:', status, err?.message);
+        onStatus?.('error');
+      } else if (status === 'CLOSED') {
+        onStatus?.('closed');
+      }
+    });
 
   return () => { supabase.removeChannel(channel); };
 }

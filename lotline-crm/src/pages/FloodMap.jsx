@@ -199,17 +199,21 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const fromSearchRef = useRef(false);       // true when click was triggered by search result (use data.geometry directly)
 
   const [state,    setState]    = useState('Both');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mapReady, setMapReady] = useState(false);
-  const [mapStyle, setMapStyle] = useState('satellite');
-  const [layers,   setLayers]   = useState({ floodplain: false, wetlands: false, water: false });
-  const [counties, setCounties] = useState(false);
+  const [mapStyle, setMapStyle] = useState(searchParams.get('style') || 'satellite');
+  const [layers,   setLayers]   = useState({
+    floodplain: searchParams.get('floodplain') === '1',
+    wetlands:   searchParams.get('wetlands')   === '1',
+    water:      searchParams.get('water')      === '1',
+  });
+  const [counties, setCounties] = useState(searchParams.get('counties') === '1');
   const [zoom,     setZoom]     = useState(7);
   const [loading,  setLoading]  = useState({});
-  const [parcelMode, setParcelMode]             = useState(true);
+  const [parcelMode, setParcelMode]             = useState(searchParams.get('parcels') !== '0');
   const [parcelData, setParcelData]             = useState(null);
   const [parcelLoading, setParcelLoading]       = useState(false);
-  const [parcelBoundaries, setParcelBoundaries] = useState(true);
+  const [parcelBoundaries, setParcelBoundaries] = useState(searchParams.get('parcels') !== '0');
   const [buildability, setBuildability]         = useState(null); // { pct, flood, wetlands }
   const [buildabilityLoading, setBuildabilityLoading] = useState(false);
   const [showBuildability, setShowBuildability] = useState(false);
@@ -221,8 +225,25 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const contoursFetchAbortRef = useRef(null); // abort controller for in-flight contour fetch
   const contoursEnabledRef = useRef(false);   // mirrors contours state for use in callbacks
 
-  const [contours, setContours] = useState(false);
-  const [soil,     setSoil]     = useState(false);
+  const [contours, setContours] = useState(searchParams.get('contours') === '1');
+  const [soil,     setSoil]     = useState(searchParams.get('soil') === '1');
+
+  // Sync map settings to URL so they survive a refresh
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      mapStyle !== 'satellite'  ? next.set('style',      mapStyle) : next.delete('style');
+      layers.floodplain         ? next.set('floodplain', '1')      : next.delete('floodplain');
+      layers.wetlands           ? next.set('wetlands',   '1')      : next.delete('wetlands');
+      layers.water              ? next.set('water',      '1')      : next.delete('water');
+      counties                  ? next.set('counties',   '1')      : next.delete('counties');
+      contours                  ? next.set('contours',   '1')      : next.delete('contours');
+      soil                      ? next.set('soil',       '1')      : next.delete('soil');
+      !parcelBoundaries         ? next.set('parcels',    '0')      : next.delete('parcels');
+      return next;
+    }, { replace: true });
+  }, [mapStyle, layers, counties, contours, soil, parcelBoundaries]); // eslint-disable-line
+
   const soilGeoJSONRef      = useRef(null);
   const soilFetchAbortRef   = useRef(null);
   const soilEnabledRef      = useRef(false);

@@ -79,7 +79,17 @@ function MarketingNav() {
                   : 'text-white/90 hover:text-white'
               }`}
             >
-              Log in
+              CRM Login
+            </Link>
+            <Link
+              to="/investor-login"
+              className={`text-sm font-medium px-4 py-2 rounded-lg border transition-colors ${
+                scrolled
+                  ? 'border-gray-300 text-sidebar hover:border-accent hover:text-accent'
+                  : 'border-white/30 text-white/90 hover:border-white hover:text-white'
+              }`}
+            >
+              Investor Portal
             </Link>
             <Link
               to="/signup"

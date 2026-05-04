@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import {
@@ -286,11 +287,22 @@ function ColHeader({ col, sort, onSort }) {
 }
 
 function MarketStats() {
-  const [timePeriod, setTimePeriod] = useState('90 days');
-  const [dataType,   setDataType]   = useState('Manufactured');
+  const [mSearchParams, setMSearchParams] = useSearchParams();
+  const [timePeriod, setTimePeriod] = useState(mSearchParams.get('mTime')   || '90 days');
+  const [dataType,   setDataType]   = useState(mSearchParams.get('mData')   || 'Manufactured');
   const [minArv,     setMinArv]     = useState('');
   const [maxArv,     setMaxArv]     = useState('');
-  const [status,     setStatus]     = useState('Sold');
+  const [status,     setStatus]     = useState(mSearchParams.get('mStatus') || 'Sold');
+
+  useEffect(() => {
+    setMSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      timePeriod !== '90 days'      ? next.set('mTime',   timePeriod) : next.delete('mTime');
+      dataType   !== 'Manufactured' ? next.set('mData',   dataType)   : next.delete('mData');
+      status     !== 'Sold'         ? next.set('mStatus', status)     : next.delete('mStatus');
+      return next;
+    }, { replace: true });
+  }, [timePeriod, dataType, status]); // eslint-disable-line
   const [sort,       setSort]       = useState({ col: 'oppScore', dir: -1 });
   const [search,     setSearch]     = useState('');
 
@@ -847,13 +859,27 @@ function HeatMap() {
   const zipLayer     = useRef(null);
   const zipCountyMap = useRef({});
 
-  // ── Filter state ──────────────────────────────────────────────────────────
-  const [groupBy,    setGroupBy]    = useState('County');
-  const [status,     setStatus]     = useState('Sold');
-  const [timePeriod, setTimePeriod] = useState('90 days');
-  const [dataType,   setDataType]   = useState('Manufactured');
-  const [acreage,    setAcreage]    = useState('All');
-  const [statistic,  setStatistic]  = useState('Days on Market');
+  // ── Filter state (URL-persisted) ──────────────────────────────────────────
+  const [heatSearchParams, setHeatSearchParams] = useSearchParams();
+  const [groupBy,    setGroupBy]    = useState(heatSearchParams.get('hGroup')   || 'County');
+  const [status,     setStatus]     = useState(heatSearchParams.get('hStatus')  || 'Sold');
+  const [timePeriod, setTimePeriod] = useState(heatSearchParams.get('hTime')    || '90 days');
+  const [dataType,   setDataType]   = useState(heatSearchParams.get('hData')    || 'Manufactured');
+  const [acreage,    setAcreage]    = useState(heatSearchParams.get('hAcreage') || 'All');
+  const [statistic,  setStatistic]  = useState(heatSearchParams.get('hStat')    || 'Days on Market');
+
+  useEffect(() => {
+    setHeatSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      groupBy    !== 'County'        ? next.set('hGroup',   groupBy)    : next.delete('hGroup');
+      status     !== 'Sold'          ? next.set('hStatus',  status)     : next.delete('hStatus');
+      timePeriod !== '90 days'       ? next.set('hTime',    timePeriod) : next.delete('hTime');
+      dataType   !== 'Manufactured'  ? next.set('hData',    dataType)   : next.delete('hData');
+      acreage    !== 'All'           ? next.set('hAcreage', acreage)    : next.delete('hAcreage');
+      statistic  !== 'Days on Market'? next.set('hStat',    statistic)  : next.delete('hStat');
+      return next;
+    }, { replace: true });
+  }, [groupBy, status, timePeriod, dataType, acreage, statistic]); // eslint-disable-line
 
   const stateLayer       = useRef(null);
   const stateBorderLayer = useRef(null);
@@ -1564,7 +1590,10 @@ const TABS = [
 ];
 
 export default function MarketResearch() {
-  const [activeTab, setActiveTab] = useState('heatmap');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_TABS = ['heatmap', 'arv', 'builders', 'counties'];
+  const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'heatmap';
+  const setActiveTab = (tab) => setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('tab', tab); return next; }, { replace: true });
 
   return (
     <div className="space-y-5">

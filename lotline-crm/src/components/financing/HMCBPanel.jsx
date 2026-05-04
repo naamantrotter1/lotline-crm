@@ -32,7 +32,9 @@ export const HMCB_DEFAULTS = {
   holdbackAmount: 0,
   fundedAtClosing: 0,
   originationFee: 0,
+  originationFeeMode: 'flat', // 'flat' | 'pct'
   brokerFee: 0,
+  brokerFeeMode: 'flat', // 'flat' | 'pct'
   underwritingFee: 0,
   appraisalFee: 0,
   attDocPrepFee: 0,
@@ -128,7 +130,7 @@ export function HMCBSummaryCard({ data, draws = [] }) {
 }
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) {
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
@@ -147,7 +149,13 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
     ? monthly * (d.termMonths + (d.extensionMonths * d.numExtensions))
     : null;
 
-  const totalFees = (d.originationFee || 0) + (d.brokerFee || 0) + (d.underwritingFee || 0)
+  const effectiveOriginationFee = d.originationFeeMode === 'pct'
+    ? (d.originationFee / 100) * totalLoan
+    : (d.originationFee || 0);
+  const effectiveBrokerFee = d.brokerFeeMode === 'pct'
+    ? (d.brokerFee / 100) * totalLoan
+    : (d.brokerFee || 0);
+  const totalFees = effectiveOriginationFee + effectiveBrokerFee + (d.underwritingFee || 0)
     + (d.appraisalFee || 0) + (d.attDocPrepFee || 0) + (d.servicingFee || 0);
   const cashToClose = fundedAtClosing - (d.purchasePrice) + totalFees;  // typically just fees since purchase is funded
 
@@ -273,6 +281,9 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
   const addGuarantor    = () => set('guarantors', [...(d.guarantors || []), '']);
   const removeGuarantor = (i) => set('guarantors', (d.guarantors || []).filter((_, idx) => idx !== i));
 
+  // ── Advanced section toggle ────────────────────────────────────────────────
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-3">
@@ -280,71 +291,46 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
       {/* Summary card */}
       <HMCBSummaryCard data={d} draws={draws} />
 
-      {/* ── Lender Information ── */}
-      <SectionCard title="Lender Information">
-        <Row>
-          <div>
-            {label('Lender Name')}
-            <input className={inp} value={d.lenderName} onChange={e => set('lenderName', e.target.value)} placeholder="Low Tide Private Lending" disabled={readOnly} />
-          </div>
-          <div>
-            {label('Loan Number (optional)')}
-            <input className={inp} value={d.loanNumber} onChange={e => set('loanNumber', e.target.value)} placeholder="LN-XXXX" disabled={readOnly} />
-          </div>
-        </Row>
-        <div>
-          {label('Lender Contact / Servicing Address')}
-          <input className={inp} value={d.lenderContact} onChange={e => set('lenderContact', e.target.value)} placeholder="123 Main St, City, NC" disabled={readOnly} />
+      {/* ── Lender / Investor ── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</span>
+          {!readOnly && onAddInvestor && (
+            <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+              + Add New Investor
+            </button>
+          )}
         </div>
-        {/* Guarantors */}
-        <div>
-          {label('Guarantors')}
-          <div className="space-y-1.5">
-            {(d.guarantors || []).map((g, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  className={inp}
-                  value={g}
-                  onChange={e => setGuarantor(i, e.target.value)}
-                  placeholder={`Guarantor ${i + 1}`}
-                  disabled={readOnly}
-                />
-                {!readOnly && (
-                  <button onClick={() => removeGuarantor(i)} className="p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 size={13} />
-                  </button>
-                )}
-              </div>
-            ))}
-            {!readOnly && (
-              <button onClick={addGuarantor} className="flex items-center gap-1 text-xs text-accent hover:underline">
-                <Plus size={12} /> Add guarantor
-              </button>
+        {investorList.length > 0 ? (
+          <select
+            className={inp}
+            value={d.lenderName}
+            onChange={e => set('lenderName', e.target.value)}
+            disabled={readOnly}
+          >
+            <option value="">— Select Lender —</option>
+            {d.lenderName && !investorList.find(i => i.name === d.lenderName) && (
+              <option value={d.lenderName}>{d.lenderName}</option>
             )}
-          </div>
-        </div>
-      </SectionCard>
+            {investorList.map(inv => (
+              <option key={inv.id} value={inv.name}>{inv.name}</option>
+            ))}
+          </select>
+        ) : (
+          <input className={inp} value={d.lenderName} onChange={e => set('lenderName', e.target.value)} placeholder="Low Tide Private Lending" disabled={readOnly} />
+        )}
+      </div>
 
-      {/* ── Loan Terms ── */}
+      {/* ── Primary: Loan Terms ── */}
       <SectionCard title="Loan Terms">
         <Row>
           <div>
-            {label('Loan Type Label')}
-            <input className={inp} value={d.loanTypeLabel} onChange={e => set('loanTypeLabel', e.target.value)} placeholder="9 Month Manufactured (New) Loan" disabled={readOnly} />
-          </div>
-          <div>
             {label('Annual Interest Rate (%)')}
-            <input type="number" step="0.01" className={inp} value={d.interestRate} onChange={e => set('interestRate', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" step="0.01" className={inp} value={d.interestRate || ''} onChange={e => set('interestRate', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
-        </Row>
-        <Row>
           <div>
             {label('Term Length (months)')}
-            <input type="number" className={inp} value={d.termMonths} onChange={e => set('termMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-          <div>
-            {label('Monthly Payment (override)')}
-            <input type="number" step="0.01" className={inp} value={d.monthlyPaymentOverride ?? ''} onChange={e => set('monthlyPaymentOverride', e.target.value ? parseFloat(e.target.value) : null)} placeholder={`Auto: ${fmt$(monthlyAuto)}`} disabled={readOnly} />
+            <input type="number" className={inp} value={d.termMonths || ''} onChange={e => set('termMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         {/* Extension */}
@@ -364,30 +350,30 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
           <Row cols={3}>
             <div>
               {label('Extension (months)')}
-              <input type="number" className={inp} value={d.extensionMonths} onChange={e => set('extensionMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
+              <input type="number" className={inp} value={d.extensionMonths || ''} onChange={e => set('extensionMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
             </div>
             <div>
               {label('Extension Fee (points)')}
-              <input type="number" step="0.25" className={inp} value={d.extensionFeePoints} onChange={e => set('extensionFeePoints', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+              <input type="number" step="0.25" className={inp} value={d.extensionFeePoints || ''} onChange={e => set('extensionFeePoints', parseFloat(e.target.value) || 0)} disabled={readOnly} />
             </div>
             <div>
               {label('Number of Extensions')}
-              <input type="number" className={inp} value={d.numExtensions} onChange={e => set('numExtensions', parseInt(e.target.value) || 1)} disabled={readOnly} />
+              <input type="number" className={inp} value={d.numExtensions || ''} onChange={e => set('numExtensions', parseInt(e.target.value) || 1)} disabled={readOnly} />
             </div>
           </Row>
         )}
       </SectionCard>
 
-      {/* ── Loan Amounts ── */}
+      {/* ── Primary: Loan Amounts ── */}
       <SectionCard title="Loan Amounts">
         <Row>
           <div>
             {label('Purchase Price ($)')}
-            <input type="number" className={inp} value={d.purchasePrice} onChange={e => { const v = parseFloat(e.target.value) || 0; set('purchasePrice', v); if (!d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice) set('fundedAtClosing', v); }} disabled={readOnly} />
+            <input type="number" className={inp} value={d.purchasePrice || ''} onChange={e => { const v = parseFloat(e.target.value) || 0; set('purchasePrice', v); if (!d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice) set('fundedAtClosing', v); }} disabled={readOnly} />
           </div>
           <div>
             {label('Construction Holdback ($)')}
-            <input type="number" className={inp} value={d.holdbackAmount} onChange={e => set('holdbackAmount', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" className={inp} value={d.holdbackAmount || ''} onChange={e => set('holdbackAmount', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         <Row>
@@ -397,7 +383,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
           </div>
           <div>
             {label('Amount Funded at Closing ($)')}
-            <input type="number" className={inp} value={d.fundedAtClosing} onChange={e => set('fundedAtClosing', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            <input type="number" className={inp} value={d.fundedAtClosing || ''} onChange={e => set('fundedAtClosing', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
         <div className="flex items-center gap-2 pt-1">
@@ -407,72 +393,159 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false }) 
         </div>
       </SectionCard>
 
-      {/* ── Fees & Closing Costs ── */}
-      <SectionCard title="Fees & Closing Costs">
+      {/* ── Primary: Key Fees ── */}
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees</p>
         <Row>
           <div>
-            {label('Origination Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.originationFee} onChange={e => set('originationFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-            {totalLoan > 0 && <p className="text-[10px] text-gray-400 mt-0.5">{((d.originationFee / totalLoan) * 100).toFixed(3)}% of total loan</p>}
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Origination Fee</p>
+              {!readOnly && (
+                <div className="inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                  <button type="button" onClick={() => set('originationFeeMode', 'flat')} className={`px-1.5 py-0.5 transition-colors ${d.originationFeeMode !== 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>$</button>
+                  <button type="button" onClick={() => set('originationFeeMode', 'pct')} className={`px-1.5 py-0.5 transition-colors ${d.originationFeeMode === 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>%</button>
+                </div>
+              )}
+            </div>
+            <input type="number" step="0.01" className={inp} value={d.originationFee || ''} onChange={e => set('originationFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            {totalLoan > 0 && (
+              d.originationFeeMode === 'pct'
+                ? <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveOriginationFee)}</p>
+                : <p className="text-[10px] text-gray-400 mt-0.5">{totalLoan > 0 ? ((effectiveOriginationFee / totalLoan) * 100).toFixed(3) : '0.000'}% of total loan</p>
+            )}
           </div>
-          <div>
-            {label('Broker Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.brokerFee} onChange={e => set('brokerFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-        </Row>
-        <Row>
-          <div>
-            {label('Underwriting / Admin Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.underwritingFee} onChange={e => set('underwritingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-          <div>
-            {label('Appraisal Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.appraisalFee} onChange={e => set('appraisalFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-        </Row>
-        <Row>
-          <div>
-            {label('Attorney Document Prep ($)')}
-            <input type="number" step="0.01" className={inp} value={d.attDocPrepFee} onChange={e => set('attDocPrepFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-          <div>
-            {label('Servicing Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.servicingFee} onChange={e => set('servicingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-        </Row>
-        <Row>
           <div>
             {label('Per-Draw Fee ($)')}
-            <input type="number" step="0.01" className={inp} value={d.drawFee} onChange={e => set('drawFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
-          </div>
-          <div>
-            {label('Total Closing Costs (auto)')}
-            <div className="px-3 py-1.5 text-sm font-semibold text-sidebar bg-gray-100 rounded-lg border border-gray-200">{fmt$(totalFees)}</div>
+            <input type="number" step="0.01" className={inp} value={d.drawFee || ''} onChange={e => set('drawFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
-
-        {/* Cash to close breakdown */}
-        <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-1.5 text-xs">
-          <p className="font-semibold text-gray-600 uppercase tracking-wide text-[10px] mb-2">Estimated Cash to Close</p>
-          <div className="flex justify-between text-gray-500">
-            <span>Purchase Price</span>
-            <span>{fmt$(d.purchasePrice)}</span>
-          </div>
-          <div className="flex justify-between text-gray-500">
-            <span>Less: Amount Funded at Closing</span>
-            <span className="text-green-600">({fmt$(fundedAtClosing)})</span>
-          </div>
-          <div className="flex justify-between text-gray-500">
-            <span>Plus: Closing Costs</span>
-            <span>{fmt$(totalFees)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-sidebar border-t border-gray-200 pt-1.5 mt-1">
-            <span>Estimated Cash to Close</span>
-            <span className="text-accent">{fmt$(Math.max(0, d.purchasePrice - fundedAtClosing + totalFees))}</span>
-          </div>
-          <p className="text-[10px] text-gray-400 pt-1">Does not include taxes, insurance premiums, or prorations.</p>
+        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Total Closing Costs</span>
+          <span className="text-sm font-bold text-accent">{fmt$(totalFees)}</span>
         </div>
-      </SectionCard>
+
+        {/* Advanced toggle */}
+        <div className="mt-3 border-t border-gray-100 pt-2">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(v => !v)}
+            className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-accent font-medium transition-colors"
+          >
+            {showAdvanced ? '− Hide advanced details' : '+ Show advanced details'}
+          </button>
+          {showAdvanced && (
+            <div className="mt-3 space-y-3">
+              {/* Advanced fee fields */}
+              <Row>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Broker Fee</p>
+                    {!readOnly && (
+                      <div className="inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                        <button type="button" onClick={() => set('brokerFeeMode', 'flat')} className={`px-1.5 py-0.5 transition-colors ${d.brokerFeeMode !== 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>$</button>
+                        <button type="button" onClick={() => set('brokerFeeMode', 'pct')} className={`px-1.5 py-0.5 transition-colors ${d.brokerFeeMode === 'pct' ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>%</button>
+                      </div>
+                    )}
+                  </div>
+                  <input type="number" step="0.01" className={inp} value={d.brokerFee || ''} onChange={e => set('brokerFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  {d.brokerFeeMode === 'pct' && totalLoan > 0 && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveBrokerFee)}</p>
+                  )}
+                </div>
+                <div>
+                  {label('Underwriting / Admin Fee ($)')}
+                  <input type="number" step="0.01" className={inp} value={d.underwritingFee || ''} onChange={e => set('underwritingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                </div>
+              </Row>
+              <Row>
+                <div>
+                  {label('Appraisal Fee ($)')}
+                  <input type="number" step="0.01" className={inp} value={d.appraisalFee || ''} onChange={e => set('appraisalFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                </div>
+                <div>
+                  {label('Attorney Document Prep ($)')}
+                  <input type="number" step="0.01" className={inp} value={d.attDocPrepFee || ''} onChange={e => set('attDocPrepFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                </div>
+              </Row>
+              <Row>
+                <div>
+                  {label('Servicing Fee ($)')}
+                  <input type="number" step="0.01" className={inp} value={d.servicingFee || ''} onChange={e => set('servicingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                </div>
+                <div>
+                  {label('Monthly Payment (override)')}
+                  <input type="number" step="0.01" className={inp} value={d.monthlyPaymentOverride ?? ''} onChange={e => set('monthlyPaymentOverride', e.target.value ? parseFloat(e.target.value) : null)} placeholder={`Auto: ${fmt$(monthlyAuto)}`} disabled={readOnly} />
+                </div>
+              </Row>
+
+              {/* Advanced identification fields */}
+              <Row>
+                <div>
+                  {label('Loan Type Label')}
+                  <input className={inp} value={d.loanTypeLabel} onChange={e => set('loanTypeLabel', e.target.value)} placeholder="9 Month Manufactured (New) Loan" disabled={readOnly} />
+                </div>
+                <div>
+                  {label('Loan Number (optional)')}
+                  <input className={inp} value={d.loanNumber} onChange={e => set('loanNumber', e.target.value)} placeholder="LN-XXXX" disabled={readOnly} />
+                </div>
+              </Row>
+              <div>
+                {label('Lender Contact / Servicing Address')}
+                <input className={inp} value={d.lenderContact} onChange={e => set('lenderContact', e.target.value)} placeholder="123 Main St, City, NC" disabled={readOnly} />
+              </div>
+              {/* Guarantors */}
+              <div>
+                {label('Guarantors')}
+                <div className="space-y-1.5">
+                  {(d.guarantors || []).map((g, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className={inp}
+                        value={g}
+                        onChange={e => setGuarantor(i, e.target.value)}
+                        placeholder={`Guarantor ${i + 1}`}
+                        disabled={readOnly}
+                      />
+                      {!readOnly && (
+                        <button onClick={() => removeGuarantor(i)} className="p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {!readOnly && (
+                    <button onClick={addGuarantor} className="flex items-center gap-1 text-xs text-accent hover:underline">
+                      <Plus size={12} /> Add guarantor
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Estimated Cash to Close breakdown */}
+              <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-1.5 text-xs">
+                <p className="font-semibold text-gray-600 uppercase tracking-wide text-[10px] mb-2">Estimated Cash to Close</p>
+                <div className="flex justify-between text-gray-500">
+                  <span>Purchase Price</span>
+                  <span>{fmt$(d.purchasePrice)}</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>Less: Amount Funded at Closing</span>
+                  <span className="text-green-600">({fmt$(fundedAtClosing)})</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>Plus: Closing Costs</span>
+                  <span>{fmt$(totalFees)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-sidebar border-t border-gray-200 pt-1.5 mt-1">
+                  <span>Estimated Cash to Close</span>
+                  <span className="text-accent">{fmt$(Math.max(0, d.purchasePrice - fundedAtClosing + totalFees))}</span>
+                </div>
+                <p className="text-[10px] text-gray-400 pt-1">Does not include taxes, insurance premiums, or prorations.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── Interest Calculation ── */}
       <SectionCard title="Interest Calculation">
