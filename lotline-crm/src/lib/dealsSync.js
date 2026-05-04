@@ -376,6 +376,25 @@ export function flushToSupabase(deal, orgId) {
   });
 }
 
+/** Async version of flushToSupabase — returns { error } so callers can await. */
+export async function flushToSupabaseAsync(deal, orgId) {
+  if (!supabase) return { error: 'no supabase' };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { error: 'no session' };
+  const row = dealToRow(deal);
+  if (orgId) row.organization_id = orgId;
+  const { error, data } = await supabase.from('deals').update(row).eq('id', row.id).select();
+  if (error) return { error };
+  if (!data || data.length === 0) {
+    const { data: existing } = await supabase.from('deals').select('id').eq('id', row.id).maybeSingle();
+    if (!existing) {
+      const { error: insertError } = await supabase.from('deals').insert(row);
+      return { error: insertError };
+    }
+  }
+  return { error: null };
+}
+
 /** Save a single deal — updates localStorage immediately, Supabase async.
  *  Tries UPDATE first (works for all roles incl. agent); falls back to
  *  INSERT for brand-new deals that don't yet exist in the DB. */
