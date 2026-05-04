@@ -4,6 +4,7 @@ import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calcu
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 import { deleteDeal as syncDeleteDeal, saveDeal } from '../lib/dealsSync';
+import { supabase } from '../lib/supabase';
 import { useDeals } from '../lib/DealsContext';
 import LiveBadge from '../components/UI/LiveBadge';
 import { useAuth } from '../lib/AuthContext';
@@ -695,8 +696,8 @@ function DealModal({ deal, onClose }) {
 }
 
 // ── Deal Card ─────────────────────────────────────────────────────────────────
-function LandCard({ deal, onClick, onDelete }) {
-  const [starred, setStarred] = useState(false);
+function LandCard({ deal, onClick, onDelete, onStar }) {
+  const [starred, setStarred] = useState(deal.is_starred ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const netProfit    = calcNetProfit(deal);
   const subdivide    = isSubdividable(deal);
@@ -719,7 +720,7 @@ function LandCard({ deal, onClick, onDelete }) {
         <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={e => { e.stopPropagation(); setStarred(p => !p); }}
+            onClick={e => { e.stopPropagation(); const next = !starred; setStarred(next); onStar?.(deal.id, next); }}
             className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
           >
             <Star size={13} fill={starred ? 'currentColor' : 'none'} />
@@ -834,6 +835,15 @@ export default function LandAcquisition() {
     setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
   };
 
+  const handleStar = async (id, val) => {
+    setCustomDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: val } : d));
+    const { error } = await supabase.from('deals').update({ is_starred: val }).eq('id', String(id));
+    if (error) {
+      console.error('Star save failed:', error);
+      setCustomDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: !val } : d));
+    }
+  };
+
   const handleAddLead = () => {
     const newDeal = {
       id: `land-${Date.now()}`,
@@ -888,7 +898,7 @@ export default function LandAcquisition() {
               {/* Cards */}
               <div>
                 {deals.map(deal => (
-                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })} onDelete={handleDelete} />
+                  <LandCard key={deal.id} deal={deal} onClick={() => navigate(`/deal/${deal.id}`, { state: { deal } })} onDelete={handleDelete} onStar={handleStar} />
                 ))}
                 {deals.length === 0 && (
                   <div className="rounded-2xl p-6 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
