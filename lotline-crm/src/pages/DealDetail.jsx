@@ -1921,12 +1921,17 @@ function DealDetailContent({ deal }) {
           if (res.ok) {
             const { members } = await res.json();
             const names = (members || [])
-              .filter(m => m.status === 'active')
-              .map(m => m.profiles?.name || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' '))
+              .filter(m => m.status === 'active' || m.status === 'disabled')
+              .map(m => {
+                const p = m.profiles || {};
+                return p.name
+                  || [p.first_name, p.last_name].filter(Boolean).join(' ')
+                  || p.email
+                  || null;
+              })
               .filter(Boolean)
               .sort((a, b) => a.localeCompare(b));
-            setAllUsers(names);
-            return;
+            if (names.length > 0) { setAllUsers(names); return; }
           }
         } catch { /* fall through */ }
       }
@@ -1935,16 +1940,15 @@ function DealDetailContent({ deal }) {
       const { data: mems } = await supabase
         .from('memberships')
         .select('user_id')
-        .eq('organization_id', activeOrgId)
-        .eq('status', 'active');
+        .eq('organization_id', activeOrgId);
       if (!mems?.length) return;
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('name, first_name, last_name')
+        .select('name, first_name, last_name, email')
         .in('id', mems.map(m => m.user_id));
       if (profiles) {
         const names = profiles
-          .map(p => p.name || [p.first_name, p.last_name].filter(Boolean).join(' '))
+          .map(p => p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email)
           .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
         setAllUsers(names);
