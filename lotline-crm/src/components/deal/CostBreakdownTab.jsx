@@ -129,7 +129,7 @@ function DiffCell({ line }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function CostBreakdownTab({ dealId }) {
+export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, canEdit }) {
   const { profile } = useAuth();
   const { can }     = usePermissions();
 
@@ -301,6 +301,23 @@ export default function CostBreakdownTab({ dealId }) {
             }`}>
               {fmtD(totalDiff)}
             </div>
+            {/* ARV row */}
+            <div className="border-t border-gray-100 px-3 py-2 flex items-center justify-between bg-white">
+              <span className="text-[12px] font-semibold text-gray-600">ARV</span>
+              <div className="w-28">
+                <NumCell value={arv} onCommit={v => onArvChange?.(v)} disabled={!canEdit} />
+              </div>
+            </div>
+            <div className="border-t border-gray-100 px-3 py-2 flex items-center justify-between bg-white">
+              <span className="text-[12px] font-semibold text-gray-600">ARV</span>
+              <span className="text-[12px] font-medium text-gray-800 px-2">{fmt(arv)}</span>
+            </div>
+            {/* Net Profit = ARV - Total Estimated */}
+            <div className="border-t border-gray-100 px-3 py-2 flex items-center justify-end bg-white">
+              <span className={`text-[12px] font-bold ${arv - totalEst > 0 ? 'text-green-600' : arv - totalEst < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                {fmtD(arv - totalEst)}
+              </span>
+            </div>
           </div>
 
         </div>
@@ -371,6 +388,14 @@ export default function CostBreakdownTab({ dealId }) {
                 <span className="text-[12px] font-semibold">Total Estimated</span>
                 <span className="text-[12px] font-bold">{fmt(totalEst)}</span>
               </div>
+            </div>
+          </div>
+
+          {/* ARV (mobile) */}
+          <div className="bg-white rounded-xl border border-gray-100 px-3 py-2 flex items-center justify-between">
+            <span className="text-[12px] font-semibold text-gray-600">ARV</span>
+            <div className="w-28">
+              <NumCell value={arv} onCommit={v => onArvChange?.(v)} disabled={!canEdit} />
             </div>
           </div>
 
