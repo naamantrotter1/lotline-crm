@@ -1907,11 +1907,22 @@ function DealDetailContent({ deal }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !canAdmin) return;
-    supabase.from('profiles').select('name').then(({ data }) => {
-      if (data) setAllUsers(data.map(u => u.name).filter(Boolean));
-    });
-  }, [canAdmin]);
+    if (!supabase || !activeOrgId) return;
+    supabase
+      .from('memberships')
+      .select('profiles(name, first_name, last_name)')
+      .eq('organization_id', activeOrgId)
+      .eq('status', 'active')
+      .then(({ data }) => {
+        if (data) {
+          const names = data
+            .map(m => m.profiles?.name || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' '))
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b));
+          setAllUsers(names);
+        }
+      });
+  }, [activeOrgId]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
