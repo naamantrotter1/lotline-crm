@@ -13,6 +13,8 @@ export function DealsProvider({ children }) {
   const [deals, setDeals] = useState([]);
   const [archivedDeals, setArchivedDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(true);
+  // 'connecting' | 'live' | 'error' | 'closed' | 'offline'
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting');
 
   const { session, activeOrgId, orgSlug } = useAuth();
   const { jvScopeOrgIds, jvLoaded } = useJv();
@@ -27,6 +29,7 @@ export function DealsProvider({ children }) {
 
     if (!session || !activeOrgId || !jvLoaded) {
       setDealsLoading(false);
+      setRealtimeStatus('offline');
       return;
     }
 
@@ -72,6 +75,10 @@ export function DealsProvider({ children }) {
       (deletedId) => {
         setDeals(prev => prev.filter(d => String(d.id) !== deletedId));
         setArchivedDeals(prev => prev.filter(d => String(d.id) !== deletedId));
+      },
+      {
+        orgId: activeOrgId,
+        onStatus: setRealtimeStatus,
       }
     );
 
@@ -107,11 +114,11 @@ export function DealsProvider({ children }) {
 
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
-  const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId).catch(e => console.error('[DealsContext] deleteDeal failed:', e.message)), [activeOrgId]);
+  const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
   const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
 
   return (
-    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, saveDeal, deleteDeal, archiveDeal }}>
+    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal }}>
       {children}
     </DealsContext.Provider>
   );

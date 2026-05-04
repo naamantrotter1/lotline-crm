@@ -147,7 +147,7 @@ async function sendViaResend({ toEmail, toName, cc, subject, html, body }) {
 }
 
 /** Log the email activity note on the deal — both success and failure. */
-async function logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmail, toName, body, status, sentVia }) {
+async function logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmail, toName, body, status, sentVia, result }) {
   const fullName   = user.user_metadata?.full_name || user.email || '';
   const toDisplay  = toName ? `${toName} (${toEmail})` : toEmail;
   const preview    = buildBodyPreview(body);
@@ -159,13 +159,16 @@ async function logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmai
 
   const metadata = {
     subject,
-    to_name:      toName || null,
-    to_email:     toEmail,
-    body_preview: preview,
-    sent_by:      fullName,
-    sent_via:     sentVia || null,
+    to_name:         toName || null,
+    to_email:        toEmail,
+    body_preview:    preview,
+    sent_by:         fullName,
+    sent_via:        sentVia || null,
     status,
-    date:         today,
+    date:            today,
+    direction:       'sent',
+    gmail_thread_id: result?.threadId || null,
+    gmail_message_id: result?.id || null,
   };
 
   const payload = {
@@ -261,7 +264,7 @@ export default async function handler(req, res) {
   // Log activity note server-side (service role bypasses RLS — reliable)
   if (dealId && orgId && user && sendSucceeded) {
     try {
-      await logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmail, toName, body, status: 'sent', sentVia });
+      await logEmailActivityNote({ supa, orgId, dealId, user, subject, toEmail, toName, body, status: 'sent', sentVia, result });
     } catch (err) {
       console.error('activity note logging error:', err.message);
     }

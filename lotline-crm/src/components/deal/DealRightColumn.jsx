@@ -97,9 +97,9 @@ function Avatar({ name, size = 'sm' }) {
 const DOC_CATEGORIES = ['Contract', 'Title Report', 'Survey', 'Inspection', 'Plat Map', 'Photos', 'Other'];
 const STORAGE_BUCKET = 'deal-documents';
 
-export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivityNoteAdded }) {
+export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   const navigate  = useNavigate();
-  const { activeOrgId, profile } = useAuth();
+  const { activeOrgId } = useAuth();
 
   const [tasks,       setTasks]       = useState([]);
   const [contacts,    setContacts]    = useState([]);
@@ -107,10 +107,10 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
   const [allocations, setAllocations] = useState([]);
   const [loading,     setLoading]     = useState(true);
 
+  const [assigneeProfiles, setAssigneeProfiles] = useState({});
   const [documents,    setDocuments]    = useState([]);
   const [docCategory,  setDocCategory]  = useState('Other');
   const [docUploading, setDocUploading] = useState(false);
-  const [docError,     setDocError]     = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -159,6 +159,21 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
     ]).then(([t, c, e, a, docs]) => {
       if (cancelled) return;
       setTasks(t);
+      // Resolve assignee names from profiles
+      const assigneeIds = [...new Set(t.filter(task => task.assigned_to).map(task => task.assigned_to))];
+      if (assigneeIds.length > 0 && supabase) {
+        supabase
+          .from('profiles')
+          .select('id, name, first_name, last_name')
+          .in('id', assigneeIds)
+          .then(({ data: profiles }) => {
+            if (profiles) {
+              setAssigneeProfiles(Object.fromEntries(
+                profiles.map(p => [p.id, p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || '?'])
+              ));
+            }
+          });
+      }
       setContacts(c);
       setEnvelopes(e);
       setAllocations(a);
@@ -169,34 +184,6 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
     return () => { cancelled = true; };
   }, [deal?.id, activeOrgId]);
 
-  // Real-time: re-fetch deal-scoped data when tasks, documents, or allocations change
-  const rtId = useRef(Math.random().toString(36).slice(2));
-  useEffect(() => {
-    if (!supabase || !deal?.id) return;
-
-    const refetch = () => {
-      if (!deal?.id) return;
-      Promise.all([
-        fetchTasks({ dealId: deal.id }).catch(() => []),
-        supabase.from('deal_documents').select('*').eq('deal_id', deal.id).order('created_at', { ascending: false }).then(({ data }) => data || []),
-        supabase.from('deal_allocations').select('*, investors(name)').eq('deal_id', deal.id).order('created_at', { ascending: false }).then(({ data }) => data || []),
-      ]).then(([t, docs, allocs]) => {
-        setTasks(t);
-        setDocuments(docs);
-        setAllocations(allocs);
-      });
-    };
-
-    const ch = supabase
-      .channel(`deal-right-${deal.id}-${rtId.current}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks',            filter: `deal_id=eq.${deal.id}` }, refetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_documents',   filter: `deal_id=eq.${deal.id}` }, refetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_allocations', filter: `deal_id=eq.${deal.id}` }, refetch)
-      .subscribe();
-
-    return () => supabase.removeChannel(ch);
-  }, [deal?.id]);
-
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
   const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString()}`;
 
@@ -205,35 +192,15 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
     if (!file || !supabase) return;
     setDocUploading(true);
     const path = `${deal.id}/${Date.now()}_${file.name}`;
-    setDocError(null);
     const { error: storageErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file);
-    if (storageErr) {
-      setDocError(storageErr.message);
-    } else {
+    if (!storageErr) {
       const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-      const { data: newDoc, error: dbErr } = await supabase
+      const { data: newDoc } = await supabase
         .from('deal_documents')
         .insert({ deal_id: deal.id, organization_id: activeOrgId, name: file.name, category: docCategory, storage_path: path, url: publicUrl, size: file.size })
         .select('*')
         .single();
-      if (dbErr) setDocError(dbErr.message);
-      else if (newDoc) {
-        setDocuments(prev => [newDoc, ...prev]);
-        // Log document upload to activity feed
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const { error: noteErr } = await supabase.from('activity_notes').insert({
-            organization_id: activeOrgId,
-            deal_id:         deal.id,
-            author_id:       session.user.id,
-            author_name:     profile?.name || null,
-            body:            `📎 Uploaded document: "${file.name}"${docCategory !== 'Other' ? ` (${docCategory})` : ''} · [Open](${publicUrl})`,
-            note_type:       'note',
-          });
-          if (noteErr) console.error('activity note for doc upload failed:', noteErr.message, noteErr);
-          else onActivityNoteAdded?.();
-        }
-      }
+      if (newDoc) setDocuments(prev => [newDoc, ...prev]);
     }
     setDocUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -312,19 +279,38 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
           addLabel="Add task"
         >
           {tasks.length > 0
-            ? tasks.slice(0, 8).map(t => (
-              <div key={t.id} className="flex items-center gap-2 py-1.5">
-                <TaskStatusIcon status={t.status} />
-                <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
-                  {t.title}
-                </span>
-                {t.due_date && (
-                  <span className={`text-[10px] flex-shrink-0 ${new Date(t.due_date) < new Date() && t.status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
-                    {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-              </div>
-            ))
+            ? tasks.slice(0, 8).map(t => {
+                const assigneeName = t.assigned_to ? (assigneeProfiles[t.assigned_to] || null) : null;
+                return (
+                  <div key={t.id} className="flex items-center gap-2 py-1.5">
+                    <TaskStatusIcon status={t.status} />
+                    <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
+                      {t.title}
+                    </span>
+                    {t.due_date && (
+                      <span className={`text-[10px] flex-shrink-0 ${new Date(t.due_date) < new Date() && t.status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                        {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    {/* Assignee avatar */}
+                    {assigneeName ? (
+                      <div
+                        title={`Assigned to ${assigneeName}`}
+                        className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[9px] font-bold text-accent flex-shrink-0 cursor-default"
+                      >
+                        {assigneeName.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                    ) : (
+                      <div
+                        title="Unassigned"
+                        className="w-5 h-5 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-[9px] text-gray-300 flex-shrink-0 cursor-default"
+                      >
+                        +
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             : <p className="text-[12px] text-gray-300 italic">No tasks yet</p>
           }
           {tasks.length > 8 && (
@@ -404,29 +390,24 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask, onActivi
           defaultOpen={documents.length > 0}
         >
           {!readOnly && (
-            <>
-              <div className="flex items-center gap-2 mb-3">
-                <select
-                  value={docCategory}
-                  onChange={e => setDocCategory(e.target.value)}
-                  className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/40 flex-1 min-w-0"
-                >
-                  {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={docUploading}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  <Upload size={11} />
-                  {docUploading ? 'Uploading…' : 'Upload'}
-                </button>
-                <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
-              </div>
-              {docError && (
-                <p className="text-[11px] text-red-500 mb-2">{docError}</p>
-              )}
-            </>
+            <div className="flex items-center gap-2 mb-3">
+              <select
+                value={docCategory}
+                onChange={e => setDocCategory(e.target.value)}
+                className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/40 flex-1 min-w-0"
+              >
+                {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={docUploading}
+                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex-shrink-0"
+              >
+                <Upload size={11} />
+                {docUploading ? 'Uploading…' : 'Upload'}
+              </button>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleDocUpload} />
+            </div>
           )}
           {documents.length > 0
             ? documents.map(doc => (

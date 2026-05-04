@@ -1,4 +1,6 @@
 import { Home } from 'lucide-react';
+import { useDeals } from '../lib/DealsContext';
+import LiveBadge from '../components/UI/LiveBadge';
 
 const SALES_STAGES = [
   'Listed',
@@ -7,10 +9,15 @@ const SALES_STAGES = [
 ];
 
 export default function Sales() {
+  const { realtimeStatus } = useDeals();
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-sidebar">Sales Pipeline</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-sidebar">Sales Pipeline</h1>
+          <LiveBadge status={realtimeStatus} />
+        </div>
         <p className="text-sm text-gray-500 mt-1">0 active listings — deals appear here once ready to sell</p>
       </div>
 

@@ -1,67 +1,18 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
-import { useAuth } from '../lib/AuthContext';
-import { CheckCircle2, Calendar } from 'lucide-react';
+import LiveBadge from '../components/UI/LiveBadge';
+import { CheckCircle2, Calendar, User, ChevronDown, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { supabase } from '../lib/supabase';
-import ContractorPicker from '../components/deal/ContractorPicker';
 
 // ── Column definitions ────────────────────────────────────────────────────────
-// milestoneKey  → deal_milestones.milestone_key (two-way sync with Important Dates sidebar)
-// contractorType → filters ContractorPicker to matching contacts
 const DD_COLUMNS = [
-  {
-    key: 'survey',
-    label: 'Survey / Boundary Review',
-    color: '#2563eb', bg: '#dbeafe',
-    hasDate: true,
-    milestoneKey: 'land_survey_scheduled',
-    contractorType: 'Land Surveyor',
-    dateLabel: 'Survey Scheduled',
-  },
-  {
-    key: 'zoning',
-    label: 'Zoning & Land Use Verification',
-    color: '#7c3aed', bg: '#ede9fe',
-    hasDate: false,
-    milestoneKey: null,
-    contractorType: null,
-  },
-  {
-    key: 'hoa',
-    label: 'HOA / Deed Restrictions Review',
-    color: '#db2777', bg: '#fce7f3',
-    hasDate: false,
-    milestoneKey: null,
-    contractorType: null,
-  },
-  {
-    key: 'perc_test',
-    label: 'Perc Test',
-    color: '#16a34a', bg: '#dcfce7',
-    hasDate: true,
-    milestoneKey: 'perc_tests_scheduled',
-    contractorType: 'Soil Scientist',
-    dateLabel: 'Perc Test Scheduled',
-  },
-  {
-    key: 'flood_zone',
-    label: 'Flood Zone & Environmental Check',
-    color: '#0891b2', bg: '#cffafe',
-    hasDate: true,
-    milestoneKey: 'env_permits_submitted',
-    contractorType: 'Environmental Consultant',
-    dateLabel: 'Env. Permits Submitted',
-  },
-  {
-    key: 'utilities',
-    label: 'Utilities & Access Confirmation',
-    color: '#ea580c', bg: '#ffedd5',
-    hasDate: false,
-    milestoneKey: null,
-    contractorType: null,
-  },
+  { key: 'survey',        label: 'Survey / Boundary Review',            color: '#2563eb', bg: '#dbeafe', hasDate: false, hasContractor: true  },
+  { key: 'zoning',        label: 'Zoning & Land Use Verification',      color: '#7c3aed', bg: '#ede9fe', hasDate: false, hasContractor: false },
+  { key: 'hoa',           label: 'HOA / Deed Restrictions Review',      color: '#db2777', bg: '#fce7f3', hasDate: false, hasContractor: false },
+  { key: 'perc_test',     label: 'Perc Test',                           color: '#16a34a', bg: '#dcfce7', hasDate: true,  hasContractor: true  },
+  { key: 'flood_zone',    label: 'Flood Zone & Environmental Check',    color: '#0891b2', bg: '#cffafe', hasDate: false, hasContractor: false },
+  { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: false },
 ];
 
 const TOTAL_TASKS = DD_COLUMNS.length;
@@ -76,6 +27,46 @@ const INIT_MAP = {
 };
 
 const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
+function loadDDDeals() {
+  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
+  return all
+    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
+    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage))
+    .sort((a, b) => {
+      // Deals with a closing date sort before those without
+      if (!a.closeDate && !b.closeDate) return 0;
+      if (!a.closeDate) return 1;
+      if (!b.closeDate) return -1;
+      return new Date(a.closeDate) - new Date(b.closeDate);
+    });
+}
+// ── localStorage helpers ──────────────────────────────────────────────────────
+const lsGet  = (k)      => localStorage.getItem(k) || '';
+const lsSet  = (k, v)   => localStorage.setItem(k, v);
+const taskKey = (id, col) => `dd_${id}_${col}`;
+
+function getTaskStatus(dealId, colKey) {
+  return lsGet(taskKey(dealId, colKey)) || 'not_started';
+}
+function setTaskStatus(dealId, colKey, status) {
+  lsSet(taskKey(dealId, colKey), status);
+}
+function getCompletedCount(dealId) {
+  return DD_COLUMNS.filter(c => getTaskStatus(dealId, c.key) === 'complete').length;
+}
+
+// Seed from deal.ddTasksCompleted (called inside the component after deals load)
+function seedInitialState(deals) {
+  for (const deal of deals) {
+    for (const name of (deal.ddTasksCompleted || [])) {
+      const k = INIT_MAP[name];
+      if (k) {
+        const lk = taskKey(deal.id, k);
+        if (!localStorage.getItem(lk)) lsSet(lk, 'complete');
+      }
+    }
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatCloseDate(str) {
@@ -95,57 +86,48 @@ function getDayCount(contractDate) {
 }
 
 // ── Task card ─────────────────────────────────────────────────────────────────
-function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, taskStatuses, onTaskStatusChange }) {
+function DDTaskCard({ deal, column, onUpdate }) {
   const navigate = useNavigate();
 
-  // Read status from Supabase state; fall back to localStorage for backward compat
-  const dbStatus = taskStatuses[`${deal.id}:dd_${column.key}`];
-  const dbDate   = taskStatuses[`${deal.id}:dd_${column.key}_date`];
-
-  const [status, setStatus] = useState(
-    dbStatus ?? localStorage.getItem(`dd_${deal.id}_${column.key}`) ?? 'not_started'
-  );
-  const [date, setDate] = useState(
-    milestoneDate || dbDate || localStorage.getItem(`dd_${deal.id}_${column.key}_date`) || ''
-  );
-
-  // Sync when Supabase data arrives or changes (e.g. another user updated it)
-  useEffect(() => {
-    if (dbStatus !== undefined && dbStatus !== status) setStatus(dbStatus);
-  }, [dbStatus]); // eslint-disable-line
-
-  useEffect(() => {
-    const incoming = milestoneDate || dbDate;
-    if (incoming && incoming !== date) setDate(incoming);
-  }, [milestoneDate, dbDate]); // eslint-disable-line
+  const [status,     setStatus]     = useState(() => getTaskStatus(deal.id, column.key));
+  const [date,       setDate]       = useState(() => lsGet(`${taskKey(deal.id, column.key)}_date`));
+  const [contractor, setContractor] = useState(() => lsGet(`${taskKey(deal.id, column.key)}_cont`));
+  const [editingCont, setEditingCont] = useState(false);
 
   if (status === 'complete') return null;
 
-  const completed   = DD_COLUMNS.filter(c => (taskStatuses[`${deal.id}:dd_${c.key}`] ?? localStorage.getItem(`dd_${deal.id}_${c.key}`) ?? 'not_started') === 'complete').length;
+  const completed   = getCompletedCount(deal.id);
   const netProfit   = calcNetProfit(deal);
   const days        = getDayCount(deal.contractDate);
   const isInProgress = status === 'in_progress';
 
   const markComplete = (e) => {
     e.stopPropagation();
+    setTaskStatus(deal.id, column.key, 'complete');
     setStatus('complete');
-    onTaskStatusChange(deal.id, `dd_${column.key}`, 'complete');
     onUpdate();
   };
 
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
+    lsSet(`${taskKey(deal.id, column.key)}_date`, val);
     setDate(val);
-    onTaskStatusChange(deal.id, `dd_${column.key}_date`, val);
     if (status === 'not_started' && val) {
+      setTaskStatus(deal.id, column.key, 'in_progress');
       setStatus('in_progress');
-      onTaskStatusChange(deal.id, `dd_${column.key}`, 'in_progress');
       onUpdate();
     }
-    // Sync to deal_milestones (two-way link with Important Dates sidebar)
-    if (column.milestoneKey) {
-      onMilestoneChange(deal.id, column.milestoneKey, val);
+  };
+
+  const saveContractor = (val) => {
+    lsSet(`${taskKey(deal.id, column.key)}_cont`, val);
+    setContractor(val);
+    setEditingCont(false);
+    if (status === 'not_started' && val) {
+      setTaskStatus(deal.id, column.key, 'in_progress');
+      setStatus('in_progress');
+      onUpdate();
     }
   };
 
@@ -191,10 +173,10 @@ function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, 
         )}
       </div>
 
-      {/* Date picker — two-way synced to deal_milestones */}
+      {/* Date picker (Perc Test) */}
       {column.hasDate && (
         <div className="mb-2" onClick={e => e.stopPropagation()}>
-          <p className="text-[9px] text-gray-400 mb-0.5">{column.dateLabel}</p>
+          <p className="text-[9px] text-gray-400 mb-0.5">Perc Test Scheduled Date</p>
           <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50">
             <Calendar size={9} className="text-gray-400 flex-shrink-0" />
             <input
@@ -207,14 +189,36 @@ function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, 
         </div>
       )}
 
-      {/* Contractor picker — queries contacts by contractor_type */}
-      {column.contractorType && (
-        <div className="mb-2">
-          <ContractorPicker
-            dealId={deal.id}
-            stageKey={column.key}
-            contractorType={column.contractorType}
-          />
+      {/* Contractor */}
+      {column.hasContractor && (
+        <div className="mb-2" onClick={e => e.stopPropagation()}>
+          {contractor ? (
+            <button
+              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
+              className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 rounded-lg px-2 py-1 w-full text-left"
+            >
+              <User size={9} className="flex-shrink-0" />
+              <span className="truncate">{contractor}</span>
+            </button>
+          ) : editingCont ? (
+            <input
+              autoFocus
+              type="text"
+              placeholder="Contractor name..."
+              className="text-[10px] border border-gray-300 rounded-lg px-2 py-1 w-full outline-none focus:border-blue-400"
+              onBlur={e => saveContractor(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveContractor(e.target.value); if (e.key === 'Escape') setEditingCont(false); }}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
+              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
+            >
+              <ChevronDown size={9} />
+              Add Contractor
+            </button>
+          )}
         </div>
       )}
 
@@ -232,19 +236,16 @@ function DDTaskCard({ deal, column, onUpdate, milestoneDate, onMilestoneChange, 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DueDiligence() {
-  const { deals } = useDeals();
-  const { activeOrgId } = useAuth();
+  const { deals, realtimeStatus } = useDeals();
   const [tick, setTick] = useState(0);
-  const [milestones, setMilestones] = useState({});
-  // taskStatuses: { '${dealId}:${taskKey}': value }
-  const [taskStatuses, setTaskStatuses] = useState({});
-  const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
-  const ddDeals = useMemo(() =>
-    deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
-  , [deals]);
+  const ddDeals = useMemo(() => {
+    const filtered = deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived);
+    seedInitialState(filtered);
+    return filtered;
+  }, [deals]);
 
   const sortedDeals = [...ddDeals].sort((a, b) => {
     if (!a.closeDate && !b.closeDate) return 0;
@@ -253,149 +254,26 @@ export default function DueDiligence() {
     return new Date(a.closeDate) - new Date(b.closeDate);
   });
 
-  // ── Seed legacy data from deal.ddTasksCompleted into Supabase ────────────
-  const seedLegacyStatuses = useCallback(async (dealsToSeed) => {
-    if (!supabase || !activeOrgId) return;
-    const rows = [];
-    for (const deal of dealsToSeed) {
-      for (const name of (deal.ddTasksCompleted || [])) {
-        const k = INIT_MAP[name];
-        if (k) rows.push({ deal_id: deal.id, organization_id: activeOrgId, task_key: `dd_${k}`, value: 'complete' });
-      }
-    }
-    if (rows.length) {
-      await supabase.from('deal_task_statuses').upsert(rows, { onConflict: 'deal_id,organization_id,task_key', ignoreDuplicates: true });
-    }
-  }, [activeOrgId]);
-
-  // ── Load all task statuses for visible deals ──────────────────────────────
-  const loadTaskStatuses = useCallback(async () => {
-    if (!supabase || !ddDeals.length) return;
-    const dealIds = ddDeals.map(d => d.id);
-    const { data } = await supabase
-      .from('deal_task_statuses')
-      .select('deal_id, task_key, value')
-      .in('deal_id', dealIds);
-    if (data) {
-      const map = {};
-      for (const row of data) map[`${row.deal_id}:${row.task_key}`] = row.value;
-      setTaskStatuses(map);
-    }
-  }, [ddDeals]);
-
-  useEffect(() => {
-    loadTaskStatuses();
-    seedLegacyStatuses(ddDeals);
-  }, [loadTaskStatuses, seedLegacyStatuses, ddDeals]);
-
-  // ── Real-time: task status changes from other users ───────────────────────
-  useEffect(() => {
-    if (!supabase) return;
-    const ch = supabase
-      .channel(`dd-task-statuses-${instanceId.current}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_task_statuses' },
-        (payload) => {
-          const row = payload.new || payload.old;
-          if (row && ddDeals.some(d => d.id === row.deal_id)) {
-            if (payload.eventType === 'DELETE') {
-              setTaskStatuses(prev => {
-                const next = { ...prev };
-                delete next[`${row.deal_id}:${row.task_key}`];
-                return next;
-              });
-            } else {
-              setTaskStatuses(prev => ({ ...prev, [`${row.deal_id}:${row.task_key}`]: payload.new.value }));
-            }
-          }
-        })
-      .subscribe();
-    return () => supabase.removeChannel(ch);
-  }, [ddDeals]); // eslint-disable-line
-
-  // ── Write a task status to Supabase ──────────────────────────────────────
-  const handleTaskStatusChange = useCallback(async (dealId, taskKey, value) => {
-    setTaskStatuses(prev => ({ ...prev, [`${dealId}:${taskKey}`]: value }));
-    if (!supabase || !activeOrgId) return;
-    await supabase.from('deal_task_statuses').upsert(
-      { deal_id: dealId, organization_id: activeOrgId, task_key: taskKey, value },
-      { onConflict: 'deal_id,organization_id,task_key' }
-    );
-  }, [activeOrgId]);
-
-  // ── Load milestones ───────────────────────────────────────────────────────
-  const loadMilestones = useCallback(async () => {
-    if (!supabase || !ddDeals.length) return;
-    const mKeys = DD_COLUMNS.filter(c => c.milestoneKey).map(c => c.milestoneKey);
-    const dealIds = ddDeals.map(d => d.id);
-    const { data } = await supabase
-      .from('deal_milestones')
-      .select('deal_id, milestone_key, eta')
-      .in('deal_id', dealIds)
-      .in('milestone_key', mKeys);
-    if (data) {
-      const map = {};
-      for (const row of data) {
-        if (row.eta) map[`${row.deal_id}/${row.milestone_key}`] = row.eta;
-      }
-      setMilestones(map);
-    }
-  }, [ddDeals]);
-
-  useEffect(() => { loadMilestones(); }, [loadMilestones]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    const ch = supabase
-      .channel(`dd-milestones-${instanceId.current}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_milestones' },
-        () => loadMilestones())
-      .subscribe();
-    return () => supabase.removeChannel(ch);
-  }, [loadMilestones]);
-
-  const handleMilestoneChange = useCallback(async (dealId, milestoneKey, value) => {
-    setMilestones(prev => {
-      const next = { ...prev };
-      if (value) next[`${dealId}/${milestoneKey}`] = value;
-      else delete next[`${dealId}/${milestoneKey}`];
-      return next;
-    });
-    if (!supabase) return;
-    if (value) {
-      await supabase.from('deal_milestones').upsert(
-        { deal_id: dealId, milestone_key: milestoneKey, eta: value, status: 'in_progress' },
-        { onConflict: 'deal_id,milestone_key' }
-      );
-    } else {
-      await supabase.from('deal_milestones')
-        .update({ eta: null })
-        .eq('deal_id', dealId)
-        .eq('milestone_key', milestoneKey);
-    }
-  }, []);
-
   return (
     <div className="space-y-0">
       {/* Header bar */}
       <div className="flex items-center mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Due Diligence</h1>
+            <LiveBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-gray-500">{ddDeals.length} deals</p>
         </div>
       </div>
 
       {/* Kanban board */}
       <div
-        key={tick}
         className="flex gap-3 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
         {DD_COLUMNS.map(col => {
-          const getStatus = (dealId) =>
-            taskStatuses[`${dealId}:dd_${col.key}`] ??
-            localStorage.getItem(`dd_${dealId}_${col.key}`) ??
-            'not_started';
-          const colDeals = sortedDeals.filter(d => getStatus(d.id) !== 'complete');
+          const colDeals = sortedDeals.filter(d => getTaskStatus(d.id, col.key) !== 'complete');
           return (
             <div key={col.key} className="flex-shrink-0 w-60">
               {/* Column header */}
@@ -416,10 +294,6 @@ export default function DueDiligence() {
                     deal={deal}
                     column={col}
                     onUpdate={forceUpdate}
-                    milestoneDate={col.milestoneKey ? milestones[`${deal.id}/${col.milestoneKey}`] : undefined}
-                    onMilestoneChange={handleMilestoneChange}
-                    taskStatuses={taskStatuses}
-                    onTaskStatusChange={handleTaskStatusChange}
                   />
                 ))}
                 {colDeals.length === 0 && (

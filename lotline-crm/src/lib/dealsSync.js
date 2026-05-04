@@ -9,44 +9,6 @@ export function lsKey(orgId) {
   return orgId ? `lotline_deals_${orgId}` : 'lotline_custom_deals';
 }
 
-function tombstoneKey(orgId) {
-  return `lotline_deleted_deal_ids_${orgId}`;
-}
-
-const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-/** Read the tombstone list for an org. Returns a Set of deal ID strings. */
-export function getTombstones(orgId) {
-  if (!orgId) return new Set();
-  try {
-    const raw = JSON.parse(localStorage.getItem(tombstoneKey(orgId)) || '[]');
-    const now = Date.now();
-    // Garbage-collect entries older than 30 days
-    const fresh = raw.filter(e => now - e.ts < TOMBSTONE_TTL_MS);
-    if (fresh.length !== raw.length) {
-      localStorage.setItem(tombstoneKey(orgId), JSON.stringify(fresh));
-    }
-    return new Set(fresh.map(e => String(e.id)));
-  } catch {
-    return new Set();
-  }
-}
-
-/** Record a deal ID as deleted so loadAllDeals won't re-flush it. */
-function addTombstone(dealId, orgId) {
-  if (!orgId) return;
-  try {
-    const raw = JSON.parse(localStorage.getItem(tombstoneKey(orgId)) || '[]');
-    const now = Date.now();
-    // Keep only fresh entries + the new one (dedup by id)
-    const updated = [
-      ...raw.filter(e => String(e.id) !== String(dealId) && now - e.ts < TOMBSTONE_TTL_MS),
-      { id: String(dealId), ts: now },
-    ];
-    localStorage.setItem(tombstoneKey(orgId), JSON.stringify(updated));
-  } catch {}
-}
-
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function lsGet(orgId) {
@@ -151,7 +113,7 @@ function dealToRow(deal) {
     deal_owner:              deal.dealOwner || null,
     listing_url:             deal.listingUrl || null,
     contract_signed_at:      deal.contractSignedAt || null,
-    scenario_data:           deal.scenarioData ?? null,
+    scenario_data:           deal.scenarioData ? JSON.stringify(deal.scenarioData) : null,
     total_capital_required:  deal.totalCapitalRequired ?? null,
     funded_to_date:          deal.fundedToDate ?? 0,
     scheduled_to_date:       deal.scheduledToDate ?? 0,
@@ -291,55 +253,24 @@ export async function loadAllDeals(orgIds) {
     const lsDeals = lsGet(orgId);
     console.log('[dealsSync] loadAllDeals: orgId =', orgId, '| supabase rows =', data.length, '| ls deals =', lsDeals.length);
     const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
-
-    // ── Tombstone filter: remove any Supabase rows the user has deleted ──────
-    // The Supabase DELETE may have been blocked silently by RLS (returns no error
-    // but leaves the row). Tombstones are the authoritative "this user deleted it"
-    // signal, so we strip those rows here AND retry the delete in the background.
-    const tombstonesEarly = getTombstones(orgId);
-    const tombstonedInSupabase = data.filter(row => tombstonesEarly.has(String(row.id)));
-    if (tombstonedInSupabase.length > 0) {
-      console.log('[dealsSync] loadAllDeals: suppressing', tombstonedInSupabase.length, 'tombstoned row(s) from Supabase and retrying delete');
-      tombstonedInSupabase.forEach(row => {
-        supabase.from('deals').delete().eq('id', String(row.id))
-          .then(({ error }) => {
-            if (error) console.warn('[dealsSync] tombstone retry-delete failed for', row.id, error.message);
-            else console.log('[dealsSync] tombstone retry-delete succeeded for', row.id);
-          });
-      });
-    }
-    const filteredData = data.filter(row => !tombstonesEarly.has(String(row.id)));
-
     // Batch-fetch cost summaries for all orgs in scope and build a lookup map.
     // This is the canonical source of truth for total costs — always use
     // deal.totalActual in downstream consumers instead of legacy flat columns.
     const summaryRows = (await Promise.all(ids.map(id => fetchCostSummariesForOrg(id)))).flat();
     const summaryByDealId = Object.fromEntries(summaryRows.map(s => [String(s.deal_id), s]));
 
-    // LS is considered "fresh" if it was saved within the last 30 seconds.
-    // This handles the race condition where the Supabase write hasn't completed
-    // before a hard refresh — LS is updated synchronously but Supabase is async.
-    const LS_FRESH_MS = 30 * 1000;
-
-    const deals = filteredData.map(row => {
+    const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
       const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
       const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
       const summary = summaryByDealId[id];
-      // Prefer LS for user-edited financing/investor fields when LS was saved recently
-      // (Supabase write may still be in-flight if the user hard-refreshed quickly)
-      const lsFresh = fromLS._lsSavedAt && (Date.now() - fromLS._lsSavedAt) < LS_FRESH_MS;
       return {
         ...fromSupabase,
         // Canonical cost total from deal_cost_summary_view — used by calcNetProfit
         // and all dashboard / analytics surfaces instead of legacy flat columns.
         totalActual:     summary ? Number(summary.total_actual    ?? 0) : null,
         totalEstimated:  summary ? Number(summary.total_estimated ?? 0) : null,
-        // Preserve _lsSavedAt so LS-prefer blocks remain active across multiple page loads.
-        // Without this, lsSet(toCache) would strip _lsSavedAt and financing/scenarioData
-        // preferences would stop applying after the first refresh.
-        ...(fromLS._lsSavedAt && { _lsSavedAt: fromLS._lsSavedAt }),
         // Seeded deals use the hardcoded date (overrides stale LS migration values)
         // User-created deals fall back to LS then null
         contractSignedAt: fromSupabase.contractSignedAt
@@ -349,48 +280,15 @@ export async function loadAllDeals(orgIds) {
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
-        // Financing/scenario fields: LS is always authoritative if it has been saved.
-        // scenarioData is only written from the frontend so LS is the most reliable source.
-        // We only fall back to Supabase if LS has no value at all.
-        // The condition is intentionally broad: apply LS-prefer whenever LS has
-        // _lsSavedAt OR any financing/investor field. This handles the edge case
-        // where _lsSavedAt is stripped by lsSet(toCache) on a reload (e.g. when
-        // the deal just moved from unsynced→Supabase but LS was not yet re-stamped)
-        // while the user's financing data is still correctly in LS.
-        ...((fromLS._lsSavedAt || fromLS.financing || fromLS.financingScenarioType || fromLS.scenarioData || fromLS.investor) && {
-          financing:                   fromLS.financing                   ?? fromSupabase.financing,
-          financingScenarioType:        fromLS.financingScenarioType        ?? fromSupabase.financingScenarioType,
-          scenarioData:                 fromLS.scenarioData                 ?? fromSupabase.scenarioData,
-          capitalDeployedDate:          fromLS.capitalDeployedDate          ?? fromSupabase.capitalDeployedDate,
-          capitalReturnedDate:          fromLS.capitalReturnedDate          ?? fromSupabase.capitalReturnedDate,
-          investor:                     fromLS.investor                     ?? fromSupabase.investor,
-          investorCapitalContributed:   fromLS.investorCapitalContributed   ?? fromSupabase.investorCapitalContributed,
-          investorEquityPct:            fromLS.investorEquityPct            ?? fromSupabase.investorEquityPct,
-          projectedPayoutDate:          fromLS.projectedPayoutDate          ?? fromSupabase.projectedPayoutDate,
-        }),
-        // Closing fields: prefer fresh LS over potentially stale Supabase
-        // (covers the Supabase async write race condition on hard refresh).
-        ...(lsFresh && {
-          closingAttorney:        fromLS.closingAttorney        ?? fromSupabase.closingAttorney,
-          closingAttorneyPhone:   fromLS.closingAttorneyPhone   ?? fromSupabase.closingAttorneyPhone,
-          closingAttorneyAddress: fromLS.closingAttorneyAddress ?? fromSupabase.closingAttorneyAddress,
-          closeDate:              fromLS.closeDate              ?? fromSupabase.closeDate,
-          contractDate:           fromLS.contractDate           ?? fromSupabase.contractDate,
-        }),
       };
     });
 
     // Keep any LS-only deals (created locally but not yet synced to Supabase)
     // and re-flush them so they eventually land in the DB.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
-    // Tombstones: deal IDs deleted by this client — must NOT be re-flushed even if
-    // they're in localStorage (e.g. from another tab that had a stale LS cache).
-    const tombstones = getTombstones(orgId);
     // Exclude stale partner deals that were cached from a previous broader scope
-    // and deals that have been locally deleted (tombstoned) to prevent resurrection.
     const unsynced = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
-      !tombstones.has(String(d.id)) &&
       !d.isArchived &&
       (!d.organizationId || String(d.organizationId) === String(orgId))
     );
@@ -438,37 +336,8 @@ export function saveToLS(deal, orgId) {
   console.log('[dealsSync] saveToLS: deal', deal.id, '→ key', lsKey(orgId), '(orgId:', orgId, ')');
   const all = lsGet(orgId);
   const idx = all.findIndex(d => String(d.id) === String(deal.id));
-  const stamped = { ...deal, _lsSavedAt: Date.now() };
-  if (idx >= 0) all[idx] = stamped; else all.push(stamped);
+  if (idx >= 0) all[idx] = deal; else all.push(deal);
   lsSet(all, orgId);
-}
-
-/** Awaitable version of flushToSupabase — returns {error} (error=null on success).
- *  Use this when you need to know if the write succeeded (e.g. for UI feedback). */
-export async function flushToSupabaseAsync(deal, orgId) {
-  if (!supabase) return { error: new Error('Supabase not configured') };
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return { error: new Error('Not authenticated') };
-    const row = dealToRow(deal);
-    if (orgId) row.organization_id = orgId;
-    const { error, data } = await supabase.from('deals').update(row).eq('id', row.id).select('id');
-    if (error) return { error };
-    if (!data || data.length === 0) {
-      // UPDATE matched 0 rows — check if deal genuinely doesn't exist (new deal) vs RLS block
-      const { data: existing } = await supabase.from('deals').select('id').eq('id', row.id).maybeSingle();
-      if (existing) {
-        // Deal exists but update was blocked — likely RLS (org mismatch or insufficient role)
-        return { error: new Error('Write blocked — check organization membership and permissions') };
-      }
-      // Genuinely new deal — insert it
-      const { error: insertError } = await supabase.from('deals').insert(row);
-      if (insertError) return { error: insertError };
-    }
-    return { error: null };
-  } catch (e) {
-    return { error: e };
-  }
 }
 
 /** Flush a single deal to Supabase only (async, no localStorage touch).
@@ -515,22 +384,13 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Delete a deal from both localStorage and Supabase.
- *  orgId is required — throws synchronously if missing to prevent silent data loss. */
-export async function deleteDeal(dealId, orgId) {
-  if (!orgId) throw new Error('deleteDeal: orgId is required');
-  // 1. Remove from localStorage immediately
+/** Delete a deal from both localStorage and Supabase */
+export function deleteDeal(dealId, orgId) {
   const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
   lsSet(all, orgId);
-  // 2. Record tombstone so loadAllDeals won't re-flush this deal if it's not yet in Supabase
-  addTombstone(dealId, orgId);
-  // 3. Delete from Supabase and surface errors
   if (supabase) {
-    const { error } = await supabase.from('deals').delete().eq('id', String(dealId));
-    if (error) {
-      console.warn('[dealsSync] deleteDeal error:', error.message);
-      throw new Error(error.message);
-    }
+    supabase.from('deals').delete().eq('id', String(dealId))
+      .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
   }
 }
 
@@ -581,25 +441,49 @@ export function saveCountyData(countyName, state, data) {
 
 /**
  * Subscribe to live deal changes from Supabase.
- * @param {function} onUpdate - called with the updated deal object on INSERT/UPDATE
- * @param {function} onDelete - called with the deleted deal id on DELETE
+ *
+ * @param {function} onUpdate        - called with the updated deal object on INSERT/UPDATE
+ * @param {function} onDelete        - called with the deleted deal id on DELETE
+ * @param {object}   [opts]
+ * @param {string}   [opts.orgId]    - when provided, server-side filter scopes to this org
+ * @param {function} [opts.onStatus] - called with 'connecting'|'live'|'error'|'closed'
  * @returns {function} unsubscribe - call to stop listening
  */
-export function subscribeToDeals(onUpdate, onDelete) {
+export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   if (!supabase) return () => {};
 
+  const { orgId, onStatus } = opts;
+
+  // Unique channel name per org prevents channel collisions across sessions
+  const channelName = orgId ? `deals-realtime-${orgId}` : 'deals-realtime';
+
+  // Server-side row filter — requires REPLICA IDENTITY FULL (migration 058)
+  const filter = orgId ? `organization_id=eq.${orgId}` : undefined;
+  const baseOpts = { schema: 'public', table: 'deals', ...(filter ? { filter } : {}) };
+
+  onStatus?.('connecting');
+
   const channel = supabase
-    .channel('deals-realtime')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'deals' }, payload => {
+    .channel(channelName)
+    .on('postgres_changes', { ...baseOpts, event: 'INSERT' }, payload => {
       onUpdate(rowToDeal(payload.new));
     })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deals' }, payload => {
+    .on('postgres_changes', { ...baseOpts, event: 'UPDATE' }, payload => {
       onUpdate(rowToDeal(payload.new));
     })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'deals' }, payload => {
+    .on('postgres_changes', { ...baseOpts, event: 'DELETE' }, payload => {
       onDelete(String(payload.old.id));
     })
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        onStatus?.('live');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[dealsSync] Realtime subscription error:', status, err?.message);
+        onStatus?.('error');
+      } else if (status === 'CLOSED') {
+        onStatus?.('closed');
+      }
+    });
 
   return () => { supabase.removeChannel(channel); };
 }

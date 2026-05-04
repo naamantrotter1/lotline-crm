@@ -8,13 +8,14 @@ import {
   Landmark, Handshake, XCircle, Info,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal, flushToSupabase, flushToSupabaseAsync, saveToLS } from '../lib/dealsSync';
-import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation, ensureInvestorContact } from '../lib/capitalStackData';
+import { saveDeal, flushToSupabase } from '../lib/dealsSync';
+import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../lib/supabase';
+import { loadInvestors, addInvestor } from '../lib/investorsStore';
 import { HOME_MODELS } from '../data/homeModels';
 import { COUNTY_DATA } from '../data/counties';
 import { GradeBadge, Tag } from '../components/UI/Badge';
@@ -26,12 +27,12 @@ import DealMiddleColumn from '../components/deal/DealMiddleColumn';
 import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
-import DealEventsTab from '../components/deal/DealEventsTab';
-import AddEventModal from '../components/deal/AddEventModal';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
-import { fetchCostSummary, resolveActual } from '../lib/costBreakdownData';
+import { fetchCostSummary } from '../lib/costBreakdownData';
+import { logTaskActivity } from '../lib/tasksData';
+import { notifyTaskAssigned } from '../lib/notify';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
@@ -88,28 +89,28 @@ const SWANSON_DOCS = [
 ];
 
 const COST_FIELDS = [
-  { key: 'land',         label: 'Land / Purchase Price' },
-  { key: 'percTest',     label: 'Perc Test / Permit' },
-  { key: 'survey',       label: 'Land Survey' },
-  { key: 'mobileHome',   label: 'Manufactured Home' },
-  { key: 'clearLand',    label: 'Land Clearing' },
-  { key: 'septic',       label: 'Septic' },
-  { key: 'water',        label: 'Well' },
-  { key: 'waterSewer',   label: 'Public Water' },
-  { key: 'electric',     label: 'Utility Power Connection' },
-  { key: 'footers',      label: 'Foundation / Footers' },
-  { key: 'setup',        label: 'Set Up' },
-  { key: 'hvac',         label: 'HVAC' },
+  { key: 'land', label: 'Land / Purchase Price' },
+  { key: 'mobileHome', label: 'Mobile Home' },
+  { key: 'hudEngineer', label: 'HUD Engineer' },
+  { key: 'percTest', label: 'Perc Test / Permit' },
+  { key: 'survey', label: 'Land Survey' },
+  { key: 'footers', label: 'Footers' },
+  { key: 'setup', label: 'Setup' },
+  { key: 'clearLand', label: 'Clear Land' },
+  { key: 'water', label: 'Water' },
+  { key: 'septic', label: 'Septic' },
+  { key: 'electric', label: 'Electric / Power Pole' },
+  { key: 'hvac', label: 'HVAC' },
   { key: 'underpinning', label: 'Skirting' },
-  { key: 'driveway',     label: 'Driveway' },
-  { key: 'landscaping',  label: 'Final Grade' },
-  { key: 'decks',        label: 'Decks Installed' },
-  { key: 'hudEngineer',  label: 'HUD Engineer' },
-  { key: 'mailbox',      label: 'Mailbox' },
-  { key: 'gutters',      label: 'Gutters' },
-  { key: 'photos',       label: 'Professional Photos' },
-  { key: 'mobileTax',    label: 'Miscellaneous' },
-  { key: 'staging',      label: 'Staging' },
+  { key: 'decks', label: 'Decks Installed' },
+  { key: 'driveway', label: 'Driveway' },
+  { key: 'landscaping', label: 'Landscaping / Final Grading' },
+  { key: 'waterSewer', label: 'Water / Sewer Hook Up' },
+  { key: 'mailbox', label: 'Mailbox' },
+  { key: 'gutters', label: 'Gutters' },
+  { key: 'photos', label: 'Professional Photos' },
+  { key: 'mobileTax', label: 'Mobile Home Tax' },
+  { key: 'staging', label: 'Staging' },
 ];
 
 function calcAllIn(deal) {
@@ -215,9 +216,8 @@ function DecimalInput({ value, onChange, className }) {
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
 function FinancingScenarioPanel({
-  deal, costs, arv, allInOverride,
+  deal, costs, arv,
   selectedScenario, applyScenario,
-  financingSaveStatus,
   // General loan terms
   lenderName, setLenderName,
   interestRate, setInterestRate,
@@ -265,18 +265,17 @@ function FinancingScenarioPanel({
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
-  const [showAdvancedFees, setShowAdvancedFees] = useState(false);
   const [showLocAdvanced, setShowLocAdvanced] = useState(false);
 
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
 
-  const allIn = allInOverride ?? COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+  const allIn = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const arvVal = arv ?? deal.arv ?? 0;
 
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || allIn || totalLent;
+  const effectiveLoanAmount = loanAmountOverride || totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
   const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
   const monthlyInterestHm = effectiveLoanAmount * (interestRate / 100) / 12;
@@ -295,20 +294,12 @@ function FinancingScenarioPanel({
   const isLoC = activeFinancing === 'Line of Credit';
   const isProfitSplit = activeFinancing === 'Profit Split';
   const isCCP = activeFinancing === 'Committed Capital Partner';
-  const isPooled = activeFinancing === 'Pooled Loan';
 
   const iCls = "text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full";
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between border-b border-gray-200 pb-1.5 mb-3">
-        <h3 className="text-sm font-semibold text-[#1a2332] uppercase tracking-wide leading-none">Financing Scenario</h3>
-        <span className="text-[10px] leading-none">
-          {financingSaveStatus === 'saving' && <span className="text-gray-400">Saving...</span>}
-          {financingSaveStatus === 'saved'  && <span className="text-green-500">Saved ✓</span>}
-          {financingSaveStatus === 'error'  && <span className="text-red-500">Save failed — retry?</span>}
-        </span>
-      </div>
+      <SectionHeader>Financing Scenario</SectionHeader>
 
       {/* Scenario selector */}
       <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
@@ -395,44 +386,22 @@ function FinancingScenarioPanel({
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
             <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2 col-span-2">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</p>
-                  {!readOnly && (
-                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
-                      + Add New Investor
-                    </button>
-                  )}
-                </div>
-                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
-                  <option value="">— Select Lender —</option>
-                  {investor && !investorList.find(i => i.name === investor) && (
-                    <option value={investor}>{investor}</option>
-                  )}
-                  {investorList.map(inv => (
-                    <option key={inv.id} value={inv.name}>{inv.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-                <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
-              </div>
-
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
-                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${Math.round(monthlyInterestHm).toLocaleString()}</p>
-              </div>
-
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
-                <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Lender Name</p>
+                <input type="text" value={lenderName} onChange={e => setLenderName(e.target.value)} placeholder="e.g. Low Tide Private Lending" className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
+                <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Home</p>
+                <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
+              </div>
+              <div className="py-2 col-span-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
                 <input
                   type="number"
-                  value={loanAmountOverride || allIn || totalLent}
+                  value={loanAmountOverride || totalLent}
                   onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
                   onFocus={e => e.target.select()}
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
@@ -443,81 +412,63 @@ function FinancingScenarioPanel({
                 )}
               </div>
               <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
+                <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
+                <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestHm).toLocaleString()}</span>
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
+                <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+              </div>
+              <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
                 <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Maturity Date (calc)</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Maturity Date</p>
                 {capitalDeployedDate && holdPeriod ? (() => {
                   const d = new Date(capitalDeployedDate); d.setMonth(d.getMonth() + holdPeriod);
-                  return <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>;
-                })() : <p className="text-xs text-gray-400 italic mt-1">Set capital deployed date to calculate.</p>}
+                  return <span className="text-sm font-medium text-gray-800">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>;
+                })() : <span className="text-sm text-gray-400">—</span>}
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
                 <input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
               </div>
-              <div className="py-2" />
-              <div className="col-span-2 border-t border-gray-100 pt-2 mt-1 flex items-center justify-between">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Extension Option</p>
-                <button
-                  type="button"
-                  onClick={() => !readOnly && setExtensionAvailable(v => !v)}
-                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${extensionAvailable ? 'bg-accent' : 'bg-gray-200'}`}
-                >
-                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${extensionAvailable ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-              {extensionAvailable && (
-                <>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Fee (points)</p>
-                    <DecimalInput value={extensionFee || 0} onChange={setExtensionFee} className={iCls} />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Months</p>
-                    <input type="text" inputMode="numeric" value={extensionMonths || ''} onChange={e => setExtensionMonths(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
-                  </div>
-                </>
-              )}
-              <div className="col-span-2 border-t border-gray-100 my-3" />
+            </div>
+          </div>
+
+          {/* Fees */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees & Closing Costs</p>
+            <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Fee (%)</p>
                 <DecimalInput value={originationFeePct} onChange={setOriginationFeePct} className={iCls} />
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Amount (calc)</p>
-                <p className="text-sm font-medium text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">${Math.round(originationFee).toLocaleString()}</p>
+                <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
               </div>
-              <div className="col-span-2 pb-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedFees(v => !v)}
-                  className="text-[10px] text-accent hover:text-accent/80 font-semibold"
-                >
-                  {showAdvancedFees ? '▴ Hide advanced fees' : '+ Show advanced fees'}
-                </button>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
+                <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
               </div>
-              {showAdvancedFees && (
-                <>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
-                    <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
-                    <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
-                    <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
-                    <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
-                  </div>
-                </>
-              )}
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
+                <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
+                <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
+                <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
+              </div>
               <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Closing Costs (calc)</p>
                 <span className="text-sm font-bold text-accent">${Math.round(totalClosingCosts).toLocaleString()}</span>
@@ -525,7 +476,33 @@ function FinancingScenarioPanel({
             </div>
           </div>
 
-          {/* Cost of Capital Summary — bottom */}
+          {/* Extension */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extension Option</p>
+              <button
+                type="button"
+                onClick={() => !readOnly && setExtensionAvailable(v => !v)}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${extensionAvailable ? 'bg-accent' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${extensionAvailable ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+            {extensionAvailable && (
+              <div className="grid grid-cols-2 gap-x-6 mt-3">
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Fee (points)</p>
+                  <DecimalInput value={extensionFee || 0} onChange={setExtensionFee} className={iCls} />
+                </div>
+                <div className="py-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Months</p>
+                  <input type="text" inputMode="numeric" value={extensionMonths || ''} onChange={e => setExtensionMonths(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cost of Capital Summary (dark) */}
           <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
             <div className="space-y-1.5">
@@ -541,27 +518,14 @@ function FinancingScenarioPanel({
                 <span className="text-gray-400">Origination Fee</span>
                 <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
               </div>
-              {(totalClosingCosts - originationFee) > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Other Closing Costs</span>
-                  <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
-                </div>
-              )}
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Other Closing Costs</span>
+                <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
+              </div>
               <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
                 <span className="font-semibold text-white">Total Cost of Capital</span>
                 <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
               </div>
-              {(() => {
-                const netAfter = netProfitEst - totalCostOfCapital;
-                return (
-                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                    <span className="font-semibold text-white">Net Profit After Financing</span>
-                    <span className={`font-bold ${netAfter >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${Math.round(netAfter).toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         </>
@@ -710,38 +674,65 @@ function FinancingScenarioPanel({
         />
       )}
 
-      {/* ── Pooled Loan ── */}
-      {!!selectedScenario && isPooled && (
+      {/* ── Investor Assignment (non-cash, non-profit-split scenarios) ── */}
+      {!!selectedScenario && !isCash && !isProfitSplit && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Pooled Loan Terms</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Investor Assignment</p>
+          <p className="text-[10px] text-gray-400 mb-3">Assign an investor to this deal. Once assigned, this deal will appear in their Investor Portal with the numbers below.</p>
           <div className="grid grid-cols-2 gap-x-6">
             <div className="py-2 col-span-2">
-              <div className="flex items-center gap-2 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500 flex-shrink-0"><rect x="2" y="3" width="6" height="18"/><rect x="9" y="3" width="6" height="18"/><rect x="16" y="3" width="6" height="18"/></svg>
-                <p className="text-xs text-purple-700">This deal is funded through a pooled loan. Loan details and allocations are managed in the <a href="/lending/pooled-loans" className="font-semibold underline">Lending → Pooled Loans</a> section. Linked loans appear above.</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Investor</p>
+                {!readOnly && (
+                  <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold flex items-center gap-0.5">
+                    + Add New Investor
+                  </button>
+                )}
               </div>
+              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                <option value="">— No Investor —</option>
+                {(investorList || []).map(inv => (
+                  <option key={inv.id} value={inv.name}>{inv.name}</option>
+                ))}
+              </select>
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
-              <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
-              <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
+              <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
+                <option>Interest Only</option>
+                <option>Profit Split %</option>
+                <option>Flat Fee</option>
+                <option>Pooled</option>
+              </select>
+            </div>
+            {investorReturnType === 'Profit Split %' && (
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Equity % (Pro-Rata)</p>
+                <input type="number" value={investorEquityPct ?? ''} onChange={e => setInvestorEquityPct(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 25" className={iCls} readOnly={readOnly} />
+              </div>
+            )}
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
+              <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
-              <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
-              <input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Status</p>
+              <select value={investorAssignmentStatus} onChange={e => setInvestorAssignmentStatus(e.target.value)} className={iCls} disabled={readOnly}>
+                <option>Committed</option>
+                <option>Funded</option>
+                <option>Returned</option>
+              </select>
             </div>
           </div>
         </div>
       )}
 
-      
+      {/* ── Capital Stack ── */}
+      <CapitalStackModule deal={deal} readOnly={readOnly} />
     </div>
   );
 }
@@ -812,7 +803,7 @@ function OverviewTab({
 
   // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || allIn || totalLent;
+  const effectiveLoanAmount = loanAmountOverride || totalLent;
   const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
   const originationFee = originationFeeType === 'percentage'
     ? effectiveLoanAmount * (originationFeePct / 100)
@@ -1041,9 +1032,6 @@ function OverviewTab({
                     className="w-full text-sm font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
                   >
                     <option value="">— Select investor —</option>
-                    {investor && !(investorList || []).find(i => i.name === investor) && (
-                      <option value={investor}>{investor}</option>
-                    )}
                     {(investorList || []).map(inv => (
                       <option key={inv.id} value={inv.name}>{inv.name}</option>
                     ))}
@@ -1081,18 +1069,15 @@ function OverviewTab({
 
 // ── Add Investor Modal ────────────────────────────────────────────────────────
 function AddInvestorModal({ onClose, onSave }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [company, setCompany] = useState('');
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [notes, setNotes] = useState('');
+  const [type, setType] = useState('Private Lender');
+  const [standardTerms, setStandardTerms] = useState('');
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent';
   const labelCls = 'text-xs font-medium text-gray-500 mb-1 block';
-
-  const derivedName = company.trim() || [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
-  const canSave = !!derivedName;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -1102,43 +1087,42 @@ function AddInvestorModal({ onClose, onSave }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XIcon size={18} /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
+          <div>
+            <label className={labelCls}>Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Investor name" className={inputCls} />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>First Name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" className={inputCls} />
+              <label className={labelCls}>Contact Name</label>
+              <input value={contact} onChange={e => setContact(e.target.value)} placeholder="First Last" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Last Name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" className={inputCls} />
+              <label className={labelCls}>Type</label>
+              <select value={type} onChange={e => setType(e.target.value)} className={inputCls + ' bg-white'}>
+                {['Hard Money Lender', 'Private Lender', 'Line of Credit', 'Internal'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Phone</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(000) 000-0000" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Company</label>
-            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Acme Capital LLC" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Phone</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 000-0000" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Type</label>
-            <div className="px-3 py-2 text-sm text-accent font-medium bg-accent/5 border border-accent/20 rounded-lg">Investor</div>
-          </div>
-          <div>
-            <label className={labelCls}>Notes</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Initial notes…" rows={2}
-              className={inputCls + ' resize-none'} />
+            <label className={labelCls}>Standard Terms</label>
+            <input value={standardTerms} onChange={e => setStandardTerms(e.target.value)} placeholder="e.g. 3 and 13" className={inputCls} />
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-5">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50">Cancel</button>
           <button
-            onClick={() => { if (canSave) onSave({ name: derivedName, contact: company.trim(), phone, email, type: 'Private Lender', standardTerms: notes }); }}
-            disabled={!canSave}
+            onClick={() => { if (name.trim()) onSave({ name: name.trim(), contact, phone, email, type, standardTerms }); }}
+            disabled={!name.trim()}
             className="flex-1 bg-accent text-white text-sm font-medium py-2 rounded-lg hover:bg-accent/90 disabled:opacity-40"
           >
             Save Investor
@@ -1158,130 +1142,45 @@ const DD_STATUS_CONFIG = {
 const STATUS_CYCLE = { not_started: 'in_progress', in_progress: 'complete', complete: 'not_started' };
 
 function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
-  const { activeOrgId, profile } = useAuth();
-  const lk = `dd_${col.key}`;
-  const [status, setStatus]   = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}`) || 'not_started');
+  const lk = `dd_${dealId}_${col.key}`;
+  const [status, setStatus]   = useState(() => localStorage.getItem(lk) || 'not_started');
   const [expanded, setExpanded] = useState(false);
-  const [cName,    setCName]   = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_cont`)    || '');
-  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_phone`)   || '');
-  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_email`)   || '');
-  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_company`) || '');
-  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`dd_${dealId}_${col.key}_notes`) || '');
-  const [files, setFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_cont`)    || '');
+  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`${lk}_phone`)   || '');
+  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`${lk}_email`)   || '');
+  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`${lk}_company`) || '');
+  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`${lk}_notes`) || '');
+  const [files, setFiles] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`${lk}_files`) || '[]'); } catch { return []; }
+  });
 
-  // Load from Supabase on mount — overrides any stale localStorage value
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.from('deal_task_statuses')
-      .select('task_key, value')
-      .eq('deal_id', dealId)
-      .like('task_key', `dd_${col.key}%`)
-      .then(({ data }) => {
-        if (!data) return;
-        const map = {};
-        for (const row of data) map[row.task_key] = row.value;
-        if (map[`dd_${col.key}`])         setStatus(map[`dd_${col.key}`]);
-        if (map[`dd_${col.key}_cont`])    setCName(map[`dd_${col.key}_cont`]);
-        if (map[`dd_${col.key}_phone`])   setCPhone(map[`dd_${col.key}_phone`]);
-        if (map[`dd_${col.key}_email`])   setCEmail(map[`dd_${col.key}_email`]);
-        if (map[`dd_${col.key}_company`]) setCCompany(map[`dd_${col.key}_company`]);
-        if (map[`dd_${col.key}_notes`])   setTaskNotes(map[`dd_${col.key}_notes`]);
-      });
-  }, [dealId, col.key]); // eslint-disable-line
-
-  // Load attachments from Supabase
-  useEffect(() => {
-    if (!supabase || !activeOrgId) return;
-    supabase.from('deal_attachments')
-      .select('id, file_name, storage_path, size_bytes')
-      .eq('deal_id', dealId)
-      .eq('organization_id', activeOrgId)
-      .eq('task_key', `dd_${col.key}`)
-      .order('created_at')
-      .then(({ data }) => {
-        if (data) setFiles(data.map(f => ({ id: f.id, name: f.file_name, path: f.storage_path, size: f.size_bytes })));
-      });
-  }, [dealId, col.key, activeOrgId]); // eslint-disable-line
-
-  const saveToSupabase = useCallback(async (taskKey, value) => {
-    if (!supabase || !activeOrgId) return;
-    await supabase.from('deal_task_statuses').upsert(
-      { deal_id: dealId, organization_id: activeOrgId, task_key: taskKey, value },
-      { onConflict: 'deal_id,organization_id,task_key' }
-    );
-  }, [dealId, activeOrgId]);
+  const save = (suffix, val) => localStorage.setItem(`${lk}_${suffix}`, val);
 
   const cycleStatus = (e) => {
     e.stopPropagation();
     if (readOnly) return;
     const next = STATUS_CYCLE[status];
+    localStorage.setItem(lk, next);
     setStatus(next);
-    saveToSupabase(`dd_${col.key}`, next);
     onCountChange();
-    if (next === 'complete' && supabase && activeOrgId) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) return;
-        supabase.from('activity_notes').insert({
-          organization_id: activeOrgId,
-          deal_id:         dealId,
-          author_id:       session.user.id,
-          author_name:     profile?.name || null,
-          body:            `✅ DD item marked complete: "${col.label}"`,
-          note_type:       'note',
-        }).then(({ error }) => {
-          if (error) console.error('DD activity note failed:', error.message, error);
-          else activityFeedRefreshRef.current?.();
-        });
-      });
-    }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    if (!file || !activeOrgId || uploading) return;
-    e.target.value = '';
-    setUploading(true);
-    try {
-      const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
-      const uid = crypto.randomUUID();
-      const storagePath = `${activeOrgId}/${dealId}/dd_${col.key}/${uid}${ext ? '.' + ext : ''}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('deal-attachments')
-        .upload(storagePath, file, { contentType: file.type });
-
-      if (uploadError) { console.error('Upload error:', uploadError); return; }
-
-      const { data: row, error: insertError } = await supabase.from('deal_attachments').insert({
-        deal_id: dealId,
-        organization_id: activeOrgId,
-        task_key: `dd_${col.key}`,
-        file_name: file.name,
-        storage_path: storagePath,
-        size_bytes: file.size,
-        mime_type: file.type,
-      }).select('id').single();
-
-      if (!insertError && row) {
-        setFiles(prev => [...prev, { id: row.id, name: file.name, path: storagePath, size: file.size }]);
-      }
-    } finally {
-      setUploading(false);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const updated = [...files, { name: file.name, url: ev.target.result }];
+      setFiles(updated);
+      localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+    };
+    reader.readAsDataURL(file);
   };
 
-  const openFile = async (path) => {
-    const { data } = await supabase.storage
-      .from('deal-attachments')
-      .createSignedUrl(path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-  };
-
-  const removeFile = async (fileId, path) => {
-    await supabase.storage.from('deal-attachments').remove([path]);
-    await supabase.from('deal_attachments').delete().eq('id', fileId);
-    setFiles(prev => prev.filter(f => f.id !== fileId));
+  const removeFile = (idx) => {
+    const updated = files.filter((_, i) => i !== idx);
+    setFiles(updated);
+    localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
   };
 
   const sc = DD_STATUS_CONFIG[status];
@@ -1318,7 +1217,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           <div className="flex items-center gap-3">
             {isComplete ? (
               <button
-                onClick={(e) => { e.stopPropagation(); if (!readOnly) { setStatus('not_started'); saveToSupabase(`dd_${col.key}`, 'not_started'); onCountChange(); } }}
+                onClick={(e) => { e.stopPropagation(); if (!readOnly) { localStorage.setItem(lk, 'not_started'); setStatus('not_started'); onCountChange(); } }}
                 disabled={readOnly}
                 className="text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
               >
@@ -1350,7 +1249,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
                   <FieldIcon size={14} className="text-gray-400 flex-shrink-0" />
                   <input
                     value={val}
-                    onChange={e => { set(e.target.value); saveToSupabase(`dd_${col.key}_${sfx}`, e.target.value); }}
+                    onChange={e => { set(e.target.value); save(sfx, e.target.value); }}
                     placeholder={ph}
                     disabled={readOnly}
                     className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
@@ -1368,7 +1267,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
             </div>
             <textarea
               value={taskNotes}
-              onChange={e => { setTaskNotes(e.target.value); saveToSupabase(`dd_${col.key}_notes`, e.target.value); }}
+              onChange={e => { setTaskNotes(e.target.value); save('notes', e.target.value); }}
               placeholder="Add notes for this task..."
               disabled={readOnly}
               rows={3}
@@ -1384,21 +1283,21 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
                 <p className="text-xs font-semibold text-gray-500">Files & Photos</p>
               </div>
               {!readOnly && (
-                <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${uploading ? 'text-gray-400 pointer-events-none' : 'text-accent hover:text-accent/80'}`}>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 cursor-pointer">
                   <Upload size={12} />
-                  {uploading ? 'Uploading…' : 'Upload'}
-                  <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                  Upload
+                  <input type="file" className="hidden" onChange={handleFileUpload} />
                 </label>
               )}
             </div>
             {files.length > 0 && (
               <div className="space-y-1.5">
-                {files.map((f) => (
-                  <div key={f.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                {files.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
                     <Paperclip size={12} className="text-gray-400 flex-shrink-0" />
-                    <button onClick={() => openFile(f.path)} className="flex-1 text-xs text-blue-600 hover:underline truncate text-left">{f.name}</button>
+                    <a href={f.url} download={f.name} className="flex-1 text-xs text-blue-600 hover:underline truncate">{f.name}</a>
                     {!readOnly && (
-                      <button onClick={() => removeFile(f.id, f.path)} className="text-gray-400 hover:text-red-400 flex-shrink-0">
+                      <button onClick={() => removeFile(idx)} className="text-gray-400 hover:text-red-400 flex-shrink-0">
                         <XIcon size={12} />
                       </button>
                     )}
@@ -1414,36 +1313,26 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
 }
 
 function DDTab({ deal, readOnly, onStatusChange }) {
-  const { activeOrgId } = useAuth();
-  const [completeCount, setCompleteCount] = useState(
-    () => DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
+  const [completeCount, setCompleteCount] = useState(() =>
+    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
   );
 
-  // Load count from Supabase on mount
+  // Seed legacy ddTasksCompleted on first render
   useEffect(() => {
-    if (!supabase) return;
-    supabase.from('deal_task_statuses')
-      .select('task_key, value')
-      .eq('deal_id', deal.id)
-      .in('task_key', DD_COLS.map(c => `dd_${c.key}`))
-      .then(({ data }) => {
-        if (!data) return;
-        const count = data.filter(r => r.value === 'complete').length;
-        if (count > 0) { setCompleteCount(count); onStatusChange?.(count); }
-      });
-  }, [deal.id]); // eslint-disable-line
+    for (const name of (deal.ddTasksCompleted || [])) {
+      const k = DD_LS_INIT_MAP[name];
+      if (k) {
+        const lk = `dd_${deal.id}_${k}`;
+        if (!localStorage.getItem(lk)) localStorage.setItem(lk, 'complete');
+      }
+    }
+    setCompleteCount(DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length);
+  }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCountChange = () => {
-    if (!supabase) return;
-    supabase.from('deal_task_statuses')
-      .select('task_key, value')
-      .eq('deal_id', deal.id)
-      .in('task_key', DD_COLS.map(c => `dd_${c.key}`))
-      .then(({ data }) => {
-        const count = (data || []).filter(r => r.value === 'complete').length;
-        setCompleteCount(count);
-        onStatusChange?.(count);
-      });
+    const count = DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length;
+    setCompleteCount(count);
+    onStatusChange?.(count);
   };
 
   return (
@@ -1465,19 +1354,10 @@ function DDTab({ deal, readOnly, onStatusChange }) {
 }
 
 // ── Tab: Development ──────────────────────────────────────────────────────────
-function DevTab({ dealId, orgId, devTasks, setDevTasks, readOnly, onTaskComplete }) {
+function DevTab({ devTasks, setDevTasks, readOnly }) {
   const allTasks = DEV_GROUPS.flatMap(g => g.tasks);
   const complete = devTasks.filter(Boolean).length;
   let taskIndex = 0;
-
-  const saveTaskToSupabase = useCallback(async (idx, value) => {
-    if (!supabase || !orgId || !dealId) return;
-    const { error } = await supabase.from('deal_task_statuses').upsert(
-      { deal_id: dealId, organization_id: orgId, task_key: `dev_${idx}`, value: value ? '1' : '' },
-      { onConflict: 'deal_id,organization_id,task_key' }
-    );
-    if (error) console.error('[DevTab] saveTaskToSupabase error:', error.message);
-  }, [dealId, orgId]);
 
   return (
     <div className="max-w-2xl">
@@ -1503,12 +1383,7 @@ function DevTab({ dealId, orgId, devTasks, setDevTasks, readOnly, onTaskComplete
                     <div
                       key={task}
                       className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
-                      onClick={readOnly ? undefined : () => {
-                        const newVal = !devTasks[idx];
-                        setDevTasks(prev => { const n = [...prev]; n[idx] = newVal; return n; });
-                        saveTaskToSupabase(idx, newVal);
-                        if (newVal) onTaskComplete?.(task);
-                      }}
+                      onClick={readOnly ? undefined : () => setDevTasks(prev => { const n = [...prev]; n[idx] = !n[idx]; return n; })}
                     >
                       {devTasks[idx]
                         ? <CheckSquare size={16} className="text-green-500 flex-shrink-0" />
@@ -2032,27 +1907,11 @@ function DealDetailContent({ deal }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
-      const res = await fetch('/api/team/members', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const { members } = await res.json();
-      if (members) setAllUsers(
-        members
-          .filter(m => m.status === 'active')
-          .map(m => ({
-            id: m.user_id,
-            name: m.profiles?.name || m.profiles?.email || m.profiles?.first_name || 'Unknown',
-          }))
-          .filter(u => u.name !== 'Unknown')
-      );
-    })();
-  }, []);
+    if (!supabase || !canAdmin) return;
+    supabase.from('profiles').select('name').then(({ data }) => {
+      if (data) setAllUsers(data.map(u => u.name).filter(Boolean));
+    });
+  }, [canAdmin]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
@@ -2077,36 +1936,6 @@ function DealDetailContent({ deal }) {
       contractDate: s.contractDate, manufacturer: s.manufacturer, deliveryDate: s.deliveryDate,
       holdingMonths: s.holdPeriod, holdingPerMonth: s.monthlyHoldCost,
       arv: s.arv, listingUrl: s.listingUrl, ...s.costs,
-      // Financing fields — written immediately to LS so hard-refresh doesn't lose them
-      financingScenarioType: s.financingScenarioType,
-      capitalDeployedDate: s.capitalDeployedDate,
-      capitalReturnedDate: s.capitalReturnedDate,
-      investorCapitalContributed: s.investorCapitalContributed,
-      investorEquityPct: s.investorEquityPct,
-      projectedPayoutDate: s.projectedPayoutDate,
-      scenarioData: {
-        interestRate: s.interestRate, originationFeeType: s.originationFeeType,
-        originationFeePct: s.originationFeePct, originationFeeFlat: s.originationFeeFlat,
-        servicingFeeType: s.servicingFeeType, servicingFeeFlat: s.servicingFeeFlat,
-        servicingFeePct: s.servicingFeePct, balloonTerm: s.balloonTerm,
-        holdPeriod: s.holdPeriod, monthlyHoldCost: s.monthlyHoldCost,
-        profitSharePct: s.profitSharePct, investorProfitSplitPct: s.investorProfitSplitPct,
-        loanAmountOverride: s.loanAmountOverride, ltcPct: s.ltcPct,
-        originationPoints: s.originationPoints, creditLimit: s.creditLimit,
-        drawPct: s.drawPct, annualFeePct: s.annualFeePct,
-        ccpInvestorId: s.ccpInvestorId, ccpCommitmentId: s.ccpCommitmentId,
-        ccpAllocationAmount: s.ccpAllocationAmount, ccpPrefReturnPct: s.ccpPrefReturnPct,
-        ccpProfitSharePct: s.ccpProfitSharePct, ccpPrefPaymentTiming: s.ccpPrefPaymentTiming,
-        ccpPosition: s.ccpPosition, ccpTranches: s.ccpTranches,
-        ccpAllocationId: s.ccpAllocationId, ccpScheduleId: s.ccpScheduleId,
-        hmcb: s.hmcbData,
-        lenderName: s.lenderName, drawAmount: s.drawAmount,
-        extensionAvailable: s.extensionAvailable, extensionFee: s.extensionFee,
-        extensionMonths: s.extensionMonths, drawFeeHm: s.drawFeeHm,
-        underwritingFee: s.underwritingFee, attorneyDocFee: s.attorneyDocFee,
-        cashSource: s.cashSource,
-        investorReturnType: s.investorReturnType, investorAssignmentStatus: s.investorAssignmentStatus,
-      },
       ...overrides,
     };
     // Save to localStorage + context immediately, and fire Supabase write
@@ -2127,43 +1956,24 @@ function DealDetailContent({ deal }) {
     DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
   );
 
-  // Dev tasks — initialized all false; Supabase load in useEffect below overwrites
+  // Initial dev tasks — Swanson has 1/38 complete (land cleared)
   const totalDevTasks = DEV_GROUPS.flatMap(g => g.tasks).length;
+  const initDev = Array(totalDevTasks).fill(false).map((_, i) =>
+    deal?.id === 'deal-020' ? i === 0 : false
+  );
 
   const [searchParams, setSearchParams] = useSearchParams();
   const VALID_DEAL_TABS = ['overview', 'events', 'threads', 'details', 'dd', 'dev', 'realized', 'financing'];
   const activeTab = VALID_DEAL_TABS.includes(searchParams.get('dealTab')) ? searchParams.get('dealTab') : 'overview';
   const setActiveTab = (tab) => setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('dealTab', tab); return next; }, { replace: true });
-
-  // If ?activity=noteId is in the URL (from a mention notification), scroll to that note
-  useEffect(() => {
-    const noteId = searchParams.get('activity');
-    if (!noteId) return;
-    setActiveTab('overview');
-    const attempt = (tries = 0) => {
-      const el = document.getElementById(`activity-db-note-${noteId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.style.transition = 'box-shadow 0.3s';
-        el.style.boxShadow = '0 0 0 3px rgba(var(--color-accent), 0.4)';
-        setTimeout(() => { el.style.boxShadow = ''; }, 2500);
-      } else if (tries < 10) {
-        setTimeout(() => attempt(tries + 1), 300);
-      }
-    };
-    setTimeout(() => attempt(), 400);
-  }, [searchParams]);
-
-  const activityFeedRefreshRef = useRef(null);
-  const [activityFeedKey, setActivityFeedKey] = useState(0);
-
   const [costs, setCosts] = useState(initCosts);
   const [notes, setNotes] = useState(deal?.notes || '');
   const [arv,   setArv]   = useState(deal?.arv ?? 0);
   const [listingUrl, setListingUrl] = useState(deal?.listingUrl || '');
-  const [devTasks, setDevTasks] = useState(() => Array(totalDevTasks).fill(false));
+  const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [costSummary, setCostSummary] = useState(null);
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const { hasFlag } = useAuth();
   const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
@@ -2171,7 +1981,7 @@ function DealDetailContent({ deal }) {
   const [starred, setStarred] = useState(false);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-  const currentStageVal = deal?.stage || '';
+  const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
@@ -2200,7 +2010,7 @@ function DealDetailContent({ deal }) {
   const [phone, setPhone] = useState(deal?.phone || '');
   const [email, setEmail] = useState(deal?.email || '');
   const [investor, setInvestor] = useState(deal?.investor || '');
-  const [investorList, setInvestorList] = useState([]);
+  const [investorList, setInvestorList] = useState(() => loadInvestors(activeOrgId, orgSlug));
   const [showAddInvestor, setShowAddInvestor]         = useState(false);
   const [showCreateTask, setShowCreateTask]           = useState(false);
   const [showLogCall, setShowLogCall]                 = useState(false);
@@ -2213,21 +2023,26 @@ function DealDetailContent({ deal }) {
   const [sewerCompany, setSewerCompany] = useState(deal?.sewerCompany || '');
   const [electricCompany, setElectricCompany] = useState(deal?.electricCompany || '');
   const [homeModel, setHomeModel] = useState(deal?.homeModel || '');
-  const [subdividable, setSubdividable] = useState(
-    () => deal?.subdividable ?? ((deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No')
-  );
-  const [landClearing, setLandClearing] = useState(
-    () => deal?.landClearing ?? ((deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No')
-  );
+  const [subdividable, setSubdividable] = useState(() => {
+    const saved = localStorage.getItem(`lotline_subdivide_${deal?.id}`);
+    if (saved !== null) return saved;
+    return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
+  });
+  const [landClearing, setLandClearing] = useState(() => {
+    const saved = localStorage.getItem(`lotline_land_clearing_${deal?.id}`);
+    if (saved !== null) return saved;
+    return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
+  });
 
+  // Persist subdivide state so the kanban card reflects it
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
-    if (deal?.id) saveDeal({ ...deal, subdividable: val }, activeOrgId);
+    if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
-    if (deal?.id) saveDeal({ ...deal, landClearing: val }, activeOrgId);
+    if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
   };
 
   const handleSendToLandAcq = () => {
@@ -2238,6 +2053,7 @@ function DealDetailContent({ deal }) {
       stage: 'Waiting on Contract',
       contractSignedAt: null,
     };
+    localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
     saveDeal(updated, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updated.id));
@@ -2250,6 +2066,7 @@ function DealDetailContent({ deal }) {
   const handleSetStage = (val) => {
     setStage(val);
     if (deal?.id) {
+      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
       const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       const isMovingToContractSigned = val === 'Contract Signed';
       // Auto-fill Contract Signed Date when moving to Deal Overview
@@ -2324,8 +2141,8 @@ function DealDetailContent({ deal }) {
   const [holdPeriod, setHoldPeriod] = useState(sd.holdPeriod ?? deal?.holdingMonths ?? 6);
   const [monthlyHoldCost, setMonthlyHoldCost] = useState(sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
   const [profitSharePct, setProfitSharePct] = useState(sd.profitSharePct ?? (deal?.investor === 'Atium Build Group LLC' ? 5 : 0));
-  const [capitalDeployedDate, setCapitalDeployedDate] = useState(deal?.capitalDeployedDate ?? '');
-  const [capitalReturnedDate, setCapitalReturnedDate] = useState(deal?.capitalReturnedDate ?? '');
+  const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
+  const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
   const [investorCapitalContributed, setInvestorCapitalContributed] = useState(deal?.investorCapitalContributed ?? null);
   const [investorEquityPct, setInvestorEquityPct] = useState(deal?.investorEquityPct ?? null);
   const [projectedPayoutDate, setProjectedPayoutDate] = useState(deal?.projectedPayoutDate ?? null);
@@ -2376,228 +2193,14 @@ function DealDetailContent({ deal }) {
   const [investorReturnType, setInvestorReturnType] = useState(sd.investorReturnType ?? 'Interest Only');
   const [investorAssignmentStatus, setInvestorAssignmentStatus] = useState(sd.investorAssignmentStatus ?? 'Committed');
 
-  // ── deal_financing_scenarios table sync ───────────────────────────────────────
-  // Primary persistence layer for the Financing tab. Reads/writes to a dedicated
-  // Supabase table so data survives hard refresh and syncs in real-time for all
-  // users viewing the same deal.
-
-  // Cache of all saved scenario rows keyed by scenario_type (e.g. 'hard_money_loan')
-  const financingSavedRef = useRef({});
-  const [financingSaveStatus, setFinancingSaveStatus] = useState('idle'); // 'idle'|'saving'|'saved'|'error'
-
-  // Apply a DB row from deal_financing_scenarios into local React state
-  function applyFinancingRow(row) {
-    if (!row) return;
-    if (row.lender_name != null) setLenderName(row.lender_name);
-    if (row.annual_interest_rate != null) setInterestRate(Number(row.annual_interest_rate));
-    if (row.hold_period_months != null) setHoldPeriod(Number(row.hold_period_months));
-    if (row.total_loan_amount != null) setLoanAmountOverride(Number(row.total_loan_amount));
-    if (row.capital_deployed_date != null) setCapitalDeployedDate(row.capital_deployed_date);
-    if (row.capital_returned_date != null) setCapitalReturnedDate(row.capital_returned_date);
-    if (row.extension_option_enabled != null) setExtensionAvailable(row.extension_option_enabled);
-    if (row.extension_period_months != null) setExtensionMonths(Number(row.extension_period_months));
-    if (row.extension_fee_percent != null) setExtensionFee(Number(row.extension_fee_percent));
-    if (row.origination_fee_percent != null) setOriginationFeePct(Number(row.origination_fee_percent));
-    if (row.servicing_fee != null) setServicingFeeFlat(Number(row.servicing_fee));
-    if (row.draw_fee_per_draw != null) setDrawFeeHm(Number(row.draw_fee_per_draw));
-    if (row.underwriting_admin_fee != null) setUnderwritingFee(Number(row.underwriting_admin_fee));
-    if (row.attorney_doc_prep_fee != null) setAttorneyDocFee(Number(row.attorney_doc_prep_fee));
-    if (row.cash_source != null) setCashSource(row.cash_source);
-    if (row.credit_limit != null) setCreditLimit(Number(row.credit_limit));
-    if (row.draw_amount != null) setDrawAmount(Number(row.draw_amount));
-    if (row.annual_fee_pct != null) setAnnualFeePct(Number(row.annual_fee_pct));
-    if (row.investor_name != null) setInvestor(row.investor_name);
-    if (row.investor_capital_contributed != null) setInvestorCapitalContributed(Number(row.investor_capital_contributed));
-    if (row.investor_return_type != null) setInvestorReturnType(row.investor_return_type);
-    if (row.investor_projected_payout_date != null) setProjectedPayoutDate(row.investor_projected_payout_date);
-    if (row.investor_assignment_status != null) setInvestorAssignmentStatus(row.investor_assignment_status);
-    if (row.investor_profit_split_pct != null) setInvestorProfitSplitPct(Number(row.investor_profit_split_pct));
-  }
-
-  // Build the upsert row for the current scenario
-  function buildFinancingRow(dbType) {
-    return {
-      deal_id: String(deal.id),
-      organization_id: activeOrgId,
-      scenario_type: dbType,
-      lender_name: lenderName || null,
-      annual_interest_rate: interestRate || null,
-      hold_period_months: holdPeriod || null,
-      total_loan_amount: loanAmountOverride || null,
-      capital_deployed_date: capitalDeployedDate || null,
-      capital_returned_date: capitalReturnedDate || null,
-      extension_option_enabled: extensionAvailable,
-      extension_period_months: extensionMonths || null,
-      extension_fee_percent: extensionFee || null,
-      origination_fee_percent: originationFeePct || null,
-      servicing_fee: servicingFeeFlat || null,
-      draw_fee_per_draw: drawFeeHm || null,
-      underwriting_admin_fee: underwritingFee || null,
-      attorney_doc_prep_fee: attorneyDocFee || null,
-      cash_source: cashSource || null,
-      credit_limit: creditLimit || null,
-      draw_amount: drawAmount || null,
-      annual_fee_pct: annualFeePct || null,
-      investor_name: investor || null,
-      investor_capital_contributed: investorCapitalContributed ?? null,
-      investor_return_type: investorReturnType || null,
-      investor_projected_payout_date: projectedPayoutDate || null,
-      investor_assignment_status: investorAssignmentStatus || null,
-      investor_profit_split_pct: investorProfitSplitPct || null,
-      updated_at: new Date().toISOString(),
-    };
-  }
-
-  // Load all saved scenarios for this deal on mount
-  useEffect(() => {
-    if (!supabase || !deal?.id) return;
-    supabase
-      .from('deal_financing_scenarios')
-      .select('*')
-      .eq('deal_id', String(deal.id))
-      .then(({ data, error }) => {
-        if (error) { console.warn('[financing-load]', error.message); return; }
-        if (!data || data.length === 0) return;
-        // Cache all rows keyed by scenario_type
-        financingSavedRef.current = Object.fromEntries(data.map(r => [r.scenario_type, r]));
-        // Apply the currently-selected scenario's saved values
-        const currentDbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
-        if (currentDbType && financingSavedRef.current[currentDbType]) {
-          applyFinancingRow(financingSavedRef.current[currentDbType]);
-        }
-      });
-  }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-save financing fields to deal_financing_scenarios on any change
-  const financingAutoSaveMounted = useRef(false);
-  useEffect(() => {
-    if (!financingAutoSaveMounted.current) { financingAutoSaveMounted.current = true; return; }
-    if (!supabase || !deal?.id || !selectedScenario) return;
-    if (!canEdit && !isAgent) return;
-
-    const dbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
-    if (!dbType) return;
-
-    setFinancingSaveStatus('saving');
-    let cancelled = false;
-    const row = buildFinancingRow(dbType);
-
-    supabase
-      .from('deal_financing_scenarios')
-      .upsert(row, { onConflict: 'deal_id,scenario_type' })
-      .then(({ error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error('[financing-save]', error.message);
-          setFinancingSaveStatus('error');
-          setTimeout(() => { if (!cancelled) setFinancingSaveStatus('idle'); }, 4000);
-        } else {
-          financingSavedRef.current[dbType] = { ...row };
-          setFinancingSaveStatus('saved');
-          setTimeout(() => { if (!cancelled) setFinancingSaveStatus('idle'); }, 2000);
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps
-    selectedScenario,
-    lenderName, interestRate, holdPeriod, loanAmountOverride,
-    capitalDeployedDate, capitalReturnedDate,
-    extensionAvailable, extensionMonths, extensionFee,
-    originationFeePct, servicingFeeFlat, drawFeeHm, underwritingFee, attorneyDocFee,
-    cashSource, creditLimit, drawAmount, annualFeePct,
-    investor, investorCapitalContributed, investorReturnType, projectedPayoutDate,
-    investorAssignmentStatus, investorProfitSplitPct,
-  ]);
-
-  // Real-time: update state when another user saves financing changes for this deal
-  useEffect(() => {
-    if (!supabase || !deal?.id) return;
-    const ch = supabase
-      .channel(`deal-financing-${deal.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'deal_financing_scenarios',
-        filter: `deal_id=eq.${deal.id}`,
-      }, payload => {
-        const row = payload.new;
-        if (!row) return;
-        financingSavedRef.current[row.scenario_type] = row;
-        // Only update UI if this matches the currently-selected scenario
-        const currentDbType = FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.dbType;
-        if (row.scenario_type === currentDbType) {
-          applyFinancingRow(row);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [deal?.id, selectedScenario]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Financing state self-correction ───────────────────────────────────────────
-  // When deal prop updates (e.g. loadAllDeals resolves with Supabase data after
-  // initial LS-cache mount), re-sync financing fields if state is still empty.
-  // This fixes the case where the LS cache was stale/missing and state was
-  // initialized with empty defaults.  If state already has a user-set value,
-  // the condition is false so nothing is overwritten.
-  // The resulting state change also triggers the auto-save, writing the freshly
-  // loaded value back to LS + Supabase to keep everything in sync.
-  useEffect(() => {
-    const v = deal?.scenarioData?.cashSource;
-    if (v && !cashSource) setCashSource(v);
-  }, [deal?.scenarioData?.cashSource]); // eslint-disable-line
-  useEffect(() => {
-    if (deal?.capitalDeployedDate && !capitalDeployedDate) setCapitalDeployedDate(deal.capitalDeployedDate);
-  }, [deal?.capitalDeployedDate]); // eslint-disable-line
-  useEffect(() => {
-    if (deal?.capitalReturnedDate && !capitalReturnedDate) setCapitalReturnedDate(deal.capitalReturnedDate);
-  }, [deal?.capitalReturnedDate]); // eslint-disable-line
-  useEffect(() => {
-    const v = deal?.financingScenarioType;
-    if (v && !financingScenarioType) setFinancingScenarioType(v);
-  }, [deal?.financingScenarioType]); // eslint-disable-line
-  useEffect(() => {
-    if (deal?.investor && !investor) setInvestor(deal.investor);
-  }, [deal?.investor]); // eslint-disable-line
-  useEffect(() => {
-    if (deal?.investorCapitalContributed != null && investorCapitalContributed == null) setInvestorCapitalContributed(deal.investorCapitalContributed);
-  }, [deal?.investorCapitalContributed]); // eslint-disable-line
-  useEffect(() => {
-    if (deal?.projectedPayoutDate && !projectedPayoutDate) setProjectedPayoutDate(deal.projectedPayoutDate);
-  }, [deal?.projectedPayoutDate]); // eslint-disable-line
-  // Self-correct financing state when deal prop updates after initial mount
-  useEffect(() => {
-    if (deal?.financing && !financing) setFinancing(deal.financing);
-  }, [deal?.financing]); // eslint-disable-line
-  // Self-correct selectedScenario when deal data arrives after initial mount.
-  // Handles the race condition where the component mounts before LS/Supabase
-  // data is available and useState initializes to '' (empty), then deal.financing
-  // arrives via loadAllDeals — without this effect the dropdown stays blank.
-  useEffect(() => {
-    if (selectedScenario) return; // user already picked a scenario — don't overwrite
-    const f = deal?.financing || '';
-    const exact = FINANCING_SCENARIOS.find(s => s.financingType === f);
-    let derived = '';
-    if (exact) derived = exact.id;
-    else if (f === 'Hard Money') derived = 'hard-money-loan';
-    else if (f === 'Cash') derived = 'cash';
-    else if (f === 'Line of Credit') derived = 'loc';
-    else if (deal?.financingScenarioType) {
-      const byDb = FINANCING_SCENARIOS.find(s => s.dbType === deal.financingScenarioType);
-      if (byDb) derived = byDb.id;
-    }
-    if (derived) setSelectedScenario(derived);
-  }, [deal?.financing, deal?.financingScenarioType]); // eslint-disable-line
-
   // Load investors from Supabase for Investor Assignment dropdown
   const [supabaseInvestors, setSupabaseInvestors] = useState([]);
   const [showInvestorPicker, setShowInvestorPicker] = useState(false);
   const investorPickerRef = useRef(null);
-  const investorMountRef = useRef(false);
   useEffect(() => {
     if (!activeOrgId) return;
     fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-      if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
+      if (inv?.length) setSupabaseInvestors(inv);
     });
   }, [activeOrgId]);
 
@@ -2612,15 +2215,6 @@ function DealDetailContent({ deal }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showInvestorPicker]);
-
-  // When the investor is actively changed (not on initial load), ensure they
-  // exist as a Contact with type='Investor' so they appear in the Contacts overview.
-  useEffect(() => {
-    if (!investorMountRef.current) { investorMountRef.current = true; return; }
-    if (investor && activeOrgId) {
-      ensureInvestorContact(investor, activeOrgId);
-    }
-  }, [investor, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute active financing type from selected scenario (used by auto-save)
   const activeFinancingForSave = selectedScenario
@@ -2637,12 +2231,6 @@ function DealDetailContent({ deal }) {
     const scenario = FINANCING_SCENARIOS.find(s => s.id === scenarioId);
     setFinancing(scenario?.financingType || '');
     setFinancingScenarioType(scenario?.dbType || null);
-    // Save immediately so hard-refresh preserves the new scenario before React re-renders
-    saveNow({ financing: scenario?.financingType || '', financingScenarioType: scenario?.dbType || null });
-    // Restore previously saved values for this scenario (if any were saved)
-    if (scenario?.dbType && financingSavedRef.current[scenario.dbType]) {
-      applyFinancingRow(financingSavedRef.current[scenario.dbType]);
-    }
   }
 
   async function saveCCPToStack() {
@@ -2692,18 +2280,6 @@ function DealDetailContent({ deal }) {
     electricCompany, parcelId, closingAttorney, closingAttorneyPhone, closingAttorneyAddress,
     closeDate, contractDate, manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
-    // Financing tab fields — included so saveNow can write them to LS immediately on change
-    financingScenarioType, capitalDeployedDate, capitalReturnedDate,
-    investorCapitalContributed, investorEquityPct, projectedPayoutDate,
-    interestRate, originationFeeType, originationFeePct, originationFeeFlat,
-    servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
-    profitSharePct, loanAmountOverride, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
-    ccpInvestorId, ccpCommitmentId, ccpAllocationAmount, ccpPrefReturnPct, ccpProfitSharePct,
-    ccpPrefPaymentTiming, ccpPosition, ccpTranches, ccpAllocationId, ccpScheduleId,
-    investorProfitSplitPct, hmcbData,
-    lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
-    drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
-    investorReturnType, investorAssignmentStatus,
   };
 
   // ── One-time hydration save: push investor position to DB on mount when scenario active ─
@@ -2718,29 +2294,16 @@ function DealDetailContent({ deal }) {
         ? investorProfitSplitPct
         : (deal.investorEquityPct ?? null);
     // Always flush to DB — local state may already be correct but DB could be stale
-    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity }, activeOrgId);
+    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Flush to LS on hard-refresh / tab close ───────────────────────────────────
-  // The auto-save useEffect fires after render+paint (~16ms). If the user hard-
-  // refreshes before that paint, the new values never reach LS. The beforeunload
-  // handler fires synchronously before the page unloads, guaranteeing LS is always
-  // written so data survives an immediate hard refresh.
-  const saveNowRef = useRef(saveNow);
-  saveNowRef.current = saveNow;
-  useEffect(() => {
-    const flush = () => saveNowRef.current?.();
-    window.addEventListener('beforeunload', flush);
-    return () => window.removeEventListener('beforeunload', flush);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Auto-save: fires on every field change, awaits Supabase write ─────────────
+  // ── Auto-save: fires immediately on every field change ───────────────────────
   const autoSaveMounted = useRef(false);
   const [saveStatus, setSaveStatus] = useState('idle');
 
   useEffect(() => {
     if (!autoSaveMounted.current) { autoSaveMounted.current = true; return; }
-    if (!deal?.id || !activeOrgId) return;
+    if (!deal?.id) return;
     if (!canEdit && !isAgent) return;
 
     const updatedDeal = {
@@ -2754,7 +2317,7 @@ function DealDetailContent({ deal }) {
       manufacturer, deliveryDate,
       holdingMonths: holdPeriod, holdingPerMonth: monthlyHoldCost,
       arv, listingUrl,
-      dealOwner,
+      realtor, dateListed, dealOwner,
       // Derive investor position fields from scenario — only when a scenario is explicitly active
       investorCapitalContributed:
         (selectedScenario === 'hard-money-loan' || selectedScenario === 'hard-money-land-home')
@@ -2765,8 +2328,6 @@ function DealDetailContent({ deal }) {
           ? investorProfitSplitPct
           : investorEquityPct,
       projectedPayoutDate,
-      capitalDeployedDate: capitalDeployedDate || null,
-      capitalReturnedDate: capitalReturnedDate || null,
       financingScenarioType,
       // Pack all scenario-specific inputs so they survive page reload
       scenarioData: {
@@ -2788,31 +2349,16 @@ function DealDetailContent({ deal }) {
       ...costs,
     };
 
-    // Optimistic: update localStorage and context immediately
-    saveToLS(updatedDeal, activeOrgId);
+    // Save immediately — localStorage, context, and Supabase all at once
+    saveDeal(updatedDeal, activeOrgId);
+    setSaveStatus('saved');
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updatedDeal.id));
       if (idx >= 0) { const next = [...prev]; next[idx] = updatedDeal; return next; }
       return [...prev, updatedDeal];
     });
-
-    // Async: write to Supabase and surface any errors
-    setSaveStatus('saving');
-    let cancelled = false;
-    flushToSupabaseAsync(updatedDeal, activeOrgId).then(({ error }) => {
-      if (cancelled) return;
-      if (error) {
-        console.error('[auto-save] Supabase write failed:', error.message);
-        setSaveStatus('error');
-        const t = setTimeout(() => { if (!cancelled) setSaveStatus('idle'); }, 4000);
-        return () => clearTimeout(t);
-      }
-      setSaveStatus('saved');
-      const t = setTimeout(() => { if (!cancelled) setSaveStatus('idle'); }, 2000);
-      return () => clearTimeout(t);
-    });
-
-    return () => { cancelled = true; };
+    const t = setTimeout(() => setSaveStatus('idle'), 2000);
+    return () => clearTimeout(t);
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     stage, address, county, dealState, zip, acreage,
     ownerName, sellerName, phone, email, investor, financing, notes,
@@ -2821,9 +2367,8 @@ function DealDetailContent({ deal }) {
     parcelId, closingAttorney, closingAttorneyPhone,
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
-    dealOwner,
+    realtor, dateListed, dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate,
-    capitalDeployedDate, capitalReturnedDate,
     loanAmountOverride, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
@@ -2837,102 +2382,45 @@ function DealDetailContent({ deal }) {
     investorReturnType, investorAssignmentStatus,
   ]);
 
-  // ── Load dev tasks from Supabase on mount ─────────────────────────────────
-  useEffect(() => {
-    if (!supabase || !deal?.id || !activeOrgId) return;
-    supabase.from('deal_task_statuses')
-      .select('task_key, value')
-      .eq('deal_id', deal.id)
-      .eq('organization_id', activeOrgId)
-      .like('task_key', 'dev_%')
-      .then(({ data }) => {
-        if (!data || data.length === 0) return;
-        setDevTasks(prev => {
-          const next = [...prev];
-          data.forEach(row => {
-            const m = row.task_key.match(/^dev_(\d+)$/);
-            if (m) {
-              const idx = parseInt(m[1], 10);
-              if (idx >= 0 && idx < next.length) next[idx] = row.value === '1';
-            }
-          });
-          return next;
-        });
-      });
-  }, [deal?.id, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Load pooled loan links for this deal ──────────────────────────────────
   useEffect(() => {
     if (!deal?.id || !activeOrgId) return;
     fetchPooledLoansForDeal(deal.id, activeOrgId).then(links => setPooledLoanLinks(links));
   }, [deal?.id, activeOrgId]);
 
-  // ── Load cost summary (always — drives the All-In stat in the header) ────────
+  // ── Load cost summary when feature flag is on ─────────────────────────────
   useEffect(() => {
-    if (!deal?.id) return;
+    if (!costBreakdownV2 || !deal?.id) return;
     fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
-  }, [deal?.id]);
+  }, [costBreakdownV2, deal?.id]);
 
   // Refresh summary whenever user switches to the cost breakdown tab
   useEffect(() => {
-    if (activeTab === 'realized' && deal?.id) {
+    if (activeTab === 'realized' && costBreakdownV2 && deal?.id) {
       fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
     }
-  }, [activeTab, deal?.id]);
+  }, [activeTab, costBreakdownV2, deal?.id]);
 
-  // Realtime: update All-In instantly when any cost line changes, then confirm with re-fetch
+  // Realtime: re-fetch cost summary whenever any cost line for this deal changes
   useEffect(() => {
-    if (!deal?.id) return;
+    if (!costBreakdownV2 || !deal?.id) return;
     const ch = supabase
       .channel(`deal-detail-cost-${deal.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines',
           filter: `deal_id=eq.${deal.id}` },
-        (payload) => {
-          // Optimistic immediate update: apply the delta from the changed row
-          // so the All-In stat updates the instant the change is saved, not after a round-trip.
-          const newVal = resolveActual(payload.new);
-          const oldVal = resolveActual(payload.old);
-          const delta = payload.eventType === 'DELETE' ? -oldVal
-                      : payload.eventType === 'INSERT' ? newVal
-                      : newVal - oldVal;
-          setCostSummary(prev => prev
-            ? { ...prev, total_actual: Math.max(0, Number(prev.total_actual || 0) + delta) }
-            : prev
-          );
-          // Re-fetch the authoritative total from the view to correct any drift
-          fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
-        })
+        () => { fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); }); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [deal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [costBreakdownV2, deal?.id]);
 
-  // allIn: always use total_actual from deal_cost_lines summary (mirrors the cost breakdown tab Total Actual)
-  const allIn = costSummary
+  // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
+  const allIn = costBreakdownV2 && costSummary
     ? Number(costSummary.total_actual ?? 0)
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 
   const sellingCosts = (arv || 0) * 0.045 + 4000;
   const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
-
-  // Cost of Capital deduction for deal header — mirrors FinancingScenarioPanel math
-  const activeFinancingMain = selectedScenario
-    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType ?? null
-    : null;
-  const isHardMoneyMain = activeFinancingMain === 'Hard Money Loan' || activeFinancingMain === 'Hard Money (Land + Home)';
-  const totalLentMain = (costs?.land || 0) + (costs?.mobileHome || 0);
-  const effectiveLoanMain = loanAmountOverride || allIn || totalLentMain;
-  const monthlyInterestMain = effectiveLoanMain * (interestRate / 100) / 12;
-  const originationFeeMain = originationFeeType === 'percentage'
-    ? effectiveLoanMain * (originationFeePct / 100)
-    : (originationFeeFlat || 0);
-  const servicingFeeMain = servicingFeeType === 'percentage'
-    ? effectiveLoanMain * (servicingFeePct / 100)
-    : (servicingFeeFlat || 0);
-  const otherFeesMain = (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
-  const totalCoCMain = (!!selectedScenario && isHardMoneyMain)
-    ? (monthlyInterestMain * holdPeriod) + originationFeeMain + servicingFeeMain + otherFeesMain
-    : 0;
-  const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts - totalCoCMain;
+  const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
 
@@ -2984,7 +2472,7 @@ function DealDetailContent({ deal }) {
           <div className="flex flex-wrap items-center gap-2 md:gap-3 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
             <GradeBadge grade={deal.grade} />
-            {(deal.tags || []).filter(t => typeof t === 'string' && t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
+            {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
             {!fromInvestorPortal && <>
               <button
                 onClick={() => canEdit && handleSetLandClearing(landClearing === 'Yes' ? 'No' : 'Yes')}
@@ -3034,11 +2522,6 @@ function DealDetailContent({ deal }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Saved
                 </span>
               )}
-              {(canEdit || isAgent) && saveStatus === 'error' && (
-                <span className="text-xs text-red-500 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Save failed
-                </span>
-              )}
               {isAgent && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200">
                   Agent View
@@ -3074,7 +2557,7 @@ function DealDetailContent({ deal }) {
                       localStorage.setItem(lsKey, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
                     } catch {}
                     // Navigate back
-                    if (fromInvestorPortal) navigate('/investors');
+                    if (fromInvestorPortal) navigate('/investor-portal');
                     else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');
                     else navigate('/deal-overview');
                   }}
@@ -3090,6 +2573,82 @@ function DealDetailContent({ deal }) {
         {/* Summary bar */}
         <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-100">
           <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">ARV</p>
+            <p className="text-sm font-bold text-[#1a2332]">${(deal.arv || 0).toLocaleString()}</p>
+          </div>
+          {!isAgent && <><div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Net Profit</p>
+            <p className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              ${Math.round(netProfit).toLocaleString()}
+            </p>
+          </div>
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Financing</p>
+            {financingTabEnabled
+              ? <button
+                  onClick={() => setActiveTab('financing')}
+                  className="text-sm font-bold text-[#1a2332] hover:text-accent transition-colors text-left"
+                >
+                  {FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.label || deal.financing || 'Set Scenario →'}
+                </button>
+              : <p className="text-sm font-bold text-[#1a2332]">{deal.financing || '—'}</p>
+            }
+          </div>
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div className="relative" ref={investorPickerRef}>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Investor</p>
+            {canEdit
+              ? <button
+                  onClick={() => setShowInvestorPicker(v => !v)}
+                  className="text-sm font-bold text-[#1a2332] hover:text-accent transition-colors text-left flex items-center gap-1"
+                >
+                  {investor || deal.investor || 'Assign →'}
+                  <ChevronDown size={12} className="text-gray-400 mt-0.5" />
+                </button>
+              : <p className="text-sm font-bold text-[#1a2332]">{investor || deal.investor || '—'}</p>
+            }
+            {showInvestorPicker && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 w-52 py-1 flex flex-col">
+                <button
+                  onClick={() => { setShowInvestorPicker(false); setShowAddInvestor(true); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent/5 text-accent font-semibold border-b border-gray-100"
+                >
+                  + Add New Investor
+                </button>
+                <div className="overflow-y-auto max-h-48">
+                  {(supabaseInvestors.length ? supabaseInvestors : investorList).map(inv => (
+                    <button
+                      key={inv.id}
+                      onClick={() => {
+                        setInvestor(inv.name);
+                        saveNow?.({ investor: inv.name });
+                        setShowInvestorPicker(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate ${investor === inv.name ? 'text-accent font-semibold' : 'text-gray-700'}`}
+                    >
+                      {inv.name}
+                    </button>
+                  ))}
+                </div>
+                {investor && (
+                  <button
+                    onClick={() => {
+                      setInvestor('');
+                      saveNow?.({ investor: '' });
+                      setShowInvestorPicker(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-500 border-t border-gray-100"
+                  >
+                    Remove investor
+                  </button>
+                )}
+              </div>
+            )}
+          </div></>}
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Stage</p>
             {(fromInvestorPortal || !canEdit)
               ? <p className="text-sm font-semibold text-[#1a2332]">{stage}</p>
@@ -3100,6 +2659,21 @@ function DealDetailContent({ deal }) {
                 >
                   {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+            }
+          </div>
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Deal Owner</p>
+            {canAdmin
+              ? <select
+                  value={dealOwner}
+                  onChange={e => setDealOwner(e.target.value)}
+                  className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="">Unassigned</option>
+                  {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -3156,8 +2730,6 @@ function DealDetailContent({ deal }) {
             investor={investor} setInvestor={setInvestor}
             onAddInvestor={() => setShowAddInvestor(true)}
             netProfit={netProfit}
-            totalCostOfCapital={totalCoCMain}
-            activeFinancing={activeFinancingMain}
             allIn={allIn}
             roi={allIn > 0 ? ((netProfit / allIn) * 100) : 0}
             costSummary={costBreakdownV2 ? costSummary : null}
@@ -3171,8 +2743,6 @@ function DealDetailContent({ deal }) {
             FINANCING_OPTIONS={FINANCING_OPTIONS}
             COST_FIELDS={COST_FIELDS}
             saveNow={saveNow}
-            dealOwner={dealOwner} setDealOwner={setDealOwner}
-            allUsers={allUsers}
             onOpenMapSearch={() => setShowMapModal(true)}
             investorList={investorList}
             onCreateTask={() => setShowCreateTask(true)}
@@ -3205,7 +2775,7 @@ function DealDetailContent({ deal }) {
             deal={deal}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            tabsToShow={isAgent ? ['overview'] : ['overview', 'events', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
+            tabsToShow={isAgent ? ['overview'] : ['overview', 'threads', 'details', 'dd', 'dev', 'realized', ...(financingTabEnabled ? ['financing'] : [])]}
             ddCount={ddCompleteCount}
             ddTotal={DD_COLS.length}
             devCount={devComplete}
@@ -3213,21 +2783,14 @@ function DealDetailContent({ deal }) {
             costOverrideCount={costBreakdownV2 && costSummary ? Number(costSummary.override_count ?? 0) : null}
             costLineCount={costBreakdownV2 && costSummary ? Number(costSummary.line_count ?? 0) : null}
           >
-            <div className={fromInvestorPortal && activeTab !== 'financing' ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
+            <div className={fromInvestorPortal ? '[&_input]:!border-0 [&_input]:!bg-transparent [&_input]:!shadow-none [&_input]:pointer-events-none [&_select]:!border-0 [&_select]:!bg-transparent [&_select]:!shadow-none [&_select]:pointer-events-none [&_select]:appearance-none [&_textarea]:!border-0 [&_textarea]:!bg-transparent [&_textarea]:!shadow-none [&_textarea]:pointer-events-none [&_textarea]:resize-none' : ''}>
       {/* Tab content */}
         {activeTab === 'overview' && (
           <DealActivityFeed
-            key={activityFeedKey}
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             currentUser={profile?.name}
-            refreshRef={activityFeedRefreshRef}
-          />
-        )}
-        {activeTab === 'events' && (
-          <DealEventsTab
-            deal={deal}
-            readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
+            refreshKey={activityRefreshKey}
           />
         )}
         {activeTab === 'threads' && (
@@ -3319,34 +2882,11 @@ function DealDetailContent({ deal }) {
           <DDTab deal={deal} readOnly={fromInvestorPortal || !canEdit} onStatusChange={setDdCompleteCount} />
         )}
         {activeTab === 'dev' && (
-          <DevTab
-            dealId={deal.id}
-            orgId={activeOrgId}
-            devTasks={devTasks}
-            setDevTasks={setDevTasks}
-            readOnly={fromInvestorPortal || !canEdit}
-            onTaskComplete={(taskName) => {
-              if (!supabase || !activeOrgId) return;
-              supabase.auth.getSession().then(({ data: { session } }) => {
-                if (!session) return;
-                supabase.from('activity_notes').insert({
-                  organization_id: activeOrgId,
-                  deal_id:         deal.id,
-                  author_id:       session.user.id,
-                  author_name:     profile?.name || null,
-                  body:            `✅ Dev task marked complete: "${taskName}"`,
-                  note_type:       'note',
-                }).then(({ error }) => {
-                  if (error) console.error('Dev activity note failed:', error.message);
-                  else activityFeedRefreshRef.current?.();
-                });
-              });
-            }}
-          />
+          <DevTab devTasks={devTasks} setDevTasks={setDevTasks} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
-            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} onCostSave={() => fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); })} readOnly={fromInvestorPortal || !canEdit} />
+            ? <CostBreakdownTab dealId={deal.id} />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (
@@ -3398,9 +2938,8 @@ function DealDetailContent({ deal }) {
 
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
-            deal={deal} costs={costs} arv={arv} allInOverride={allIn}
+            deal={deal} costs={costs} arv={arv}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
-            financingSaveStatus={financingSaveStatus}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
             holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
@@ -3425,18 +2964,18 @@ function DealDetailContent({ deal }) {
             ccpPrefPaymentTiming={ccpPrefPaymentTiming} setCcpPrefPaymentTiming={setCcpPrefPaymentTiming}
             ccpPosition={ccpPosition} setCcpPosition={setCcpPosition}
             ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
-            capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={v => { setCapitalDeployedDate(v); stateRef.current = { ...stateRef.current, capitalDeployedDate: v }; saveNow(); }}
-            capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={v => { setCapitalReturnedDate(v); stateRef.current = { ...stateRef.current, capitalReturnedDate: v }; saveNow(); }}
-            cashSource={cashSource} setCashSource={v => { setCashSource(v); stateRef.current = { ...stateRef.current, cashSource: v }; saveNow(); }}
-            investor={investor} setInvestor={v => { setInvestor(v); stateRef.current = { ...stateRef.current, investor: v }; saveNow(); }}
+            capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
+            capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+            cashSource={cashSource} setCashSource={setCashSource}
+            investor={investor} setInvestor={setInvestor}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
             onAddInvestor={() => setShowAddInvestor(true)}
-            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={v => { setInvestorCapitalContributed(v); stateRef.current = { ...stateRef.current, investorCapitalContributed: v }; saveNow(); }}
-            investorEquityPct={investorEquityPct} setInvestorEquityPct={v => { setInvestorEquityPct(v); stateRef.current = { ...stateRef.current, investorEquityPct: v }; saveNow(); }}
-            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={v => { setProjectedPayoutDate(v); stateRef.current = { ...stateRef.current, projectedPayoutDate: v }; saveNow(); }}
-            investorReturnType={investorReturnType} setInvestorReturnType={v => { setInvestorReturnType(v); stateRef.current = { ...stateRef.current, investorReturnType: v }; saveNow(); }}
-            investorAssignmentStatus={investorAssignmentStatus} setInvestorAssignmentStatus={v => { setInvestorAssignmentStatus(v); stateRef.current = { ...stateRef.current, investorAssignmentStatus: v }; saveNow(); }}
-            readOnly={!canEdit}
+            investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
+            investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
+            projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
+            investorReturnType={investorReturnType} setInvestorReturnType={setInvestorReturnType}
+            investorAssignmentStatus={investorAssignmentStatus} setInvestorAssignmentStatus={setInvestorAssignmentStatus}
+            readOnly={fromInvestorPortal || !canEdit}
           />
         )}
 
@@ -3459,7 +2998,6 @@ function DealDetailContent({ deal }) {
             deal={deal}
             readOnly={fromInvestorPortal || (!canEdit && !isAgent)}
             onCreateTask={() => setShowCreateTask(true)}
-            onActivityNoteAdded={() => activityFeedRefreshRef.current?.()}
           />
         }
       />
@@ -3470,7 +3008,27 @@ function DealDetailContent({ deal }) {
       <CreateTaskModal
         defaultDealId={deal.id}
         onClose={() => setShowCreateTask(false)}
-        onCreated={() => setShowCreateTask(false)}
+        onCreated={async (task, assignedToName, assignedToId) => {
+          setShowCreateTask(false);
+          if (task?.deal_id) {
+            const authorName = profile?.name || profile?.first_name || 'Someone';
+            const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
+            await logTaskActivity({
+              orgId:      activeOrgId,
+              dealId:     task.deal_id,
+              authorId:   profile?.id,
+              authorName,
+              noteType:   'task',
+              body:       `Task created: "${task.title}"${assigneePart}`,
+            });
+            // Force the activity feed to reload now that the note is inserted
+            setActivityRefreshKey(k => k + 1);
+          }
+          // Notify the assignee (skip if they assigned it to themselves)
+          if (task && assignedToId && assignedToId !== profile?.id) {
+            notifyTaskAssigned(task, assignedToId, assignedToName, deal?.address, { orgId: activeOrgId });
+          }
+        }}
       />
     )}
 
@@ -3478,18 +3036,8 @@ function DealDetailContent({ deal }) {
       <ComposeEmailModal
         contact={{ email: email, fullName: sellerName || ownerName || '' }}
         dealId={deal.id}
-        orgId={activeOrgId}
-        dealAddress={address}
         onClose={() => setShowSendEmail(false)}
-        onSent={() => { setShowSendEmail(false); setActiveTab('overview'); setActivityFeedKey(k => k + 1); }}
-      />
-    )}
-
-    {showScheduleMeeting && (
-      <AddEventModal
-        deal={deal}
-        onSaved={() => { setShowScheduleMeeting(false); setActiveTab('events'); }}
-        onClose={() => setShowScheduleMeeting(false)}
+        onSent={() => setShowSendEmail(false)}
       />
     )}
 
@@ -3508,10 +3056,13 @@ function DealDetailContent({ deal }) {
             standard_terms: newInv.standardTerms || null,
             organization_id: activeOrgId,
           });
-          // Refresh investor list from Supabase
+          // Refresh Supabase investor list
           fetchAllInvestors(activeOrgId).then(({ investors: inv }) => {
-            if (inv?.length) { setSupabaseInvestors(inv); setInvestorList(inv); }
+            if (inv?.length) setSupabaseInvestors(inv);
           });
+          // Also update localStorage list for fallback
+          const updated = addInvestor(newInv, activeOrgId, orgSlug);
+          setInvestorList(updated);
           // Assign to this deal
           const name = saved?.name || newInv.name;
           setInvestor(name);

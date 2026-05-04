@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { useDeals } from '../lib/DealsContext';
+import LiveBadge from '../components/UI/LiveBadge';
 import { usePermissions } from '../hooks/usePermissions';
 
 const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
@@ -166,7 +167,7 @@ function loadCustomDeals() {
 
 export default function DealOverview() {
   const navigate = useNavigate();
-  const { deals: customDeals } = useDeals();
+  const { deals: customDeals, realtimeStatus } = useDeals();
   const { isAgent } = usePermissions();
 
   const allDeals = customDeals
@@ -176,7 +177,10 @@ export default function DealOverview() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Deal Overview</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Deal Overview</h1>
+            <LiveBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-gray-500 mt-0.5">{allDeals.length} active deals across all stages</p>
         </div>
       </div>
