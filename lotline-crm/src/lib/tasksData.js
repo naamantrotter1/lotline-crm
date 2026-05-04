@@ -90,10 +90,16 @@ export async function deleteTask(id) {
 /**
  * Log a task event to activity_notes so it appears in the deal Activity tab.
  * note_type: 'task' | 'task_complete' | 'task_update'
+ *
+ * Falls back to a minimal insert (without note_type/author_name) when migration
+ * 057 hasn't been applied to the database yet — so tasks always appear in the
+ * feed regardless of schema state.
  */
 export async function logTaskActivity({ orgId, dealId, authorId, authorName, noteType, body }) {
   if (!supabase || !dealId) return;
-  await supabase.from('activity_notes').insert({
+
+  // Try full insert with note_type + author_name (requires migration 057)
+  const { error } = await supabase.from('activity_notes').insert({
     organization_id:    orgId,
     deal_id:            dealId,
     author_id:          authorId,
@@ -101,5 +107,17 @@ export async function logTaskActivity({ orgId, dealId, authorId, authorName, not
     note_type:          noteType,
     body,
     mentioned_user_ids: [],
-  }).catch(e => console.warn('logTaskActivity', e));
+  });
+
+  if (error) {
+    // Migration 057 likely not applied — fall back to base columns only
+    console.warn('logTaskActivity: full insert failed, falling back:', error.message);
+    await supabase.from('activity_notes').insert({
+      organization_id:    orgId,
+      deal_id:            dealId,
+      author_id:          authorId,
+      body,
+      mentioned_user_ids: [],
+    }).catch(e => console.warn('logTaskActivity fallback failed:', e.message));
+  }
 }
