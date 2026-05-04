@@ -110,7 +110,7 @@ export default function CreateTaskModal({ onClose, onCreated, defaultContactId, 
     });
     setSaving(false);
     if (err) { setError(err.message || 'Failed to create task.'); return; }
-    onCreated?.(data, form.assigned_to_name || null);
+    onCreated?.(data, form.assigned_to_name || null, form.assigned_to || null);
   };
 
   return (

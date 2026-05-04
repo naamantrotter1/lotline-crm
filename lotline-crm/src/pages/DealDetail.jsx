@@ -32,6 +32,7 @@ import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
 import { logTaskActivity } from '../lib/tasksData';
+import { notifyTaskAssigned } from '../lib/notify';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
@@ -3005,7 +3006,7 @@ function DealDetailContent({ deal }) {
       <CreateTaskModal
         defaultDealId={deal.id}
         onClose={() => setShowCreateTask(false)}
-        onCreated={(task, assignedToName) => {
+        onCreated={(task, assignedToName, assignedToId) => {
           setShowCreateTask(false);
           if (task?.deal_id) {
             const authorName = profile?.name || profile?.first_name || 'Someone';
@@ -3018,6 +3019,10 @@ function DealDetailContent({ deal }) {
               noteType:   'task',
               body:       `Task created: "${task.title}"${assigneePart}`,
             });
+          }
+          // Notify the assignee (skip if they assigned it to themselves)
+          if (task && assignedToId && assignedToId !== profile?.id) {
+            notifyTaskAssigned(task, assignedToId, assignedToName, deal?.address, { orgId: activeOrgId });
           }
         }}
       />

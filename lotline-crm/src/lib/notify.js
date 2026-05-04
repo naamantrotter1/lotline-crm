@@ -50,6 +50,27 @@ export function notifyPipelineChange(deal, newStage, { orgId, userId } = {}) {
   );
 }
 
+/**
+ * Call when a task is assigned to a team member.
+ * Sends a DB notification to the assignee only (not the creator).
+ *
+ * @param {object} task         - the newly created task object
+ * @param {string} assigneeId   - user_id of the person being assigned
+ * @param {string} assigneeName - display name of the assignee
+ * @param {string} dealAddress  - optional deal address for context
+ * @param {object} opts         - { orgId }
+ */
+export async function notifyTaskAssigned(task, assigneeId, assigneeName, dealAddress, { orgId } = {}) {
+  if (!orgId || !assigneeId) return;
+  const titleText = task.title ? `"${task.title}"` : 'A task';
+  const bodyText  = dealAddress ? `${titleText} on ${dealAddress}` : titleText;
+  await fire(
+    `New task assigned to you`,
+    bodyText,
+    { orgId, userId: assigneeId, type: 'task_assigned', entityType: 'task', entityId: String(task.id) },
+  );
+}
+
 /** Call when a deal moves stages within Deal Overview.
  *  Pass { orgId, userId } so the notification is stored in the DB.
  */
