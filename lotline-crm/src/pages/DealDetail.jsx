@@ -1907,11 +1907,22 @@ function DealDetailContent({ deal }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !canAdmin) return;
-    supabase.from('profiles').select('name').then(({ data }) => {
-      if (data) setAllUsers(data.map(u => u.name).filter(Boolean));
-    });
-  }, [canAdmin]);
+    if (!supabase || !activeOrgId) return;
+    supabase
+      .from('memberships')
+      .select('profiles(name, first_name, last_name)')
+      .eq('organization_id', activeOrgId)
+      .eq('status', 'active')
+      .then(({ data }) => {
+        if (data) {
+          const names = data
+            .map(m => m.profiles?.name || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' '))
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b));
+          setAllUsers(names);
+        }
+      });
+  }, [activeOrgId]);
 
   // Refs always hold the latest deal + state values — used by saveNow for synchronous saves
   const dealRef        = useRef(deal);
@@ -3010,20 +3021,21 @@ function DealDetailContent({ deal }) {
         onClose={() => setShowCreateTask(false)}
         onCreated={async (task, assignedToName, assignedToId) => {
           setShowCreateTask(false);
-          if (task?.deal_id) {
-            const authorName = profile?.name || profile?.first_name || 'Someone';
-            const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
-            await logTaskActivity({
-              orgId:      activeOrgId,
-              dealId:     task.deal_id,
-              authorId:   profile?.id,
-              authorName,
-              noteType:   'task',
-              body:       `Task created: "${task.title}"${assigneePart}`,
-            });
-            // Force the activity feed to reload now that the note is inserted
-            setActivityRefreshKey(k => k + 1);
-          }
+          // Use deal.id directly — task.deal_id may be null if the DB col isn't returned
+          const dealId = task?.deal_id || deal.id;
+          const authorName = profile?.name || profile?.first_name || 'Someone';
+          const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
+          const taskTitle = task?.title || 'Untitled task';
+          console.log('[DealDetail] onCreated: logging task activity', { dealId, task, activeOrgId });
+          await logTaskActivity({
+            orgId:      activeOrgId,
+            dealId,
+            authorId:   profile?.id,
+            authorName,
+            noteType:   'task',
+            body:       `Task created: "${taskTitle}"${assigneePart}`,
+          });
+          setActivityRefreshKey(k => k + 1);
           // Notify the assignee (skip if they assigned it to themselves)
           if (task && assignedToId && assignedToId !== profile?.id) {
             notifyTaskAssigned(task, assignedToId, assignedToName, deal?.address, { orgId: activeOrgId });
