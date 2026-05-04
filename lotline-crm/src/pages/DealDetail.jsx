@@ -3010,20 +3010,21 @@ function DealDetailContent({ deal }) {
         onClose={() => setShowCreateTask(false)}
         onCreated={async (task, assignedToName, assignedToId) => {
           setShowCreateTask(false);
-          if (task?.deal_id) {
-            const authorName = profile?.name || profile?.first_name || 'Someone';
-            const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
-            await logTaskActivity({
-              orgId:      activeOrgId,
-              dealId:     task.deal_id,
-              authorId:   profile?.id,
-              authorName,
-              noteType:   'task',
-              body:       `Task created: "${task.title}"${assigneePart}`,
-            });
-            // Force the activity feed to reload now that the note is inserted
-            setActivityRefreshKey(k => k + 1);
-          }
+          // Use deal.id directly — task.deal_id may be null if the DB col isn't returned
+          const dealId = task?.deal_id || deal.id;
+          const authorName = profile?.name || profile?.first_name || 'Someone';
+          const assigneePart = assignedToName ? ` · Assigned to ${assignedToName}` : '';
+          const taskTitle = task?.title || 'Untitled task';
+          console.log('[DealDetail] onCreated: logging task activity', { dealId, task, activeOrgId });
+          await logTaskActivity({
+            orgId:      activeOrgId,
+            dealId,
+            authorId:   profile?.id,
+            authorName,
+            noteType:   'task',
+            body:       `Task created: "${taskTitle}"${assigneePart}`,
+          });
+          setActivityRefreshKey(k => k + 1);
           // Notify the assignee (skip if they assigned it to themselves)
           if (task && assignedToId && assignedToId !== profile?.id) {
             notifyTaskAssigned(task, assignedToId, assignedToName, deal?.address, { orgId: activeOrgId });

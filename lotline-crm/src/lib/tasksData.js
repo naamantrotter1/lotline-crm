@@ -96,10 +96,14 @@ export async function deleteTask(id) {
  * feed regardless of schema state.
  */
 export async function logTaskActivity({ orgId, dealId, authorId, authorName, noteType, body }) {
-  if (!supabase || !dealId) return;
+  if (!supabase || !dealId) {
+    console.warn('[logTaskActivity] skipped — missing supabase or dealId', { supabase: !!supabase, dealId });
+    return;
+  }
 
-  // Try full insert with note_type + author_name (requires migration 057)
-  const { error } = await supabase.from('activity_notes').insert({
+  console.log('[logTaskActivity] inserting', { orgId, dealId, authorId, noteType, body });
+
+  const { data, error } = await supabase.from('activity_notes').insert({
     organization_id:    orgId,
     deal_id:            dealId,
     author_id:          authorId,
@@ -107,17 +111,21 @@ export async function logTaskActivity({ orgId, dealId, authorId, authorName, not
     note_type:          noteType,
     body,
     mentioned_user_ids: [],
-  });
+  }).select().single();
 
   if (error) {
-    // Migration 057 likely not applied — fall back to base columns only
-    console.warn('logTaskActivity: full insert failed, falling back:', error.message);
+    console.warn('[logTaskActivity] insert failed, falling back:', error.message, error);
     await supabase.from('activity_notes').insert({
       organization_id:    orgId,
       deal_id:            dealId,
       author_id:          authorId,
       body,
       mentioned_user_ids: [],
-    }).catch(e => console.warn('logTaskActivity fallback failed:', e.message));
+    }).then(({ error: e2 }) => {
+      if (e2) console.warn('[logTaskActivity] fallback also failed:', e2.message);
+      else console.log('[logTaskActivity] fallback insert succeeded');
+    });
+  } else {
+    console.log('[logTaskActivity] insert succeeded', data);
   }
 }
