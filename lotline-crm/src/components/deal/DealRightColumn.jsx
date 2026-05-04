@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { fetchTasks } from '../../lib/tasksData';
+import { fetchTasks, deleteTask } from '../../lib/tasksData';
 import { fetchEnvelopes } from '../../lib/esignData';
 
 // ── Collapsible section ───────────────────────────────────────────────────────
@@ -184,6 +184,34 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
     return () => { cancelled = true; };
   }, [deal?.id, activeOrgId]);
 
+  // Realtime: sync task deletes/updates from other views (e.g. Tasks overview)
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    const ch = supabase
+      .channel(`deal-tasks-${deal.id}`)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'tasks',
+        filter: `deal_id=eq.${deal.id}`,
+      }, (payload) => {
+        if (payload.new?.deleted_at) {
+          // Soft-deleted elsewhere — remove from sidebar
+          setTasks(prev => prev.filter(t => t.id !== payload.new.id));
+        } else {
+          // Status or other field changed
+          setTasks(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [deal?.id]);
+
+  const handleDeleteTask = async (id) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    await deleteTask(id);
+  };
+
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
   const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString()}`;
 
@@ -282,7 +310,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
             ? tasks.slice(0, 8).map(t => {
                 const assigneeName = t.assigned_to ? (assigneeProfiles[t.assigned_to] || null) : null;
                 return (
-                  <div key={t.id} className="flex items-center gap-2 py-1.5">
+                  <div key={t.id} className="flex items-center gap-2 py-1.5 group">
                     <TaskStatusIcon status={t.status} />
                     <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
                       {t.title}
@@ -307,6 +335,15 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
                       >
                         +
                       </div>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => handleDeleteTask(t.id)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Delete task"
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     )}
                   </div>
                 );
