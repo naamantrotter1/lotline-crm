@@ -3222,3 +3222,4 @@ export default function DealDetail() {
     </DealErrorBoundary>
   );
 }
+
