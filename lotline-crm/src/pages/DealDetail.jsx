@@ -2601,7 +2601,14 @@ function DealDetailContent({ deal }) {
               {canEdit && (
                 <button
                   onClick={() => {
-                    saveDeal({ ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage }, activeOrgId);
+                    const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage };
+                    saveDeal(archived, activeOrgId);
+                    setDeals(prev => prev.filter(d => String(d.id) !== String(deal.id)));
+                    setArchivedDeals(prev => {
+                      const idx = prev.findIndex(d => String(d.id) === String(deal.id));
+                      if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
+                      return [...prev, archived];
+                    });
                     // Remove from active localStorage list (org-scoped key)
                     try {
                       const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';

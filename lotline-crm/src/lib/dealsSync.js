@@ -405,12 +405,16 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Delete a deal from both localStorage and Supabase */
+/** Soft-delete (archive) a deal by ID — sets is_archived=true in Supabase.
+ *  Prefer calling archiveDeal(deal, orgId) when you have the full deal object.
+ *  This variant is kept for backwards-compat callers that only have the ID. */
 export function deleteDeal(dealId, orgId) {
   const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
   lsSet(all, orgId);
   if (supabase) {
-    supabase.from('deals').delete().eq('id', String(dealId))
+    supabase.from('deals')
+      .update({ is_archived: true, archived_at: new Date().toISOString() })
+      .eq('id', String(dealId))
       .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
   }
 }
