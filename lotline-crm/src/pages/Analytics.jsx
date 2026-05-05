@@ -69,10 +69,12 @@ export default function Analytics() {
     () => activeDeals.filter(d => d.pipeline === 'deal-overview'),
     [activeDeals],
   );
-  // Leaderboard includes both Deal Overview and Sales pipeline deals
+  // Leaderboard uses the same stage filter as the Deal Overview page
+  // (pipeline field is unreliable — DO page shows deals by stage, not pipeline)
+  const DEAL_OVERVIEW_STAGES = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
   const leaderboardDeals = useMemo(
-    () => activeDeals.filter(d => d.pipeline === 'deal-overview' || d.pipeline === 'sales'),
-    [activeDeals],
+    () => activeDeals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage)),
+    [activeDeals], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // ── Primary KPIs ────────────────────────────────────────────────────────────
