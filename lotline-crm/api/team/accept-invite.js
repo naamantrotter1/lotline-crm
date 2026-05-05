@@ -84,12 +84,12 @@ export default async function handler(req, res) {
     .update({ status: 'accepted', accepted_at: new Date().toISOString() })
     .eq('id', inv.id);
 
-  // Set the user's active_organization_id to this org (if they don't have one)
+  // Always set active_organization_id to the invited org so the user's
+  // Supabase session resolves the correct org context for RLS policies.
   await adminClient
     .from('profiles')
     .update({ active_organization_id: inv.organization_id })
-    .eq('id', user.id)
-    .is('active_organization_id', null);
+    .eq('id', user.id);
 
   return res.status(200).json({ membership, organizationId: inv.organization_id });
 }
