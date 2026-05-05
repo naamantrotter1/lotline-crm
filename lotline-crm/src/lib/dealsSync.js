@@ -282,6 +282,19 @@ export async function loadAllDeals(orgIds) {
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
+        // LS fallbacks for date/closing fields — prevents Supabase returning null
+        // (column missing or write failed) from overwriting a locally-saved value.
+        closeDate:             fromSupabase.closeDate             || fromLS.closeDate             || null,
+        closingDate:           fromSupabase.closingDate           || fromLS.closingDate           || null,
+        deliveryDate:          fromSupabase.deliveryDate          || fromLS.deliveryDate          || null,
+        ddDeadline:            fromSupabase.ddDeadline            || fromLS.ddDeadline            || null,
+        appraisalDate:         fromSupabase.appraisalDate         || fromLS.appraisalDate         || null,
+        financingContingency:  fromSupabase.financingContingency  || fromLS.financingContingency  || null,
+        closingAttorney:       fromSupabase.closingAttorney       || fromLS.closingAttorney       || null,
+        closingAttorneyPhone:  fromSupabase.closingAttorneyPhone  || fromLS.closingAttorneyPhone  || null,
+        closingAttorneyAddress: fromSupabase.closingAttorneyAddress || fromLS.closingAttorneyAddress || null,
+        dealOwner:             fromSupabase.dealOwner             || fromLS.dealOwner             || null,
+        manufacturer:          fromSupabase.manufacturer          || fromLS.manufacturer          || null,
       };
     });
 
