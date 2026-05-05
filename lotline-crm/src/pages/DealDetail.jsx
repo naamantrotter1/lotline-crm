@@ -1906,7 +1906,7 @@ function DealDetailContent({ deal }) {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
-  const { setDeals, setArchivedDeals } = useDeals();
+  const { deals, setDeals, setArchivedDeals } = useDeals();
   const { profile, activeOrgId, orgSlug } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -2164,6 +2164,34 @@ function DealDetailContent({ deal }) {
   const [deliveryDate, setDeliveryDate] = useState(deal?.deliveryDate || '');
   const [realtor, setRealtor] = useState(deal?.realtor || '');
   const [dateListed, setDateListed] = useState(deal?.dateListed || '');
+
+  // ── Realtime: sync remote updates from other users into local state ───────────
+  useEffect(() => {
+    const remoteDeal = deals.find(d => String(d.id) === String(deal.id));
+    if (!remoteDeal) return;
+    setAddress(remoteDeal.address || '');
+    setCounty(remoteDeal.county || '');
+    setDealState(remoteDeal.state || '');
+    setZip(remoteDeal.zip || '');
+    setAcreage(remoteDeal.acreage?.toString() || '');
+    setParcelId(remoteDeal.parcelId || '');
+    setLeadSource(remoteDeal.leadSource || '');
+    setOwnerType(remoteDeal.ownerType || '');
+    setUtilityScenario(remoteDeal.utilityScenario || '');
+    setOwnerName(remoteDeal.ownerName || '');
+    setSellerName(remoteDeal.sellerName || '');
+    setPhone(remoteDeal.phone || '');
+    setEmail(remoteDeal.email || '');
+    setInvestor(remoteDeal.investor || '');
+    setFinancing(remoteDeal.financing || '');
+    setClosingAttorney(remoteDeal.closingAttorney || '');
+    setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
+    setClosingAttorneyAddress(remoteDeal.closingAttorneyAddress || '');
+    setCloseDate(remoteDeal.closeDate || '');
+    setContractDate(remoteDeal.contractDate || '');
+    setDealOwner(remoteDeal.dealOwner || '');
+    if (remoteDeal.arv != null) setArv(remoteDeal.arv);
+  }, [deals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Financing scenario state — restored from scenarioData if available
   const sd = deal?.scenarioData || {};
@@ -2718,21 +2746,6 @@ function DealDetailContent({ deal }) {
                 >
                   {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-            }
-          </div>
-          <div className="hidden sm:block w-px h-8 bg-gray-200" />
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Deal Owner</p>
-            {canAdmin
-              ? <select
-                  value={dealOwner}
-                  onChange={e => setDealOwner(e.target.value)}
-                  className="text-sm font-semibold text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  <option value="">Unassigned</option>
-                  {allUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                </select>
-              : <p className="text-sm font-semibold text-[#1a2332]">{dealOwner || 'Unassigned'}</p>
             }
           </div>
           <div className="ml-auto flex items-center gap-2">

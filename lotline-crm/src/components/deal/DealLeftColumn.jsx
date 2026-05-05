@@ -3,7 +3,7 @@
  * "Information" — deal header, quick action row, editable About fields,
  * property quick stats, capital position mini.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
@@ -25,9 +25,30 @@ const DEFAULT_SECTIONS = [
 function EditableField({ label, value, onChange, type = 'text', options, readOnly, mono, prefix }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState(value || '');
+  const [saved, setSaved]     = useState(false);
+  const latestDraft = useRef(value || '');
+  const escapingRef = useRef(false);
 
-  const commit = () => { onChange(draft); setEditing(false); };
-  const cancel = () => { setDraft(value || ''); setEditing(false); };
+  const updateDraft = (v) => { latestDraft.current = v; setDraft(v); };
+
+  const commit = () => {
+    onChange(latestDraft.current);
+    setEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  const cancel = () => {
+    escapingRef.current = true;
+    updateDraft(value || '');
+    setEditing(false);
+    setTimeout(() => { escapingRef.current = false; }, 50);
+  };
+
+  const handleBlur = () => {
+    if (escapingRef.current) return;
+    commit();
+  };
 
   if (readOnly) {
     return (
@@ -49,7 +70,8 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
             ? (
               <select
                 value={draft}
-                onChange={e => setDraft(e.target.value)}
+                onChange={e => updateDraft(e.target.value)}
+                onBlur={handleBlur}
                 autoFocus
                 className="flex-1 text-[13px] text-gray-800 bg-white border border-accent/60 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
@@ -61,17 +83,21 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
               <input
                 type={type}
                 value={draft}
-                onChange={e => setDraft(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') cancel(); }}
+                onChange={e => updateDraft(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') commit();
+                  if (e.key === 'Escape') { escapingRef.current = true; cancel(); }
+                }}
                 autoFocus
                 className={`flex-1 text-[13px] text-gray-800 bg-white border border-accent/60 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/20 ${mono ? 'font-mono' : ''}`}
               />
             )
           }
-          <button onClick={commit} className="p-1 text-green-600 hover:bg-green-50 rounded">
+          <button onMouseDown={e => e.preventDefault()} onClick={commit} className="p-1 text-green-600 hover:bg-green-50 rounded">
             <Check size={13} />
           </button>
-          <button onClick={cancel} className="p-1 text-gray-400 hover:bg-gray-100 rounded">
+          <button onMouseDown={e => e.preventDefault()} onClick={cancel} className="p-1 text-gray-400 hover:bg-gray-100 rounded">
             <X size={13} />
           </button>
         </div>
@@ -82,7 +108,7 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
   return (
     <div
       className="py-1.5 flex items-start justify-between border-b border-gray-50 last:border-0 group cursor-pointer hover:bg-gray-50/80 rounded px-1 -mx-1 transition-colors"
-      onClick={() => { setDraft(value || ''); setEditing(true); }}
+      onClick={() => { updateDraft(value || ''); setEditing(true); }}
     >
       <span className="text-[11px] text-gray-400 font-medium w-28 flex-shrink-0 pt-0.5">{label}</span>
       <div className="flex items-start gap-1.5 flex-1 justify-end min-w-0">
@@ -92,7 +118,10 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
             : <span className="text-gray-300 italic text-[12px]">—</span>
           }
         </span>
-        <Edit3 size={11} className="text-gray-300 group-hover:text-accent opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity mt-0.5" />
+        {saved
+          ? <Check size={11} className="text-green-500 flex-shrink-0 mt-0.5" />
+          : <Edit3 size={11} className="text-gray-300 group-hover:text-accent opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity mt-0.5" />
+        }
       </div>
     </div>
   );
