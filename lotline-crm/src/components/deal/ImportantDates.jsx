@@ -13,7 +13,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 
 // ── Phase / milestone definitions ─────────────────────────────────────────────
-export const PHASES = [
+const PHASES = [
   {
     label: 'Due Diligence',
     keys: [
@@ -52,7 +52,7 @@ export const PHASES = [
   },
 ];
 
-export const ALL_MILESTONE_KEYS = PHASES.flatMap(p => p.keys.map(k => k.key));
+const ALL_MILESTONE_KEYS = PHASES.flatMap(p => p.keys.map(k => k.key));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function dateColor(dateStr) {
