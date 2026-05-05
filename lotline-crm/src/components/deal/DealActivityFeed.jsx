@@ -20,7 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, CheckSquare, Mail, Phone,
-  FileEdit, X, AtSign, BellOff, Bell, MessageSquare,
+  FileEdit, X, AtSign, BellOff, Bell, MessageSquare, Paperclip,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -29,15 +29,16 @@ import MentionChip from './MentionChip';
 
 // ── Event type config ─────────────────────────────────────────────────────────
 const EVENT_CONFIG = {
-  note:         { icon: StickyNote,   color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-  stage_change: { icon: RefreshCw,    color: 'bg-purple-50 text-purple-600 border-purple-200' },
-  created:      { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
-  field_edit:   { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
-  email:        { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
-  call:         { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
-  task:          { icon: CheckSquare,  color: 'bg-green-50 text-green-600 border-green-200'   },
-  task_complete: { icon: CheckCircle2,  color: 'bg-green-50 text-green-600 border-green-200'   },
-  task_update:   { icon: CheckSquare,  color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  note:            { icon: StickyNote,   color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
+  stage_change:    { icon: RefreshCw,    color: 'bg-purple-50 text-purple-600 border-purple-200' },
+  created:         { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
+  field_edit:      { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  email:           { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
+  call:            { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
+  task:            { icon: CheckSquare,  color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_complete:   { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_update:     { icon: CheckSquare,  color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  document_upload: { icon: Paperclip,   color: 'bg-orange-50 text-orange-500 border-orange-200' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -577,7 +578,7 @@ function EventCard({ event, usersById, onDeleteNote, replyProps }) {
         )}
 
         {/* Reply button / inline reply input */}
-        {event.type === 'note' && replyProps && (
+        {(event.type === 'note' || event.type === 'document_upload') && replyProps && (
           <div className="mt-2">
             {isReplying ? (
               <div className="flex gap-2 mt-1">
@@ -793,14 +794,15 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     setReplyMap(newReplyMap);
 
     const dbNoteEvents = dbNotes.filter(n => !n.parent_note_id).map(n => {
-      const isTask = n.note_type && n.note_type !== 'note';
-      const authorName = isTask && n.author_name
+      const isTask = n.note_type && !['note', 'document_upload'].includes(n.note_type);
+      const authorName = (isTask || n.note_type === 'document_upload') && n.author_name
         ? n.author_name
         : (usersById[n.author_id]?.name || 'Unknown');
       const titles = {
-        task:          'Task created',
-        task_complete: 'Task completed',
-        task_update:   'Task updated',
+        task:            'Task created',
+        task_complete:   'Task completed',
+        task_update:     'Task updated',
+        document_upload: 'Document uploaded',
       };
       return {
         id:          `db-note-${n.id}`,

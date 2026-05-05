@@ -229,6 +229,18 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
         .select('*')
         .single();
       if (newDoc) setDocuments(prev => [newDoc, ...prev]);
+
+      // Log to activity feed
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.from('activity_notes').insert({
+          organization_id: activeOrgId,
+          deal_id:         deal.id,
+          author_id:       session.user.id,
+          note_type:       'document_upload',
+          body:            `Uploaded "${file.name}" (${docCategory})`,
+        });
+      }
     }
     setDocUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
