@@ -126,7 +126,7 @@ export default function ImportantDates({ deal, readOnly }) {
       const { data: ms } = await supabase
         .from('deal_milestones')
         .upsert(
-          { deal_id: deal.id, milestone_key: key, eta: value, status: 'in_progress' },
+          { organization_id: orgId, deal_id: deal.id, milestone_key: key, eta: value, status: 'in_progress' },
           { onConflict: 'deal_id,milestone_key' }
         )
         .select('id')
