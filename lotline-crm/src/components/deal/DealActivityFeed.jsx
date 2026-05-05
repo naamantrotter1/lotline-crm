@@ -20,7 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, CheckSquare, Mail, Phone,
-  FileEdit, X, AtSign, BellOff, Bell,
+  FileEdit, X, AtSign, BellOff, Bell, MessageSquare, Paperclip,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -29,15 +29,16 @@ import MentionChip from './MentionChip';
 
 // ── Event type config ─────────────────────────────────────────────────────────
 const EVENT_CONFIG = {
-  note:         { icon: StickyNote,   color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-  stage_change: { icon: RefreshCw,    color: 'bg-purple-50 text-purple-600 border-purple-200' },
-  created:      { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
-  field_edit:   { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
-  email:        { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
-  call:         { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
-  task:          { icon: CheckSquare,  color: 'bg-green-50 text-green-600 border-green-200'   },
-  task_complete: { icon: CheckCircle2,  color: 'bg-green-50 text-green-600 border-green-200'   },
-  task_update:   { icon: CheckSquare,  color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  note:            { icon: StickyNote,   color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
+  stage_change:    { icon: RefreshCw,    color: 'bg-purple-50 text-purple-600 border-purple-200' },
+  created:         { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
+  field_edit:      { icon: FileEdit,     color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  email:           { icon: Mail,         color: 'bg-indigo-50 text-indigo-600 border-indigo-200'},
+  call:            { icon: Phone,        color: 'bg-cyan-50 text-cyan-600 border-cyan-200'      },
+  task:            { icon: CheckSquare,  color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_complete:   { icon: CheckCircle2, color: 'bg-green-50 text-green-600 border-green-200'   },
+  task_update:     { icon: CheckSquare,  color: 'bg-blue-50 text-blue-600 border-blue-200'      },
+  document_upload: { icon: Paperclip,   color: 'bg-orange-50 text-orange-500 border-orange-200' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -488,12 +489,14 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 }
 
 // ── Single event card ─────────────────────────────────────────────────────────
-function EventCard({ event, usersById, onDeleteNote }) {
+function EventCard({ event, usersById, onDeleteNote, replyProps }) {
   const cfg  = EVENT_CONFIG[event.type] || EVENT_CONFIG.note;
   const Icon = cfg.icon;
   const [exp, setExp] = useState(false);
 
   const isLong = (event.body || '').length > 200;
+  const replies = replyProps?.replies || [];
+  const isReplying = replyProps?.replyingTo === event._dbId;
 
   return (
     <div className="flex gap-3" id={`activity-${event.id}`}>
@@ -554,6 +557,68 @@ function EventCard({ event, usersById, onDeleteNote }) {
         {event.meta?.author && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-400">
             <span className="font-medium text-gray-500">{event.meta.author}</span>
+          </div>
+        )}
+
+        {/* Thread replies */}
+        {replies.length > 0 && (
+          <div className="mt-3 border-l-2 border-gray-100 pl-3 space-y-2.5">
+            {replies.map(r => (
+              <div key={r.id}>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-semibold text-gray-700">
+                    {usersById[r.author_id]?.name || r.author_name || 'Unknown'}
+                  </span>
+                  <span className="text-[11px] text-gray-400">{timeAgo(r.created_at)}</span>
+                </div>
+                <p className="text-[12px] text-gray-600 leading-relaxed mt-0.5">{r.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Reply button / inline reply input */}
+        {(event.type === 'note' || event.type === 'document_upload') && replyProps && (
+          <div className="mt-2">
+            {isReplying ? (
+              <div className="flex gap-2 mt-1">
+                <textarea
+                  autoFocus
+                  value={replyProps.replyText}
+                  onChange={e => replyProps.onReplyTextChange(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replyProps.onSubmitReply(event._dbId); }
+                    if (e.key === 'Escape') replyProps.onCancelReply();
+                  }}
+                  placeholder="Write a reply…"
+                  rows={2}
+                  className="flex-1 text-[12px] px-2.5 py-1.5 border border-gray-200 rounded-lg resize-none focus:outline-none focus:border-accent/40 bg-gray-50"
+                />
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => replyProps.onSubmitReply(event._dbId)}
+                    disabled={!replyProps.replyText.trim() || replyProps.replySubmitting}
+                    className="text-[11px] text-white bg-accent px-2.5 py-1 rounded-lg hover:bg-accent/90 disabled:opacity-40 font-semibold"
+                  >
+                    {replyProps.replySubmitting ? '…' : 'Reply'}
+                  </button>
+                  <button
+                    onClick={replyProps.onCancelReply}
+                    className="text-[11px] text-gray-400 px-2.5 py-1 rounded-lg hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => replyProps.onReply(event._dbId)}
+                className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-accent transition-colors mt-0.5"
+              >
+                <MessageSquare size={11} />
+                {replies.length > 0 ? `${replies.length} repl${replies.length === 1 ? 'y' : 'ies'} · Reply` : 'Reply'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -637,14 +702,18 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   const [dbNotes,  setDbNotes]  = useState([]);
   const [legacyNotes, setLegacyNotes] = useState([]);
   const [events,   setEvents]   = useState([]);
+  const [replyMap, setReplyMap] = useState({}); // { [parentNoteId]: reply[] }
   const [usersById, setUsersById] = useState({}); // { [userId]: { name, role, email } }
+  const [replyingTo,     setReplyingTo]     = useState(null); // _dbId of parent note
+  const [replyText,      setReplyText]      = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   // ── Load DB notes ──────────────────────────────────────────────────────────
   const loadDbNotes = useCallback(async () => {
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at')
+      .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id')
       .eq('deal_id', deal.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -714,15 +783,26 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
 
   // ── Build unified event list ───────────────────────────────────────────────
   useEffect(() => {
-    const dbNoteEvents = dbNotes.map(n => {
-      const isTask = n.note_type && n.note_type !== 'note';
-      const authorName = isTask && n.author_name
+    // Build reply map: parentId → replies sorted oldest-first
+    const newReplyMap = dbNotes.reduce((acc, n) => {
+      if (!n.parent_note_id) return acc;
+      if (!acc[n.parent_note_id]) acc[n.parent_note_id] = [];
+      acc[n.parent_note_id].push(n);
+      return acc;
+    }, {});
+    Object.values(newReplyMap).forEach(arr => arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+    setReplyMap(newReplyMap);
+
+    const dbNoteEvents = dbNotes.filter(n => !n.parent_note_id).map(n => {
+      const isTask = n.note_type && !['note', 'document_upload'].includes(n.note_type);
+      const authorName = (isTask || n.note_type === 'document_upload') && n.author_name
         ? n.author_name
         : (usersById[n.author_id]?.name || 'Unknown');
       const titles = {
-        task:          'Task created',
-        task_complete: 'Task completed',
-        task_update:   'Task updated',
+        task:            'Task created',
+        task_complete:   'Task completed',
+        task_update:     'Task updated',
+        document_upload: 'Document uploaded',
       };
       return {
         id:          `db-note-${n.id}`,
@@ -775,6 +855,33 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNoteAdded = (note) => {
     setDbNotes(prev => [note, ...prev]);
+  };
+
+  const handleSubmitReply = async (parentNoteId) => {
+    if (!replyText.trim() || replySubmitting) return;
+    setReplySubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data: reply, error } = await supabase
+        .from('activity_notes')
+        .insert({
+          organization_id: activeOrgId,
+          deal_id:         deal.id,
+          author_id:       session.user.id,
+          body:            replyText.trim(),
+          parent_note_id:  parentNoteId,
+        })
+        .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id')
+        .single();
+      if (!error && reply) {
+        setDbNotes(prev => [...prev, reply]);
+        setReplyText('');
+        setReplyingTo(null);
+      }
+    } finally {
+      setReplySubmitting(false);
+    }
   };
 
   const handleDeleteNote = async (eventId) => {
@@ -850,6 +957,16 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                 event={evt}
                 usersById={usersById}
                 onDeleteNote={!readOnly ? handleDeleteNote : null}
+                replyProps={!readOnly && evt._dbId ? {
+                  replies:         replyMap[evt._dbId] || [],
+                  replyingTo,
+                  replyText,
+                  replySubmitting,
+                  onReply:         (id) => { setReplyingTo(id); setReplyText(''); },
+                  onReplyTextChange: setReplyText,
+                  onSubmitReply:   handleSubmitReply,
+                  onCancelReply:   () => { setReplyingTo(null); setReplyText(''); },
+                } : null}
               />
             ))}
           </div>

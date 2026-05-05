@@ -8,12 +8,13 @@ import {
   Home, UserCircle, FileText, CheckSquare, Scale,
   TrendingDown, ChevronDown, ChevronRight, Plus,
   ExternalLink, Circle, CheckCircle2, Clock, AlertCircle,
-  Mail, Phone, MapPin, Upload, Trash2, Download,
+  Mail, Phone, MapPin, Upload, Trash2, Download, Calendar,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { fetchTasks, deleteTask } from '../../lib/tasksData';
 import { fetchEnvelopes } from '../../lib/esignData';
+import ImportantDates from './ImportantDates';
 
 // ── Collapsible section ───────────────────────────────────────────────────────
 function Section({ icon: Icon, title, count, defaultOpen = false, children, onAdd, addLabel = 'Add' }) {
@@ -229,6 +230,18 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
         .select('*')
         .single();
       if (newDoc) setDocuments(prev => [newDoc, ...prev]);
+
+      // Log to activity feed
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.from('activity_notes').insert({
+          organization_id: activeOrgId,
+          deal_id:         deal.id,
+          author_id:       session.user.id,
+          note_type:       'document_upload',
+          body:            `Uploaded "${file.name}" (${docCategory})`,
+        });
+      }
     }
     setDocUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -417,6 +430,14 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
               </div>
             )
           }
+        </Section>
+
+        {/* Important Dates */}
+        <Section
+          icon={Calendar}
+          title="Important Dates"
+        >
+          <ImportantDates deal={deal} readOnly={readOnly} />
         </Section>
 
         {/* Documents */}
