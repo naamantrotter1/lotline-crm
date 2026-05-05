@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calculator, Clock, FileSignature, FileCheck, User, DollarSign, Calendar, TreePine, SplitSquareHorizontal, Trash2, Plus } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
-import { deleteDeal as syncDeleteDeal, saveDeal } from '../lib/dealsSync';
+import { saveDeal } from '../lib/dealsSync';
 import { useDeals } from '../lib/DealsContext';
 import LiveBadge from '../components/UI/LiveBadge';
 import { useAuth } from '../lib/AuthContext';
@@ -821,15 +821,24 @@ function loadCustomDeals() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
   const navigate = useNavigate();
-  const { deals: customDeals, setDeals: setCustomDeals, realtimeStatus } = useDeals();
+  const { deals: customDeals, setDeals: setCustomDeals, setArchivedDeals, archiveDeal, realtimeStatus } = useDeals();
   const { profile, activeOrgId } = useAuth();
 
   const allDeals = customDeals
     .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived && d.stage !== 'Contract Signed');
 
   const handleDelete = (id) => {
-    syncDeleteDeal(id);
-    setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
+    const deal = customDeals.find(d => String(d.id) === String(id));
+    if (deal) {
+      const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
+      archiveDeal(deal); // sets is_archived: true in Supabase
+      setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
+      setArchivedDeals(prev => {
+        const idx = prev.findIndex(d => String(d.id) === String(id));
+        if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
+        return [...prev, archived];
+      });
+    }
   };
 
   const handleStar = (id, val) => {

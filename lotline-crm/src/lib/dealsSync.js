@@ -396,13 +396,24 @@ export function deleteDeal(dealId, orgId) {
   }
 }
 
-/** Archive a deal */
+/** Archive a deal — only flips is_archived in Supabase, removes from active localStorage */
 export function archiveDeal(deal, orgId) {
-  const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString() };
-  saveDeal(archived, orgId);
-  // Remove from active localStorage list
+  // Remove from active localStorage cache immediately
   const all = lsGet(orgId).filter(d => String(d.id) !== String(deal.id));
   lsSet(all, orgId);
+  // Targeted Supabase update — only send is_archived: true (not the full deal object)
+  if (supabase) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      supabase.from('deals')
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq('id', String(deal.id))
+        .then(({ error }) => {
+          if (error) console.error('[dealsSync] archiveDeal error:', error.message);
+          else console.log('[dealsSync] archiveDeal: archived deal', deal.id);
+        });
+    });
+  }
 }
 
 // ── County Data ───────────────────────────────────────────────────────────────
