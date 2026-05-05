@@ -69,6 +69,11 @@ export default function Analytics() {
     () => activeDeals.filter(d => d.pipeline === 'deal-overview'),
     [activeDeals],
   );
+  // Leaderboard includes both Deal Overview and Sales pipeline deals
+  const leaderboardDeals = useMemo(
+    () => activeDeals.filter(d => d.pipeline === 'deal-overview' || d.pipeline === 'sales'),
+    [activeDeals],
+  );
 
   // ── Primary KPIs ────────────────────────────────────────────────────────────
   const activePipelineCount = activePipelineDeals.length;
@@ -197,7 +202,7 @@ export default function Analytics() {
   // ── Deal Owner Leaderboard ───────────────────────────────────────────────
   const leaderboard = useMemo(() => {
     const owners = {};
-    activePipelineDeals.forEach(d => {
+    leaderboardDeals.forEach(d => {
       const owner = d.dealOwner || 'Unassigned';
       if (!owners[owner]) owners[owner] = { owner, deals: 0, arv: 0, inDD: 0, inDev: 0, inSales: 0 };
       owners[owner].deals++;
@@ -207,7 +212,7 @@ export default function Analytics() {
       if (d.stage === 'Sales' || d.stage === 'Complete') owners[owner].inSales++;
     });
     return Object.values(owners).sort((a, b) => b.deals - a.deals || b.arv - a.arv);
-  }, [activePipelineDeals]);
+  }, [leaderboardDeals]);
 
   // ── Prospects in Land Acq by Owner ──────────────────────────────────────
   const prospectsLeaderboard = useMemo(() => {
@@ -541,7 +546,7 @@ export default function Analytics() {
 
       {/* Deal Owner Modal */}
       {selectedOwner && (() => {
-        const ownerDeals = activePipelineDeals.filter(
+        const ownerDeals = leaderboardDeals.filter(
           d => (d.dealOwner || 'Unassigned') === selectedOwner.owner
         );
         return (
