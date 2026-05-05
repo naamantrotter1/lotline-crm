@@ -100,8 +100,11 @@ function dealToRow(deal) {
     holding_months:          deal.holdingMonths ?? 4,
     holding_per_month:       deal.holdingPerMonth ?? 250,
     manufacturer:            deal.manufacturer || null,
-    is_archived:             deal.isArchived || false,
-    archived_at:             deal.archivedAt || null,
+    // is_archived and archived_at are intentionally omitted here.
+    // Regular saves must NEVER overwrite archive status — archiveDeal() is the
+    // sole owner of these fields and sends a dedicated targeted UPDATE.
+    // Including them here causes a race condition where a queued flushToSupabase
+    // (with isArchived:false) fires after archiveDeal and un-archives the deal.
     lat:                     deal.lat ?? null,
     lng:                     deal.lng ?? null,
     capital_deployed_date:         deal.capitalDeployedDate || null,
