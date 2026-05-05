@@ -32,12 +32,20 @@ export function AuthProvider({ children }) {
         setProfile(data);
         localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
 
-        // Resolve active org: slug, plan, seat_limit + membership role
+        // Resolve active org: slug, plan, seat_limit + membership role.
         // Both queries are awaited in parallel so setLoading(false) only fires
         // after orgRole is known — prevents permission checks running with null role.
-        if (data.active_organization_id) {
-          const orgId = data.active_organization_id;
+        //
+        // Auto-heal: if active_organization_id is null OR points to an org the
+        // user no longer has an active membership in (e.g. accepted invite under
+        // old code that didn't update the profile), fall back to the first active
+        // membership and silently fix the profile. This ensures team users never
+        // get stuck with canEdit=false due to a stale org pointer.
+        let orgId = data.active_organization_id;
+        let org   = null;
+        let memRole = null;
 
+        if (orgId) {
           const [orgResult, memResult] = await Promise.all([
             supabase
               .from('organizations')
@@ -52,14 +60,47 @@ export function AuthProvider({ children }) {
               .eq('status', 'active')
               .maybeSingle(),
           ]);
+          org     = orgResult.data;
+          memRole = memResult.data?.role ?? null;
+        }
 
-          const org = orgResult.data;
-          const mem = memResult.data;
+        // Fall back when active_organization_id is null or has no active membership
+        if (!memRole) {
+          const { data: fallbackMems } = await supabase
+            .from('memberships')
+            .select('organization_id, role')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true })
+            .limit(1);
+
+          if (fallbackMems?.length > 0) {
+            const fallbackOrgId = fallbackMems[0].organization_id;
+            if (fallbackOrgId !== orgId) {
+              // Profile points to wrong org — fix it silently
+              supabase.from('profiles')
+                .update({ active_organization_id: fallbackOrgId })
+                .eq('id', userId)
+                .then(() => {});
+              setProfile(prev => ({ ...prev, active_organization_id: fallbackOrgId }));
+              const { data: fallbackOrg } = await supabase
+                .from('organizations')
+                .select('slug, plan, seat_limit, feature_flags')
+                .eq('id', fallbackOrgId)
+                .single();
+              org   = fallbackOrg;
+              orgId = fallbackOrgId;
+            }
+            memRole = fallbackMems[0].role;
+          }
+        }
+
+        if (orgId && (org || memRole)) {
           setOrgSlug(org?.slug ?? null);
           setOrgPlan(org?.plan ?? null);
           setOrgSeatLimit(org?.seat_limit ?? null);
           setOrgFeatureFlags(org?.feature_flags ?? {});
-          setOrgRole(mem?.role ?? null);
+          setOrgRole(memRole);
         } else {
           setOrgSlug(null);
           setOrgRole(null);
