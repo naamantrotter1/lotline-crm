@@ -1892,7 +1892,7 @@ function DealDetailContent({ deal }) {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
-  const { setDeals, setArchivedDeals } = useDeals();
+  const { deals, setDeals, setArchivedDeals } = useDeals();
   const { profile, activeOrgId, orgSlug } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -2155,6 +2155,39 @@ function DealDetailContent({ deal }) {
   const [deliveryDate, setDeliveryDate] = useState(deal?.deliveryDate || '');
   const [realtor, setRealtor] = useState(deal?.realtor || '');
   const [dateListed, setDateListed] = useState(deal?.dateListed || '');
+
+  // ── Realtime: sync remote updates from other users into local state ───────────
+  // The DealsContext subscription (subscribeToDeals) already fires on UPDATE events,
+  // keeping the `deals` array in context fresh. Here we react to those changes and
+  // push updated field values into local state so this page updates without a refresh.
+  // EditableField manages its own internal `draft` state while editing, so syncing
+  // the parent's value won't disturb a user who is actively typing in a field.
+  useEffect(() => {
+    const remoteDeal = deals.find(d => String(d.id) === String(deal.id));
+    if (!remoteDeal) return;
+    setAddress(remoteDeal.address || '');
+    setCounty(remoteDeal.county || '');
+    setDealState(remoteDeal.state || '');
+    setZip(remoteDeal.zip || '');
+    setAcreage(remoteDeal.acreage?.toString() || '');
+    setParcelId(remoteDeal.parcelId || '');
+    setLeadSource(remoteDeal.leadSource || '');
+    setOwnerType(remoteDeal.ownerType || '');
+    setUtilityScenario(remoteDeal.utilityScenario || '');
+    setOwnerName(remoteDeal.ownerName || '');
+    setSellerName(remoteDeal.sellerName || '');
+    setPhone(remoteDeal.phone || '');
+    setEmail(remoteDeal.email || '');
+    setInvestor(remoteDeal.investor || '');
+    setFinancing(remoteDeal.financing || '');
+    setClosingAttorney(remoteDeal.closingAttorney || '');
+    setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
+    setClosingAttorneyAddress(remoteDeal.closingAttorneyAddress || '');
+    setCloseDate(remoteDeal.closeDate || '');
+    setContractDate(remoteDeal.contractDate || '');
+    setDealOwner(remoteDeal.dealOwner || '');
+    if (remoteDeal.arv != null) setArv(remoteDeal.arv);
+  }, [deals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Financing scenario state — restored from scenarioData if available
   const sd = deal?.scenarioData || {};
