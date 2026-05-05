@@ -152,7 +152,7 @@ function DealModal({ deal, onClose }) {
 
   // Computed
   const totalBuild    = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
-  const sellingCosts  = (arv || 0) * 0.045 + 4000;
+  const sellingCosts  = (arv || 0) * ((deal.sellingCostPct || 4.5) / 100) + 4000;
   const holdingCosts  = (holdingMonths || 4) * (holdingPerMonth || 250);
   const netProfit     = (arv || 0) - totalBuild - sellingCosts - holdingCosts;
   const profitPct     = arv > 0 ? netProfit / arv * 100 : 0;

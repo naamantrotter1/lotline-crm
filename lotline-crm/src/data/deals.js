@@ -68,7 +68,7 @@ export function calcNetProfit(deal, totalActualOverride) {
   const arv = deal.arv || 0;
   const coc = computeCostOfCapital(deal);
 
-  return arv - totalCosts - arv * ((deal.sellingCostPct || 4.5) / 100) - (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250) - coc;
+  return arv - totalCosts - arv * ((deal.sellingCostPct || 4.5) / 100) - 4000 - (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250) - coc;
 }
 
 export const DEAL_OVERVIEW_DEALS = [

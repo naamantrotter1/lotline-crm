@@ -283,7 +283,7 @@ function FinancingScenarioPanel({
   const locDraw = drawAmount || 0;
   const monthlyInterestLoc = locDraw * (interestRate / 100) / 12;
 
-  const sellingCosts = arvVal * 0.045 + 4000;
+  const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
   const holdingCosts = (holdPeriod || 4) * ((deal.holdingPerMonth || 250));
   const netProfitEst = arvVal - allIn - sellingCosts - holdingCosts;
   const profitSplitAmount = netProfitEst * (investorProfitSplitPct / 100);
@@ -796,7 +796,7 @@ function OverviewTab({
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
   const arvVal = arv ?? deal.arv ?? 0;
-  const sellingCosts = arvVal * 0.045 + 4000;
+  const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
   const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
 
   // Financing calculations (computed before netProfit so we can deduct them)
@@ -2462,7 +2462,7 @@ function DealDetailContent({ deal }) {
     ? Number(costSummary.total_actual ?? 0)
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 
-  const sellingCosts = (arv || 0) * 0.045 + 4000;
+  const sellingCosts = (arv || 0) * ((deal.sellingCostPct || 4.5) / 100) + 4000;
   const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
   const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
   const devComplete = devTasks.filter(Boolean).length;
