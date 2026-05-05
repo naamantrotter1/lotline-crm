@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { BarChart2, Loader2, Trophy } from 'lucide-react';
+import { BarChart2, Loader2, Trophy, X } from 'lucide-react';
 import { useDeals } from '../lib/DealsContext';
 import { calcNetProfit } from '../data/deals';
 
@@ -56,7 +57,9 @@ function stageSort(a, b) {
 
 export default function Analytics() {
   const { deals, dealsLoading } = useDeals();
+  const navigate = useNavigate();
   const activeDeals = deals || [];
+  const [selectedOwner, setSelectedOwner] = useState(null);
 
   const landAcqDeals = useMemo(
     () => activeDeals.filter(d => d.pipeline === 'land-acquisition'),
@@ -468,7 +471,11 @@ export default function Analytics() {
                 entry.inSales > 0 && `${entry.inSales} in Sales`,
               ].filter(Boolean);
               return (
-                <div key={entry.owner} className="border border-gray-200 rounded-xl p-4 bg-white">
+                <div
+                  key={entry.owner}
+                  className="border border-gray-200 rounded-xl p-4 bg-white cursor-pointer hover:border-accent hover:shadow-md transition-all"
+                  onClick={() => setSelectedOwner(entry)}
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <span className="text-sm font-semibold text-sidebar">
@@ -531,6 +538,80 @@ export default function Analytics() {
           </table>
         </div>
       )}
+
+      {/* Deal Owner Modal */}
+      {selectedOwner && (() => {
+        const ownerDeals = activePipelineDeals.filter(
+          d => (d.dealOwner || 'Unassigned') === selectedOwner.owner
+        );
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onClick={() => setSelectedOwner(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                <div>
+                  <h2 className="font-semibold text-sidebar text-base">{selectedOwner.owner}</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {ownerDeals.length} deal{ownerDeals.length !== 1 ? 's' : ''} in active pipeline
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedOwner(null)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Deal list */}
+              <div className="overflow-y-auto flex-1">
+                {ownerDeals.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-10">No deals found</p>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                      <tr>
+                        <th className="text-left py-2.5 px-5 text-xs font-semibold text-gray-500 uppercase">Address</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Stage</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">ARV</th>
+                        <th className="text-right py-2.5 px-5 text-xs font-semibold text-gray-500 uppercase">Est. Profit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ownerDeals.map(d => {
+                        const profit = calcNetProfit(d);
+                        return (
+                          <tr
+                            key={d.id}
+                            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                            onClick={() => { setSelectedOwner(null); navigate(`/deal/${d.id}`); }}
+                          >
+                            <td className="py-3 px-5 text-sm font-medium text-accent hover:underline">
+                              {d.address || '(No address)'}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-500">{d.stage || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-right text-gray-600">{fmt$(d.arv || 0)}</td>
+                            <td className={`py-3 px-5 text-sm text-right font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {fmt$(profit)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
