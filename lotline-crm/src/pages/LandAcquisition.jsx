@@ -695,7 +695,6 @@ function DealModal({ deal, onClose }) {
 // ── Deal Card ─────────────────────────────────────────────────────────────────
 function LandCard({ deal, onClick, onDelete, onStar }) {
   const [starred, setStarred] = useState(deal.is_starred ?? false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const netProfit    = calcNetProfit(deal);
   const subdivide    = isSubdividable(deal);
   const landClearing = isLandClearing(deal);
@@ -729,30 +728,13 @@ function LandCard({ deal, onClick, onDelete, onStar }) {
               'bg-gray-100 text-gray-600'
             }`}>{deal.grade}</span>
           )}
-          {!confirmDelete ? (
-            <button
-              onClick={e => { e.stopPropagation(); setConfirmDelete(true); }}
+          <button
+              onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
               className="text-gray-400 hover:text-red-500 transition-colors"
-              title="Delete deal"
+              title="Archive deal"
             >
               <Trash2 size={13} />
             </button>
-          ) : (
-            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
-              >
-                Delete
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); setConfirmDelete(false); }}
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -827,18 +809,30 @@ export default function LandAcquisition() {
   const allDeals = customDeals
     .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived && d.stage !== 'Contract Signed');
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const deal = customDeals.find(d => String(d.id) === String(id));
-    if (deal) {
-      const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
-      archiveDeal(deal); // sets is_archived: true in Supabase
-      setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
-      setArchivedDeals(prev => {
-        const idx = prev.findIndex(d => String(d.id) === String(id));
-        if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
-        return [...prev, archived];
-      });
+    if (!deal) return;
+    const confirmed = window.confirm(`Archive "${deal.address}"? It will be moved to Archived Deals.`);
+    if (!confirmed) return;
+
+    // Optimistic removal from active state
+    setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
+
+    // Targeted Supabase archive — ONLY sets is_archived: true
+    const { error } = await archiveDeal(deal);
+    if (error) {
+      // Rollback on failure
+      setCustomDeals(prev => [...prev, deal]);
+      return;
     }
+
+    // Move to archived state on success
+    const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
+    setArchivedDeals(prev => {
+      const idx = prev.findIndex(d => String(d.id) === String(id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
+      return [...prev, archived];
+    });
   };
 
   const handleStar = (id, val) => {

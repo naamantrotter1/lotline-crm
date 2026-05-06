@@ -412,24 +412,30 @@ export function deleteDeal(dealId, orgId) {
   }
 }
 
-/** Archive a deal — only flips is_archived in Supabase, removes from active localStorage */
-export function archiveDeal(deal, orgId) {
-  // Remove from active localStorage cache immediately
+/** Archive a deal — only flips is_archived in Supabase, removes from active localStorage.
+ *  Returns { error } so callers can detect failure and roll back optimistic UI. */
+export async function archiveDeal(deal, orgId) {
+  // Remove from active localStorage cache immediately (optimistic)
   const all = lsGet(orgId).filter(d => String(d.id) !== String(deal.id));
   lsSet(all, orgId);
-  // Targeted Supabase update — only send is_archived: true (not the full deal object)
-  if (supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return;
-      supabase.from('deals')
-        .update({ is_archived: true, archived_at: new Date().toISOString() })
-        .eq('id', String(deal.id))
-        .then(({ error }) => {
-          if (error) console.error('[dealsSync] archiveDeal error:', error.message);
-          else console.log('[dealsSync] archiveDeal: archived deal', deal.id);
-        });
-    });
+  // Targeted Supabase update — ONLY send is_archived: true, never the full deal object
+  if (!supabase) return { error: null };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { error: null };
+  const { error } = await supabase
+    .from('deals')
+    .update({ is_archived: true, archived_at: new Date().toISOString() })
+    .eq('id', String(deal.id));
+  if (error) {
+    console.error('[dealsSync] archiveDeal error:', error.message);
+    // Restore in LS on failure so the deal isn't silently lost
+    const restored = lsGet(orgId);
+    if (!restored.find(d => String(d.id) === String(deal.id))) restored.push(deal);
+    lsSet(restored, orgId);
+  } else {
+    console.log('[dealsSync] archiveDeal: archived deal', deal.id);
   }
+  return { error };
 }
 
 // ── County Data ───────────────────────────────────────────────────────────────

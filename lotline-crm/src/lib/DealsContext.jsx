@@ -22,6 +22,14 @@ export function DealsProvider({ children }) {
   // The org IDs to query — uses JV scope when hub has partners selected, else own org only
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
+  // On login, clear any stale workaround keys that are no longer needed
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('lotline_deleted_deal_ids_'))
+      .forEach(k => localStorage.removeItem(k));
+  }, [session?.user?.id]);
+
   useEffect(() => {
     // Clear deals and restart whenever session, org, or JV scope changes
     setDeals([]);
