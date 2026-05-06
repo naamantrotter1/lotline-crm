@@ -301,40 +301,17 @@ export async function loadAllDeals(orgIds) {
       };
     });
 
-    // Keep any LS-only deals (created locally but not yet synced to Supabase)
-    // and re-flush them so they eventually land in the DB.
+    // Keep any LS-only deals that were created locally and have never been
+    // synced to Supabase (identified by the absence of organizationId).
+    // Deals that HAVE organizationId were previously loaded from Supabase — if
+    // they're now absent from the active query they were archived/deleted by
+    // someone else and must NOT be re-surfaced.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
-    // Exclude stale partner deals that were cached from a previous broader scope
-    const candidates = lsDeals.filter(d =>
+    const unsynced = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
       !d.isArchived &&
-      (!d.organizationId || String(d.organizationId) === String(orgId))
+      !d.organizationId   // only truly new, never-synced-from-DB deals
     );
-
-    // Verify candidates are truly new deals not yet in Supabase.
-    // Problem: when another user archives a deal, that deal disappears from the
-    // is_archived=false query but stays in this user's localStorage (LS is only
-    // updated when THIS user calls archiveDeal). loadAllDeals would then treat the
-    // stale LS entry as an "unsynced new deal" and re-add it to state on every
-    // refresh. Fix: check if each candidate already exists in Supabase (as
-    // archived or otherwise) — if it does, it's stale, not new.
-    let unsynced = candidates;
-    if (candidates.length > 0) {
-      const { data: existing } = await supabase
-        .from('deals')
-        .select('id')
-        .in('id', candidates.map(d => String(d.id)));
-      const existingIds = new Set((existing || []).map(r => String(r.id)));
-      // Truly new: not in DB at all → safe to re-flush
-      unsynced = candidates.filter(d => !existingIds.has(String(d.id)));
-      // Stale: exists in DB (archived by someone else) → clean from LS silently
-      if (existingIds.size > 0) {
-        const staleIds = new Set(candidates.filter(d => existingIds.has(String(d.id))).map(d => String(d.id)));
-        const cleaned = lsGet(orgId).filter(d => !staleIds.has(String(d.id)));
-        lsSet(cleaned, orgId);
-        console.log('[dealsSync] loadAllDeals: removed', staleIds.size, 'stale LS entries (archived in DB)');
-      }
-    }
 
     if (unsynced.length > 0) {
       console.log('[dealsSync] loadAllDeals: re-flushing', unsynced.length, 'unsynced deals to Supabase');
