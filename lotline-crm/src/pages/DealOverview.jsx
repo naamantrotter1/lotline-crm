@@ -2,8 +2,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Star, User, DollarSign, Calendar, Search, ClipboardList, Hammer, CheckCircle2, TreePine, SplitSquareHorizontal } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { supabase } from '../lib/supabase';
 import { useDeals } from '../lib/DealsContext';
+import { saveDeal } from '../lib/dealsSync';
+import { useAuth } from '../lib/AuthContext';
 import LiveBadge from '../components/UI/LiveBadge';
 import { usePermissions } from '../hooks/usePermissions';
 
@@ -40,18 +41,17 @@ const TAG_STYLES = {
 };
 
 function isSubdividable(deal) {
-  const saved = localStorage.getItem(`lotline_subdivide_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
+  if (deal.subdividable === 'Yes' || deal.subdividable === true) return true;
   return (deal.tags || []).includes('Subdivide');
 }
 
 function isLandClearing(deal) {
-  const saved = localStorage.getItem(`lotline_land_clearing_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
+  if (deal.landClearing === 'Yes' || deal.landClearing === true) return true;
   return (deal.tags || []).includes('Land Clearing');
 }
 
 function DealCard({ deal, onClick, isAgent, onStar }) {
+  const [starred, setStarred] = useState(deal.is_starred ?? false);
   const netProfit    = calcNetProfit(deal);
   const closing      = closingCountdown(deal.closeDate);
   const subdivide    = isSubdividable(deal);
@@ -74,10 +74,10 @@ function DealCard({ deal, onClick, isAgent, onStar }) {
         <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={e => { e.stopPropagation(); onStar?.(deal.id, !(deal.is_starred ?? false)); }}
-            className={`transition-colors ${deal.is_starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
+            onClick={e => { e.stopPropagation(); const next = !starred; setStarred(next); onStar?.(deal.id, next); }}
+            className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
           >
-            <Star size={13} fill={deal.is_starred ? 'currentColor' : 'none'} />
+            <Star size={13} fill={starred ? 'currentColor' : 'none'} />
           </button>
           {deal.grade && (
             <span className={`text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center ${
@@ -169,18 +169,16 @@ export default function DealOverview() {
   const navigate = useNavigate();
   const { deals: customDeals, setDeals, realtimeStatus } = useDeals();
   const { isAgent } = usePermissions();
+  const { activeOrgId } = useAuth();
+
+  const handleStar = (id, val) => {
+    setDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: val } : d));
+    const deal = customDeals.find(d => String(d.id) === String(id));
+    if (deal) saveDeal({ ...deal, is_starred: val }, activeOrgId);
+  };
 
   const allDeals = customDeals
     .filter(d => STAGES.includes(d.stage) && !d.isArchived);
-
-  const handleStar = async (id, val) => {
-    setDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: val } : d));
-    const { error } = await supabase.from('deals').update({ is_starred: val }).eq('id', String(id));
-    if (error) {
-      console.error('Star save failed:', error);
-      setDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: !val } : d));
-    }
-  };
 
   return (
     <div className="space-y-4">

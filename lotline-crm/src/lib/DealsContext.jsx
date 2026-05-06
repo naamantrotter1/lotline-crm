@@ -4,6 +4,7 @@ import { fetchCostSummary } from './costBreakdownData';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 import { useJv } from './JvContext';
+import { runLocalStorageMigration } from './lsMigration';
 
 const DealsContext = createContext(null);
 
@@ -21,6 +22,19 @@ export function DealsProvider({ children }) {
 
   // The org IDs to query — uses JV scope when hub has partners selected, else own org only
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
+
+  // On login, clear any stale workaround keys that are no longer needed
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('lotline_deleted_deal_ids_'))
+      .forEach(k => localStorage.removeItem(k));
+  }, [session?.user?.id]);
+
+  // One-time localStorage → Supabase migration
+  useEffect(() => {
+    if (session && activeOrgId) runLocalStorageMigration(activeOrgId);
+  }, [session?.user?.id, activeOrgId]);
 
   useEffect(() => {
     // Clear deals and restart whenever session, org, or JV scope changes
@@ -55,9 +69,9 @@ export function DealsProvider({ children }) {
 
     // ONE real-time subscription for deal row changes
     const unsub = subscribeToDeals(
-      (updated) => {
+      (updated, eventType) => {
         if (updated.isArchived) {
-          // Move to archived list
+          // Deal was archived by anyone — remove from ALL users' active views immediately
           setArchivedDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
             if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
@@ -68,7 +82,11 @@ export function DealsProvider({ children }) {
           setDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
             if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-            return [...prev, updated];
+            // Only add to active list for INSERT events (new deal created).
+            // For UPDATE events, if the deal isn't already in active state, leave it out —
+            // it may have been archived or hidden and we must not re-surface it.
+            if (eventType === 'INSERT') return [...prev, updated];
+            return prev;
           });
         }
       },

@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Trash2, CheckCircle2, Pencil } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
+import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
-import { fetchCommitmentSummaries, fetchInvestors, ensureInvestorContact } from '../lib/capitalStackData';
-import { archiveInvestor, upsertInvestor, fetchAllInvestors } from '../lib/investorPortalData';
-import { supabase } from '../lib/supabase';
+import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -108,28 +107,6 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
     }));
   const allInvestorDeals = [...staticDeals, ...liveDeals];
 
-  // Compute stats live from context deals when investor has no pre-computed values
-  const rawLiveDeals = contextDeals.filter(d => (d.investor || '').trim() === investor.name.trim());
-  const computedCapital = rawLiveDeals.reduce((s, d) => {
-    const loan = d.scenarioData?.loanAmountOverride || d.totalActual || 0;
-    return s + Number(loan);
-  }, 0);
-  const computedRoiDollars = rawLiveDeals.reduce((s, d) => {
-    const loan = d.scenarioData?.loanAmountOverride || d.totalActual || 0;
-    const rate = (d.scenarioData?.interestRate || 0) / 100;
-    const hold = d.scenarioData?.holdPeriod || 12;
-    const origPct = (d.scenarioData?.originationFeePct || 0) / 100;
-    return s + (loan * rate * (hold / 12)) + (loan * origPct);
-  }, 0);
-  const displayCapital = investor.capitalInvested > 0 ? investor.capitalInvested : computedCapital;
-  const displayRoiDollars = investor.roiDollars > 0 ? investor.roiDollars : Math.round(computedRoiDollars);
-  const displayRoiPct = investor.roiPct > 0 ? investor.roiPct : (displayCapital > 0 ? (displayRoiDollars / displayCapital) * 100 : 0);
-  const avgHold = rawLiveDeals.length > 0
-    ? rawLiveDeals.reduce((s, d) => s + (d.scenarioData?.holdPeriod || 12), 0) / rawLiveDeals.length
-    : 12;
-  const displayAnnRoi = investor.avgAnnualizedRoi > 0 ? investor.avgAnnualizedRoi : (displayCapital > 0 && avgHold > 0 ? (displayRoiPct / avgHold) * 12 : 0);
-  const displayReturns = investor.totalReturns > 0 ? investor.totalReturns : 0;
-
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       {/* Card header */}
@@ -145,7 +122,7 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
             </div>
           </div>
           <span className="bg-accent/10 text-accent text-xs font-bold px-2.5 py-1 rounded-full">
-            {allInvestorDeals.length} {allInvestorDeals.length === 1 ? 'deal' : 'deals'}
+            {investor.activeDeals} {investor.activeDeals === 1 ? 'deal' : 'deals'}
           </span>
         </div>
 
@@ -153,26 +130,26 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{isCash ? 'Total Build Cost' : 'Capital Invested'}</p>
-            <p className="text-base font-bold text-[#1a2332]">${displayCapital.toLocaleString()}</p>
+            <p className="text-base font-bold text-[#1a2332]">${investor.capitalInvested.toLocaleString()}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">Total Returns</p>
-            <p className="text-base font-bold text-gray-400">${displayReturns.toLocaleString()}</p>
+            <p className="text-base font-bold text-gray-400">${investor.totalReturns.toLocaleString()}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="text-center p-2 bg-green-50 rounded-lg">
             <p className="text-xs text-gray-400">ROI %</p>
-            <p className="text-sm font-bold text-green-600">{displayRoiPct.toFixed(2)}%</p>
+            <p className="text-sm font-bold text-green-600">{investor.roiPct.toFixed(2)}%</p>
           </div>
           <div className="text-center p-2 bg-blue-50 rounded-lg">
             <p className="text-xs text-gray-400">ROI</p>
-            <p className="text-sm font-bold text-blue-600">${displayRoiDollars.toLocaleString()}</p>
+            <p className="text-sm font-bold text-blue-600">${investor.roiDollars.toLocaleString()}</p>
           </div>
           <div className="text-center p-2 bg-purple-50 rounded-lg">
             <p className="text-xs text-gray-400">Ann. ROI</p>
-            <p className="text-sm font-bold text-purple-600">{displayAnnRoi.toFixed(2)}%</p>
+            <p className="text-sm font-bold text-purple-600">{investor.avgAnnualizedRoi.toFixed(2)}%</p>
           </div>
         </div>
 
@@ -236,11 +213,7 @@ const FINANCING_SCENARIOS_LIST = [
 function AssignFunderModal({ deal, investors, onAssign, onClose }) {
   const [mode, setMode] = useState('existing');
   const [selected, setSelected] = useState('');
-  const [newFirstName, setNewFirstName] = useState('');
-  const [newLastName, setNewLastName] = useState('');
-  const [newCompany, setNewCompany] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPhone, setNewPhone] = useState('');
+  const [newName, setNewName] = useState('');
 
   // Financing scenario
   const [scenario, setScenario] = useState('');
@@ -276,25 +249,13 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
     }
   };
 
-  const newFunderName = newCompany.trim() || [newFirstName.trim(), newLastName.trim()].filter(Boolean).join(' ');
-  const funderName = mode === 'existing' ? selected : newFunderName;
+  const funderName = mode === 'existing' ? selected : newName.trim();
   const canSubmit = !!funderName;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
     const terms = { scenario, interestRate, originationFeeType, originationFeePct, originationFeeFlat, servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm, holdPeriod, monthlyHoldCost, profitSharePct, capitalDeployedDate, capitalReturnedDate, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct, investorProfitSplitPct };
-    onAssign({
-      funderName,
-      terms,
-      isNew: mode === 'new',
-      newInvestor: mode === 'new' ? {
-        name: funderName,
-        contact: newCompany.trim(),
-        email: newEmail.trim(),
-        phone: newPhone.trim(),
-        standardTerms: '',
-      } : null,
-    });
+    onAssign({ funderName, terms, isNew: mode === 'new', newInvestor: mode === 'new' ? { name: funderName, standardTerms: '' } : null });
   };
 
   // Shared styles matching DealDetail
@@ -343,39 +304,11 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
               </select>
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">First Name</label>
-                  <input type="text" value={newFirstName} onChange={e => setNewFirstName(e.target.value)}
-                    placeholder="Jane"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Last Name</label>
-                  <input type="text" value={newLastName} onChange={e => setNewLastName(e.target.value)}
-                    placeholder="Smith"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
-                <input type="text" value={newCompany} onChange={e => setNewCompany(e.target.value)}
-                  placeholder="Acme Capital LLC"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                  placeholder="jane@example.com"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-                <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)}
-                  placeholder="(555) 000-0000"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Investor Name</label>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="e.g. John Smith Capital"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30" />
             </div>
           )}
 
@@ -485,91 +418,58 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
+  const { jvScope } = useJv();
+  const UNFUNDED = ['Cash', 'None', '', null, undefined];
+  const allUnfunded = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
+
+  // Also include live context deals with no investor not already covered by a static unfunded entry
+  const staticUnfundedAddrs = new Set(allUnfunded.map(d => (d.address || '').trim().toLowerCase()));
+  const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
+  const liveUnfunded = contextDeals
+    .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticUnfundedAddrs.has((d.address || '').trim().toLowerCase()))
+    .map(d => {
+      const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
+      return {
+        address: d.address,
+        pipeline: d.stage,
+        stage: d.stage,
+        lender: '',
+        totalCapital,
+        landCost: d.land || 0,
+        construction: totalCapital - (d.land || 0),
+        arv: d.arv || 0,
+        closeDate: d.closeDate || null,
+        _isLive: true,
+      };
+    });
+
+  const [assignments, setAssignments] = useState({});
+  const [extraInvestors, setExtraInvestors] = useState([]);
   const [modalDeal, setModalDeal] = useState(null);
-  const [dbDeals, setDbDeals] = useState(null); // null = loading
 
-  const fetchNeedsFunding = async () => {
-    if (!orgId || !supabase) return;
-    const { data, error } = await supabase
-      .from('deals')
-      .select('id, address, stage, pipeline, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
-      .eq('organization_id', orgId)
-      .eq('is_archived', false);
-    if (error) { console.error('[NeedsFunding] Supabase query error:', error); return; }
-    const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-    // Deal Overview = has contract_signed_at set OR pipeline is a deal-overview variant
-    const isLandAcq = (row) => {
-      const p = (row.pipeline || '').toLowerCase();
-      return (p === 'land-acquisition' || p === 'land acquisition') && !row.contract_signed_at;
-    };
-    setDbDeals((data || []).filter(row => !isLandAcq(row) && noInv(row.investor)).map(row => ({
-      id: row.id,
-      address: row.address,
-      pipeline: row.stage,
-      stage: row.stage,
-      totalCapital: row.total_capital_required != null
-        ? Number(row.total_capital_required)
-        : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
-      landCost: Number(row.land) || 0,
-      arv: Number(row.arv) || 0,
-      closeDate: row.close_date || null,
-      _sourceId: row.id,
-    })));
-  };
-
-  // Query Supabase directly on mount — bypasses all localStorage caching so every
-  // user always sees the same real-time data. Only Deal Overview deals.
-  useEffect(() => { fetchNeedsFunding(); }, [orgId]);
-
-  // Re-query when an investor is assigned so the deal disappears immediately
-  const refreshDbDeals = () => {
-    if (!orgId || !supabase) return;
-    supabase
-      .from('deals')
-      .select('id, address, stage, pipeline, investor, land, mobile_home, arv, close_date, total_capital_required, is_archived, contract_signed_at')
-      .eq('organization_id', orgId)
-      .eq('is_archived', false)
-      .then(({ data }) => {
-        const noInv = (inv) => !inv || inv.trim() === '' || inv === 'None' || inv === 'Cash';
-        const isLandAcq = (row) => {
-          const p = (row.pipeline || '').toLowerCase();
-          return (p === 'land-acquisition' || p === 'land acquisition') && !row.contract_signed_at;
-        };
-        setDbDeals((data || []).filter(row => !isLandAcq(row) && noInv(row.investor)).map(row => ({
-          id: row.id,
-          address: row.address,
-          pipeline: row.stage,
-          stage: row.stage,
-          totalCapital: row.total_capital_required != null
-            ? Number(row.total_capital_required)
-            : (Number(row.land) || 0) + (Number(row.mobile_home) || 0),
-          landCost: Number(row.land) || 0,
-          arv: Number(row.arv) || 0,
-          closeDate: row.close_date || null,
-          _sourceId: row.id,
-        })));
-      });
-  };
-
-  const deals = dbDeals ?? [];
+  // Once assigned, deal leaves the list
+  const deals = [
+    ...allUnfunded.filter(d => !assignments[d.address]),
+    ...liveUnfunded.filter(d => !assignments[d.address]),
+  ];
   const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
-  const allInvestors = (investorsProp ?? []).filter(i => i.name !== 'Cash' && i.name !== 'None');
+  const baseInvestors = investorsProp ?? loadInvestors(orgId, orgSlug);
+  const allInvestors = [
+    ...baseInvestors.filter(i => i.name !== 'Cash' && i.name !== 'None'),
+    ...extraInvestors.filter(e => !baseInvestors.find(i => i.name === e.name)),
+  ];
 
   const handleAssign = ({ funderName, terms, isNew, newInvestor }) => {
     if (isNew && newInvestor) {
-      upsertInvestor({
-        name:            newInvestor.name,
-        email:           newInvestor.email || '',
-        phone:           newInvestor.phone || '',
-        organization_id: orgId,
-      });
-      ensureInvestorContact(newInvestor.name, orgId);
+      setExtraInvestors(prev => [...prev, newInvestor]);
     }
+    setAssignments(prev => ({ ...prev, [modalDeal.address]: { funder: funderName, terms } }));
 
-    // Save investor directly to the deal record (DB + context)
-    const matchedDeal = contextDeals.find(d => d.id === modalDeal._sourceId);
+    // Write investor + financing back to the deal
+    const norm = a => (a || '').trim().toLowerCase();
+    const matchedDeal = contextDeals.find(d => norm(d.address) === norm(modalDeal.address));
     if (matchedDeal) {
       const updatedDeal = {
         ...matchedDeal,
@@ -581,8 +481,6 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
     }
 
     setModalDeal(null);
-    // Re-query so the assigned deal disappears from the list
-    setTimeout(refreshDbDeals, 500);
   };
 
   return (
@@ -596,11 +494,7 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
         </p>
       </div>
 
-      {dbDeals === null ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
-          Loading…
-        </div>
-      ) : deals.length === 0 ? (
+      {deals.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
           All deals have a funder assigned.
         </div>
@@ -686,461 +580,53 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
 }
 
 // ── Tab: Directory ───────────────────────────────────────────────────────────
-function InviteInvestorModal({ onClose, onInvited, activeOrgId }) {
-  const { profile } = useAuth();
-  const [name,    setName]    = useState('');
-  const [email,   setEmail]   = useState('');
-  const [phone,   setPhone]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
-  const [inviteResult, setInviteResult] = useState(null); // { email, inviteUrl } | null
-
-  const handleInvite = async () => {
-    if (!name.trim() || !email.trim()) { setError('Name and email are required.'); return; }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/inviteInvestor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          organizationId: activeOrgId,
-          invitedByName: profile?.name ?? 'LotLine',
-          appUrl: window.location.origin,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Invite failed');
-      setInviteResult({ email: email.trim(), inviteUrl: data.inviteUrl ?? null });
-      onInvited?.({ name: name.trim(), email: email.trim(), phone: phone.trim() });
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Invite Investor</h2>
-            <p className="text-xs text-gray-500 mt-0.5">They'll receive a magic-link to set their password and access their portal.</p>
-          </div>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded"><X size={18} /></button>
-        </div>
-
-        {inviteResult ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <CheckCircle className="text-green-500" size={36} />
-            <p className="text-sm font-semibold text-gray-800">Invitation sent to {inviteResult.email}</p>
-            <p className="text-xs text-gray-500">They'll receive an email with a link to set their password.</p>
-            {inviteResult.inviteUrl && (
-              <div className="w-full mt-2">
-                <p className="text-xs text-gray-400 mb-1">Activation link (copy if email is delayed):</p>
+function DirectoryTab({ investors }) {
+  const contacts = investors.filter(i => i.contact && i.name !== 'Cash');
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Investor</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {contacts.map(inv => (
+            <tr key={inv.id} className="hover:bg-gray-50">
+              <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={inviteResult.inviteUrl}
-                    className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 truncate"
-                  />
-                  <button
-                    onClick={() => navigator.clipboard.writeText(inviteResult.inviteUrl)}
-                    className="px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-gray-600 whitespace-nowrap"
-                  >Copy</button>
-                </div>
-              </div>
-            )}
-            <button onClick={onClose} className="mt-2 text-xs text-accent hover:underline">Close</button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Nick Gorden"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="nick@example.com"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="(555) 000-0000"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            {error && (
-              <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                <AlertCircle size={13} /> {error}
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
-              <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
-                Cancel
-              </button>
-              <button
-                onClick={handleInvite}
-                disabled={loading}
-                className="flex-1 px-4 py-2.5 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Sending…' : 'Send Invite'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function EditInvestorModal({ investor, onClose, onSaved }) {
-  const [firstName,     setFirstName]     = useState(() => { const parts = (investor.name || '').split(' '); return parts[0] || ''; });
-  const [lastName,      setLastName]      = useState(() => { const parts = (investor.name || '').split(' '); return parts.slice(1).join(' '); });
-  const [company,       setCompany]       = useState(investor.contact || '');
-  const [email,         setEmail]         = useState(investor.email || '');
-  const [phone,         setPhone]         = useState(investor.phone || '');
-  const [standardTerms, setStandardTerms] = useState(investor.standardTerms || '');
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState('');
-
-  const handleSave = async () => {
-    const derivedName = company.trim() || [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
-    if (!derivedName) { setError('Name or company is required.'); return; }
-    setLoading(true);
-    setError('');
-    const updated = {
-      ...investor,
-      name:          derivedName,
-      contact:       company.trim(),
-      email:         email.trim(),
-      phone:         phone.trim(),
-      standardTerms: standardTerms.trim(),
-    };
-    // Persist to Supabase if this investor has a UUID (not a local inv-* id)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(investor.id));
-    if (isUuid) {
-      const { error: err } = await upsertInvestor({
-        id:             investor.id,
-        name:           updated.name,
-        contact:        updated.contact,
-        email:          updated.email,
-        phone:          updated.phone,
-        standard_terms: updated.standardTerms,
-      });
-      if (err) { setError(err.message); setLoading(false); return; }
-    }
-    onSaved(updated);
-    onClose();
-  };
-
-  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30';
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-[#1a2332]">Edit Investor</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-        </div>
-        <div className="px-6 py-5 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">First Name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First" className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Last Name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last" className={inputCls} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Company</label>
-            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Company name" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 000-0000" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Standard Terms</label>
-            <input value={standardTerms} onChange={e => setStandardTerms(e.target.value)} placeholder="e.g. 10% / 12 months" className={inputCls} />
-          </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
-        </div>
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="px-5 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DirectoryTab({ investors, deals, onDelete, onEdit, activeOrgId }) {
-  const { profile } = useAuth();
-  const [confirmId,    setConfirmId]    = useState(null);
-  const [showInvite,   setShowInvite]   = useState(false);
-  const [editInvestor, setEditInvestor] = useState(null);
-  const [sendingId,    setSendingId]    = useState(null);   // id currently sending invite
-  const [sentIds,      setSentIds]      = useState({});     // id → true/errorMsg
-
-  const handleSendInvite = async (inv) => {
-    if (!inv.email) return;
-    setSendingId(inv.id);
-    try {
-      const res = await fetch('/api/inviteInvestor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name:           inv.name,
-          email:          inv.email,
-          phone:          inv.phone || '',
-          organizationId: activeOrgId,
-          invitedByName:  profile?.name ?? 'LotLine',
-          appUrl:         window.location.origin,
-          investorId:     inv.id,  // prevents duplicate investor rows
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Invite failed');
-      setSentIds(prev => ({ ...prev, [inv.id]: true }));
-    } catch (e) {
-      setSentIds(prev => ({ ...prev, [inv.id]: e.message }));
-    } finally {
-      setSendingId(null);
-    }
-  };
-
-  // Compute live deal counts from actual deals data, matched by investor name
-  const dealCountByName = {};
-  (deals || []).forEach(d => {
-    if (d.investor && !d.isArchived) {
-      dealCountByName[d.investor] = (dealCountByName[d.investor] || 0) + 1;
-    }
-  });
-  const allInvestors = investors.filter(i => i.name !== 'Cash');
-
-  // ── Pending self-registered investors (not yet linked to this org) ──────────
-  const [pendingInvestors, setPendingInvestors] = useState([]);
-  const [linkingId, setLinkingId] = useState(null);
-
-  useEffect(() => {
-    if (!activeOrgId) return;
-    supabase
-      .from('investors')
-      .select('id, name, email, created_at')
-      .eq('status', 'self_registered')
-      .is('organization_id', null)
-      .then(({ data }) => setPendingInvestors(data ?? []));
-  }, [activeOrgId]);
-
-  const handleLinkInvestor = async (inv) => {
-    setLinkingId(inv.id);
-    await supabase
-      .from('investors')
-      .update({ organization_id: activeOrgId, status: 'linked' })
-      .eq('id', inv.id);
-    setPendingInvestors(prev => prev.filter(i => i.id !== inv.id));
-    setLinkingId(null);
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* ── Pending self-registered investors banner ── */}
-      {pendingInvestors.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={15} className="text-amber-600 flex-shrink-0" />
-            <p className="text-xs font-semibold text-amber-800">
-              {pendingInvestors.length} pending investor{pendingInvestors.length !== 1 ? 's' : ''} — signed up via the investor portal, not yet linked to your organization
-            </p>
-          </div>
-          <div className="space-y-2">
-            {pendingInvestors.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-100">
-                <div>
-                  <p className="text-xs font-semibold text-gray-800">{inv.name}</p>
-                  {inv.email && <p className="text-[10px] text-gray-400">{inv.email}</p>}
-                </div>
-                <button
-                  onClick={() => handleLinkInvestor(inv)}
-                  disabled={linkingId === inv.id}
-                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
-                >
-                  {linkingId === inv.id ? '…' : 'Link to organization'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Header with Invite button */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">{allInvestors.length} investor{allInvestors.length !== 1 ? 's' : ''}</p>
-        <button
-          onClick={() => setShowInvite(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-lg hover:bg-accent/90 transition-colors"
-        >
-          <UserPlus size={13} /> Invite Investor
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Investor</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Contact</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {allInvestors.map(inv => (
-              <tr key={inv.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                      <Users size={13} className="text-accent" />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-800">{inv.name}</span>
+                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <Users size={13} className="text-accent" />
                   </div>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-700">{inv.contact || '—'}</td>
-                <td className="px-4 py-3">
-                  {inv.email ? (
-                    <a href={`mailto:${inv.email}`} className="text-xs text-accent hover:underline flex items-center gap-1">
-                      <Mail size={11} /> {inv.email}
-                    </a>
-                  ) : <span className="text-xs text-gray-400">—</span>}
-                </td>
-                <td className="px-4 py-3">
-                  {inv.phone ? (
-                    <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
-                      <Phone size={11} /> {formatPhone(inv.phone)}
-                    </a>
-                  ) : <span className="text-xs text-gray-400">—</span>}
-                </td>
-                <td className="px-4 py-3">
-                  {(() => { const n = dealCountByName[inv.name] || 0; return <span className="text-xs font-medium text-accent">{n} {n === 1 ? 'deal' : 'deals'}</span>; })()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {confirmId === inv.id ? (
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-xs text-gray-500">Remove investor?</span>
-                      <button
-                        onClick={() => { onDelete(inv.id); setConfirmId(null); }}
-                        className="text-xs font-semibold text-red-500 hover:text-red-700"
-                      >Yes</button>
-                      <button
-                        onClick={() => setConfirmId(null)}
-                        className="text-xs text-gray-400 hover:text-gray-600"
-                      >Cancel</button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 justify-end">
-                      {/* Portal invite button — status-aware */}
-                      {inv.email && (() => {
-                        const isActive  = inv.status === 'active' || (inv.authUserId && inv.status !== 'revoked');
-                        const isPending = !isActive && (inv.status === 'invited' || inv.authUserId);
-                        if (sentIds[inv.id] === true) {
-                          return (
-                            <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
-                              <CheckCircle size={11} /> Sent
-                            </span>
-                          );
-                        }
-                        if (sentIds[inv.id]) {
-                          return <span className="text-[10px] text-red-500 px-1 max-w-[200px] truncate" title={sentIds[inv.id]}>Failed</span>;
-                        }
-                        if (isActive) {
-                          return (
-                            <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium px-1.5">
-                              <CheckCircle size={11} /> Portal Active
-                            </span>
-                          );
-                        }
-                        return (
-                          <button
-                            onClick={() => handleSendInvite(inv)}
-                            disabled={sendingId === inv.id}
-                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 disabled:opacity-50 transition-colors"
-                            title={isPending ? 'Resend portal invite email' : 'Send portal invite email'}
-                          >
-                            {sendingId === inv.id ? '…' : <><Mail size={10} /> {isPending ? 'Resend Invite' : 'Invite to Portal'}</>}
-                          </button>
-                        );
-                      })()}
-                      <button
-                        onClick={() => setEditInvestor(inv)}
-                        className="p-1 text-gray-300 hover:text-accent transition-colors rounded"
-                        title="Edit investor"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => setConfirmId(inv.id)}
-                        className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
-                        title="Remove investor"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {showInvite && (
-        <InviteInvestorModal
-          activeOrgId={activeOrgId}
-          onClose={() => setShowInvite(false)}
-          onInvited={() => {}}
-        />
-      )}
-
-      {editInvestor && (
-        <EditInvestorModal
-          investor={editInvestor}
-          onClose={() => setEditInvestor(null)}
-          onSaved={(updated) => { onEdit(updated); setEditInvestor(null); }}
-        />
-      )}
+                  <span className="text-xs font-semibold text-gray-800">{inv.name}</span>
+                </div>
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-700">{inv.contact || '—'}</td>
+              <td className="px-4 py-3">
+                {inv.email ? (
+                  <a href={`mailto:${inv.email}`} className="text-xs text-accent hover:underline flex items-center gap-1">
+                    <Mail size={11} /> {inv.email}
+                  </a>
+                ) : <span className="text-xs text-gray-400">—</span>}
+              </td>
+              <td className="px-4 py-3">
+                {inv.phone ? (
+                  <a href={`tel:${inv.phone}`} className="text-xs text-gray-700 flex items-center gap-1 hover:text-accent">
+                    <Phone size={11} /> {formatPhone(inv.phone)}
+                  </a>
+                ) : <span className="text-xs text-gray-400">—</span>}
+              </td>
+              <td className="px-4 py-3">
+                <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1398,41 +884,44 @@ export default function InvestorPortal() {
   const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'commitments', 'directory', 'available-investments'];
   const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'by-investor';
   const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
-  const [investors, setInvestors] = useState([]);
+  const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
 
-  const toInvestorShape = r => ({
-    id: r.id,
-    name: r.name,
-    contact: r.contact || '',
-    email: r.email || '',
-    phone: r.phone || '',
-    type: r.type || 'Private Lender',
-    preferredFinancing: r.preferred_financing || '',
-    standardTerms: r.standard_terms || '',
-    notes: r.notes || '',
-    activeDeals: 0,
-    capitalInvested: 0,
-    totalReturns: 0,
-    roiPct: 0,
-    roiDollars: 0,
-    avgAnnualizedRoi: 0,
-    deals: [],
-    // Portal access fields
-    authUserId: r.auth_user_id ?? null,
-    invitedAt:  r.invited_at  ?? null,
-    status:     r.status      ?? null,
-  });
-
-  // Load investor list from Supabase whenever JV scope changes.
+  // Reload investor list whenever JV scope changes.
+  // Own-org investors always come from localStorage (pre-computed stats).
+  // Partner investors are fetched from Supabase and merged in.
   useEffect(() => {
+    if (jvScope.mode === 'own_only') {
+      setInvestors(loadInvestors(activeOrgId, orgSlug));
+      return;
+    }
+    const ownInvestors = jvScope.includeOwn !== false ? loadInvestors(activeOrgId, orgSlug) : [];
     const partnerIds = scopeIds.filter(id => id !== activeOrgId);
-    const ownIds = activeOrgId ? [activeOrgId] : [];
-    const fetchIds = jvScope.mode === 'own_only' ? ownIds : [...ownIds, ...partnerIds];
-    if (!fetchIds.length) return;
-    fetchInvestors(fetchIds).then(rows => {
-      setInvestors((rows ?? []).map(toInvestorShape));
+    if (partnerIds.length === 0) {
+      setInvestors(ownInvestors);
+      return;
+    }
+    fetchInvestors(partnerIds).then(rows => {
+      const partnerInvestors = rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        contact: r.contact || '',
+        email: r.email || '',
+        phone: r.phone || '',
+        type: r.type || 'Private Lender',
+        preferredFinancing: r.preferred_financing || '',
+        standardTerms: r.standard_terms || '',
+        notes: r.notes || '',
+        activeDeals: 0,
+        capitalInvested: 0,
+        totalReturns: 0,
+        roiPct: 0,
+        roiDollars: 0,
+        avgAnnualizedRoi: 0,
+        deals: [],
+      }));
+      setInvestors([...ownInvestors, ...partnerInvestors]);
     });
-  }, [JSON.stringify(scopeIds), activeOrgId]);
+  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
@@ -1522,24 +1011,7 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} deals={customDeals} activeOrgId={activeOrgId}
-          onDelete={async (id) => {
-            const inv = investors.find(i => i.id === id);
-            // Revoke portal access before archiving
-            if (inv?.authUserId) {
-              await fetch('/api/revokeInvestorAccess', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ investorId: id, authUserId: inv.authUserId }),
-              }).catch(() => {});
-            }
-            await archiveInvestor(id);
-            setInvestors(prev => prev.filter(i => i.id !== id));
-          }}
-          onEdit={(updated) => {
-            setInvestors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
-          }}
-        />}
+        {activeTab === 'directory' && <DirectoryTab investors={investors} />}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
 

@@ -4,7 +4,6 @@ import { X, ChevronRight, Star, MapPin, Archive, Landmark, Handshake, Zap, Calcu
 import { calcNetProfit } from '../data/deals';
 import { GradeBadge, Tag } from '../components/UI/Badge';
 import { saveDeal } from '../lib/dealsSync';
-import { supabase } from '../lib/supabase';
 import { useDeals } from '../lib/DealsContext';
 import LiveBadge from '../components/UI/LiveBadge';
 import { useAuth } from '../lib/AuthContext';
@@ -24,15 +23,13 @@ const TAG_STYLES = {
 };
 
 function isSubdividable(deal) {
-  const saved = localStorage.getItem(`lotline_subdivide_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
-  return (deal.tags || []).includes('Subdivide') || deal.subdividable === true;
+  if (deal.subdividable === 'Yes' || deal.subdividable === true) return true;
+  return (deal.tags || []).includes('Subdivide');
 }
 
 function isLandClearing(deal) {
-  const saved = localStorage.getItem(`lotline_land_clearing_${deal.id}`);
-  if (saved !== null) return saved === 'Yes';
-  return (deal.tags || []).includes('Land Clearing') || deal.landClearing === true;
+  if (deal.landClearing === 'Yes' || deal.landClearing === true) return true;
+  return (deal.tags || []).includes('Land Clearing');
 }
 
 function formatCloseDate(dateStr) {
@@ -152,7 +149,7 @@ function DealModal({ deal, onClose }) {
 
   // Computed
   const totalBuild    = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
-  const sellingCosts  = (arv || 0) * ((deal.sellingCostPct || 4.5) / 100) + 4000;
+  const sellingCosts  = (arv || 0) * 0.045 + 4000;
   const holdingCosts  = (holdingMonths || 4) * (holdingPerMonth || 250);
   const netProfit     = (arv || 0) - totalBuild - sellingCosts - holdingCosts;
   const profitPct     = arv > 0 ? netProfit / arv * 100 : 0;
@@ -697,7 +694,7 @@ function DealModal({ deal, onClose }) {
 
 // ── Deal Card ─────────────────────────────────────────────────────────────────
 function LandCard({ deal, onClick, onDelete, onStar }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [starred, setStarred] = useState(deal.is_starred ?? false);
   const netProfit    = calcNetProfit(deal);
   const subdivide    = isSubdividable(deal);
   const landClearing = isLandClearing(deal);
@@ -719,10 +716,10 @@ function LandCard({ deal, onClick, onDelete, onStar }) {
         <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={e => { e.stopPropagation(); onStar?.(deal.id, !(deal.is_starred ?? false)); }}
-            className={`transition-colors ${deal.is_starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
+            onClick={e => { e.stopPropagation(); const next = !starred; setStarred(next); onStar?.(deal.id, next); }}
+            className={`transition-colors ${starred ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
           >
-            <Star size={13} fill={deal.is_starred ? 'currentColor' : 'none'} />
+            <Star size={13} fill={starred ? 'currentColor' : 'none'} />
           </button>
           {deal.grade && (
             <span className={`text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center ${
@@ -731,30 +728,13 @@ function LandCard({ deal, onClick, onDelete, onStar }) {
               'bg-gray-100 text-gray-600'
             }`}>{deal.grade}</span>
           )}
-          {!confirmDelete ? (
-            <button
-              onClick={e => { e.stopPropagation(); setConfirmDelete(true); }}
+          <button
+              onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
               className="text-gray-400 hover:text-red-500 transition-colors"
-              title="Delete deal"
+              title="Archive deal"
             >
               <Trash2 size={13} />
             </button>
-          ) : (
-            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
-              >
-                Delete
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); setConfirmDelete(false); }}
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -829,27 +809,36 @@ export default function LandAcquisition() {
   const allDeals = customDeals
     .filter(d => d.pipeline === 'land-acquisition' && !d.isArchived && d.stage !== 'Contract Signed');
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const deal = customDeals.find(d => String(d.id) === String(id));
-    if (deal) {
-      const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
-      archiveDeal(deal);
-      setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
-      setArchivedDeals(prev => {
-        const idx = prev.findIndex(d => String(d.id) === String(id));
-        if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
-        return [...prev, archived];
-      });
+    if (!deal) return;
+    const confirmed = window.confirm(`Archive "${deal.address}"? It will be moved to Archived Deals.`);
+    if (!confirmed) return;
+
+    // Optimistic removal from active state
+    setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
+
+    // Targeted Supabase archive — ONLY sets is_archived: true
+    const { error } = await archiveDeal(deal);
+    if (error) {
+      // Rollback on failure
+      setCustomDeals(prev => [...prev, deal]);
+      return;
     }
+
+    // Move to archived state on success
+    const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
+    setArchivedDeals(prev => {
+      const idx = prev.findIndex(d => String(d.id) === String(id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
+      return [...prev, archived];
+    });
   };
 
-  const handleStar = async (id, val) => {
+  const handleStar = (id, val) => {
     setCustomDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: val } : d));
-    const { error } = await supabase.from('deals').update({ is_starred: val }).eq('id', String(id));
-    if (error) {
-      console.error('Star save failed:', error);
-      setCustomDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, is_starred: !val } : d));
-    }
+    const deal = customDeals.find(d => String(d.id) === String(id));
+    if (deal) saveDeal({ ...deal, is_starred: val }, activeOrgId);
   };
 
   const handleAddLead = () => {

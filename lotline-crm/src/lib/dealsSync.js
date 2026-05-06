@@ -100,8 +100,11 @@ function dealToRow(deal) {
     holding_months:          deal.holdingMonths ?? 4,
     holding_per_month:       deal.holdingPerMonth ?? 250,
     manufacturer:            deal.manufacturer || null,
-    is_archived:             deal.isArchived || false,
-    archived_at:             deal.archivedAt || null,
+    // is_archived and archived_at are intentionally omitted here.
+    // Regular saves must NEVER overwrite archive status — archiveDeal() is the
+    // sole owner of these fields and sends a dedicated targeted UPDATE.
+    // Including them here causes a race condition where a queued flushToSupabase
+    // (with isArchived:false) fires after archiveDeal and un-archives the deal.
     lat:                     deal.lat ?? null,
     lng:                     deal.lng ?? null,
     capital_deployed_date:         deal.capitalDeployedDate || null,
@@ -282,6 +285,19 @@ export async function loadAllDeals(orgIds) {
         listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
         // Trust Supabase first, fall back to localStorage, then seeded date
         contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
+        // LS fallbacks for date/closing fields — prevents Supabase returning null
+        // (column missing or write failed) from overwriting a locally-saved value.
+        closeDate:             fromSupabase.closeDate             || fromLS.closeDate             || null,
+        closingDate:           fromSupabase.closingDate           || fromLS.closingDate           || null,
+        deliveryDate:          fromSupabase.deliveryDate          || fromLS.deliveryDate          || null,
+        ddDeadline:            fromSupabase.ddDeadline            || fromLS.ddDeadline            || null,
+        appraisalDate:         fromSupabase.appraisalDate         || fromLS.appraisalDate         || null,
+        financingContingency:  fromSupabase.financingContingency  || fromLS.financingContingency  || null,
+        closingAttorney:       fromSupabase.closingAttorney       || fromLS.closingAttorney       || null,
+        closingAttorneyPhone:  fromSupabase.closingAttorneyPhone  || fromLS.closingAttorneyPhone  || null,
+        closingAttorneyAddress: fromSupabase.closingAttorneyAddress || fromLS.closingAttorneyAddress || null,
+        dealOwner:             fromSupabase.dealOwner             || fromLS.dealOwner             || null,
+        manufacturer:          fromSupabase.manufacturer          || fromLS.manufacturer          || null,
       };
     });
 
@@ -405,38 +421,37 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Soft-delete (archive) a deal by ID — sets is_archived=true in Supabase.
- *  Prefer calling archiveDeal(deal, orgId) when you have the full deal object.
- *  This variant is kept for backwards-compat callers that only have the ID. */
-export function deleteDeal(dealId, orgId) {
-  const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
-  lsSet(all, orgId);
-  if (supabase) {
-    supabase.from('deals')
-      .update({ is_archived: true, archived_at: new Date().toISOString() })
-      .eq('id', String(dealId))
-      .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
-  }
+/** Delete a deal — redirects to archiveDeal so is_archived:true is always
+ *  written to Supabase, preventing cross-user Realtime re-surfacing bugs. */
+export async function deleteDeal(dealId, orgId) {
+  const deal = lsGet(orgId).find(d => String(d.id) === String(dealId));
+  return archiveDeal(deal || { id: dealId }, orgId);
 }
 
-/** Archive a deal — only flips is_archived in Supabase, removes from active localStorage */
-export function archiveDeal(deal, orgId) {
-  // Remove from active localStorage cache immediately
+/** Archive a deal — only flips is_archived in Supabase, removes from active localStorage.
+ *  Returns { error } so callers can detect failure and roll back optimistic UI. */
+export async function archiveDeal(deal, orgId) {
+  // Remove from active localStorage cache immediately (optimistic)
   const all = lsGet(orgId).filter(d => String(d.id) !== String(deal.id));
   lsSet(all, orgId);
-  // Targeted Supabase update — only send is_archived: true (not the full deal object)
-  if (supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return;
-      supabase.from('deals')
-        .update({ is_archived: true, archived_at: new Date().toISOString() })
-        .eq('id', String(deal.id))
-        .then(({ error }) => {
-          if (error) console.error('[dealsSync] archiveDeal error:', error.message);
-          else console.log('[dealsSync] archiveDeal: archived deal', deal.id);
-        });
-    });
+  // Targeted Supabase update — ONLY send is_archived: true, never the full deal object
+  if (!supabase) return { error: null };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { error: null };
+  const { error } = await supabase
+    .from('deals')
+    .update({ is_archived: true, archived_at: new Date().toISOString() })
+    .eq('id', String(deal.id));
+  if (error) {
+    console.error('[dealsSync] archiveDeal error:', error.message);
+    // Restore in LS on failure so the deal isn't silently lost
+    const restored = lsGet(orgId);
+    if (!restored.find(d => String(d.id) === String(deal.id))) restored.push(deal);
+    lsSet(restored, orgId);
+  } else {
+    console.log('[dealsSync] archiveDeal: archived deal', deal.id);
   }
+  return { error };
 }
 
 // ── County Data ───────────────────────────────────────────────────────────────
@@ -502,10 +517,10 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   const channel = supabase
     .channel(channelName)
     .on('postgres_changes', { ...baseOpts, event: 'INSERT' }, payload => {
-      onUpdate(rowToDeal(payload.new));
+      onUpdate(rowToDeal(payload.new), 'INSERT');
     })
     .on('postgres_changes', { ...baseOpts, event: 'UPDATE' }, payload => {
-      onUpdate(rowToDeal(payload.new));
+      onUpdate(rowToDeal(payload.new), 'UPDATE');
     })
     .on('postgres_changes', { ...baseOpts, event: 'DELETE' }, payload => {
       onDelete(String(payload.old.id));
