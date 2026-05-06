@@ -556,14 +556,23 @@ export function saveCountyData(countyName, state, data) {
  * @param {function} onUpdate        - called with the updated deal object on INSERT/UPDATE
  * @param {function} onDelete        - called with the deleted deal id on DELETE
  * @param {object}   [opts]
- * @param {string}   [opts.orgId]    - when provided, server-side filter scopes to this org
- * @param {function} [opts.onStatus] - called with 'connecting'|'live'|'error'|'closed'
+ * @param {string}   [opts.orgId]       - when provided, client-side filter scopes to this org
+ * @param {function} [opts.onStatus]    - called with 'connecting'|'live'|'error'|'closed'
+ * @param {string}   [opts.accessToken] - user JWT; set on the Realtime client before subscribing
+ *                                        to avoid CHANNEL_ERROR from INITIAL_SESSION timing race
  * @returns {function} unsubscribe - call to stop listening
  */
 export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   if (!supabase) return () => {};
 
-  const { orgId, onStatus } = opts;
+  const { orgId, onStatus, accessToken } = opts;
+
+  // Ensure Realtime uses the current user's JWT rather than the anon key.
+  // supabase-js calls supabase.realtime.setAuth() only when the INITIAL_SESSION
+  // event fires, which can happen *after* this subscription is created — causing
+  // a CHANNEL_ERROR because the channel join is authenticated with the anon key.
+  // Explicitly setting the token here eliminates that race.
+  if (accessToken) supabase.realtime.setAuth(accessToken);
 
   // Unique channel name per subscription instance — appending a random suffix
   // prevents CHANNEL_ERROR caused by rapid effect re-runs (e.g. jvLoaded/activeOrgId

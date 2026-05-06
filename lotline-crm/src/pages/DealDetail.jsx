@@ -2183,8 +2183,13 @@ function DealDetailContent({ deal }) {
     setClosingAttorney(remoteDeal.closingAttorney || '');
     setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
     setClosingAttorneyAddress(remoteDeal.closingAttorneyAddress || '');
-    setCloseDate(remoteDeal.closeDate || '');
-    setContractDate(remoteDeal.contractDate || '');
+    // Date fields: only overwrite local state when remote has a non-null value.
+    // A null remote close_date can mean the DB write hasn't committed yet (realtime
+    // race) — accepting null here would clear the field and trigger auto-save,
+    // which would then overwrite localStorage with an empty date and lose the value
+    // on the next hard refresh.
+    if (remoteDeal.closeDate != null) setCloseDate(remoteDeal.closeDate || '');
+    if (remoteDeal.contractDate != null) setContractDate(remoteDeal.contractDate || '');
     setDealOwner(remoteDeal.dealOwner || '');
     if (remoteDeal.arv != null) setArv(remoteDeal.arv);
   }, [deals]); // eslint-disable-line react-hooks/exhaustive-deps

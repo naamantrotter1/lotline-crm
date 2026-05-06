@@ -87,7 +87,26 @@ export function DealsProvider({ children }) {
         } else {
           setDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
-            if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
+            if (idx >= 0) {
+              const existing = prev[idx];
+              // Guard against a race condition where a realtime UPDATE event fires
+              // before the close_date (or other date) write has committed to the DB.
+              // payload.new.close_date can be null even if the user just saved a date —
+              // the DB reflects the old value until the write transaction commits.
+              // Using ?? preserves the existing non-null value in that window while
+              // still allowing legitimate clears (null → null stays null).
+              const merged = {
+                ...updated,
+                closeDate:    updated.closeDate    ?? existing.closeDate,
+                contractDate: updated.contractDate ?? existing.contractDate,
+                closingDate:  updated.closingDate  ?? existing.closingDate,
+                deliveryDate: updated.deliveryDate ?? existing.deliveryDate,
+                ddDeadline:   updated.ddDeadline   ?? existing.ddDeadline,
+                appraisalDate: updated.appraisalDate ?? existing.appraisalDate,
+                financingContingency: updated.financingContingency ?? existing.financingContingency,
+              };
+              const next = [...prev]; next[idx] = merged; return next;
+            }
             // Only add to active list for INSERT events (new deal created).
             // For UPDATE events, if the deal isn't already in active state, leave it out —
             // it may have been archived or hidden and we must not re-surface it.
@@ -103,6 +122,7 @@ export function DealsProvider({ children }) {
       {
         orgId: activeOrgId,
         onStatus: setRealtimeStatus,
+        accessToken: session?.access_token,
       }
     );
 
