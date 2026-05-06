@@ -549,14 +549,12 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
 
   const channel = supabase
     .channel(channelName)
-    .on('postgres_changes', { ...baseOpts, event: 'INSERT' }, payload => {
-      onUpdate(rowToDeal(payload.new), 'INSERT');
-    })
-    .on('postgres_changes', { ...baseOpts, event: 'UPDATE' }, payload => {
-      onUpdate(rowToDeal(payload.new), 'UPDATE');
-    })
-    .on('postgres_changes', { ...baseOpts, event: 'DELETE' }, payload => {
-      onDelete(String(payload.old.id));
+    .on('postgres_changes', { ...baseOpts, event: '*' }, payload => {
+      if (payload.eventType === 'DELETE') {
+        onDelete(String(payload.old.id));
+      } else {
+        onUpdate(rowToDeal(payload.new), payload.eventType);
+      }
     })
     .subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
