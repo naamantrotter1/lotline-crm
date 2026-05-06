@@ -1892,7 +1892,7 @@ function DealDetailContent({ deal }) {
   const location = useLocation();
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
-  const { deals, setDeals, setArchivedDeals } = useDeals();
+  const { deals, setDeals, setArchivedDeals, archiveDeal } = useDeals();
   const { profile, activeOrgId, orgSlug } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -2633,21 +2633,21 @@ function DealDetailContent({ deal }) {
               )}
               {canEdit && (
                 <button
-                  onClick={() => {
-                    const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage };
-                    saveDeal(archived, activeOrgId);
+                  onClick={async () => {
+                    // Optimistic removal
                     setDeals(prev => prev.filter(d => String(d.id) !== String(deal.id)));
+                    const { error } = await archiveDeal({ ...deal, lastStage: stage });
+                    if (error) {
+                      // Rollback on failure
+                      setDeals(prev => [...prev, deal]);
+                      return;
+                    }
+                    const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: stage };
                     setArchivedDeals(prev => {
                       const idx = prev.findIndex(d => String(d.id) === String(deal.id));
                       if (idx >= 0) { const next = [...prev]; next[idx] = archived; return next; }
                       return [...prev, archived];
                     });
-                    // Remove from active localStorage list (org-scoped key)
-                    try {
-                      const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
-                      const all = JSON.parse(localStorage.getItem(lsKey) || '[]');
-                      localStorage.setItem(lsKey, JSON.stringify(all.filter(d => String(d.id) !== String(deal.id))));
-                    } catch {}
                     // Navigate back
                     if (fromInvestorPortal) navigate('/investor-portal');
                     else if (deal.pipeline === 'land-acquisition') navigate('/pipelines/land');

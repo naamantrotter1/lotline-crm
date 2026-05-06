@@ -307,11 +307,30 @@ export async function loadAllDeals(orgIds) {
     // they're now absent from the active query they were archived/deleted by
     // someone else and must NOT be re-surfaced.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
-    const unsynced = lsDeals.filter(d =>
+    const candidates = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
       !d.isArchived &&
       !d.organizationId   // only truly new, never-synced-from-DB deals
     );
+
+    // Exclude candidates that exist in Supabase as archived.
+    // Seeded deals have no organizationId in LS (written statically) so they pass
+    // the !organizationId check, but if they were archived they must NOT be re-flushed.
+    let unsynced = candidates;
+    if (candidates.length > 0) {
+      const { data: archivedInDb } = await supabase
+        .from('deals')
+        .select('id')
+        .in('id', candidates.map(d => String(d.id)))
+        .eq('is_archived', true);
+      if (archivedInDb?.length > 0) {
+        const archivedIds = new Set(archivedInDb.map(r => String(r.id)));
+        // Remove them from LS so they don't resurface on every refresh
+        lsSet(lsGet(orgId).filter(d => !archivedIds.has(String(d.id))), orgId);
+        unsynced = candidates.filter(d => !archivedIds.has(String(d.id)));
+        console.log('[dealsSync] loadAllDeals: removed', archivedIds.size, 'archived stale LS entries');
+      }
+    }
 
     if (unsynced.length > 0) {
       console.log('[dealsSync] loadAllDeals: re-flushing', unsynced.length, 'unsynced deals to Supabase');
