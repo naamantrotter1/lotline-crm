@@ -307,28 +307,44 @@ export async function loadAllDeals(orgIds) {
     // they're now absent from the active query they were archived/deleted by
     // someone else and must NOT be re-surfaced.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
+    // Deals in LS that have organizationId were previously synced from DB — if absent
+    // from the active query they were archived/deleted by someone else. Log them so we
+    // can diagnose re-surfacing bugs.
+    const lsWithOrgId = lsDeals.filter(d => d.organizationId && !supabaseIds.has(String(d.id)));
+    if (lsWithOrgId.length > 0) {
+      console.warn('[dealsSync] loadAllDeals: LS has', lsWithOrgId.length, 'deals with orgId NOT in Supabase active query (archived/deleted elsewhere):', lsWithOrgId.map(d => d.id));
+    }
     const candidates = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
       !d.isArchived &&
       !d.organizationId   // only truly new, never-synced-from-DB deals
     );
+    if (candidates.length > 0) {
+      console.log('[dealsSync] loadAllDeals: LS candidates (unsynced, no orgId):', candidates.map(d => d.id));
+    }
 
     // Exclude candidates that exist in Supabase as archived.
     // Seeded deals have no organizationId in LS (written statically) so they pass
     // the !organizationId check, but if they were archived they must NOT be re-flushed.
     let unsynced = candidates;
     if (candidates.length > 0) {
-      const { data: archivedInDb } = await supabase
+      const { data: archivedInDb, error: archCheckErr } = await supabase
         .from('deals')
         .select('id')
         .in('id', candidates.map(d => String(d.id)))
         .eq('is_archived', true);
+      if (archCheckErr) {
+        console.error('[dealsSync] loadAllDeals: archived-check query error:', archCheckErr.message);
+      }
       if (archivedInDb?.length > 0) {
         const archivedIds = new Set(archivedInDb.map(r => String(r.id)));
         // Remove them from LS so they don't resurface on every refresh
         lsSet(lsGet(orgId).filter(d => !archivedIds.has(String(d.id))), orgId);
         unsynced = candidates.filter(d => !archivedIds.has(String(d.id)));
-        console.log('[dealsSync] loadAllDeals: removed', archivedIds.size, 'archived stale LS entries');
+        console.log('[dealsSync] loadAllDeals: removed', archivedIds.size, 'archived stale LS entries:', [...archivedIds]);
+      }
+      if (unsynced.length > 0) {
+        console.log('[dealsSync] loadAllDeals: unsynced (will flush to DB):', unsynced.map(d => d.id));
       }
     }
 
@@ -470,15 +486,30 @@ export async function archiveDeal(deal, orgId) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { error: null };
   // Call the SECURITY DEFINER RPC — works for all roles (viewer, member, operator, etc.)
+  console.log('[dealsSync] archiveDeal: calling RPC for deal', deal.id, '| orgId:', orgId);
   const { error } = await supabase.rpc('archive_deal', { p_deal_id: String(deal.id) });
   if (error) {
-    console.error('[dealsSync] archiveDeal error:', error.message);
+    console.error('[dealsSync] archiveDeal error:', error.message, '| code:', error.code, '| deal:', deal.id);
     // Restore in LS on failure so the deal isn't silently lost
     const restored = lsGet(orgId);
     if (!restored.find(d => String(d.id) === String(deal.id))) restored.push(deal);
     lsSet(restored, orgId);
   } else {
-    console.log('[dealsSync] archiveDeal: archived deal', deal.id);
+    console.log('[dealsSync] archiveDeal: RPC succeeded for deal', deal.id);
+    // Post-archive verification: confirm is_archived=true is actually in DB
+    const { data: verifyRow } = await supabase
+      .from('deals')
+      .select('id, is_archived')
+      .eq('id', String(deal.id))
+      .maybeSingle();
+    if (verifyRow) {
+      console.log('[dealsSync] archiveDeal: DB verify → is_archived =', verifyRow.is_archived, '| deal:', deal.id);
+      if (!verifyRow.is_archived) {
+        console.error('[dealsSync] archiveDeal: RPC returned no error but deal is NOT archived in DB! deal:', deal.id);
+      }
+    } else {
+      console.warn('[dealsSync] archiveDeal: deal', deal.id, 'not found in DB after RPC (may not have been in DB)');
+    }
   }
   return { error };
 }
