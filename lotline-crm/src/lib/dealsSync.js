@@ -429,19 +429,18 @@ export async function deleteDeal(dealId, orgId) {
 }
 
 /** Archive a deal — only flips is_archived in Supabase, removes from active localStorage.
+ *  Uses the archive_deal RPC (SECURITY DEFINER) so any active org member can archive,
+ *  regardless of their role — bypasses the operator-only UPDATE RLS policy safely.
  *  Returns { error } so callers can detect failure and roll back optimistic UI. */
 export async function archiveDeal(deal, orgId) {
   // Remove from active localStorage cache immediately (optimistic)
   const all = lsGet(orgId).filter(d => String(d.id) !== String(deal.id));
   lsSet(all, orgId);
-  // Targeted Supabase update — ONLY send is_archived: true, never the full deal object
   if (!supabase) return { error: null };
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { error: null };
-  const { error } = await supabase
-    .from('deals')
-    .update({ is_archived: true, archived_at: new Date().toISOString() })
-    .eq('id', String(deal.id));
+  // Call the SECURITY DEFINER RPC — works for all roles (viewer, member, operator, etc.)
+  const { error } = await supabase.rpc('archive_deal', { p_deal_id: String(deal.id) });
   if (error) {
     console.error('[dealsSync] archiveDeal error:', error.message);
     // Restore in LS on failure so the deal isn't silently lost
