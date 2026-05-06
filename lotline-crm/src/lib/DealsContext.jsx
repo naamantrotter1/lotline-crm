@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey } from './dealsSync';
+import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey, removeFromLS } from './dealsSync';
 import { fetchCostSummary } from './costBreakdownData';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
@@ -75,7 +75,9 @@ export function DealsProvider({ children }) {
     const unsub = subscribeToDeals(
       (updated, eventType) => {
         if (updated.isArchived) {
-          // Deal was archived by anyone — remove from ALL users' active views immediately
+          // Deal was archived by anyone — remove from ALL users' active views immediately.
+          // Also clean LS so the stale entry doesn't re-surface on the next loadAllDeals.
+          removeFromLS(updated.id, activeOrgId);
           setArchivedDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
             if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }

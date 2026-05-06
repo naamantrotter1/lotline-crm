@@ -305,11 +305,37 @@ export async function loadAllDeals(orgIds) {
     // and re-flush them so they eventually land in the DB.
     const supabaseIds = new Set(deals.map(d => String(d.id)));
     // Exclude stale partner deals that were cached from a previous broader scope
-    const unsynced = lsDeals.filter(d =>
+    const candidates = lsDeals.filter(d =>
       !supabaseIds.has(String(d.id)) &&
       !d.isArchived &&
       (!d.organizationId || String(d.organizationId) === String(orgId))
     );
+
+    // Verify candidates are truly new deals not yet in Supabase.
+    // Problem: when another user archives a deal, that deal disappears from the
+    // is_archived=false query but stays in this user's localStorage (LS is only
+    // updated when THIS user calls archiveDeal). loadAllDeals would then treat the
+    // stale LS entry as an "unsynced new deal" and re-add it to state on every
+    // refresh. Fix: check if each candidate already exists in Supabase (as
+    // archived or otherwise) — if it does, it's stale, not new.
+    let unsynced = candidates;
+    if (candidates.length > 0) {
+      const { data: existing } = await supabase
+        .from('deals')
+        .select('id')
+        .in('id', candidates.map(d => String(d.id)));
+      const existingIds = new Set((existing || []).map(r => String(r.id)));
+      // Truly new: not in DB at all → safe to re-flush
+      unsynced = candidates.filter(d => !existingIds.has(String(d.id)));
+      // Stale: exists in DB (archived by someone else) → clean from LS silently
+      if (existingIds.size > 0) {
+        const staleIds = new Set(candidates.filter(d => existingIds.has(String(d.id))).map(d => String(d.id)));
+        const cleaned = lsGet(orgId).filter(d => !staleIds.has(String(d.id)));
+        lsSet(cleaned, orgId);
+        console.log('[dealsSync] loadAllDeals: removed', staleIds.size, 'stale LS entries (archived in DB)');
+      }
+    }
+
     if (unsynced.length > 0) {
       console.log('[dealsSync] loadAllDeals: re-flushing', unsynced.length, 'unsynced deals to Supabase');
       unsynced.forEach(d => flushToSupabase(d, orgId));
@@ -347,6 +373,14 @@ export async function loadArchivedDeals(orgId) {
   } catch {
     try { return JSON.parse(localStorage.getItem(archivedKey) || '[]'); } catch { return []; }
   }
+}
+
+/** Remove a single deal from localStorage only (synchronous, no network).
+ *  Called when another user archives a deal via Realtime so the stale LS
+ *  entry doesn't re-surface on the next loadAllDeals. */
+export function removeFromLS(dealId, orgId) {
+  const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
+  lsSet(all, orgId);
 }
 
 /** Write a single deal to localStorage only (synchronous, no network). */
