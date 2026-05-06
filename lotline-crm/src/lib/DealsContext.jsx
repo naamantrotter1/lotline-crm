@@ -37,11 +37,15 @@ export function DealsProvider({ children }) {
   }, [session?.user?.id, activeOrgId]);
 
   useEffect(() => {
-    // Clear deals and restart whenever session, org, or JV scope changes
+    // Clear deals and restart whenever the logged-in user, org, or JV scope changes.
+    // Deliberately depends on session?.user?.id (a stable primitive) rather than the
+    // full session object — the session reference changes on every TOKEN_REFRESHED event
+    // (~hourly) which would otherwise cause loadAllDeals to re-run and re-surface deals
+    // that were optimistically removed from state (but still is_archived=false in DB).
     setDeals([]);
     setArchivedDeals([]);
 
-    if (!session || !activeOrgId || !jvLoaded) {
+    if (!session?.user?.id || !activeOrgId || !jvLoaded) {
       setDealsLoading(false);
       setRealtimeStatus('offline');
       return;
@@ -128,7 +132,7 @@ export function DealsProvider({ children }) {
       unsub();
       if (costChannel) supabase.removeChannel(costChannel);
     };
-  }, [session, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
+  }, [session?.user?.id, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
 
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
