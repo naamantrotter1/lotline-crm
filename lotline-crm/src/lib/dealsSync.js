@@ -565,8 +565,11 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
 
   const { orgId, onStatus } = opts;
 
-  // Unique channel name per org prevents channel collisions across sessions
-  const channelName = orgId ? `deals-realtime-${orgId}` : 'deals-realtime';
+  // Unique channel name per subscription instance — appending a random suffix
+  // prevents CHANNEL_ERROR caused by rapid effect re-runs (e.g. jvLoaded/activeOrgId
+  // changing on mount) creating a new subscription before the previous cleanup
+  // (supabase.removeChannel) completes and frees the channel name.
+  const channelName = `deals-realtime-${orgId || 'anon'}-${Math.random().toString(36).slice(2)}`;
 
   // No server-side filter — they cause CHANNEL_ERROR on postgres_changes subscriptions.
   // We filter by organization_id client-side instead (safe and reliable).
