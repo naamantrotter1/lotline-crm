@@ -402,14 +402,11 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Delete a deal from both localStorage and Supabase */
-export function deleteDeal(dealId, orgId) {
-  const all = lsGet(orgId).filter(d => String(d.id) !== String(dealId));
-  lsSet(all, orgId);
-  if (supabase) {
-    supabase.from('deals').delete().eq('id', String(dealId))
-      .then(({ error }) => { if (error) console.warn('[dealsSync] deleteDeal error:', error.message); });
-  }
+/** Delete a deal — redirects to archiveDeal so is_archived:true is always
+ *  written to Supabase, preventing cross-user Realtime re-surfacing bugs. */
+export async function deleteDeal(dealId, orgId) {
+  const deal = lsGet(orgId).find(d => String(d.id) === String(dealId));
+  return archiveDeal(deal || { id: dealId }, orgId);
 }
 
 /** Archive a deal — only flips is_archived in Supabase, removes from active localStorage.
@@ -501,10 +498,10 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   const channel = supabase
     .channel(channelName)
     .on('postgres_changes', { ...baseOpts, event: 'INSERT' }, payload => {
-      onUpdate(rowToDeal(payload.new));
+      onUpdate(rowToDeal(payload.new), 'INSERT');
     })
     .on('postgres_changes', { ...baseOpts, event: 'UPDATE' }, payload => {
-      onUpdate(rowToDeal(payload.new));
+      onUpdate(rowToDeal(payload.new), 'UPDATE');
     })
     .on('postgres_changes', { ...baseOpts, event: 'DELETE' }, payload => {
       onDelete(String(payload.old.id));

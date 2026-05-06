@@ -69,9 +69,9 @@ export function DealsProvider({ children }) {
 
     // ONE real-time subscription for deal row changes
     const unsub = subscribeToDeals(
-      (updated) => {
+      (updated, eventType) => {
         if (updated.isArchived) {
-          // Move to archived list
+          // Deal was archived by anyone — remove from ALL users' active views immediately
           setArchivedDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
             if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
@@ -82,7 +82,11 @@ export function DealsProvider({ children }) {
           setDeals(prev => {
             const idx = prev.findIndex(d => String(d.id) === String(updated.id));
             if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-            return [...prev, updated];
+            // Only add to active list for INSERT events (new deal created).
+            // For UPDATE events, if the deal isn't already in active state, leave it out —
+            // it may have been archived or hidden and we must not re-surface it.
+            if (eventType === 'INSERT') return [...prev, updated];
+            return prev;
           });
         }
       },
