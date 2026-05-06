@@ -568,9 +568,9 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   // Unique channel name per org prevents channel collisions across sessions
   const channelName = orgId ? `deals-realtime-${orgId}` : 'deals-realtime';
 
-  // Server-side row filter — requires REPLICA IDENTITY FULL (migration 058)
-  const filter = orgId ? `organization_id=eq.${orgId}` : undefined;
-  const baseOpts = { schema: 'public', table: 'deals', ...(filter ? { filter } : {}) };
+  // No server-side filter — they cause CHANNEL_ERROR on postgres_changes subscriptions.
+  // We filter by organization_id client-side instead (safe and reliable).
+  const baseOpts = { schema: 'public', table: 'deals' };
 
   onStatus?.('connecting');
 
@@ -580,6 +580,8 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
       if (payload.eventType === 'DELETE') {
         onDelete(String(payload.old.id));
       } else {
+        // Client-side org filter — ignore events for other orgs
+        if (orgId && payload.new?.organization_id && payload.new.organization_id !== orgId) return;
         onUpdate(rowToDeal(payload.new), payload.eventType);
       }
     })
