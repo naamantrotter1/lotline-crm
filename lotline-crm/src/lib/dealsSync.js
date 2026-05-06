@@ -592,7 +592,7 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
       if (status === 'SUBSCRIBED') {
         onStatus?.('live');
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn('[dealsSync] Realtime subscription error:', status, err?.message);
+        console.warn('[dealsSync] Realtime subscription error:', status, '| err:', JSON.stringify(err), '| channel:', channelName);
         onStatus?.('error');
       } else if (status === 'CLOSED') {
         onStatus?.('closed');
