@@ -4,6 +4,7 @@ import { fetchCostSummary } from './costBreakdownData';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 import { useJv } from './JvContext';
+import { runLocalStorageMigration } from './lsMigration';
 
 const DealsContext = createContext(null);
 
@@ -29,6 +30,11 @@ export function DealsProvider({ children }) {
       .filter(k => k.startsWith('lotline_deleted_deal_ids_'))
       .forEach(k => localStorage.removeItem(k));
   }, [session?.user?.id]);
+
+  // One-time localStorage → Supabase migration
+  useEffect(() => {
+    if (session && activeOrgId) runLocalStorageMigration(activeOrgId);
+  }, [session?.user?.id, activeOrgId]);
 
   useEffect(() => {
     // Clear deals and restart whenever session, org, or JV scope changes

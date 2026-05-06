@@ -75,13 +75,6 @@ const COUNTED_COLUMNS = DEV_COLUMNS.filter(c => !c.tagOnly);
 const TOTAL_SUBTASKS = COUNTED_COLUMNS.reduce((sum, c) => sum + c.subtasks.length, 0);
 
 const DEAL_OVERVIEW_STAGES = new Set(['Development']);
-function loadDevDeals() {
-  const all = (() => { try { return JSON.parse(localStorage.getItem('lotline_custom_deals') || '[]'); } catch { return []; } })();
-  return all
-    .map(d => ({ ...d, stage: localStorage.getItem(`lotline_deal_stage_${d.id}`) || d.stage }))
-    .filter(d => DEAL_OVERVIEW_STAGES.has(d.stage));
-}
-// devDeals now computed inside component from context
 
 const STAGE_ORDER = ['Contract Signed', 'Due Diligence', 'Development'];
 const STAGE_COLORS = {
