@@ -23,11 +23,13 @@ const TAG_STYLES = {
 };
 
 function isSubdividable(deal) {
+  if (deal.subdividable === 'No' || deal.subdividable === false) return false;
   if (deal.subdividable === 'Yes' || deal.subdividable === true) return true;
   return (deal.tags || []).includes('Subdivide');
 }
 
 function isLandClearing(deal) {
+  if (deal.landClearing === 'No' || deal.landClearing === false) return false;
   if (deal.landClearing === 'Yes' || deal.landClearing === true) return true;
   return (deal.tags || []).includes('Land Clearing');
 }
