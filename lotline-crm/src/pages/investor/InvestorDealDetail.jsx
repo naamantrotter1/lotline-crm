@@ -161,55 +161,60 @@ export default function InvestorDealDetail() {
       </div>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-4 md:px-8 space-y-6 mt-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 pb-4">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-        {/* ── 2. Your Position + Deal Metrics ── */}
-        <div className="grid md:grid-cols-2 gap-4 md:gap-6">
-          <YourPosition deal={deal} totalDistributed={totalDistributed} />
-          <DealMetrics  deal={deal} />
-        </div>
+          {/* ── Left: primary content ── */}
+          <div className="flex-1 min-w-0 space-y-6">
+            {/* Milestone Timeline */}
+            <MilestoneTimeline deal={deal} milestones={milestones} />
 
-        {/* ── 3. Milestone Timeline ── */}
-        <MilestoneTimeline deal={deal} milestones={milestones} />
+            {/* Pinned Status Note */}
+            {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
 
-        {/* ── 4. Pinned Status Note ── */}
-        {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
+            {/* Cash Flow */}
+            <CashFlowWidget distributions={distributions} />
 
-        {/* ── 5. Cash Flow ── */}
-        <CashFlowWidget distributions={distributions} />
+            {/* Activity Log */}
+            <ActivityLog dealId={deal.id} />
 
-        {/* ── 6. Inline Documents ── */}
-        <InlineDocs dealId={deal.id} investorId={investor?.id} />
-
-        {/* ── 7. Activity Log ── */}
-        <ActivityLog dealId={deal.id} />
-
-        {/* ── 8. Property Map ── */}
-        <PropertyMap address={deal.address} />
-
-        {/* ── 9. Property Details (demoted) ── */}
-        {[deal.financing, deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
-          <div>
-            <h2 className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
-              Property Details
-            </h2>
-            <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 divide-y divide-gray-100 dark:divide-white/5">
-              {[
-                { label: 'Financing',        value: deal.financing         },
-                { label: 'Utility Scenario', value: deal.utility_scenario  },
-                { label: 'Home Model',       value: deal.home_model        },
-                { label: 'Acreage',          value: deal.acreage ? `${deal.acreage} acres` : null },
-                { label: 'County',           value: deal.county            },
-                { label: 'State',            value: deal.state             },
-              ].filter(r => r.value).map(({ label, value }) => (
-                <div key={label} className="flex justify-between px-5 py-3 text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">{label}</span>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">{value}</span>
-                </div>
-              ))}
-            </div>
+            {/* Inline Documents */}
+            <InlineDocs dealId={deal.id} investorId={investor?.id} />
           </div>
-        )}
+
+          {/* ── Right: sticky sidebar ── */}
+          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-4 lg:sticky lg:top-4">
+            <YourPosition deal={deal} totalDistributed={totalDistributed} />
+            <DealMetrics  deal={deal} />
+
+            {/* Property Map */}
+            <PropertyMap address={deal.address} />
+
+            {/* Property Details */}
+            {[deal.financing, deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
+              <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">
+                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-5 pt-4 pb-2">
+                  Property Details
+                </p>
+                <div className="divide-y divide-gray-100 dark:divide-white/5">
+                  {[
+                    { label: 'Financing',        value: deal.financing         },
+                    { label: 'Utility Scenario', value: deal.utility_scenario  },
+                    { label: 'Home Model',       value: deal.home_model        },
+                    { label: 'Acreage',          value: deal.acreage ? `${deal.acreage} acres` : null },
+                    { label: 'County',           value: deal.county            },
+                    { label: 'State',            value: deal.state             },
+                  ].filter(r => r.value).map(({ label, value }) => (
+                    <div key={label} className="flex justify-between px-5 py-2.5 text-xs">
+                      <span className="text-gray-500 dark:text-gray-400">{label}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

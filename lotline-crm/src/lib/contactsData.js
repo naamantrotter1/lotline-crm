@@ -125,7 +125,7 @@ export async function updateContact(id, { types, ...fields }) {
   return { data: await fetchContact(id) };
 }
 
-/** Delete a contact (hard delete — cascades to contact_types, contact_deals). */
+/** Delete a contact. Requires migration 058_contacts_delete_rls.sql to be run in Supabase. */
 export async function deleteContact(id) {
   if (!supabase) return { error: 'No Supabase client' };
   const { error } = await supabase
@@ -155,9 +155,33 @@ export async function fetchDealContacts(dealId) {
 }
 
 export const LIFECYCLE_STAGES = ['new', 'working', 'qualified', 'customer', 'dormant'];
+// Unified type list — covers both general contact roles and contractor specialties.
+// These values are stored in the contact_types table and are used by ContractorPicker
+// to filter contacts for a specific pipeline stage.
 export const CONTACT_TYPE_OPTIONS = [
-  'Buyer','Closing Attorney','Contractor','Home Dealer','Home Manufacturer',
-  'Investor','Land Clearing Contractor','Land Surveyor','Real Estate Agent',
-  'Septic Installer','Set-up Contractor','Soil Scientist','Well Installer','Wholesaler',
+  // General roles
+  'Buyer',
+  'Investor',
+  'Seller',
+  'Wholesaler',
+  'Home Manufacturer',
+  // Contractor / trade specialties (must match pipeline contractorType strings exactly)
+  'Closing Attorney',
+  'Electrician',
+  'Environmental Consultant',
+  'General Contractor',
+  'HVAC Contractor',
+  'Home Dealer',
+  'Home Setup Contractor',
+  'Land Clearing Contractor',
+  'Land Surveyor',
+  'Permit Expeditor',
+  'Plumbing Contractor',
+  'Real Estate Agent',
+  'Septic Contractor',
+  'Skirting Contractor',
+  'Soil Scientist',
+  'Well Drilling Contractor',
+  'Other',
 ];
 export const LEAD_SOURCES = ['Direct','Referral','Website','Cold Call','Social Media','Email Campaign','Conference','Driving for Dollars','MLS','Wholesaler','Other'];

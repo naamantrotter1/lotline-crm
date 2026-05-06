@@ -13,15 +13,48 @@ import { supabase } from './supabase';
 /**
  * Resolve the investor record linked to the current auth user.
  * Returns { investor, error }.
+ *
+ * Three-step fallback so investors can always be found:
+ *   1. investors.auth_user_id = auth.uid()   (fastest, set on activation)
+ *   2. investor_users join row               (legacy / OAuth path)
+ *   3. investors.email = user.email          (auto-links auth_user_id for future)
  */
 export async function fetchMyInvestor() {
-  const { data, error } = await supabase
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) return { investor: null, error: 'Not authenticated' };
+
+  // Step 1: direct auth_user_id match (primary)
+  const { data: byAuthId } = await supabase
+    .from('investors')
+    .select('*')
+    .eq('auth_user_id', user.id)
+    .eq('is_archived', false)
+    .maybeSingle();
+  if (byAuthId) return { investor: byAuthId, error: null };
+
+  // Step 2: investor_users join table
+  const { data: investorUser } = await supabase
     .from('investor_users')
     .select('investor_id, investors(*)')
-    .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-    .single();
-  if (error) return { investor: null, error };
-  return { investor: data?.investors ?? null, error: null };
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (investorUser?.investors) return { investor: investorUser.investors, error: null };
+
+  // Step 3: match by email, then auto-link
+  const { data: byEmail } = await supabase
+    .from('investors')
+    .select('*')
+    .eq('email', user.email)
+    .eq('is_archived', false)
+    .maybeSingle();
+  if (byEmail) {
+    // Auto-link so future lookups hit Step 1
+    await supabase.from('investors').update({ auth_user_id: user.id }).eq('id', byEmail.id);
+    return { investor: byEmail, error: null };
+  }
+
+  return { investor: null, error: null };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -54,6 +87,59 @@ export async function fetchMyDeals(investorName) {
     total_actual:    byId[d.id]?.total_actual    ?? null,
     total_estimated: byId[d.id]?.total_estimated ?? null,
   }));
+  return { deals, error: null };
+}
+
+/**
+ * Fetch all deals the investor is allocated to, via deal_allocations.
+ * This is the primary deals query for the investor portal — does NOT rely on
+ * the legacy deals.investor text field.
+ * Returns { deals, error } where each deal has an `.allocation` sub-object.
+ */
+export async function fetchMyAllocations(investorId) {
+  if (!investorId) return { deals: [], error: null };
+
+  // Step 1: fetch allocations (avoid PostgREST FK join hint — use two queries instead)
+  const { data: allocations, error: allocErr } = await supabase
+    .from('deal_allocations')
+    .select('id, deal_id, amount, percent_of_deal, position, preferred_return_pct, profit_share_pct, status, funding_status, allocated_at')
+    .eq('investor_id', investorId)
+    .order('allocated_at', { ascending: false });
+
+  if (allocErr) return { deals: [], error: allocErr };
+  if (!allocations?.length) return { deals: [], error: null };
+
+  // Step 2: fetch deals by the IDs from allocations
+  const dealIds = [...new Set(allocations.map(a => a.deal_id).filter(Boolean))];
+  const { data: dealsData, error: dealsErr } = await supabase
+    .from('deals')
+    .select('id, address, county, state, stage, arv, parcel_id, acreage, lead_source, close_date, projected_payout_date, projected_irr, visible_to_investors, created_at, contract_signed_at, min_check_size')
+    .in('id', dealIds);
+
+  if (dealsErr) return { deals: [], error: dealsErr };
+
+  // Step 3: merge allocation data onto each deal
+  const dealMap = Object.fromEntries((dealsData ?? []).map(d => [d.id, d]));
+  const deals = allocations
+    .filter(a => {
+      const deal = dealMap[a.deal_id];
+      return deal != null && deal.visible_to_investors !== false;
+    })
+    .map(a => ({
+      ...dealMap[a.deal_id],
+      allocation: {
+        id:                 a.id,
+        amount:             a.amount,
+        percentOfDeal:      a.percent_of_deal,
+        position:           a.position,
+        preferredReturnPct: a.preferred_return_pct,
+        profitSharePct:     a.profit_share_pct,
+        status:             a.status,
+        fundingStatus:      a.funding_status,
+        allocatedAt:        a.allocated_at,
+      },
+    }));
+
   return { deals, error: null };
 }
 
@@ -391,10 +477,18 @@ export async function logImpersonationEnd(logId) {
 // ─────────────────────────────────────────────────────────────
 
 export async function fetchAllInvestors(orgId) {
-  let q = supabase.from('investors').select('*').order('name');
+  let q = supabase.from('investors').select('*').neq('is_archived', true).order('name');
   if (orgId) q = q.eq('organization_id', orgId);
   const { data, error } = await q;
   return { investors: data ?? [], error };
+}
+
+export async function archiveInvestor(id) {
+  const { error } = await supabase
+    .from('investors')
+    .update({ is_archived: true })
+    .eq('id', id);
+  return { error };
 }
 
 export async function upsertInvestor(investor) {

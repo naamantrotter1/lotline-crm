@@ -5,7 +5,7 @@ import {
   Calendar, ChevronRight, Clock, Download,
 } from 'lucide-react';
 import {
-  fetchMyDeals, fetchMyDistributions, computePortfolioMetrics,
+  fetchMyAllocations, fetchMyDistributions, computePortfolioMetrics,
 } from '../../lib/investorPortalData';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -106,12 +106,34 @@ export default function InvestorHome() {
     if (!investor) return;
     setLoading(true);
     Promise.all([
-      fetchMyDeals(investor.name),
+      fetchMyAllocations(investor.id),
       fetchMyDistributions(investor.id),
     ]).then(([{ deals: d }, { distributions: dist }]) => {
       setDeals(d);
       setDistributions(dist);
-      setMetrics(computePortfolioMetrics(d, dist));
+      // Compute metrics from allocation amounts (not deal construction costs)
+      const totalCapitalDeployed = d.reduce((s, deal) => s + (deal.allocation?.amount ?? 0), 0);
+      const totalReturned = dist.reduce((s, dist) => s + (dist.amount ?? 0), 0);
+      const totalProjectedReturn = d.reduce((s, deal) => {
+        const principal = deal.allocation?.amount ?? 0;
+        const rate = (deal.allocation?.preferredReturnPct ?? 0) / 100;
+        const months = 6; // default hold period
+        return s + (principal * rate * months / 12);
+      }, 0);
+      const totalArv = d.reduce((s, deal) => s + (deal.arv ?? 0), 0);
+      const weightedIrr = totalArv > 0
+        ? d.reduce((s, deal) => s + (deal.projected_irr ?? 0) * ((deal.arv ?? 0) / totalArv), 0)
+        : 0;
+      const future = d
+        .filter(deal => deal.projected_payout_date && new Date(deal.projected_payout_date) > new Date())
+        .sort((a, b) => new Date(a.projected_payout_date) - new Date(b.projected_payout_date));
+      setMetrics({
+        deployed:        totalCapitalDeployed,
+        returned:        totalReturned,
+        unrealizedGain:  totalProjectedReturn,
+        weightedIrr,
+        nextDistribution: future[0]?.projected_payout_date ?? null,
+      });
       setLoading(false);
     });
   }, [investor]);
@@ -193,8 +215,16 @@ export default function InvestorHome() {
             ))}
           </div>
         ) : deals.length === 0 ? (
-          <div className="bg-white dark:bg-[#1c2130] rounded-xl p-8 text-center text-gray-500 dark:text-gray-400 text-sm border border-gray-200 dark:border-white/8">
-            No active deals yet.
+          <div className="bg-white dark:bg-[#1c2130] rounded-xl p-12 text-center border border-gray-200 dark:border-white/8">
+            <p className="text-4xl mb-4">🏠</p>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-2">No deals linked yet</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              Your investment manager hasn't linked any deals to your account yet.<br />
+              Deals you're invested in will appear here once they're assigned.
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Questions? <a href="mailto:naaman@lotlinehomes.com" className="text-accent hover:underline">naaman@lotlinehomes.com</a>
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

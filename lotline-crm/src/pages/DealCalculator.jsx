@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
-import { saveDeal } from '../lib/dealsSync';
+import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
+import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -28,7 +29,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
   const [stage,       setStage]       = useState('New Lead');
   const [saved,       setSaved]       = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!address.trim()) return;
     const id = 'custom-' + Date.now();
 
@@ -81,10 +82,45 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
       staging:      0,
     };
 
-    saveDeal(deal, activeOrgId);
+    saveToLS(deal, activeOrgId);
     onDealSaved(deal);
     setSaved(true);
     setTimeout(onClose, 1200);
+    // Await Supabase insert so the DB trigger fn_seed_deal_cost_lines fires first,
+    // then overwrite the seeded default amounts with the actual calculator values.
+    const { error } = await flushToSupabaseAsync(deal, activeOrgId);
+    if (!error) {
+      await updateCostLinesFromCalc(id, {
+        land_purchase_price:      vals.land,
+        perc_test:                vals.percTest,
+        land_survey:              vals.survey,
+        'environmental_permits.construction_authorization': vals.constructionAuth,
+        'environmental_permits.improvement_permit':         vals.improvementPermit,
+        'environmental_permits.well_permit':                vals.wellPermit,
+        mobile_home:              vals.mobileHome,
+        land_clearing:            vals.landClearing,
+        rough_grade:              vals.roughGrade,
+        septic:                   vals.septic,
+        well:                     vals.water,
+        public_water:             vals.waterSewer,
+        public_sewer:             vals.publicSewer,
+        utility_power_connection: vals.electric,
+        foundation_footers:       vals.footers,
+        set_up:                   vals.setup,
+        trim_out:                 vals.trimOut,
+        hvac:                     vals.hvac,
+        electrical:               vals.electrical,
+        plumbing_connection:      vals.plumbingConnection,
+        septic_connection:        vals.septicConnection,
+        skirting:                 vals.underpinning,
+        driveway:                 vals.driveway,
+        final_grade:              vals.landscaping,
+        decks_installed:          vals.decks,
+        hud_engineer:             vals.hudEngineer,
+        mailbox:                  vals.mailbox,
+        miscellaneous:            vals.mobileTax,
+      });
+    }
   };
 
   return (
@@ -202,24 +238,33 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
 
 const defaultValues = {
   land: 0,
-  mobileHome: 75000,
-  hudEngineer: 500,
   percTest: 2000,
   survey: 1500,
-  footers: 6000,
-  setup: 9000,
-  landClearing: 3500,
-  water: 10000,
+  constructionAuth: 400,
+  improvementPermit: 400,
+  wellPermit: 400,
+  mobileHome: 78000,
+  landClearing: 0,
+  roughGrade: 1500,
   septic: 7500,
+  water: 10000,
+  waterSewer: 0,
+  publicSewer: 0,
   electric: 2000,
+  footers: 1500,
+  setup: 9000,
+  trimOut: 2800,
   hvac: 4500,
-  underpinning: 5650,
-  decks: 3500,
+  electrical: 2500,
+  plumbingConnection: 1750,
+  septicConnection: 1750,
+  underpinning: 4500,
   driveway: 1200,
   landscaping: 2500,
-  waterSewer: 1500,
+  decks: 3500,
+  hudEngineer: 500,
   mailbox: 170,
-  mobileTax: 300,
+  mobileTax: 0,
   arv: 230000,
   sellingCostPct: 4.5,
   holdingPerMonth: 250,
@@ -228,29 +273,72 @@ const defaultValues = {
 };
 
 const costFields = [
-  { key: 'land', label: 'Land' },
-  { key: 'mobileHome', label: 'Mobile Home' },
-  { key: 'hudEngineer', label: 'HUD Engineer' },
-  { key: 'percTest', label: 'Perc Test / Permit' },
-  { key: 'survey', label: 'Land Survey' },
-  { key: 'footers', label: 'Footers' },
-  { key: 'setup', label: 'Setup' },
-  { key: 'landClearing', label: 'Land Clearing' },
-  { key: 'water', label: 'Water' },
-  { key: 'septic', label: 'Septic' },
-  { key: 'electric', label: 'Electric / Power Pole' },
-  { key: 'hvac', label: 'HVAC' },
-  { key: 'underpinning', label: 'Skirting' },
-  { key: 'decks', label: 'Decks Installed' },
-  { key: 'driveway', label: 'Driveway' },
-  { key: 'landscaping', label: 'Landscaping / Final Grading' },
-  { key: 'waterSewer', label: 'Water / Sewer Hook Up' },
-  { key: 'mailbox', label: 'Mailbox' },
-  { key: 'mobileTax', label: 'Mobile Home Tax' },
+  { key: 'land',              label: 'Land / Purchase Price' },
+  { key: 'percTest',          label: 'Perc Test / Permit' },
+  { key: 'survey',            label: 'Land Survey' },
+  { key: 'constructionAuth',  label: 'Construction Authorization' },
+  { key: 'improvementPermit', label: 'Improvement Permit' },
+  { key: 'wellPermit',        label: 'Well Permit' },
+  { key: 'mobileHome',        label: 'Manufactured Home' },
+  { key: 'landClearing',      label: 'Land Clearing' },
+  { key: 'roughGrade',        label: 'Rough Grade' },
+  { key: 'septic',            label: 'Septic' },
+  { key: 'water',             label: 'Well' },
+  { key: 'waterSewer',        label: 'Public Water' },
+  { key: 'publicSewer',       label: 'Public Sewer' },
+  { key: 'electric',          label: 'Utility Power Connection' },
+  { key: 'footers',           label: 'Foundation / Footers' },
+  { key: 'setup',             label: 'Set Up' },
+  { key: 'trimOut',           label: 'Trim Out (Interior / Exterior)' },
+  { key: 'hvac',              label: 'HVAC' },
+  { key: 'electrical',        label: 'Electrical' },
+  { key: 'plumbingConnection',label: 'Plumbing Connection' },
+  { key: 'septicConnection',  label: 'Septic Connection' },
+  { key: 'underpinning',      label: 'Skirting' },
+  { key: 'driveway',          label: 'Driveway' },
+  { key: 'landscaping',       label: 'Final Grade' },
+  { key: 'decks',             label: 'Decks Installed' },
+  { key: 'hudEngineer',       label: 'HUD Engineer' },
+  { key: 'mailbox',           label: 'Mailbox' },
+  { key: 'mobileTax',         label: 'Miscellaneous' },
 ];
 
 function fmt(n) {
   return `$${Number(n || 0).toLocaleString()}`;
+}
+
+/** Number input that displays with commas (e.g. 78,000) but accepts raw numbers while typing. */
+function FmtInput({ value, onChange, className }) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState('');
+  const ref = useRef(null);
+
+  const handleFocus = () => {
+    setDraft(value === 0 ? '' : String(value));
+    setFocused(true);
+  };
+
+  useEffect(() => { if (focused) ref.current?.select(); }, [focused]);
+
+  const handleBlur = () => {
+    setFocused(false);
+    onChange(parseFloat(draft) || 0);
+  };
+
+  return (
+    <input
+      ref={ref}
+      type={focused ? 'number' : 'text'}
+      inputMode="decimal"
+      value={focused ? draft : (value === 0 ? '' : Number(value).toLocaleString())}
+      placeholder="0"
+      onChange={e => setDraft(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.blur(); } }}
+      className={className}
+    />
+  );
 }
 
 export default function DealCalculator() {
@@ -260,7 +348,7 @@ export default function DealCalculator() {
   const { setDeals } = useDeals();
   const { profile, activeOrgId } = useAuth();
 
-  const set = (key, val) => setVals((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }));
+  const set = (key, val) => setVals((prev) => ({ ...prev, [key]: typeof val === 'number' ? val : (parseFloat(val) || 0) }));
 
   const buildCost = costFields.reduce((sum, f) => sum + (vals[f.key] || 0), 0);
   const sellingCosts = vals.arv * (vals.sellingCostPct / 100);
@@ -328,11 +416,9 @@ export default function DealCalculator() {
                   <label className="text-sm text-gray-600 flex-1">{f.label}</label>
                   <div className="relative w-32">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                    <input
-                      type="number"
-                      value={vals[f.key] === 0 ? '' : vals[f.key]}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      placeholder="0"
+                    <FmtInput
+                      value={vals[f.key]}
+                      onChange={(v) => set(f.key, v)}
                       className="w-full pl-5 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
                     />
                   </div>
@@ -345,9 +431,9 @@ export default function DealCalculator() {
             <h3 className="font-semibold text-sidebar mb-3">Deal Parameters</h3>
             <div className="space-y-2">
               {[
-                { key: 'arv', label: 'Estimated ARV', prefix: '$' },
+                { key: 'arv', label: 'Estimated ARV', prefix: '$', fmt: true },
                 { key: 'sellingCostPct', label: 'Selling Costs %', suffix: '%' },
-                { key: 'holdingPerMonth', label: 'Holding Cost / Month', prefix: '$' },
+                { key: 'holdingPerMonth', label: 'Holding Cost / Month', prefix: '$', fmt: true },
                 { key: 'holdingMonths', label: 'Est. Months to Sell', suffix: 'mo' },
                 { key: 'desiredProfitPct', label: 'Desired Profit Margin %', suffix: '%' },
               ].map((f) => (
@@ -355,13 +441,21 @@ export default function DealCalculator() {
                   <label className="text-sm text-gray-600 flex-1">{f.label}</label>
                   <div className="relative w-32">
                     {f.prefix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.prefix}</span>}
-                    <input
-                      type="number"
-                      value={vals[f.key] === 0 ? '' : vals[f.key]}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      placeholder="0"
-                      className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
-                    />
+                    {f.fmt ? (
+                      <FmtInput
+                        value={vals[f.key]}
+                        onChange={(v) => set(f.key, v)}
+                        className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        value={vals[f.key] === 0 ? '' : vals[f.key]}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        placeholder="0"
+                        className={`w-full py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right ${f.prefix ? 'pl-5 pr-2' : 'pl-2 pr-6'}`}
+                      />
+                    )}
                     {f.suffix && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{f.suffix}</span>}
                   </div>
                 </div>

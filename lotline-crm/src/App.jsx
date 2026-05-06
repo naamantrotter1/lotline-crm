@@ -58,6 +58,13 @@ class DealErrorBoundary extends Component {
     return this.props.children;
   }
 }
+import InvestorLanding from './pages/investor/InvestorLanding';
+import InvestorSetup from './pages/investor/InvestorSetup';
+import InvestorLogin from './pages/investor/InvestorLogin';
+import InvestorLoginPage from './pages/investor/InvestorLoginPage';
+import InvestorActivate from './pages/investor/InvestorActivate';
+import InvestorResetPassword from './pages/investor/InvestorResetPassword';
+import InvestorSignup from './pages/investor/InvestorSignup';
 import Landing from './pages/marketing/Landing';
 import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
@@ -74,6 +81,8 @@ import InvestorUpdates from './pages/investor/InvestorUpdates';
 import InvestorDistributions from './pages/investor/InvestorDistributions';
 import InvestorOpportunities from './pages/investor/InvestorOpportunities';
 import InvestorMessages from './pages/investor/InvestorMessages';
+import InvestorPerformance from './pages/investor/InvestorPerformance';
+import InvestorAccount from './pages/investor/InvestorAccount';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -128,7 +137,8 @@ import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
- *  Special case: unauthenticated users hitting exactly "/" see the marketing landing page. */
+ *  "/" always shows the marketing landing page for all users (authenticated or not).
+ *  Authenticated users access the app via /dashboard. */
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -139,10 +149,18 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!session) {
-    if (location.pathname === '/') return <Landing />;
-    return <Navigate to="/login" replace />;
+  // If Supabase redirected an invite/recovery email link to / (because /investor-setup
+  // wasn't in the allowlist), rescue the token by forwarding to the correct page.
+  if (location.pathname === '/') {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const tokenType  = hashParams.get('type');
+    const token      = hashParams.get('access_token');
+    if (token && (tokenType === 'invite' || tokenType === 'recovery')) {
+      return <Navigate to={'/investor-setup' + window.location.hash} replace />;
+    }
+    return <Landing />;
   }
+  if (!session) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -152,33 +170,32 @@ function ProtectedRoute({ children }) {
  * Investors are excluded — they don't own an org.
  */
 function OnboardingGuard({ children }) {
-  const { profile, loading } = useAuth();
+  const { profile, accountType, loading } = useAuth();
   if (loading) return null;
-  const role = profile?.role;
   const needsOnboarding =
     profile &&
-    role !== 'investor' &&
+    accountType !== 'investor' &&
+    profile?.role !== 'investor' &&
     !profile.active_organization_id;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
   return children;
 }
 
-/** Redirects non-admins (owner/admin) to / */
+/** Redirects non-admins (owner/admin) to /dashboard */
 function AdminRoute({ children }) {
   const { can } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (!can('team.view')) return <Navigate to="/" replace />;
+  if (!can('team.view')) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
-/** Agent/Investor landing: redirect to role landing page */
+/** Agent landing: redirect agents to their deal overview */
 function AgentIndexRoute() {
-  const { isAgent, isInvestor } = usePermissions();
+  const { isAgent } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  if (isAgent)    return <Navigate to="/pipelines/deal-overview" replace />;
-  if (isInvestor) return <Navigate to="/investor/home" replace />;
+  if (isAgent) return <Navigate to="/pipelines/deal-overview" replace />;
   return <Dashboard />;
 }
 
@@ -200,16 +217,60 @@ const INVESTOR_PERMITTED = new Set([
   '/investor/documents',
   '/investor/opportunities',
   '/investor/messages',
+  '/investor/performance',
+  '/investor/account',
 ]);
 
-/** Gate for investor-only routes: operators can also enter via impersonation */
-function InvestorRoute({ children }) {
+/**
+ * RequireOperator — blocks investor accounts from all CRM routes.
+ * Investors are redirected to /investor/home.
+ * Agents, operators, admins, owners all pass through.
+ */
+function RequireOperator({ children }) {
+  const { accountType, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (accountType === 'investor') return <Navigate to="/investor/home" replace />;
+  return children;
+}
+
+/**
+ * InvestorPortalEntry — single element for the /investor parent route.
+ * - /investor exactly: always shows the public InvestorLanding (no auth required)
+ * - /investor/* sub-pages: requires auth + investor/operator access
+ */
+function InvestorPortalEntry() {
+  const { session, loading } = useAuth();
+  const { isInvestor, canEdit, canAdmin } = usePermissions();
+  const location = useLocation();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f5f3ee' }}>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  // Public investor landing page
+  if (location.pathname === '/investor') return <InvestorLanding />;
+  // Sub-pages require a session; any authenticated user can access the investor portal
+  // (investors see their own data; operators can impersonate)
+  if (!session) return <Navigate to="/investor" replace />;
+  return <InvestorLayout />;
+}
+
+/** @deprecated kept for reference */
+function RequireInvestor({ children }) {
   const { isInvestor, canEdit, canAdmin } = usePermissions();
   const { loading } = useAuth();
   if (loading) return null;
-  // Operators are allowed in (they may be impersonating)
   if (isInvestor || canEdit || canAdmin) return children;
-  return <Navigate to="/" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
+/** @deprecated Use RequireInvestor — kept for reference only */
+function InvestorRoute({ children }) {
+  return <RequireInvestor>{children}</RequireInvestor>;
 }
 
 /** Redirects agents/investors away from pages they have no access to */
@@ -242,10 +303,22 @@ export default function App() {
             <Route path="/terms"    element={<Terms />} />
             <Route path="/privacy"  element={<Privacy />} />
 
-            {/* Auth routes */}
+            {/* Auth routes — CRM / operator */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Investor account setup — public landing target for invite emails */}
+            <Route path="/investor-setup" element={<InvestorSetup />} />
+
+            {/* Dedicated investor login page (dark theme, linked from marketing) */}
+            <Route path="/investor-login" element={<InvestorLoginPage />} />
+
+            {/* Auth routes — investor portal */}
+            <Route path="/investor/login"  element={<InvestorLogin />} />
+            <Route path="/investor/signup" element={<InvestorSignup />} />
+            <Route path="/investor/activate"       element={<InvestorActivate />} />
+            <Route path="/investor/reset-password" element={<InvestorResetPassword />} />
 
             {/* Invitation acceptance — public but session-aware */}
             <Route path="/invite/:token" element={<AcceptInvite />} />
@@ -274,19 +347,23 @@ export default function App() {
               }
             />
 
-            {/* All other routes require authentication + completed onboarding */}
+            {/* All other routes require authentication + completed onboarding + operator account */}
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Layout />
-                  </OnboardingGuard>
+                  <RequireOperator>
+                    <OnboardingGuard>
+                      <Layout />
+                    </OnboardingGuard>
+                  </RequireOperator>
                 </ProtectedRoute>
               }
             >
               {/* Agents hitting / are redirected to their landing page */}
               <Route index element={<AgentIndexRoute />} />
+              {/* /dashboard is the CRM home for authenticated users (post-login redirect target) */}
+              <Route path="dashboard" element={<AgentIndexRoute />} />
               <Route path="big-rocks"   element={<AgentRoute path="big-rocks"><BigRocks /></AgentRoute>} />
               <Route path="pnl"         element={<AgentRoute path="pnl"><PnlDashboard /></AgentRoute>} />
               <Route path="analytics"   element={<AgentRoute path="analytics"><Analytics /></AgentRoute>} />
@@ -336,17 +413,8 @@ export default function App() {
               />
             </Route>
 
-            {/* ── Investor Portal (dual-mode: investor login or operator impersonation) */}
-            <Route
-              path="/investor"
-              element={
-                <ProtectedRoute>
-                  <InvestorRoute>
-                    <InvestorLayout />
-                  </InvestorRoute>
-                </ProtectedRoute>
-              }
-            >
+            {/* ── Investor Portal (public landing + authenticated sub-pages) */}
+            <Route path="/investor" element={<InvestorPortalEntry />}>
               <Route index element={<Navigate to="/investor/home" replace />} />
               <Route path="home"                  element={<InvestorHome />} />
               <Route path="deals"                 element={<InvestorDeals />} />
@@ -356,6 +424,8 @@ export default function App() {
               <Route path="documents"             element={<InvestorDocuments />} />
               <Route path="opportunities"         element={<InvestorOpportunities />} />
               <Route path="messages"              element={<InvestorMessages />} />
+              <Route path="performance"           element={<InvestorPerformance />} />
+              <Route path="account"               element={<InvestorAccount />} />
             </Route>
           </Routes>
         </DealsProvider>

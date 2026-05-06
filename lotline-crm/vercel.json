@@ -3,6 +3,12 @@
   "framework": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/sync-gmail-replies",
+      "schedule": "*/10 * * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/homes/(.*)",

@@ -71,24 +71,6 @@ export const INVESTORS = [
     notes: 'Funding Marion Rd Lot 10-1 and 10-4.',
     deals: ['deal-009', 'deal-012'],
   },
-  {
-    id: 'inv-005',
-    name: 'Cash',
-    contact: '',
-    email: '',
-    phone: '',
-    type: 'Internal',
-    activeDeals: 1,
-    capitalInvested: 99940,
-    totalReturns: 0,
-    roiPct: 55.44,
-    roiDollars: 55408,
-    avgAnnualizedRoi: 166.32,
-    preferredFinancing: 'Cash',
-    standardTerms: '',
-    notes: 'Cash deal — Swanson Rd, Crouse NC.',
-    deals: ['deal-020'],
-  },
 ];
 
 export const ALL_DEALS_TABLE = [

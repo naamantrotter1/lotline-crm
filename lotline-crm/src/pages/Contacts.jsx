@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Users, Plus, Search, Phone, Mail,
   Tag, User, ChevronDown, X, MoreHorizontal, Trash2,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   fetchContacts, deleteContact, updateContact,
@@ -186,6 +187,7 @@ export default function Contacts() {
   const { activeOrgId } = useAuth();
   const { can } = usePermissions();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [contacts, setContacts]     = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -207,6 +209,29 @@ export default function Contacts() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Real-time: re-fetch when any contact changes so all users stay in sync
+  const contactsChannelId = useRef(Math.random().toString(36).slice(2));
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    const ch = supabase
+      .channel(`contacts-list-${contactsChannelId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [activeOrgId, load]);
+
+  // If navigated here after a delete, immediately remove the contact from state
+  useEffect(() => {
+    const deletedId = location.state?.deletedId;
+    if (deletedId) {
+      setContacts(prev => prev.filter(c => c.id !== deletedId));
+      // Clear the state so it doesn't re-apply on future renders
+      window.history.replaceState({}, '');
+    }
+  }, [location.state?.deletedId]);
+
   // Global keyboard shortcut: C → create contact (when not in an input)
   useEffect(() => {
     const handler = (e) => {
@@ -220,7 +245,8 @@ export default function Contacts() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this contact? This cannot be undone.')) return;
-    await deleteContact(id);
+    const result = await deleteContact(id);
+    if (result?.error) { alert(`Could not delete: ${result.error}`); return; }
     setContacts(prev => prev.filter(c => c.id !== id));
   };
 

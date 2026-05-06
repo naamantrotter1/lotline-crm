@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Briefcase, FileText, Bell, DollarSign,
   TrendingUp, MessageSquare, LogOut, Menu, X,
-  Eye, EyeOff, ChevronDown, Sun, Moon,
+  Eye, EyeOff, ChevronDown, Sun, Moon, BarChart2, UserCircle,
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -11,13 +11,14 @@ import { logImpersonationEnd, fetchAllInvestors, fetchInvestorNamesFromDeals } f
 import NotificationsBell from './investor/NotificationsBell';
 
 const NAV = [
-  { to: '/investor/home',           icon: LayoutDashboard, label: 'Dashboard'       },
+  { to: '/investor/home',           icon: LayoutDashboard, label: 'Overview'        },
   { to: '/investor/deals',          icon: Briefcase,       label: 'My Deals'        },
   { to: '/investor/distributions',  icon: DollarSign,      label: 'Distributions'   },
-  { to: '/investor/updates',        icon: Bell,            label: 'Updates'         },
   { to: '/investor/documents',      icon: FileText,        label: 'Documents'       },
+  { to: '/investor/performance',    icon: BarChart2,       label: 'Performance'     },
   { to: '/investor/opportunities',  icon: TrendingUp,      label: 'Opportunities'   },
   { to: '/investor/messages',       icon: MessageSquare,   label: 'Messages'        },
+  { to: '/investor/account',        icon: UserCircle,      label: 'Account'         },
 ];
 
 export default function InvestorLayout() {
@@ -39,6 +40,18 @@ export default function InvestorLayout() {
 
   const isOperator = canEdit || canAdmin;
 
+  // Guard: investors who haven't completed account setup go back to /investor-setup
+  useEffect(() => {
+    if (
+      !impersonating &&
+      profile &&
+      (profile.role === 'investor' || profile.account_type === 'investor') &&
+      profile.has_set_password === false
+    ) {
+      navigate('/investor-setup', { replace: true });
+    }
+  }, [profile?.has_set_password, profile?.role, profile?.account_type, impersonating]);
+
   // Operators: fetch investor list for the picker — try investors table first, fall back to deal data
   useEffect(() => {
     if (!isOperator || investorRecord) return;
@@ -57,7 +70,7 @@ export default function InvestorLayout() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    navigate('/investor', { replace: true });
   };
 
   const stopImpersonating = async () => {

@@ -13,10 +13,11 @@ import { useAuth } from '../lib/AuthContext';
  * profiles.role ('realtor', 'investor') is kept separately for routing guards.
  */
 export function usePermissions() {
-  const { role, orgRole, can } = useAuth();
+  const { role, accountType, orgRole, can } = useAuth();
 
   const isAgent    = role === 'realtor';
-  const isInvestor = role === 'investor';
+  // isInvestor: check new accountType column first, fall back to legacy role field
+  const isInvestor = accountType === 'investor' || role === 'investor';
 
   return {
     // Fine-grained capability check (preferred for new code)

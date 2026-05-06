@@ -7,26 +7,102 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Settings2, Landmark, Handshake,
+  CalendarPlus, Layers, Settings2, Landmark, Handshake, User,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import CustomizeRecordDrawer from './CustomizeRecordDrawer';
+import ImportantDates from './ImportantDates';
 
 // ── Default section definitions ───────────────────────────────────────────────
 const DEFAULT_SECTIONS = [
-  { key: 'about',          label: 'About this deal', visible: true, order: 0 },
-  { key: 'seller',         label: 'Seller / Owner',  visible: true, order: 1 },
-  { key: 'financing',      label: 'Financing',       visible: true, order: 2 },
-  { key: 'closing',        label: 'Closing',         visible: true, order: 3 },
+  { key: 'about',           label: 'About this deal',  visible: true,  order: 0 },
+  { key: 'seller',          label: 'Seller / Owner',   visible: true,  order: 1 },
+  { key: 'financing',       label: 'Financing',        visible: true,  order: 2 },
+  { key: 'closing',         label: 'Closing',          visible: true,  order: 3 },
+  { key: 'important_dates', label: 'Important Dates',  visible: true,  order: 4 },
+  { key: 'key_contacts',    label: 'Key Contacts',     visible: true,  order: 5 },
+  { key: 'deal_owner',      label: 'Deal Owner',       visible: true,  order: 6 },
 ];
+
+// ── Key Contacts section (reads deal_stage_contacts) ──────────────────────────
+function KeyContacts({ deal }) {
+  const [items, setItems] = useState([]);
+  const instanceId = useRef(Math.random().toString(36).slice(2));
+
+  const load = useCallback(async () => {
+    if (!supabase || !deal?.id) return;
+    const { data } = await supabase
+      .from('deal_stage_contacts')
+      .select('stage_key, contacts(id, first_name, last_name, company, phone, email, contractor_type)')
+      .eq('deal_id', deal.id);
+    if (data) {
+      setItems(data.filter(r => r.contacts).map(r => ({ stageKey: r.stage_key, ...r.contacts })));
+    }
+  }, [deal?.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    const dealId = deal.id;
+    const ch = supabase
+      .channel(`key-contacts-${dealId}-${instanceId.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_stage_contacts' },
+        (payload) => { const row = payload.new || payload.old; if (row?.deal_id === dealId) load(); })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [deal?.id, load]);
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[12px] text-gray-300 italic">
+        No key contacts assigned yet. Add contractors from the pipeline boards.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((c, i) => (
+        <div key={i} className="flex items-start gap-2 border-b border-gray-50 last:border-0 pb-2 last:pb-0">
+          <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User size={10} className="text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-semibold text-gray-800">
+              {`${c.first_name || ''} ${c.last_name || ''}`.trim() || c.company || 'Unknown'}
+            </p>
+            {c.contractor_type && (
+              <p className="text-[10px] text-accent font-medium">{c.contractor_type}</p>
+            )}
+            {c.phone && (
+              <a href={`tel:${c.phone}`}
+                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5">
+                <Phone size={9} />{c.phone}
+              </a>
+            )}
+            {c.email && (
+              <a href={`mailto:${c.email}`}
+                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5 truncate">
+                <Mail size={9} />{c.email}
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Inline editable field ─────────────────────────────────────────────────────
 function EditableField({ label, value, onChange, type = 'text', options, readOnly, mono, prefix }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState(value || '');
   const [saved, setSaved]     = useState(false);
+  // Ref always holds the latest draft so onBlur closures don't go stale (critical for select)
   const latestDraft = useRef(value || '');
+  // Prevents onBlur from committing when Escape was pressed
   const escapingRef = useRef(false);
 
   const updateDraft = (v) => { latestDraft.current = v; setDraft(v); };
@@ -94,6 +170,7 @@ function EditableField({ label, value, onChange, type = 'text', options, readOnl
               />
             )
           }
+          {/* onMouseDown prevents blur from firing before onClick */}
           <button onMouseDown={e => e.preventDefault()} onClick={commit} className="p-1 text-green-600 hover:bg-green-50 rounded">
             <Check size={13} />
           </button>
@@ -195,28 +272,33 @@ const DEFAULT_PROBABILITIES = {
 };
 
 // ── Note compose mini modal ───────────────────────────────────────────────────
-function NoteComposer({ dealId, onClose }) {
-  const { session, activeOrgId } = useAuth();
+function NoteComposer({ dealId, orgId, onClose }) {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
+  const { profile } = useAuth();
   const save = async () => {
     if (!text.trim()) { onClose(); return; }
-    if (supabase && session && activeOrgId) {
-      setSaving(true);
+    setSaving(true);
+    if (supabase && orgId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authorName = profile?.name
+        || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
+        || null;
       await supabase.from('activity_notes').insert({
-        organization_id:    activeOrgId,
-        deal_id:            dealId,
-        author_id:          session.user.id,
-        body:               text.trim(),
+        organization_id: orgId,
+        deal_id: dealId,
+        author_id: session?.user?.id || null,
+        author_name: authorName,
+        body: text.trim(),
         mentioned_user_ids: [],
       });
-      setSaving(false);
     } else {
-      // Fallback: write to localStorage when Supabase unavailable
+      // Fallback: legacy localStorage (no Supabase available)
       const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
       notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
       localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
     }
+    setSaving(false);
     onClose();
   };
   return (
@@ -231,7 +313,7 @@ function NoteComposer({ dealId, onClose }) {
       />
       <div className="flex justify-end gap-2 mt-2">
         <button onClick={onClose} className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100">Cancel</button>
-        <button onClick={save} disabled={saving} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold disabled:opacity-60">{saving ? 'Saving…' : 'Save Note'}</button>
+        <button onClick={save} disabled={saving} className="text-xs text-white bg-accent px-3 py-1.5 rounded-lg hover:bg-accent/90 font-semibold disabled:opacity-50">{saving ? 'Saving…' : 'Save Note'}</button>
       </div>
     </div>
   );
@@ -294,6 +376,8 @@ export default function DealLeftColumn({
   investorList,
   onAddInvestor,
   netProfit,
+  totalCostOfCapital = 0,
+  activeFinancing = null,
   allIn,
   roi,
 
@@ -311,6 +395,8 @@ export default function DealLeftColumn({
   onLogCall,
   onSendEmail,
   onScheduleMeeting,
+  dealOwner, setDealOwner,
+  allUsers = [],
   onApplyFinancing,
   onSubmitDeal,
 }) {
@@ -416,18 +502,34 @@ export default function DealLeftColumn({
       </div>
 
       {/* Quick stats bar */}
-      <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 flex-shrink-0">
-        {[
-          { label: 'All-In',    value: fmt(allIn),     color: 'text-[#1a2332]'  },
-          { label: 'ARV',       value: fmt(arv),       color: 'text-[#1a2332]'  },
-          { label: 'Net Profit',value: fmt(netProfit), color: netProfit > 0 ? 'text-green-600' : netProfit < 0 ? 'text-red-500' : 'text-gray-400' },
-        ].map(s => (
-          <div key={s.label} className="py-2.5 px-2 text-center">
-            <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">{s.label}</p>
-            <p className={`text-[13px] font-bold ${s.color} leading-none`}>{s.value}</p>
+      {(() => {
+        const isHardMoneyActive = activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)';
+        const profitColor = netProfit > 0 ? 'text-green-600' : netProfit < 0 ? 'text-red-500' : 'text-gray-400';
+        const tooltip = isHardMoneyActive
+          ? `ARV ${fmt(arv)} − All-In ${fmt(allIn)} − Cost of Capital ${fmt(totalCostOfCapital)}`
+          : null;
+        return (
+          <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 flex-shrink-0">
+            {[
+              { label: 'All-In', value: fmt(allIn), color: 'text-[#1a2332]' },
+              { label: 'ARV',    value: fmt(arv),   color: 'text-[#1a2332]' },
+            ].map(s => (
+              <div key={s.label} className="py-2.5 px-2 text-center">
+                <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">{s.label}</p>
+                <p className={`text-[13px] font-bold ${s.color} leading-none`}>{s.value}</p>
+              </div>
+            ))}
+            <div className="py-2.5 px-2 text-center" title={tooltip || undefined}>
+              <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">Net Profit</p>
+              <p className={`text-[13px] font-bold ${profitColor} leading-none`}>{fmt(netProfit)}</p>
+              {isHardMoneyActive && (
+                <p className="text-[8px] text-gray-400 leading-none mt-0.5">↓ After financing costs</p>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
+
 
       {/* Quick action row */}
       {!readOnly && (
@@ -436,9 +538,9 @@ export default function DealLeftColumn({
           <ActionBtn icon={Mail}        label="Email"   onClick={onSendEmail}    />
           <ActionBtn icon={Phone}       label="Call"    onClick={onLogCall}      />
           <ActionBtn icon={CheckSquare} label="Task"    onClick={onCreateTask}   />
-          <ActionBtn icon={CalendarPlus}label="Meeting" onClick={onScheduleMeeting} />
+          <ActionBtn icon={CalendarPlus}label="Event" onClick={onScheduleMeeting} />
           {showNote && (
-            <NoteComposer dealId={deal.id} onClose={() => setShowNote(false)} />
+            <NoteComposer dealId={deal.id} orgId={activeOrgId} onClose={() => setShowNote(false)} />
           )}
         </div>
       )}
@@ -458,7 +560,6 @@ export default function DealLeftColumn({
                 <EditableField label="Zip"         value={zip}        onChange={v => { setZip(v);        saveNow({ zip: v });        }} readOnly={readOnly} />
                 <EditableField label="Parcel ID"   value={parcelId}   onChange={v => { setParcelId(v);   saveNow({ parcelId: v });   }} readOnly={readOnly} mono />
                 <EditableField label="Acreage"     value={acreage ? String(acreage) : ''} onChange={v => { setAcreage(v); saveNow({ acreage: v }); }} type="number" readOnly={readOnly} />
-                <EditableField label="ARV"         value={arv ? String(arv) : ''} onChange={v => { setArv(Number(v)); saveNow({ arv: Number(v) }); }} type="number" prefix="$" readOnly={readOnly} />
                 <EditableField label="Lead Source" value={leadSource} onChange={v => { setLeadSource(v); saveNow({ leadSource: v }); }} options={LEAD_SOURCE_OPTIONS} readOnly={readOnly} />
                 <EditableField label="Owner Type"  value={ownerType}  onChange={v => { setOwnerType(v);  saveNow({ ownerType: v });  }} options={OWNER_TYPE_OPTIONS} readOnly={readOnly} />
                 <EditableField label="Utilities"   value={utilityScenario} onChange={v => { setUtilityScenario(v); saveNow({ utilityScenario: v }); }} options={UTILITY_SCENARIO_OPTIONS} readOnly={readOnly} />
@@ -507,6 +608,37 @@ export default function DealLeftColumn({
                 <EditableField label="Atty Address"  value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
                 <EditableField label="Close Date"    value={closeDate}              onChange={v => { setCloseDate(v);              saveNow({ closeDate: v });              }} type="date" readOnly={readOnly} />
                 <EditableField label="Contract Signed" value={contractDate}         onChange={v => { setContractDate(v);           saveNow({ contractDate: v });           }} type="date" readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'important_dates') return (
+              <Section key="important_dates" title="Important Dates" defaultOpen={false}>
+                <ImportantDates deal={deal} readOnly={readOnly} />
+              </Section>
+            );
+            if (s.key === 'key_contacts') return (
+              <Section key="key_contacts" title="Key Contacts" defaultOpen={false}>
+                <KeyContacts deal={deal} />
+              </Section>
+            );
+            if (s.key === 'deal_owner') return (
+              <Section key="deal_owner" title="Deal Owner" defaultOpen={true}>
+                {readOnly
+                  ? <p className="text-sm text-gray-700">{dealOwner || <span className="text-gray-400">Unassigned</span>}</p>
+                  : <select
+                      value={dealOwner || ''}
+                      onChange={e => { setDealOwner(e.target.value); saveNow({ dealOwner: e.target.value }); }}
+                      className="w-full text-sm text-[#1a2332] bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    >
+                      <option value="">— Unassigned —</option>
+                      {/* Ensure current value always has a matching option while allUsers loads */}
+                      {dealOwner && !allUsers.some(u => u.name === dealOwner) && (
+                        <option key="__current__" value={dealOwner}>{dealOwner}</option>
+                      )}
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.name}>{u.name}</option>
+                      ))}
+                    </select>
+                }
               </Section>
             );
             return null;

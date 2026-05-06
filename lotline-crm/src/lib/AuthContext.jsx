@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { canUser } from './permissions';
+import { fetchMyInvestor } from './investorPortalData';
 
 const AuthContext = createContext(null);
 
@@ -107,14 +108,11 @@ export function AuthProvider({ children }) {
           setOrgSeatLimit(null);
         }
 
-        // If investor role, resolve their linked investor record
-        if (data.role === 'investor') {
-          const { data: link } = await supabase
-            .from('investor_users')
-            .select('investor_id, investors(*)')
-            .eq('user_id', userId)
-            .single();
-          setInvestorRecord(link?.investors ?? null);
+        // If investor role, resolve their linked investor record using the
+        // 3-step fallback (auth_user_id → investor_users → email match).
+        if (data.role === 'investor' || data.account_type === 'investor') {
+          const { investor } = await fetchMyInvestor();
+          setInvestorRecord(investor ?? null);
         } else {
           setInvestorRecord(null);
         }
@@ -188,6 +186,10 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = (userId) => fetchProfile(userId);
 
+  // Derive accountType: prefer the new column, fall back to role for backward compat
+  const accountType = profile?.account_type
+    ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+
   return (
     <ImpersonationContext.Provider value={{ impersonating, setImpersonating }}>
       <AuthContext.Provider value={{
@@ -195,6 +197,8 @@ export function AuthProvider({ children }) {
         profile,
         // profile.role — used for investor / realtor detection (NOT org-level permissions)
         role: profile?.role ?? null,
+        // accountType: 'operator' | 'investor' | null — canonical account type discriminator
+        accountType,
         activeOrgId: profile?.active_organization_id ?? null,
         orgSlug,          // slug of the active org, e.g. 'lotline-homes'
         // ── Org-level permission fields ──────────────────────────────────────

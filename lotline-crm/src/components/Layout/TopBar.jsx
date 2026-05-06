@@ -249,21 +249,55 @@ function MentionsTab({ onNavigate }) {
   );
 }
 
+const NOTIF_ICONS = {
+  mention:      '💬',
+  task_assigned:'✅',
+  task_due:     '⏰',
+  task_overdue: '⏰',
+  stage_change: '➡️',
+  new_note:     '📝',
+  new_document: '📎',
+  deal_dead:    '❌',
+  general:      '🔔',
+};
+
 function NotifPanel({ onClose, onRead, unreadMentions }) {
   const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'mentions'
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotifications().then(data => { setNotifs(data); setLoading(false); });
     markAllNotifsRead().then(() => onRead && onRead());
   }, []);
 
+  const handleNotifClick = (n) => {
+    // Use action_url if available (new format)
+    if (n.action_url) {
+      onClose();
+      navigate(n.action_url);
+      return;
+    }
+    // Legacy: entity_type-based navigation
+    if (n.entity_type === 'activity_note' && n.entity_id) {
+      try {
+        const { dealId, noteId } = JSON.parse(n.entity_id);
+        onClose();
+        navigate(`/deal/${dealId}?activity=${noteId}`);
+        return;
+      } catch {}
+    }
+    if (n.entity_type === 'task') {
+      onClose();
+      navigate('/tasks');
+    }
+  };
+
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
       {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-        {/* Tab switcher */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab('notifications')}
@@ -311,20 +345,37 @@ function NotifPanel({ onClose, onRead, unreadMentions }) {
 
       {/* Tab content */}
       {activeTab === 'notifications' ? (
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[500px] overflow-y-auto">
           {loading ? (
             <p className="text-sm text-gray-400 text-center py-10">Loading…</p>
           ) : notifs.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No notifications yet</p>
           ) : (
             <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-              {notifs.map(n => (
-                <li key={n.id} className={`px-4 py-3 ${n.read ? '' : 'bg-accent/5'}`}>
-                  <p className="text-sm font-medium text-sidebar dark:text-white">{n.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
-                  <p className="text-xs text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
-                </li>
-              ))}
+              {notifs.map(n => {
+                const clickable = !!(n.action_url || n.entity_type === 'activity_note' || n.entity_type === 'task' || n.entity_type === 'deal');
+                const icon = NOTIF_ICONS[n.type] || NOTIF_ICONS.general;
+                return (
+                  <li
+                    key={n.id}
+                    onClick={() => clickable && handleNotifClick(n)}
+                    className={`px-4 py-3 flex gap-3 ${!n.read ? 'bg-accent/5' : ''} ${clickable ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors' : ''}`}
+                  >
+                    <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <p className="text-sm font-medium text-sidebar dark:text-white leading-tight">{n.title}</p>
+                        {!n.read && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />}
+                      </div>
+                      {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">"{n.body}"</p>}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {n.deal_address && <span className="font-medium text-gray-500">{n.deal_address} · </span>}
+                        {timeAgo(n.created_at)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -528,7 +579,7 @@ export default function TopBar({ onToggleSidebar }) {
               </button>
               <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
               <button
-                onClick={() => { setShowUserMenu(false); signOut().then(() => navigate('/login', { replace: true })); }}
+                onClick={() => { setShowUserMenu(false); signOut().then(() => navigate('/', { replace: true })); }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <LogOut size={14} />

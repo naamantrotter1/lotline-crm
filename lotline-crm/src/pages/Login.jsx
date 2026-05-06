@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -16,14 +16,21 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const { signIn, session, refreshProfile } = useAuth();
+  const { signIn, session, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  // Prevent auto-navigate while awaiting MFA challenge
-  const skipNavRef = useRef(false);
+  // When true, suppress auto-nav (e.g. during MFA challenge). Using state so
+  // setting it to false triggers the useEffect below to re-run.
+  const [skipNav, setSkipNav] = useState(false);
 
+  // Auto-redirect operators who are already signed in when this page loads.
+  // skipNav is true while a sign-in is in progress so this doesn't fire mid-flow.
   useEffect(() => {
-    if (session && !skipNavRef.current) navigate('/', { replace: true });
-  }, [session]);
+    if (!session || skipNav) return;
+    const accountType = profile?.account_type
+      ?? (profile?.role === 'investor' ? 'investor' : (profile ? 'operator' : null));
+    if (accountType === null) return; // profile still loading
+    if (accountType !== 'investor') navigate('/dashboard', { replace: true });
+  }, [session, profile, skipNav]);
 
   // Mode: 'signin' | 'mfa-challenge' | 'signup-step1' | 'signup-step2' | 'forgot-password' | 'forgot-sent'
   const [mode,         setMode]         = useState('signin');
@@ -100,26 +107,47 @@ export default function Login() {
     setError('');
     setLoading(true);
     // Block auto-nav until we know if MFA is required
-    skipNavRef.current = true;
-    const { error } = await signIn(email.trim(), password);
-    if (error) {
-      skipNavRef.current = false;
-      setError(error.message === 'Invalid login credentials'
-        ? 'Incorrect email or password. Please try again.'
-        : error.message);
+    setSkipNav(true);
+    try {
+      const { error } = await signIn(email.trim(), password);
+      if (error) {
+        setError(error.message === 'Invalid login credentials'
+          ? 'Incorrect email or password. Please try again.'
+          : error.message);
+        return;
+      }
+
+      // Block investor accounts — they must use /investor-login
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('account_type, role')
+        .eq('id', user?.id)
+        .single();
+      const isInvestorAccount =
+        profileData?.account_type === 'investor' || profileData?.role === 'investor';
+      if (isInvestorAccount) {
+        await supabase.auth.signOut();
+        setError('Investor accounts use the investor portal. Sign in at /investor-login.');
+        return;
+      }
+
+      // Check Authenticator Assurance Level
+      const { data: aalData } = await supabase.auth.getAuthenticatorAssuranceLevel();
+      if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
+        setMode('mfa-challenge');
+        return; // keep skipNav = true — nav blocked until MFA passed
+      }
+
+      // All checks passed — navigate to dashboard
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSkipNav(false);
       setLoading(false);
-      return;
     }
-    // Check Authenticator Assurance Level
-    const { data: aalData } = await supabase.auth.getAuthenticatorAssuranceLevel();
-    if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
-      setMode('mfa-challenge');
-      setLoading(false);
-      return; // keep skipNavRef.current = true — nav blocked until MFA passed
-    }
-    skipNavRef.current = false;
-    navigate('/', { replace: true });
-    setLoading(false);
   };
 
   // MFA challenge handler
@@ -144,9 +172,9 @@ export default function Login() {
       setLoading(false);
       return;
     }
-    skipNavRef.current = false;
-    navigate('/', { replace: true });
+    setSkipNav(false);
     setLoading(false);
+    navigate('/dashboard', { replace: true });
   };
 
   // Google SSO
@@ -231,6 +259,12 @@ export default function Login() {
                 Don't have an account?{' '}
                 <a href="/signup" className="text-accent hover:underline font-medium">Sign up free →</a>
               </p>
+              <div className="mt-6 pt-5 border-t border-gray-200 text-center">
+                <p className="text-xs text-gray-400">
+                  Are you an investor?{' '}
+                  <a href="/investor-login" className="text-gray-500 hover:text-accent hover:underline font-medium">Sign in to the investor portal →</a>
+                </p>
+              </div>
             </>
           )}
 

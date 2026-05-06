@@ -118,7 +118,7 @@ export default function AcceptInvite() {
       await callAcceptApi(token, sess.access_token);
       await refreshProfile(sess.user.id);
       setPhase('done');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (e) {
       setError(e.message);
       setPhase('error');
@@ -148,7 +148,7 @@ export default function AcceptInvite() {
       await callAcceptApi(token, data.session.access_token);
       await refreshProfile(data.user.id);
       setPhase('done');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (e) {
       setError(e.message);
       setPhase('error');

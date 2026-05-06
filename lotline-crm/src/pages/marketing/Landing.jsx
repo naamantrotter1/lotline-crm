@@ -243,7 +243,7 @@ function Hero() {
         style={{ background: 'radial-gradient(circle,#c8613a 0%,transparent 70%)' }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 md:pt-40 md:pb-28">
+      <div className="relative max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16 pt-32 pb-20 md:pt-40 md:pb-28">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Left: copy */}
           <div>
@@ -267,12 +267,18 @@ function Hero() {
                 {hero.cta1}
                 <ArrowRight size={16} />
               </Link>
-              <a
-                href="#how-it-works"
+              <Link
+                to="/login"
                 className="inline-flex items-center gap-2 bg-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/15 transition-colors"
               >
-                {hero.cta2}
-              </a>
+                Team Login
+              </Link>
+              <Link
+                to="/investor-login"
+                className="inline-flex items-center gap-2 border border-accent/60 text-white font-semibold px-6 py-3 rounded-xl hover:border-accent hover:bg-accent/10 transition-colors"
+              >
+                Investor Login
+              </Link>
             </div>
             {/* Metric badges */}
             <div className="flex flex-wrap gap-5 mt-10">
@@ -304,7 +310,7 @@ function Hero() {
 function Advantages() {
   return (
     <section className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-sidebar mb-3">
             Everything your acquisition team needs
@@ -337,7 +343,7 @@ function Advantages() {
 function HowItWorks() {
   return (
     <section id="how-it-works" className="py-20" style={{ background: '#f5f3ee' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-sidebar mb-3">How it works</h2>
           <p className="text-gray-500 max-w-xl mx-auto">
@@ -380,7 +386,7 @@ function Features() {
             key={f.title}
             className={`py-16 ${i % 2 !== 0 ? 'bg-cream' : 'bg-white'}`}
           >
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
               <div
                 className={`grid md:grid-cols-2 gap-12 items-center ${
                   isEven ? '' : 'md:[direction:rtl]'
@@ -424,7 +430,7 @@ function Features() {
 function PricingPreview() {
   return (
     <section className="py-20" style={{ background: '#1a2332' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-3">Simple, transparent pricing</h2>
           <p className="text-white/50 max-w-md mx-auto">
@@ -453,12 +459,15 @@ function PricingPreview() {
               </div>
               <p className={`text-xs mb-5 ${p.highlighted ? 'text-white/75' : 'text-white/40'}`}>{p.tagline}</p>
               <ul className="space-y-2 mb-6 flex-1">
-                {p.features.map((feat) => (
-                  <li key={feat} className="flex items-center gap-2 text-sm">
-                    <Check size={13} className={p.highlighted ? 'text-white/80' : 'text-accent'} strokeWidth={2.5} />
-                    <span className={p.highlighted ? 'text-white/85' : 'text-white/60'}>{feat}</span>
-                  </li>
-                ))}
+                {p.features.map((feat) => {
+                  const label = typeof feat === 'string' ? feat : feat.text;
+                  return (
+                    <li key={label} className="flex items-center gap-2 text-sm">
+                      <Check size={13} className={p.highlighted ? 'text-white/80' : 'text-accent'} strokeWidth={2.5} />
+                      <span className={p.highlighted ? 'text-white/85' : 'text-white/60'}>{label}</span>
+                    </li>
+                  );
+                })}
               </ul>
               <Link
                 to={p.name === 'Scale' ? '/contact' : `/cart?plan=${p.name.toLowerCase()}`}
@@ -487,7 +496,7 @@ function PricingPreview() {
 function Testimonials() {
   return (
     <section className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto px-6 sm:px-10 lg:px-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-sidebar mb-3">
             What land investors are saying

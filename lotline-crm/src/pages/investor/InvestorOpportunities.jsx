@@ -216,7 +216,7 @@ function DealCard({ deal, investor, myInterestIds }) {
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
               {[
                 { label: 'Land',           value: fmt(deal.land)        },
-                { label: 'Mobile Home',    value: fmt(deal.mobile_home) },
+                { label: 'Manufactured Home', value: fmt(deal.mobile_home) },
                 { label: 'Permits',        value: fmt(deal.permits)     },
                 { label: 'Setup',          value: fmt(deal.setup)       },
                 { label: 'Septic',         value: fmt(deal.septic)      },
