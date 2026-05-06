@@ -2375,8 +2375,18 @@ function DealDetailContent({ deal }) {
       selectedScenario === 'profit-split'
         ? investorProfitSplitPct
         : (deal.investorEquityPct ?? null);
-    // Always flush to DB — local state may already be correct but DB could be stale
-    flushToSupabase({ ...deal, investorCapitalContributed: capital, investorEquityPct: equity });
+    // Targeted update — only touch investor fields, never overwrite date columns.
+    // Previously this called flushToSupabase({ ...deal, ... }) which spread the full deal
+    // object (including closeDate: null) and wiped close_date in Supabase on every mount.
+    if (supabase) {
+      supabase
+        .from('deals')
+        .update({ investor_capital_contributed: capital, investor_equity_pct: equity })
+        .eq('id', deal.id)
+        .then(({ error }) => {
+          if (error) console.warn('[DealDetail] hydration investor update failed', error);
+        });
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-save: fires immediately on every field change ───────────────────────
