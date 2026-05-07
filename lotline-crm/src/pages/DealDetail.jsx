@@ -650,6 +650,10 @@ function FinancingScenarioPanel({
               <span className="text-sm font-medium text-accent">${Math.round(profitSplitAmount).toLocaleString()}</span>
             </div>
             <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
+              <input type="date" value={capitalDeployedDate || ''} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
+            </div>
+            <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Projected Payout Date</p>
               <input type="date" value={projectedPayoutDate ?? ''} onChange={e => setProjectedPayoutDate(e.target.value || null)} className={iCls} readOnly={readOnly} />
             </div>
