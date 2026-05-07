@@ -499,6 +499,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
         value={text}
         onChange={(v) => { setText(v); setError(null); }}
         onSubmit={save}
+        onMentionInserted={(m) => setMentionMap(prev => ({ ...prev, [m.name]: m.id }))}
         members={members}
         placeholder="Write a note… type @ to mention a teammate"
         rows={3}
