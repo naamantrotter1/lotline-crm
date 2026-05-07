@@ -916,8 +916,13 @@ function HeatMap() {
     for (const deal of unresolved) {
       try {
         await new Promise(r => setTimeout(r, 350));
+        // Dev: route through Vite proxy (avoids sandbox restrictions).
+        // Prod: call Nominatim directly — real browsers support it fine.
+        const base = import.meta.env.DEV
+          ? '/nominatim'
+          : 'https://nominatim.openstreetmap.org';
         const res = await fetch(
-          `/nominatim/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`
+          `${base}/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`
         );
         const data = await res.json();
         if (data?.[0]) {
