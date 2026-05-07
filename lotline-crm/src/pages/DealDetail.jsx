@@ -3156,19 +3156,7 @@ function DealDetailContent({ deal }) {
 
         {/* Summary bar */}
         <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-100">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide">ARV</p>
-            <p className="text-sm font-bold text-[#1a2332]">${(deal.arv || 0).toLocaleString()}</p>
-          </div>
-          {!isAgent && <><div className="hidden sm:block w-px h-8 bg-gray-200" />
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Net Profit</p>
-            <p className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-              ${Math.round(netProfit).toLocaleString()}
-            </p>
-          </div>
-          <div className="hidden sm:block w-px h-8 bg-gray-200" />
-          <div>
+          {!isAgent && <><div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Financing</p>
             {financingTabEnabled
               ? <button
