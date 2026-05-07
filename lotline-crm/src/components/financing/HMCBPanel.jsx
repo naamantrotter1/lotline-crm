@@ -130,17 +130,26 @@ export function HMCBSummaryCard({ data, draws = [] }) {
 }
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
-// Inline copy of getEstimatedHoldMonths so HMCBPanel can compute the
-// estimated hold without a cross-file import. Mirrors DealDetail.jsx.
-// Pure date-difference: not clamped to the term length.
+// Inline copies of getEstimatedHoldMonths + formatHoldPeriod so HMCBPanel can
+// compute partial-month hold periods without a cross-file import. Mirrors
+// DealDetail.jsx — fractional months based on a 30-day month.
 function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
   if (!deployedDate || !saleDate) return fallbackMonths;
   const d = new Date(deployedDate), s = new Date(saleDate);
   if (Number.isNaN(d.getTime()) || Number.isNaN(s.getTime())) return fallbackMonths;
-  const months = (s.getFullYear() - d.getFullYear()) * 12
-               + (s.getMonth() - d.getMonth())
-               + (s.getDate() >= d.getDate() ? 0 : -1);
-  return Math.max(1, months);
+  const days = Math.round((s.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return Math.max(1 / 30, (fallbackMonths || 0));
+  return days / 30;
+}
+
+function formatHoldPeriod(months) {
+  if (!Number.isFinite(months) || months <= 0) return '0 days';
+  const totalDays = Math.round(months * 30);
+  const whole = Math.floor(totalDays / 30);
+  const rem = totalDays - whole * 30;
+  if (whole === 0) return `${rem} day${rem === 1 ? '' : 's'}`;
+  if (rem === 0)   return `${whole} month${whole === 1 ? '' : 's'}`;
+  return `${whole} month${whole === 1 ? '' : 's'} ${rem} day${rem === 1 ? '' : 's'}`;
 }
 
 export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate }) {
