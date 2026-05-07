@@ -123,8 +123,12 @@ export default function PaymentScheduleSection({
     if (!investor || !deal) return;
     setGenerating(true);
     setError(null);
+    // Use the override if the deal prop hasn't been refreshed yet
+    const dealForGenerate = capitalDeployedDateOverride
+      ? { ...deal, capitalDeployedDate: capitalDeployedDateOverride }
+      : deal;
     const { error: err } = await savePaymentSchedule({
-      deal,
+      deal: dealForGenerate,
       investor,
       allocation: allocation || null,
       orgId: deal.organization_id,
