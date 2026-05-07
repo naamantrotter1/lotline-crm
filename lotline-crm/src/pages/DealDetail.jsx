@@ -2439,15 +2439,31 @@ function DealDetailContent({ deal }) {
     return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
   });
 
-  // Persist subdivide state so the kanban card reflects it
+  // Persist subdivide / land clearing state so the kanban card reflects it
+  // both via localStorage (legacy) and via deal.tags (which the cards read).
+  const updateTagPresence = (tagName, on) => {
+    if (!deal?.id) return;
+    const currentTags = Array.isArray(deal.tags) ? deal.tags : [];
+    const nextTags = on
+      ? (currentTags.includes(tagName) ? currentTags : [...currentTags, tagName])
+      : currentTags.filter(t => t !== tagName);
+    if (nextTags.length === currentTags.length &&
+        nextTags.every((t, i) => t === currentTags[i])) return;
+    const updated = { ...deal, tags: nextTags };
+    saveDeal(updated, activeOrgId);
+    setDeals(prev => prev.map(d => String(d.id) === String(deal.id) ? updated : d));
+  };
+
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
     if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
+    updateTagPresence('Subdivide', val === 'Yes');
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
     if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
+    updateTagPresence('Land Clearing', val === 'Yes');
   };
 
   const handleSendToLandAcq = () => {
