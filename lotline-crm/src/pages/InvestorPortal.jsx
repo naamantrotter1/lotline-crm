@@ -487,11 +487,14 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   // after a funder was assigned, because the static list never updated.
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
-    .filter(d =>
-      !d.isArchived &&
-      !LAND_ACQ_STAGES.has(d.stage) &&
-      UNFUNDED.includes((d.investor || '').trim())
-    )
+    .filter(d => {
+      if (d.isArchived || LAND_ACQ_STAGES.has(d.stage)) return false;
+      if (!UNFUNDED.includes((d.investor || '').trim())) return false;
+      // A deal might be funded via HMCB even if deal.investor wasn't persisted yet
+      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim();
+      if (hmcbLender && !UNFUNDED.includes(hmcbLender)) return false;
+      return true;
+    })
     .map(d => {
       const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return {
