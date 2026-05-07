@@ -288,7 +288,11 @@ function FinancingScenarioPanel({
   const monthlyInterestLoc = locDraw * (interestRate / 100) / 12;
 
   const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  const holdingCosts = (holdPeriod || 4) * ((deal.holdingPerMonth || 250));
+  // Estimated hold (deployed → sale) drives holding-cost accrual when set.
+  const effHoldMonthsForProfit = getEstimatedHoldMonths(
+    capitalDeployedDate, estimatedSaleDate, holdPeriod || 4
+  );
+  const holdingCosts = effHoldMonthsForProfit * ((deal.holdingPerMonth || 250));
   const netProfitEst = arvVal - allIn - sellingCosts - holdingCosts;
   const profitSplitAmount = netProfitEst * (investorProfitSplitPct / 100);
 
