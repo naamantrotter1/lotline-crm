@@ -2643,7 +2643,7 @@ function DealDetailContent({ deal }) {
     closingAttorneyAddress, closeDate, contractDate,
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
-    investorCapitalContributed, investorEquityPct, projectedPayoutDate,
+    investorCapitalContributed, investorEquityPct, projectedPayoutDate, estimatedSaleDate,
     loanAmountOverride, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
