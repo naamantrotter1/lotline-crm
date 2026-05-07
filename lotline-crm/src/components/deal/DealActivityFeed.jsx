@@ -979,6 +979,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       if (!error && reply) {
         setDbNotes(prev => [...prev, reply]);
         setReplyText('');
+        setReplyMentionMap({});
         setReplyingTo(null);
 
         // Fan out mentions + notifications (best-effort)
