@@ -886,42 +886,58 @@ export default function InvestorPortal() {
   const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
 
-  // Reload investor list whenever JV scope changes.
-  // Own-org investors always come from localStorage (pre-computed stats).
-  // Partner investors are fetched from Supabase and merged in.
+  // Always fetch investors from Supabase as the source of truth — that way an
+  // investor added on any device by any org member shows up here.
+  // Cached stats (capital, ROI, deal mappings) come from localStorage so we
+  // don't lose pre-computed numbers that aren't stored on the DB row yet.
   useEffect(() => {
-    if (jvScope.mode === 'own_only') {
-      setInvestors(loadInvestors(activeOrgId, orgSlug));
-      return;
-    }
-    const ownInvestors = jvScope.includeOwn !== false ? loadInvestors(activeOrgId, orgSlug) : [];
+    const includeOwn = jvScope.includeOwn !== false;
     const partnerIds = scopeIds.filter(id => id !== activeOrgId);
-    if (partnerIds.length === 0) {
-      setInvestors(ownInvestors);
+    const allOrgIds = [
+      ...(includeOwn && activeOrgId ? [activeOrgId] : []),
+      ...partnerIds,
+    ].filter(Boolean);
+
+    if (allOrgIds.length === 0) {
+      setInvestors([]);
       return;
     }
-    fetchInvestors(partnerIds).then(rows => {
-      const partnerInvestors = rows.map(r => ({
-        id: r.id,
-        name: r.name,
-        contact: r.contact || '',
-        email: r.email || '',
-        phone: r.phone || '',
-        type: r.type || 'Private Lender',
-        preferredFinancing: r.preferred_financing || '',
-        standardTerms: r.standard_terms || '',
-        notes: r.notes || '',
-        activeDeals: 0,
-        capitalInvested: 0,
-        totalReturns: 0,
-        roiPct: 0,
-        roiDollars: 0,
-        avgAnnualizedRoi: 0,
-        deals: [],
-      }));
-      setInvestors([...ownInvestors, ...partnerInvestors]);
+
+    // Stats cache (computed locally from deal data) — merged onto DB rows by name.
+    const cached = includeOwn ? loadInvestors(activeOrgId, orgSlug) : [];
+    const cachedByName = Object.fromEntries(cached.map(i => [i.name, i]));
+
+    fetchInvestors(allOrgIds).then(rows => {
+      const merged = rows.map(r => {
+        const c = cachedByName[r.name] || {};
+        return {
+          id: r.id,
+          name: r.name,
+          contact: r.contact || '',
+          email: r.email || '',
+          phone: r.phone || '',
+          type: r.type || 'Private Lender',
+          preferredFinancing: r.preferred_financing || '',
+          standardTerms: r.standard_terms || '',
+          notes: r.notes || '',
+          activeDeals:      c.activeDeals      ?? 0,
+          capitalInvested:  c.capitalInvested  ?? 0,
+          totalReturns:     c.totalReturns     ?? 0,
+          roiPct:           c.roiPct           ?? 0,
+          roiDollars:       c.roiDollars       ?? 0,
+          avgAnnualizedRoi: c.avgAnnualizedRoi ?? 0,
+          deals:            c.deals            || [],
+        };
+      });
+      // Include any local-only investors not yet pushed to Supabase (offline adds).
+      const dbNames = new Set(rows.map(r => r.name));
+      const localOnly = cached.filter(c => !dbNames.has(c.name));
+      setInvestors([...merged, ...localOnly]);
+    }).catch(err => {
+      console.warn('Failed to fetch investors from Supabase, falling back to cache', err);
+      setInvestors(cached);
     });
-  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
+  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug, jvScope.includeOwn]);
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
