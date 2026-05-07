@@ -1141,14 +1141,16 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  // Recompute activeDeals from live context so stale cached counts can't
-  // cause an investor (e.g. Low Tide Lending) to show 0 active deals.
-  const enrichedInvestors = useMemo(() => investors.map(inv => ({
-    ...inv,
-    activeDeals: customDeals.filter(d =>
-      !d.isArchived && (d.investor || '').trim() === inv.name.trim()
-    ).length || inv.activeDeals,
-  })), [investors, customDeals]);
+  // Recompute activeDeals from live context using case-insensitive matching so
+  // minor capitalisation differences (e.g. "Low Tide Lending" vs "low tide lending")
+  // don't cause an investor to show 0 active deals.
+  const enrichedInvestors = useMemo(() => investors.map(inv => {
+    const invNameLower = inv.name.trim().toLowerCase();
+    const liveCount = customDeals.filter(d =>
+      !d.isArchived && (d.investor || '').trim().toLowerCase() === invNameLower
+    ).length;
+    return { ...inv, activeDeals: liveCount > 0 ? liveCount : (inv.activeDeals ?? 0) };
+  }), [investors, customDeals]);
 
   const totalCapital = enrichedInvestors.reduce((s, i) => s + i.capitalInvested, 0);
   const totalDeals = enrichedInvestors.reduce((s, i) => s + i.activeDeals, 0);
