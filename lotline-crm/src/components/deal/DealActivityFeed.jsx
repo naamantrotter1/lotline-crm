@@ -17,6 +17,7 @@
  * DB-backed note save still works.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, CheckSquare, Mail, Phone,
