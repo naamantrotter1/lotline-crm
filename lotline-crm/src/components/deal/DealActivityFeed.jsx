@@ -569,7 +569,7 @@ function EventCard({ event, usersById, onDeleteNote, replyProps }) {
         )}
 
         {/* Author */}
-        {event.meta?.author && (
+        {event.meta?.author && !event.hideAuthorFooter && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-400">
             <span className="font-medium text-gray-500">{event.meta.author}</span>
           </div>
