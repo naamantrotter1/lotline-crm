@@ -420,6 +420,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
   const [text,  setText]  = useState('');
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState(null);
+  const [mentionMap, setMentionMap] = useState({}); // { displayName: userId }
   const textRef = useRef(null);
 
   const save = async () => {
@@ -432,7 +433,9 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
       if (!session) throw new Error('Not authenticated');
       const authorId = session.user.id;
 
-      const body = text.trim();
+      // Convert friendly @Name occurrences back to @[Name](uuid) tokens
+      // before saving, so the rendered note shows mention chips.
+      const body = expandMentions(text.trim(), mentionMap);
 
       // Extract + validate mentions
       const extracted = extractMentions(body);
