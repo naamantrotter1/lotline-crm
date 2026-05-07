@@ -3544,7 +3544,7 @@ function DealDetailContent({ deal }) {
 
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
-            deal={deal} costs={costs} arv={arv} allIn={allIn}
+            deal={deal} costs={costs} arv={arv} allIn={allIn} netProfit={netProfit}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
