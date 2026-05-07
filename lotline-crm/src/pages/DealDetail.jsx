@@ -35,6 +35,7 @@ import { logTaskActivity } from '../lib/tasksData';
 import { notifyTaskAssigned } from '../lib/notify';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
 import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
+import PaymentScheduleSection from '../components/financing/PaymentScheduleSection';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
