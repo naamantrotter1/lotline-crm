@@ -344,6 +344,36 @@ function FinancingScenarioPanel({
         </select>
       </div>
 
+      {/* ── Estimated Sale Date (shared across all scenarios) ── */}
+      {!!selectedScenario && (
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estimated Sale Date</p>
+          <input
+            type="date"
+            value={estimatedSaleDate || ''}
+            onChange={e => setEstimatedSaleDate(e.target.value)}
+            className={iCls}
+            readOnly={readOnly}
+          />
+          {(() => {
+            const fallback = holdPeriod || 12;
+            if (capitalDeployedDate && estimatedSaleDate) {
+              const est = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, fallback);
+              return (
+                <p className="text-[11px] text-gray-500 mt-2">
+                  Est. hold: <span className="font-semibold text-gray-700">{est} month{est === 1 ? '' : 's'}</span>
+                  {fallback ? <span className="text-gray-400"> ({fallback}-month term available)</span> : null}
+                </p>
+              );
+            }
+            if (estimatedSaleDate && !capitalDeployedDate) {
+              return <p className="text-[11px] text-gray-400 mt-2">Set Capital Deployed Date to calculate hold period.</p>;
+            }
+            return null;
+          })()}
+        </div>
+      )}
+
       {/* ── Cash ── */}
       {!!selectedScenario && isCash && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
