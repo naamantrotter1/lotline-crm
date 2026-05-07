@@ -1945,6 +1945,22 @@ function CommittedCapitalPartnerPanel({
   );
 }
 
+// ── Estimated hold helper ────────────────────────────────────────────────────
+// Returns the number of full months between Capital Deployed Date and the
+// user-set Estimated Sale Date, clamped between 1 and the term length.
+// Falls back to fallbackMonths (the contractual term) when either date is
+// missing or invalid.
+function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
+  if (!deployedDate || !saleDate) return fallbackMonths;
+  const d = new Date(deployedDate), s = new Date(saleDate);
+  if (Number.isNaN(d.getTime()) || Number.isNaN(s.getTime())) return fallbackMonths;
+  const months = (s.getFullYear() - d.getFullYear()) * 12
+               + (s.getMonth() - d.getMonth())
+               + (s.getDate() >= d.getDate() ? 0 : -1);
+  const clampMax = Number.isFinite(fallbackMonths) && fallbackMonths > 0 ? fallbackMonths : 12;
+  return Math.max(1, Math.min(months, clampMax));
+}
+
 // ── Financing scenario types (matching Lovable CRM) ──────────────────────────
 const FINANCING_SCENARIOS = [
   {
