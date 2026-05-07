@@ -1206,7 +1206,7 @@ export default function InvestorPortal() {
       <div className="px-6 pt-5">
         {!isInvestor && activeTab !== 'available-investments' && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           {[
-            { label: 'Active Investors', value: investors.filter(i => i.name !== 'Cash').length, icon: Users },
+            { label: 'Active Investors', value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users },
             { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`, icon: DollarSign },
             { label: 'Active Deals Funded', value: totalDeals, icon: Briefcase },
             { label: 'Total Projected ROI', value: `$${totalROI.toLocaleString()}`, icon: TrendingUp },
