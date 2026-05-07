@@ -469,11 +469,29 @@ export function saveDeal(deal, orgId) {
   flushToSupabase(deal, orgId);
 }
 
-/** Delete a deal — redirects to archiveDeal so is_archived:true is always
- *  written to Supabase, preventing cross-user Realtime re-surfacing bugs. */
+/** Delete a deal — hard delete from Supabase via SECURITY DEFINER RPC.
+ *  Removes from localStorage immediately for optimistic UI, then issues
+ *  the server delete which cascades to tasks, activity_notes, deal_events,
+ *  allocations, milestones, etc. via FKs. Returns { error } so callers
+ *  can detect failure and roll back. */
 export async function deleteDeal(dealId, orgId) {
-  const deal = lsGet(orgId).find(d => String(d.id) === String(dealId));
-  return archiveDeal(deal || { id: dealId }, orgId);
+  // Optimistic LS removal — rollback below on failure.
+  const previous = lsGet(orgId);
+  const deal = previous.find(d => String(d.id) === String(dealId));
+  lsSet(previous.filter(d => String(d.id) !== String(dealId)), orgId);
+  if (!supabase) return { error: null };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { error: null };
+  const { error } = await supabase.rpc('delete_deal', { p_deal_id: String(dealId) });
+  if (error) {
+    console.error('[dealsSync] deleteDeal RPC failed:', error.message, '| code:', error.code);
+    if (deal) {
+      const restored = lsGet(orgId);
+      if (!restored.find(d => String(d.id) === String(deal.id))) restored.push(deal);
+      lsSet(restored, orgId);
+    }
+  }
+  return { error };
 }
 
 /** Archive a deal — only flips is_archived in Supabase, removes from active localStorage.
