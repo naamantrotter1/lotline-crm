@@ -35,10 +35,14 @@ const fmtDate = (d) => {
 
 export default function PaymentScheduleSection({
   deal,
-  investorName,           // Display name from the financing scenario dropdown
-  allocation,             // Optional deal_allocations row (CCP scenario)
+  investorName,                  // Display name from the financing scenario dropdown
+  capitalDeployedDateOverride,   // Local React state from FinancingScenarioPanel — fresher than deal.capitalDeployedDate
+  allocation,                    // Optional deal_allocations row (CCP scenario)
   readOnly,
 }) {
+  // Use the freshest capital-deployed-date available
+  const effectiveDeployedDate =
+    capitalDeployedDateOverride || deal?.capitalDeployedDate || deal?.capital_deployed_date;
   const [investor, setInvestor]   = useState(null);
   const [rows, setRows]           = useState([]);
   const [loading, setLoading]     = useState(false);
