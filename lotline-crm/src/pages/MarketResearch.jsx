@@ -1373,10 +1373,7 @@ function HeatMap() {
     const raw = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
     if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
     if (showLandAcq) {
-      const withCoords = withGeocoords(raw);
-      const hasCoords = withCoords.filter(d => d.lat && d.lng);
-      console.log('[LandAcq] raw:', raw.length, 'withCoords having lat/lng:', hasCoords.length, 'geocoords keys:', Object.keys(geocoords).length, 'sample:', hasCoords.slice(0,2).map(d=>d.address));
-      landAcqLayer.current = makePipelineLayer(withCoords, '#f59e0b',
+      landAcqLayer.current = makePipelineLayer(withGeocoords(raw), '#f59e0b',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
       landAcqLayer.current.addTo(map);
     }
