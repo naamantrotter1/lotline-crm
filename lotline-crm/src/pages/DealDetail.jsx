@@ -397,7 +397,7 @@ function FinancingScenarioPanel({
               const est = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, fallback);
               return (
                 <p className="text-[11px] text-gray-500 mt-2">
-                  Est. hold: <span className="font-semibold text-gray-700">{est} month{est === 1 ? '' : 's'}</span>
+                  Est. hold: <span className="font-semibold text-gray-700">{formatHoldPeriod(est)}</span>
                   {fallback ? <span className="text-gray-400"> ({fallback}-month term available)</span> : null}
                 </p>
               );
