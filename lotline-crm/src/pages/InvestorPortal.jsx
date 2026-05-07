@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
-import { loadInvestors, addInvestor as storeAddInvestor } from '../lib/investorsStore';
+import { loadInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
