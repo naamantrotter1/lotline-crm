@@ -511,6 +511,14 @@ function FinancingScenarioPanel({
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest (calc)</p>
                 <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestHm).toLocaleString()}</span>
               </div>
+              <div className="py-2 col-span-2">
+                <PaymentDueDayPicker
+                  value={paymentDueDay}
+                  onChange={setPaymentDueDay}
+                  capitalDeployedDate={capitalDeployedDate}
+                  readOnly={readOnly}
+                />
+              </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
                 <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
