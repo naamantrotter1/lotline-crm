@@ -36,7 +36,7 @@ export default function BigRocks() {
           <Target size={20} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-sidebar">Big Rocks</h1>
+          <h1 className="text-2xl font-bold text-sidebar">Big Rock</h1>
           <p className="text-sm text-gray-500">Weekly priority tasks and accountability tracker</p>
         </div>
       </div>

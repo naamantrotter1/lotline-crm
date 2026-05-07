@@ -15,7 +15,7 @@ const BASE_NAV_SECTIONS = [
     label: 'Overview',
     items: [
       { icon: LayoutDashboard, label: 'Dashboard',       to: '/dashboard'  },
-      { icon: Target,          label: 'Big Rocks',       to: '/big-rocks'  },
+      { icon: Target,          label: 'Big Rock',        to: '/big-rocks'  },
       { icon: TrendingUp,      label: 'P&L Dashboard',   to: '/pnl'        },
       { icon: BarChart2,       label: 'Analytics',       to: '/analytics'  },
       { icon: Users,           label: 'Investor Portal', to: '/investors'  },
