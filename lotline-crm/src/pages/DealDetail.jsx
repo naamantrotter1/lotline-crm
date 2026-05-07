@@ -684,7 +684,18 @@ function FinancingScenarioPanel({
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
-              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={investorCapitalContributed != null && investorCapitalContributed !== '' ? `$${Number(investorCapitalContributed).toLocaleString()}` : ''}
+                onChange={e => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  setInvestorCapitalContributed(raw === '' ? null : Number(raw));
+                }}
+                placeholder="$50,000"
+                className={iCls}
+                readOnly={readOnly}
+              />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split (%)</p>
@@ -777,7 +788,18 @@ function FinancingScenarioPanel({
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
-              <input type="number" value={investorCapitalContributed ?? ''} onChange={e => setInvestorCapitalContributed(e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 50000" className={iCls} readOnly={readOnly} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={investorCapitalContributed != null && investorCapitalContributed !== '' ? `$${Number(investorCapitalContributed).toLocaleString()}` : ''}
+                onChange={e => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  setInvestorCapitalContributed(raw === '' ? null : Number(raw));
+                }}
+                placeholder="$50,000"
+                className={iCls}
+                readOnly={readOnly}
+              />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
