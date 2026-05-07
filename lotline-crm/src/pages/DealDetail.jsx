@@ -263,6 +263,8 @@ function FinancingScenarioPanel({
   projectedPayoutDate, setProjectedPayoutDate,
   investorReturnType, setInvestorReturnType,
   investorAssignmentStatus, setInvestorAssignmentStatus,
+  // Estimated Sale Date — drives hold-based cost calcs across all scenarios
+  estimatedSaleDate, setEstimatedSaleDate,
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
