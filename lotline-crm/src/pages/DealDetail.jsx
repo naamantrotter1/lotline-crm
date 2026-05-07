@@ -269,6 +269,7 @@ function FinancingScenarioPanel({
   estimatedSaleDate, setEstimatedSaleDate,
   // Payment Due Day — drives schedule/calendar dates for HM Loan, HM L+H, LoC
   paymentDueDay, setPaymentDueDay,
+  firstPaymentDate, setFirstPaymentDate,
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
