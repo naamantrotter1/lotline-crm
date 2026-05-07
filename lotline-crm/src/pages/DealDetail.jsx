@@ -2875,6 +2875,7 @@ function DealDetailContent({ deal }) {
     lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
     drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
     investorReturnType, investorAssignmentStatus,
+    paymentDueDay,
   ]);
 
   // ── Load pooled loan links for this deal ──────────────────────────────────
