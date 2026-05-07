@@ -1328,15 +1328,36 @@ function HeatMap() {
     return group;
   }
 
+  // Kick off geocoding when a pipeline is toggled on (not re-triggered by geocoords updates).
+  useEffect(() => {
+    if (showDealOverview) {
+      const raw = [...(isLotLine ? DEAL_OVERVIEW_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
+      geocodeAddresses(raw, geocoords);
+    }
+  }, [showDealOverview, contextDeals]); // eslint-disable-line
+
+  useEffect(() => {
+    if (showLandAcq) {
+      const raw = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
+      geocodeAddresses(raw, geocoords);
+    }
+  }, [showLandAcq, contextDeals]); // eslint-disable-line
+
+  useEffect(() => {
+    if (showSales) {
+      const raw = contextDeals.filter(d => d.pipeline === 'sales');
+      geocodeAddresses(raw, geocoords);
+    }
+  }, [showSales, contextDeals]); // eslint-disable-line
+
+  // Redraw pipeline layers whenever geocoords update (markers trickle in as geocoding completes).
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
     const raw = [...(isLotLine ? DEAL_OVERVIEW_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
-    const allDealOverview = withGeocoords(raw);
-    geocodeAddresses(raw);
     if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
     if (showDealOverview) {
-      dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
+      dealOverviewLayer.current = makePipelineLayer(withGeocoords(raw), '#3b82f6',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Deal Overview`);
       dealOverviewLayer.current.addTo(map);
     }
@@ -1346,11 +1367,9 @@ function HeatMap() {
     const map = leafletMap.current;
     if (!map) return;
     const raw = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
-    const allLandAcq = withGeocoords(raw);
-    geocodeAddresses(raw);
     if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
     if (showLandAcq) {
-      landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',
+      landAcqLayer.current = makePipelineLayer(withGeocoords(raw), '#f59e0b',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
       landAcqLayer.current.addTo(map);
     }
@@ -1360,11 +1379,9 @@ function HeatMap() {
     const map = leafletMap.current;
     if (!map) return;
     const raw = contextDeals.filter(d => d.pipeline === 'sales');
-    const salesDeals = withGeocoords(raw);
-    geocodeAddresses(raw);
     if (salesLayer.current) { salesLayer.current.remove(); salesLayer.current = null; }
     if (showSales) {
-      salesLayer.current = makePipelineLayer(salesDeals, '#10b981',
+      salesLayer.current = makePipelineLayer(withGeocoords(raw), '#10b981',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Sales`);
       salesLayer.current.addTo(map);
     }
