@@ -214,6 +214,7 @@ const INVESTOR_PERMITTED = new Set([
   '/investor/home',
   '/investor/deals',
   '/investor/distributions',
+  '/investor/payments',
   '/investor/updates',
   '/investor/documents',
   '/investor/opportunities',
