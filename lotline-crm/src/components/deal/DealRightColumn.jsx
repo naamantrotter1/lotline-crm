@@ -95,7 +95,7 @@ function Avatar({ name, size = 'sm' }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-const DOC_CATEGORIES = ['Contract', 'Title Report', 'Survey', 'Inspection', 'Plat Map', 'GIS Map', 'Financing', 'Zoning Verification', 'Soil Report', 'Photos', 'Other'];
+const DOC_CATEGORIES = ['Contract', 'Title Report', 'Survey', 'Inspection', 'Plat Map', 'GIS Map', 'Financing', 'Zoning Verification', 'Soil Report', 'Environmental Permit', 'Construction Permit', 'Photos', 'Other'];
 const STORAGE_BUCKET = 'deal-documents';
 
 export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
