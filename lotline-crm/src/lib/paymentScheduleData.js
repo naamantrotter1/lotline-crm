@@ -126,7 +126,7 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     deal.capital_deployed_date;
   if (!deployedRaw) return [];
 
-  const startDate = new Date(deployedRaw);
+  const startDate = parseLocalDate(deployedRaw) || new Date(deployedRaw);
   if (Number.isNaN(startDate.getTime())) return [];
 
   const payments = [];
