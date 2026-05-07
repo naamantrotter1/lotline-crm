@@ -22,7 +22,7 @@ export function computeCostOfCapital(deal) {
   if (!sd) return 0;
   const fin = (deal?.financing || '').toLowerCase().trim();
   if (!fin || fin === 'cash') return 0;
-  const loanFallback = deal.totalActual || (deal.land || 0) + (deal.mobileHome || 0);
+  const loanFallback = deal.investorCapitalContributed || (deal.land || 0) + (deal.mobileHome || 0);
   const loan = sd.loanAmountOverride || loanFallback;
   if (!loan) return 0;
   const monthlyInterest = loan * ((sd.interestRate || 0) / 100) / 12;
