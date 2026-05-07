@@ -620,24 +620,22 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         <div className="rounded-lg bg-[#1a2332] text-white p-4 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-gray-400">Monthly Interest Payment</span>
-            <span className="font-semibold">{fmt$(monthly)}</span>
+            <span className="text-gray-400">{fmt$(monthly)}</span>
           </div>
           {showEst && (
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Total Interest — Est. Hold ({formatHoldPeriod(estHold)})</span>
-              <span className="font-semibold text-accent">{fmt$(totalInterestEstimated)}</span>
+              <span className="text-gray-400">{fmt$(totalInterestEstimated)}</span>
             </div>
           )}
           <div className="flex justify-between text-xs">
-            <span className={showEst ? 'text-gray-500' : 'text-gray-400'}>
-              Total Interest — Full Term ({d.termMonths} mo)
-            </span>
-            <span className={showEst ? 'text-gray-500' : 'font-semibold'}>{fmt$(totalInterestFullTerm)}</span>
+            <span className="text-gray-400">Total Interest — Full Term ({d.termMonths} mo)</span>
+            <span className="text-gray-400">{fmt$(totalInterestFullTerm)}</span>
           </div>
           {totalInterestExtended !== null && (
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Total Interest — Extended ({d.termMonths + d.extensionMonths * d.numExtensions} mo)</span>
-              <span className="font-semibold">{fmt$(totalInterestExtended)}</span>
+              <span className="text-gray-400">{fmt$(totalInterestExtended)}</span>
             </div>
           )}
           <div className="flex justify-between text-xs border-t border-white/20 pt-2 mt-1">
@@ -646,14 +644,14 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           </div>
           {showEst && (
             <div className="flex justify-between text-[11px]">
-              <span className="text-gray-500">Full Term Total ({d.termMonths} mo + fees)</span>
+              <span className="text-gray-400">Full Term Total ({d.termMonths} mo + fees)</span>
               <span className="text-gray-400">{fmt$(totalInterestFullTerm + totalFees)}</span>
             </div>
           )}
           {d.extensionAvailable && (
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">If Extended (interest + fees + ext. fee)</span>
-              <span className="font-semibold text-yellow-400">{fmt$(totalInterestExtended + totalFees + totalLoan * (d.extensionFeePoints / 100))}</span>
+              <span className="text-gray-400">{fmt$(totalInterestExtended + totalFees + totalLoan * (d.extensionFeePoints / 100))}</span>
             </div>
           )}
         </div>
