@@ -93,8 +93,9 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   // Merge static + context deals, deduplicating by address (static wins)
   const staticDeals = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => d.lender === investor.name);
   const staticAddresses = new Set(staticDeals.map(d => (d.address || '').trim().toLowerCase()));
+  const invNameLower = investor.name.trim().toLowerCase();
   const liveDeals = contextDeals
-    .filter(d => (d.investor || '').trim() === investor.name.trim() && !staticAddresses.has((d.address || '').trim().toLowerCase()))
+    .filter(d => (d.investor || '').trim().toLowerCase() === invNameLower && !staticAddresses.has((d.address || '').trim().toLowerCase()))
     .map(d => ({
       address: d.address,
       stage: d.stage,
