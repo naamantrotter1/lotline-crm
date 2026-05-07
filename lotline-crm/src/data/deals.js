@@ -109,16 +109,17 @@ export function calcNetProfit(deal, totalActualOverride) {
   const fin = (deal?.financing || '').toLowerCase().trim();
   const hasFinancing = !!fin && fin !== 'cash';
 
-  const fullHold = sd.holdPeriod || deal.holdingMonths || 4;
+  const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
   const effHold  = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
 
   const sellingCosts = arv * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  const holdingCosts = effHold * (sd.monthlyHoldCost || deal.holdingPerMonth || 250);
+  const holdingCosts = effHold * (sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
   const coc = hasFinancing ? computeCostOfCapital(deal) : 0;
 
   const profitBeforeShare = arv - totalCosts - sellingCosts - holdingCosts - coc;
+  const profitSharePct = sd.profitSharePct != null ? sd.profitSharePct : _defaultProfitSharePct(deal?.investor);
   const profitShareAmount = hasFinancing
-    ? profitBeforeShare * ((sd.profitSharePct || 0) / 100)
+    ? profitBeforeShare * (profitSharePct / 100)
     : 0;
 
   return profitBeforeShare - profitShareAmount;
