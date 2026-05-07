@@ -1004,7 +1004,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
           orgId={activeOrgId}
           onSaved={handleNoteAdded}
           currentUser={currentUser}
-          mentionsEnabled={mentionsEnabled}
+          members={members}
         />
       )}
 
