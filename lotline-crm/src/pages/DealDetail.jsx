@@ -528,6 +528,14 @@ function FinancingScenarioPanel({
               </div>
             </div>
           </div>
+
+          {/* Payment Schedule (hard-money / hmcb scenarios) */}
+          <PaymentScheduleSection
+            deal={deal}
+            investorName={investor}
+            allocation={null}
+            readOnly={readOnly}
+          />
         </>
       )}
 
