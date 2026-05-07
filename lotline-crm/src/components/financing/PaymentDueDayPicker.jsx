@@ -29,7 +29,17 @@ function applyDueDay(date, dueDay) {
 }
 
 function toIsoDate(d) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseLocalDate(yyyymmdd) {
+  if (!yyyymmdd) return null;
+  const [y, m, d] = String(yyyymmdd).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
 }
 
 export default function PaymentDueDayPicker({
