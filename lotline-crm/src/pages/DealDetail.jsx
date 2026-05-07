@@ -300,6 +300,24 @@ function FinancingScenarioPanel({
 
   const iCls = "text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full";
 
+  // Auto-fill: when Estimated Sale Date is set in Profit Split scenario and
+  // Projected Payout Date is empty, mirror the date. User can still override.
+  useEffect(() => {
+    if (!estimatedSaleDate) return;
+    if (!isProfitSplit) return;
+    if (!projectedPayoutDate) setProjectedPayoutDate(estimatedSaleDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatedSaleDate, isProfitSplit]);
+
+  // Auto-fill: in Cash scenario, mirror Estimated Sale Date into Capital
+  // Returned Date when the latter is empty.
+  useEffect(() => {
+    if (!estimatedSaleDate) return;
+    if (!isCash) return;
+    if (!capitalReturnedDate) setCapitalReturnedDate(estimatedSaleDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatedSaleDate, isCash]);
+
   return (
     <div className="space-y-4">
       <SectionHeader>Financing Scenario</SectionHeader>
