@@ -898,35 +898,43 @@ function HeatMap() {
   const [geocoords, setGeocoords] = useState(() => {
     try { return JSON.parse(localStorage.getItem('mkt_geocache') || '{}'); } catch { return {}; }
   });
+  const geocodingInProgress = useRef(new Set());
   useEffect(() => {
     try { localStorage.setItem('mkt_geocache', JSON.stringify(geocoords)); } catch {}
   }, [geocoords]);
 
-  async function geocodeAddresses(deals) {
-    const unresolved = deals.filter(d => !d.lat && !d.lng && d.address && !geocoords[d.address]);
+  // Geocodes any deals missing lat/lng, skipping addresses already in cache or in-flight.
+  // Results trickle in as each request completes, triggering layer redraws via geocoords state.
+  const geocodeAddresses = useRef(async (deals, currentGeocoords) => {
+    const unresolved = deals.filter(d =>
+      !d.lat && !d.lng && d.address &&
+      !currentGeocoords[d.address] &&
+      !geocodingInProgress.current.has(d.address)
+    );
     if (!unresolved.length) return;
-    const updates = {};
+    unresolved.forEach(d => geocodingInProgress.current.add(d.address));
     for (const deal of unresolved) {
       try {
-        await new Promise(r => setTimeout(r, 300)); // ~3 req/s — within Nominatim ToS
+        await new Promise(r => setTimeout(r, 350)); // ~3 req/s — within Nominatim ToS
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`,
           { headers: { 'Accept-Language': 'en', 'User-Agent': 'LotLine-CRM/1.0' } }
         );
         const data = await res.json();
-        if (data?.[0]) updates[deal.address] = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        if (data?.[0]) {
+          const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          setGeocoords(prev => ({ ...prev, [deal.address]: coords }));
+        }
       } catch {}
+      geocodingInProgress.current.delete(deal.address);
     }
-    if (Object.keys(updates).length) setGeocoords(prev => ({ ...prev, ...updates }));
-  }
+  }).current;
 
-  function withGeocoords(deals) {
-    return deals.map(d => ({
-      ...d,
-      lat: d.lat ?? geocoords[d.address]?.lat,
-      lng: d.lng ?? geocoords[d.address]?.lng,
-    }));
-  }
+  const withGeocoords = (deals) => deals.map(d => ({
+    ...d,
+    lat: d.lat ?? geocoords[d.address]?.lat,
+    lng: d.lng ?? geocoords[d.address]?.lng,
+  }));
 
   // ── Map state (declared early so searchQuery useEffect can reference geojson) ─
   const [geojson,     setGeojson]     = useState(null);
