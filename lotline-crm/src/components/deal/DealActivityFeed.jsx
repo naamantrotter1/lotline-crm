@@ -790,6 +790,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   const [replyingTo,     setReplyingTo]     = useState(null); // _dbId of parent note
   const [replyText,      setReplyText]      = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyMentionMap, setReplyMentionMap] = useState({}); // { displayName: userId }
 
   // ── Load DB notes ──────────────────────────────────────────────────────────
   const loadDbNotes = useCallback(async () => {
