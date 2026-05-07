@@ -832,8 +832,11 @@ function FinancingScenarioPanel({
         </div>
       )}
 
-      {/* ── Capital Stack ── */}
-      <CapitalStackModule deal={deal} readOnly={readOnly} />
+      {/* ── Capital Stack — only for Committed Capital Partner (multi-investor, tranched).
+            Single-investor scenarios already track their lender on the scenario panel. */}
+      {selectedScenario === 'committed-capital-partner' && (
+        <CapitalStackModule deal={deal} readOnly={readOnly} />
+      )}
     </div>
   );
 }
