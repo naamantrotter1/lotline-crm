@@ -602,14 +602,27 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             : `Interest on funded at closing only: ${fmt$(fundedAtClosing)}`}
         </p>
 
+        {(() => {
+          const estHold = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, d.termMonths);
+          const totalInterestEstimated = monthly * estHold;
+          const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== d.termMonths;
+          return (
         <div className="rounded-lg bg-[#1a2332] text-white p-4 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-gray-400">Monthly Interest Payment</span>
             <span className="font-semibold">{fmt$(monthly)}</span>
           </div>
+          {showEst && (
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">Total Interest — Est. Hold ({estHold} mo)</span>
+              <span className="font-semibold text-accent">{fmt$(totalInterestEstimated)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs">
-            <span className="text-gray-400">Total Interest — Full Term ({d.termMonths} mo)</span>
-            <span className="font-semibold">{fmt$(totalInterestFullTerm)}</span>
+            <span className={showEst ? 'text-gray-500' : 'text-gray-400'}>
+              Total Interest — Full Term ({d.termMonths} mo)
+            </span>
+            <span className={showEst ? 'text-gray-500' : 'font-semibold'}>{fmt$(totalInterestFullTerm)}</span>
           </div>
           {totalInterestExtended !== null && (
             <div className="flex justify-between text-xs">
