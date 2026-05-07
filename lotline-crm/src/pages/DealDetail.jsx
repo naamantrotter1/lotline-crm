@@ -2284,16 +2284,22 @@ function DealDetailContent({ deal }) {
     setPhone(remoteDeal.phone || '');
     setEmail(remoteDeal.email || '');
     setInvestor(remoteDeal.investor || '');
-    setFinancing(remoteDeal.financing || '');
-    // Re-sync the scenario selector + DB enum when remote update brings new values,
-    // otherwise the dropdown can show one scenario while financing/financingScenarioType
-    // disagree.
+    // Re-sync the scenario selector + canonical DB enum when remote update
+    // brings new values. We treat `financing_scenario_type` as the source of
+    // truth — the legacy `financing` text field is derived. We deliberately
+    // do NOT set `financing` from remote here: applyScenario already keeps it
+    // in sync locally, and a stale remote `financing` (e.g. echoing before our
+    // own write commits) would otherwise flip the dropdown back.
     if (remoteDeal.financingScenarioType) {
       const byDb = FINANCING_SCENARIOS.find(s => s.dbType === remoteDeal.financingScenarioType);
       if (byDb) {
         setSelectedScenario(byDb.id);
         setFinancingScenarioType(remoteDeal.financingScenarioType);
+        setFinancing(byDb.financingType);
       }
+    } else if (!selectedScenario) {
+      // No scenario locally and remote also has no enum → trust remote text
+      setFinancing(remoteDeal.financing || '');
     }
     setClosingAttorney(remoteDeal.closingAttorney || '');
     setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
