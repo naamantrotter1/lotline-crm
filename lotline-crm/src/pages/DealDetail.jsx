@@ -2898,7 +2898,7 @@ function DealDetailContent({ deal }) {
     lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
     drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
     investorReturnType, investorAssignmentStatus,
-    paymentDueDay,
+    paymentDueDay, firstPaymentDate,
   ]);
 
   // ── Auto-regen payment schedule when paymentDueDay or capitalDeployedDate changes ──
