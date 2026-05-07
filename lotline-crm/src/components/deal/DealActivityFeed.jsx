@@ -546,7 +546,7 @@ function EventCard({ event, usersById, onDeleteNote, replyProps }) {
 
         {/* Body — renders @mention chips */}
         {event.body && (
-          <div className={`mt-2 ${!exp && isLong ? 'line-clamp-3' : ''}`}>
+          <div ref={bodyRef} className={`mt-2 ${!exp ? 'line-clamp-3' : ''}`}>
             {event.hasMentions ? (
               <NoteBodyRenderer
                 body={event.body}
@@ -559,7 +559,7 @@ function EventCard({ event, usersById, onDeleteNote, replyProps }) {
             )}
           </div>
         )}
-        {isLong && (
+        {(hasOverflow || exp) && (
           <button
             onClick={() => setExp(e => !e)}
             className="text-[11px] text-accent mt-1 font-medium"
