@@ -109,6 +109,7 @@ function dealToRow(deal) {
     lng:                     deal.lng ?? null,
     capital_deployed_date:         deal.capitalDeployedDate || null,
     capital_returned_date:         deal.capitalReturnedDate || null,
+    estimated_sale_date:           deal.estimatedSaleDate   || null,
     investor_paid_out:             deal.investorPaidOut || false,
     investor_capital_contributed:  deal.investorCapitalContributed ?? null,
     investor_equity_pct:           deal.investorEquityPct ?? null,
