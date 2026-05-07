@@ -2535,10 +2535,23 @@ function DealDetailContent({ deal }) {
     if (!deal?.id) return;
     if (!canEdit && !isAgent) return;
 
+    // Always derive financing fields from selectedScenario so the legacy
+    // `financing` text column and the canonical `financing_scenario_type` enum
+    // can never drift. Without this, any saveDeal call that spreads a stale
+    // `deal` prop (e.g. handleSetStage, handleSendToLandAcq) could wipe
+    // financingScenarioType back to null and flip the dropdown on refresh.
+    const scenarioMeta = selectedScenario
+      ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)
+      : null;
+    const derivedFinancing             = scenarioMeta?.financingType || financing || '';
+    const derivedFinancingScenarioType = scenarioMeta?.dbType        || financingScenarioType || null;
+
     const updatedDeal = {
       ...deal,
       stage, address, county, state: dealState, zip, acreage,
-      ownerName, sellerName, phone, email, investor, financing, notes,
+      ownerName, sellerName, phone, email, investor,
+      financing: derivedFinancing,
+      notes,
       leadSource, ownerType, utilityScenario, homeModel,
       waterCompany, sewerCompany, electricCompany,
       parcelId, closingAttorney, closingAttorneyPhone,
@@ -2557,7 +2570,7 @@ function DealDetailContent({ deal }) {
           ? investorProfitSplitPct
           : investorEquityPct,
       projectedPayoutDate,
-      financingScenarioType,
+      financingScenarioType: derivedFinancingScenarioType,
       // Pack all scenario-specific inputs so they survive page reload
       scenarioData: {
         interestRate, originationFeeType, originationFeePct, originationFeeFlat,
