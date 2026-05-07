@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { parseMentionSegments, buildMentionToken, extractMentions, validateMentions } from '../../lib/mentions';
+import { parseMentionSegments, extractMentions, validateMentions, expandMentions } from '../../lib/mentions';
 import MentionChip from './MentionChip';
 
 // ── Event type config ─────────────────────────────────────────────────────────
