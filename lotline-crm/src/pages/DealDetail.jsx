@@ -733,7 +733,7 @@ function FinancingScenarioPanel({
                 <>
                   <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-                      {showEst ? `Total Interest × est. hold (${estMonths} mo)` : 'Total Interest'}
+                      {showEst ? `Total Interest × est. hold (${formatHoldPeriod(estMonths)})` : 'Total Interest'}
                     </span>
                     <span className="text-sm font-semibold text-accent">
                       ${(showEst ? interestEst : interestFull).toLocaleString()}
