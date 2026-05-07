@@ -3479,6 +3479,7 @@ function DealDetailContent({ deal }) {
             capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
             capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
             estimatedSaleDate={estimatedSaleDate} setEstimatedSaleDate={setEstimatedSaleDate}
+            paymentDueDay={paymentDueDay} setPaymentDueDay={setPaymentDueDay}
             cashSource={cashSource} setCashSource={setCashSource}
             investor={investor} setInvestor={setInvestor}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
