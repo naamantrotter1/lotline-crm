@@ -1483,6 +1483,7 @@ export default function InvestorPortal() {
         {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={enrichedInvestors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} />}
+        {activeTab === 'payments' && <PaymentsAdminTab orgId={activeOrgId} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
         {activeTab === 'directory' && (
           <DirectoryTab
