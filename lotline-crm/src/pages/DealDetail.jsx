@@ -1779,7 +1779,7 @@ function CommittedCapitalPartnerPanel({
   const projectedPrefFull = amountNum * (ccpPrefReturnPct / 100) * (holdMonths / 12);
   const projectedPref     = amountNum * (ccpPrefReturnPct / 100) * (estHoldMonths / 12);
   const showCcpEst        = !!(deal?.capitalDeployedDate && deal?.estimatedSaleDate)
-                            && estHoldMonths !== holdMonths;
+                            && Math.abs(estHoldMonths - holdMonths) > 0.01;
   const projectedShare = ccpProfitSharePct != null && ccpProfitSharePct > 0
     ? netProfit * (ccpProfitSharePct / 100)
     : 0;
