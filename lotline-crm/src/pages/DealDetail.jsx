@@ -2547,6 +2547,15 @@ function DealDetailContent({ deal }) {
   useEffect(() => {
     const remoteDeal = deals.find(d => String(d.id) === String(deal.id));
     if (!remoteDeal) return;
+    // Sync stage from remote so a fresher DB value propagates after async loads
+    // (DealsContext typically hydrates from localStorage first, then from Supabase).
+    // Without this, local state could keep showing a stale stage even though the
+    // DB has the new value — the symptom users see as a stage "reverting on refresh".
+    const allStages = [...LAND_ACQ_STAGES, ...DEAL_OVERVIEW_STAGES];
+    if (remoteDeal.stage && allStages.includes(remoteDeal.stage) && remoteDeal.stage !== stage) {
+      setStage(remoteDeal.stage);
+      if (deal?.id) localStorage.setItem(`lotline_deal_stage_${deal.id}`, remoteDeal.stage);
+    }
     setAddress(remoteDeal.address || '');
     setCounty(remoteDeal.county || '');
     setDealState(remoteDeal.state || '');
