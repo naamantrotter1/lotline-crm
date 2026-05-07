@@ -364,20 +364,40 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
       <SectionCard title="Loan Amounts">
         <Row>
           <div>
-            {label('Purchase Price ($)')}
-            <input type="number" className={inp} value={d.purchasePrice || ''} onChange={e => {
-              if (readOnly) return;
-              const v = parseFloat(e.target.value) || 0;
-              // Auto-mirror Funded at Closing only when it was tracking purchasePrice (or unset).
-              // Both updates must go in a single onChange call: two sequential `set()` calls
-              // would close over the same stale `d`, and the second would clobber the first.
-              const shouldMirror = !d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice;
-              onChange({ ...d, purchasePrice: v, ...(shouldMirror ? { fundedAtClosing: v } : {}) });
-            }} disabled={readOnly} />
+            {label('Purchase Price')}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={inp}
+              value={d.purchasePrice ? `$${Number(d.purchasePrice).toLocaleString()}` : ''}
+              onChange={e => {
+                if (readOnly) return;
+                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                const v = parseFloat(raw) || 0;
+                // Auto-mirror Funded at Closing only when it was tracking purchasePrice (or unset).
+                // Both updates must go in a single onChange call: two sequential `set()` calls
+                // would close over the same stale `d`, and the second would clobber the first.
+                const shouldMirror = !d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice;
+                onChange({ ...d, purchasePrice: v, ...(shouldMirror ? { fundedAtClosing: v } : {}) });
+              }}
+              placeholder="$0"
+              disabled={readOnly}
+            />
           </div>
           <div>
-            {label('Construction Holdback ($)')}
-            <input type="number" className={inp} value={d.holdbackAmount || ''} onChange={e => set('holdbackAmount', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            {label('Construction Holdback')}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={inp}
+              value={d.holdbackAmount ? `$${Number(d.holdbackAmount).toLocaleString()}` : ''}
+              onChange={e => {
+                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                set('holdbackAmount', parseFloat(raw) || 0);
+              }}
+              placeholder="$0"
+              disabled={readOnly}
+            />
           </div>
         </Row>
         <Row>
@@ -386,8 +406,19 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             <div className="px-3 py-1.5 text-sm font-semibold text-sidebar bg-gray-100 rounded-lg border border-gray-200">{fmt$(totalLoan)}</div>
           </div>
           <div>
-            {label('Amount Funded at Closing ($)')}
-            <input type="number" className={inp} value={d.fundedAtClosing || ''} onChange={e => set('fundedAtClosing', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+            {label('Amount Funded at Closing')}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={inp}
+              value={d.fundedAtClosing ? `$${Number(d.fundedAtClosing).toLocaleString()}` : ''}
+              onChange={e => {
+                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                set('fundedAtClosing', parseFloat(raw) || 0);
+              }}
+              placeholder="$0"
+              disabled={readOnly}
+            />
           </div>
         </Row>
         <div className="flex items-center gap-2 pt-1">
