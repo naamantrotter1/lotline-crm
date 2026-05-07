@@ -602,11 +602,6 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             : `Interest on funded at closing only: ${fmt$(fundedAtClosing)}`}
         </p>
 
-        {(() => {
-          const estHold = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, d.termMonths);
-          const totalInterestEstimated = monthly * estHold;
-          const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== d.termMonths;
-          return (
         <div className="rounded-lg bg-[#1a2332] text-white p-4 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-gray-400">Monthly Interest Payment</span>
