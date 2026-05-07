@@ -443,8 +443,27 @@ async function notifyMentions({
   }));
 }
 
+// Parse a plain-text segment for [label](url) markdown links.
+// Returns an array of { type: 'text'|'link', content, href? } chunks.
+const LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+function parseLinks(text) {
+  if (!text) return [{ type: 'text', content: '' }];
+  const out = [];
+  let last = 0;
+  let m;
+  LINK_RE.lastIndex = 0;
+  while ((m = LINK_RE.exec(text)) !== null) {
+    if (m.index > last) out.push({ type: 'text', content: text.slice(last, m.index) });
+    out.push({ type: 'link', content: m[1], href: m[2] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ type: 'text', content: text.slice(last) });
+  return out;
+}
+
 // ── NoteBodyRenderer ──────────────────────────────────────────────────────────
-// Renders a note body, replacing @[Name](uuid) tokens with <MentionChip>.
+// Renders a note body, replacing @[Name](uuid) tokens with <MentionChip>
+// and [label](url) tokens with clickable anchors.
 function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
   const segments = parseMentionSegments(body, usersById);
   return (
@@ -464,7 +483,26 @@ function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
             />
           );
         }
-        return <span key={i}>{seg.content}</span>;
+        const subSegs = parseLinks(seg.content);
+        return (
+          <span key={i}>
+            {subSegs.map((sub, j) =>
+              sub.type === 'link'
+                ? (
+                  <a
+                    key={j}
+                    href={sub.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    {sub.content}
+                  </a>
+                )
+                : <span key={j}>{sub.content}</span>
+            )}
+          </span>
+        );
       })}
     </span>
   );
