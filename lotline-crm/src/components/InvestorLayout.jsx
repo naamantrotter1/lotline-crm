@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Briefcase, FileText, Bell, DollarSign,
   TrendingUp, MessageSquare, LogOut, Menu, X,
-  Eye, EyeOff, ChevronDown, Sun, Moon, BarChart2, UserCircle,
+  Eye, EyeOff, ChevronDown, Sun, Moon, BarChart2, UserCircle, CreditCard,
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
