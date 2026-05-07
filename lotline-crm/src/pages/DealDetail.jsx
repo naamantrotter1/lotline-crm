@@ -2602,6 +2602,7 @@ function DealDetailContent({ deal }) {
           ? investorProfitSplitPct
           : investorEquityPct,
       projectedPayoutDate,
+      estimatedSaleDate: estimatedSaleDate || null,
       financingScenarioType: derivedFinancingScenarioType,
       // Pack all scenario-specific inputs so they survive page reload
       scenarioData: {
