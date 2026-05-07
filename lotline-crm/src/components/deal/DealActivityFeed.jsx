@@ -830,8 +830,9 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         date:        n.created_at,
         hasMentions: !!(n.mentioned_user_ids?.length),
         isTask,
+        meta:        { author: authorName },
         // Hide separate author footer for plain notes since the title already shows the author.
-        meta:        { author: type === 'note' ? null : authorName },
+        hideAuthorFooter: type === 'note',
       };
     });
 
