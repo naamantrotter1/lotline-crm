@@ -3503,6 +3503,8 @@ function DealDetailContent({ deal }) {
             onAddInvestor={() => setShowInvestorPicker(true)}
             capitalDeployedDate={capitalDeployedDate}
             estimatedSaleDate={estimatedSaleDate}
+            paymentDueDay={paymentDueDay}
+            onPaymentDueDayChange={setPaymentDueDay}
           />
         )}
 
