@@ -213,23 +213,33 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
     const prevTasks = tasks;
     setTasks(prev => prev.filter(t => t.id !== id));
 
-    // Try soft-delete first (preferred — preserves audit trail)
+    // Try soft-delete first (preferred — preserves audit trail). RLS-denied
+    // updates return { data: [], error: null }, so we have to check row count.
     const { data: softData, error: softErr } = await deleteTask(id);
-    const softSucceeded = !softErr && Array.isArray(softData) ? softData.length > 0 : !softErr;
+    const softSucceeded = !softErr && Array.isArray(softData) && softData.length > 0;
+    console.log('[deleteTask] soft', { id, softSucceeded, softData, softErr });
 
-    if (softErr || !softSucceeded) {
-      // Soft-delete failed (RLS blocked it, column missing, or no row matched).
-      // Fall back to hard-delete so the task actually goes away on refresh.
-      const { error: hardErr } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id);
-      if (hardErr) {
-        console.error('handleDeleteTask: both soft and hard delete failed', { softErr, hardErr });
-        // Restore optimistic state so the user sees the task is still there.
-        setTasks(prevTasks);
-        alert('Could not delete task: ' + (hardErr.message || 'permission denied'));
-      }
+    if (softSucceeded) return;
+
+    // Soft-delete didn't update any row → fall back to hard-delete.
+    // We .select() so we can detect RLS-denied deletes (which return empty arrays).
+    const { data: hardData, error: hardErr } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id)
+      .select();
+    const hardSucceeded = !hardErr && Array.isArray(hardData) && hardData.length > 0;
+    console.log('[deleteTask] hard', { id, hardSucceeded, hardData, hardErr });
+
+    if (!hardSucceeded) {
+      console.error('handleDeleteTask: both soft and hard delete affected 0 rows', {
+        softErr, softData, hardErr, hardData,
+      });
+      setTasks(prevTasks);
+      alert(
+        'Could not delete task. ' +
+        (hardErr?.message || softErr?.message || 'The database rejected the delete (likely an RLS policy on the tasks table — only the task creator or an admin may delete it).')
+      );
     }
   };
 
