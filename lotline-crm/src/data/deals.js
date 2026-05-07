@@ -26,7 +26,7 @@ export function computeCostOfCapital(deal) {
   const loan = sd.loanAmountOverride || loanFallback;
   if (!loan) return 0;
   const monthlyInterest = loan * ((sd.interestRate || 0) / 100) / 12;
-  const fullHold = sd.holdPeriod || deal.holdingMonths || 0;
+  const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
   const effHold = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
   const origFee = (sd.originationFeeType === 'percentage' || !sd.originationFeeType)
     ? loan * ((sd.originationFeePct || 0) / 100)
