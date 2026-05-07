@@ -2043,12 +2043,12 @@ function CommittedCapitalPartnerPanel({
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Projected hold period</span>
               <span className="font-medium">
-                {showCcpEst ? `${estHoldMonths} mo (est. hold)` : `${holdMonths} mo`}
+                {showCcpEst ? `${formatHoldPeriod(estHoldMonths)} (est. hold)` : `${holdMonths} mo`}
               </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">
-                Projected pref return ({ccpPrefReturnPct}% × {showCcpEst ? estHoldMonths : holdMonths} mo)
+                Projected pref return ({ccpPrefReturnPct}% × {showCcpEst ? formatHoldPeriod(estHoldMonths) : `${holdMonths} mo`})
                 {ccpTranches.length > 0 && <span className="ml-1 text-gray-500" title="Simplified: full allocation × rate × hold period. Tranche-by-tranche accrual in PR 2.">*</span>}
               </span>
               <span className="font-medium">{fmt(Math.round(projectedPref))}</span>
