@@ -858,6 +858,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       return {
         id:          `db-note-${n.id}`,
         _dbId:       n.id,
+        authorId:    n.author_id,
         type,
         title:       titles[n.note_type] || authorName,
         body:        n.body,
