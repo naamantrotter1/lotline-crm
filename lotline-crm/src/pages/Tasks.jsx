@@ -155,17 +155,25 @@ export default function Tasks() {
     const prevTasks = tasks;
     setTasks(prev => prev.filter(t => t.id !== id));
 
-    // Try soft-delete first; if it returns no rows (RLS blocked or column missing),
-    // fall back to hard-delete so the task actually disappears on refresh.
     const { data: softData, error: softErr } = await deleteTask(id);
-    const softSucceeded = !softErr && Array.isArray(softData) ? softData.length > 0 : !softErr;
-    if (softErr || !softSucceeded) {
-      const { error: hardErr } = await supabase.from('tasks').delete().eq('id', id);
-      if (hardErr) {
-        console.error('handleDelete: both soft and hard delete failed', { softErr, hardErr });
-        setTasks(prevTasks);
-        alert('Could not delete task: ' + (hardErr.message || 'permission denied'));
-      }
+    const softSucceeded = !softErr && Array.isArray(softData) && softData.length > 0;
+    console.log('[deleteTask] soft', { id, softSucceeded, softData, softErr });
+    if (softSucceeded) return;
+
+    const { data: hardData, error: hardErr } = await supabase
+      .from('tasks').delete().eq('id', id).select();
+    const hardSucceeded = !hardErr && Array.isArray(hardData) && hardData.length > 0;
+    console.log('[deleteTask] hard', { id, hardSucceeded, hardData, hardErr });
+
+    if (!hardSucceeded) {
+      console.error('handleDelete: both soft and hard delete affected 0 rows', {
+        softErr, softData, hardErr, hardData,
+      });
+      setTasks(prevTasks);
+      alert(
+        'Could not delete task. ' +
+        (hardErr?.message || softErr?.message || 'The database rejected the delete (likely an RLS policy on the tasks table — only the task creator or an admin may delete it).')
+      );
     }
   };
 
