@@ -517,27 +517,6 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
                 </div>
               </div>
 
-              {/* Estimated Cash to Close breakdown */}
-              <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-1.5 text-xs">
-                <p className="font-semibold text-gray-600 uppercase tracking-wide text-[10px] mb-2">Estimated Cash to Close</p>
-                <div className="flex justify-between text-gray-500">
-                  <span>Purchase Price</span>
-                  <span>{fmt$(d.purchasePrice)}</span>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>Less: Amount Funded at Closing</span>
-                  <span className="text-green-600">({fmt$(fundedAtClosing)})</span>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>Plus: Closing Costs</span>
-                  <span>{fmt$(totalFees)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-sidebar border-t border-gray-200 pt-1.5 mt-1">
-                  <span>Estimated Cash to Close</span>
-                  <span className="text-accent">{fmt$(Math.max(0, d.purchasePrice - fundedAtClosing + totalFees))}</span>
-                </div>
-                <p className="text-[10px] text-gray-400 pt-1">Does not include taxes, insurance premiums, or prorations.</p>
-              </div>
             </div>
           )}
         </div>
