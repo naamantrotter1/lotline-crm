@@ -1088,10 +1088,11 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                   replyingTo,
                   replyText,
                   replySubmitting,
-                  onReply:         (id) => { setReplyingTo(id); setReplyText(''); },
+                  onReply:         (id) => { setReplyingTo(id); setReplyText(''); setReplyMentionMap({}); },
                   onReplyTextChange: setReplyText,
+                  onMentionInserted: (m) => setReplyMentionMap(prev => ({ ...prev, [m.name]: m.id })),
                   onSubmitReply:   handleSubmitReply,
-                  onCancelReply:   () => { setReplyingTo(null); setReplyText(''); },
+                  onCancelReply:   () => { setReplyingTo(null); setReplyText(''); setReplyMentionMap({}); },
                 } : null}
               />
             ))}
