@@ -796,9 +796,10 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
 
     const dbNoteEvents = dbNotes.filter(n => !n.parent_note_id).map(n => {
       const isTask = n.note_type && !['note', 'document_upload'].includes(n.note_type);
-      const authorName = (isTask || n.note_type === 'document_upload') && n.author_name
-        ? n.author_name
-        : (usersById[n.author_id]?.name || 'Unknown');
+      const authorName =
+        n.author_name ||
+        usersById[n.author_id]?.name ||
+        'Unknown';
       const titles = {
         task:            'Task created',
         task_complete:   'Task completed',
