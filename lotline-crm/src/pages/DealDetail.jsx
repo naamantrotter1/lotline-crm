@@ -605,6 +605,14 @@ function FinancingScenarioPanel({
               </div>
             )}
           </div>
+
+          {/* Payment Schedule (line of credit) */}
+          <PaymentScheduleSection
+            deal={deal}
+            investorName={investor}
+            allocation={null}
+            readOnly={readOnly}
+          />
         </div>
       )}
 
