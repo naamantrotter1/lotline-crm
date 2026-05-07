@@ -219,7 +219,7 @@ function DecimalInput({ value, onChange, className }) {
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
 function FinancingScenarioPanel({
-  deal, costs, arv, allIn,
+  deal, costs, arv, allIn, netProfit: netProfitFromParent,
   selectedScenario, applyScenario,
   // General loan terms
   lenderName, setLenderName,
