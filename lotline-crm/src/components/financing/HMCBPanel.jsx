@@ -631,9 +631,15 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             </div>
           )}
           <div className="flex justify-between text-xs border-t border-white/20 pt-2 mt-1">
-            <span className="text-gray-400">Total Cost (interest + fees)</span>
-            <span className="font-bold text-accent">{fmt$(totalInterestFullTerm + totalFees)}</span>
+            <span className="text-gray-400">{showEst ? `Est. Total Cost (${estHold} mo + fees)` : 'Total Cost (interest + fees)'}</span>
+            <span className="font-bold text-accent">{fmt$((showEst ? totalInterestEstimated : totalInterestFullTerm) + totalFees)}</span>
           </div>
+          {showEst && (
+            <div className="flex justify-between text-[11px]">
+              <span className="text-gray-500">Full Term Total ({d.termMonths} mo + fees)</span>
+              <span className="text-gray-400">{fmt$(totalInterestFullTerm + totalFees)}</span>
+            </div>
+          )}
           {d.extensionAvailable && (
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">If Extended (interest + fees + ext. fee)</span>
@@ -641,6 +647,8 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             </div>
           )}
         </div>
+          );
+        })()}
       </SectionCard>
 
       {/* ── Draw Schedule ── */}
