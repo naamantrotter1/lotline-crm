@@ -629,8 +629,10 @@ function FinancingScenarioPanel({
             const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - holdPeriod) > 0.01;
             const holdingCostEst  = estHold * (deal.holdingPerMonth || 250);
             const holdingCostFull = holdPeriod * (deal.holdingPerMonth || 250);
-            const netEst         = arvVal - allIn - sellingCosts - holdingCostEst  - totalCostEst;
-            const netFull        = arvVal - allIn - sellingCosts - holdingCostFull - totalCostFull;
+            const profitBeforeEst  = arvVal - allIn - sellingCosts - holdingCostEst  - totalCostEst;
+            const profitBeforeFull = arvVal - allIn - sellingCosts - holdingCostFull - totalCostFull;
+            const netEst  = profitBeforeEst  - profitBeforeEst  * ((profitSharePct || 0) / 100);
+            const netFull = profitBeforeFull - profitBeforeFull * ((profitSharePct || 0) / 100);
             return (
               <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
