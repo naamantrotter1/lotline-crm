@@ -3590,7 +3590,7 @@ function DealDetailContent({ deal }) {
             data={hmcbData}
             onChange={setHmcbData}
             readOnly={fromInvestorPortal || !canEdit}
-            investorList={investorList}
+            investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
             onAddInvestor={() => setShowInvestorPicker(true)}
             capitalDeployedDate={capitalDeployedDate}
             estimatedSaleDate={estimatedSaleDate}
