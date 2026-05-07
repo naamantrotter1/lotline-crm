@@ -418,16 +418,19 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
-  const { jvScope } = useJv();
   const UNFUNDED = ['Cash', 'None', '', null, undefined];
-  const allUnfunded = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => UNFUNDED.includes(d.lender));
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
-  // Also include live context deals with no investor not already covered by a static unfunded entry
-  const staticUnfundedAddrs = new Set(allUnfunded.map(d => (d.address || '').trim().toLowerCase()));
+  // Source of truth: live context deals only. The previous implementation merged
+  // a hardcoded static table (ALL_DEALS_TABLE) which kept showing deals here long
+  // after a funder was assigned, because the static list never updated.
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
-    .filter(d => !d.isArchived && !LAND_ACQ_STAGES.has(d.stage) && UNFUNDED.includes(d.investor || '') && !staticUnfundedAddrs.has((d.address || '').trim().toLowerCase()))
+    .filter(d =>
+      !d.isArchived &&
+      !LAND_ACQ_STAGES.has(d.stage) &&
+      UNFUNDED.includes((d.investor || '').trim())
+    )
     .map(d => {
       const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return {
@@ -448,11 +451,9 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   const [extraInvestors, setExtraInvestors] = useState([]);
   const [modalDeal, setModalDeal] = useState(null);
 
-  // Once assigned, deal leaves the list
-  const deals = [
-    ...allUnfunded.filter(d => !assignments[d.address]),
-    ...liveUnfunded.filter(d => !assignments[d.address]),
-  ];
+  // Once assigned in this session, deal leaves the list immediately (the context
+  // update is also pushed below, so the filter naturally excludes it next render).
+  const deals = liveUnfunded.filter(d => !assignments[d.address]);
   const totalNeeded = deals.reduce((s, d) => s + (d.totalCapital || 0), 0);
 
   const baseInvestors = investorsProp ?? loadInvestors(orgId, orgSlug);
