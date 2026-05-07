@@ -623,7 +623,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           </div>
           {showEst && (
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Total Interest — Est. Hold ({estHold} mo)</span>
+              <span className="text-gray-400">Total Interest — Est. Hold ({formatHoldPeriod(estHold)})</span>
               <span className="font-semibold text-accent">{fmt$(totalInterestEstimated)}</span>
             </div>
           )}
