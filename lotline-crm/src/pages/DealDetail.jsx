@@ -616,7 +616,7 @@ function FinancingScenarioPanel({
                   </div>
                   {showEst && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Monthly Interest × est. hold ({estHold} mo)</span>
+                      <span className="text-gray-400">Monthly Interest × est. hold ({formatHoldPeriod(estHold)})</span>
                       <span className="font-medium">${Math.round(interestEst).toLocaleString()}</span>
                     </div>
                   )}
