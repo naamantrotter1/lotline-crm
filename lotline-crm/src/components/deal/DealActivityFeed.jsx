@@ -916,15 +916,25 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      const authorId = session.user.id;
+      const body = replyText.trim();
+
+      // Extract + validate mentions from the reply body
+      const extracted = extractMentions(body);
+      const { valid: validMentionedIds } = extracted.length
+        ? await validateMentions(extracted, activeOrgId)
+        : { valid: [] };
+
       const { data: reply, error } = await supabase
         .from('activity_notes')
         .insert({
-          organization_id: activeOrgId,
-          deal_id:         deal.id,
-          author_id:       session.user.id,
-          author_name:     currentUser || null,
-          body:            replyText.trim(),
-          parent_note_id:  parentNoteId,
+          organization_id:    activeOrgId,
+          deal_id:            deal.id,
+          author_id:          authorId,
+          author_name:        currentUser || null,
+          body,
+          parent_note_id:     parentNoteId,
+          mentioned_user_ids: validMentionedIds,
         })
         .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id')
         .single();
@@ -932,6 +942,20 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         setDbNotes(prev => [...prev, reply]);
         setReplyText('');
         setReplyingTo(null);
+
+        // Fan out mentions + notifications (best-effort)
+        const authorName =
+          members.find(m => m.id === authorId)?.name ||
+          currentUser ||
+          'Someone';
+        notifyMentions({
+          orgId:  activeOrgId,
+          dealId: deal.id,
+          authorId, authorName,
+          body,
+          noteId: reply.id,
+          validMentionedIds,
+        }).catch(e => console.warn('reply mention fanout', e));
       }
     } finally {
       setReplySubmitting(false);
