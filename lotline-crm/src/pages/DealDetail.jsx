@@ -603,7 +603,7 @@ function FinancingScenarioPanel({
             const interestFull   = monthlyInterestHm * holdPeriod;
             const totalCostEst   = interestEst  + totalClosingCosts;
             const totalCostFull  = interestFull + totalClosingCosts;
-            const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== holdPeriod;
+            const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - holdPeriod) > 0.01;
             const netEst         = arvVal - allIn - totalCostEst;
             const netFull        = arvVal - allIn - totalCostFull;
             return (
