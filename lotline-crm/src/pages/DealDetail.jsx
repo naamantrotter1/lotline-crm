@@ -2285,6 +2285,16 @@ function DealDetailContent({ deal }) {
     setEmail(remoteDeal.email || '');
     setInvestor(remoteDeal.investor || '');
     setFinancing(remoteDeal.financing || '');
+    // Re-sync the scenario selector + DB enum when remote update brings new values,
+    // otherwise the dropdown can show one scenario while financing/financingScenarioType
+    // disagree.
+    if (remoteDeal.financingScenarioType) {
+      const byDb = FINANCING_SCENARIOS.find(s => s.dbType === remoteDeal.financingScenarioType);
+      if (byDb) {
+        setSelectedScenario(byDb.id);
+        setFinancingScenarioType(remoteDeal.financingScenarioType);
+      }
+    }
     setClosingAttorney(remoteDeal.closingAttorney || '');
     setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
     setClosingAttorneyAddress(remoteDeal.closingAttorneyAddress || '');
