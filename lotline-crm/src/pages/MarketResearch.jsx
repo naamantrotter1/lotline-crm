@@ -924,6 +924,8 @@ function HeatMap() {
         const res = await fetch(
           `${base}/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`
         );
+        if (res.status === 429) break; // rate-limited — stop the loop, retry next trigger
+        if (!res.ok) { geocodingInProgress.current.delete(deal.address); continue; }
         const data = await res.json();
         if (data?.[0]) {
           const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
