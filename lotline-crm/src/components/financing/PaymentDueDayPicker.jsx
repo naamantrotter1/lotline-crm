@@ -127,16 +127,6 @@ export default function PaymentDueDayPicker({
             disabled={readOnly}
             className={inputCls}
           />
-          {firstPaymentDate && firstPaymentDate !== computedFirstPayment && (
-            <button
-              type="button"
-              onClick={() => onFirstPaymentDateChange?.(null)}
-              disabled={readOnly}
-              className="text-[11px] text-accent hover:underline mt-1"
-            >
-              Reset to {computedFirstPayment ? new Date(computedFirstPayment + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'auto'}
-            </button>
-          )}
         </div>
       )}
     </div>
