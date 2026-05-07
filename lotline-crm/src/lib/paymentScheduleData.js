@@ -149,9 +149,7 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const originationFee = round2(originationFlat || principal * originationPct);
     const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
     const firstPaymentDateRaw = data.firstPaymentDate ?? scenarioData.firstPaymentDate ?? null;
-    const firstPaymentAnchor = firstPaymentDateRaw && !Number.isNaN(new Date(firstPaymentDateRaw).getTime())
-      ? new Date(firstPaymentDateRaw)
-      : null;
+    const firstPaymentAnchor = parseLocalDate(firstPaymentDateRaw);
 
     if (originationFee > 0) {
       payments.push({
@@ -250,9 +248,7 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const months = Math.max(1, Math.round(toNumber(deal.holding_months ?? data.holdPeriod ?? 6)));
     const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
     const firstPaymentDateRaw = data.firstPaymentDate ?? scenarioData.firstPaymentDate ?? null;
-    const firstPaymentAnchor = firstPaymentDateRaw && !Number.isNaN(new Date(firstPaymentDateRaw).getTime())
-      ? new Date(firstPaymentDateRaw)
-      : null;
+    const firstPaymentAnchor = parseLocalDate(firstPaymentDateRaw);
 
     if (monthlyInterest > 0) {
       for (let m = 1; m <= months; m++) {
