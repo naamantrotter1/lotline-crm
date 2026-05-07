@@ -358,6 +358,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
           organization_id:    orgId,
           deal_id:            dealId,
           author_id:          authorId,
+          author_name:        currentUser || null,
           body,
           mentioned_user_ids: validMentionedIds,
         })
