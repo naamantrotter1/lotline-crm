@@ -217,21 +217,53 @@ function useOrgMembers(orgId) {
 // shows a portal popover anchored to the textarea, and inserts well-formed
 // @[Name](uuid) tokens on selection. Pure UI — the parent owns the text and
 // is responsible for extracting/validating mentions on save.
+// Split text into segments where @Name occurrences (only names present in
+// mentionMap) become 'mention' segments. Used by the highlight overlay.
+function splitMentionSegments(text, mentionMap) {
+  if (!text) return [];
+  const names = Object.keys(mentionMap || {}).sort((a, b) => b.length - a.length);
+  if (!names.length) return [{ type: 'text', content: text }];
+
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`@(?:${escaped.join('|')})(?=$|[\\s\\W])`, 'g');
+
+  const out = [];
+  let last = 0;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push({ type: 'text', content: text.slice(last, m.index) });
+    out.push({ type: 'mention', content: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ type: 'text', content: text.slice(last) });
+  return out;
+}
+
 function MentionTextarea({
   value,
   onChange,
   onSubmit,
   onMentionInserted,
   members,
+  mentionMap,
   textareaRef,
   ...textareaProps
 }) {
   const internalRef = useRef(null);
   const ref = textareaRef || internalRef;
+  const mirrorRef = useRef(null);
   const [mentionQuery,   setMentionQuery]   = useState(null);
   const [mentionStart,   setMentionStart]   = useState(-1);
   const [mentionResults, setMentionResults] = useState([]);
   const [mentionIdx,     setMentionIdx]     = useState(0);
+
+  // Keep the highlight mirror scrolled in lockstep with the textarea so chips
+  // stay aligned when content overflows the visible rows.
+  const syncScroll = () => {
+    if (!mirrorRef.current || !ref.current) return;
+    mirrorRef.current.scrollTop  = ref.current.scrollTop;
+    mirrorRef.current.scrollLeft = ref.current.scrollLeft;
+  };
 
   const searchTeammates = useCallback((q) => {
     const ql = q.trim().toLowerCase();
