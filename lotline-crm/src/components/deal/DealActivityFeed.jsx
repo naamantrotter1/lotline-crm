@@ -133,6 +133,240 @@ function MentionAutocomplete({ results, selectedIdx, onSelect, anchorRef }) {
   );
 }
 
+// ── useOrgMembers ─────────────────────────────────────────────────────────────
+// Loads the active org's members for @-mention autocomplete. Excludes the
+// current user. Tries the server API first (admin client, no RLS), falls back
+// to a direct memberships+profiles query for local dev.
+function useOrgMembers(orgId) {
+  const [members, setMembers] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  useEffect(() => {
+    if (!orgId || !supabase) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid   = session?.user?.id;
+      const token = session?.access_token;
+      if (!cancelled) setCurrentUserId(uid || null);
+
+      if (token) {
+        try {
+          const res = await fetch('/api/team/members', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const { members: apiMembers } = await res.json();
+            if (cancelled) return;
+            setMembers((apiMembers || [])
+              .filter(m => m.user_id !== uid && m.status === 'active')
+              .map(m => ({
+                id:            m.user_id,
+                name:          m.profiles?.name
+                               || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ')
+                               || m.profiles?.email?.split('@')[0]
+                               || 'Team member',
+                role:          m.role || 'member',
+                avatar_url:    m.profiles?.avatar_url || null,
+                is_jv_partner: false,
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name)));
+            return;
+          }
+        } catch {
+          // fall through to direct query
+        }
+      }
+
+      const { data: mems } = await supabase
+        .from('memberships')
+        .select('user_id, role')
+        .eq('organization_id', orgId)
+        .eq('status', 'active');
+      if (cancelled || !mems?.length) return;
+
+      const memberIds = mems.map(m => m.user_id);
+      const roleMap   = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, first_name, last_name, avatar_url')
+        .in('id', memberIds);
+      if (cancelled) return;
+
+      setMembers((profiles || [])
+        .filter(p => p.id !== uid)
+        .map(p => ({
+          id:            p.id,
+          name:          p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Team member',
+          role:          roleMap[p.id] || 'member',
+          avatar_url:    p.avatar_url || null,
+          is_jv_partner: false,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)));
+    })();
+
+    return () => { cancelled = true; };
+  }, [orgId]);
+
+  return { members, currentUserId };
+}
+
+// ── MentionTextarea ───────────────────────────────────────────────────────────
+// Controlled textarea with @-mention autocomplete. Detects '@' triggers,
+// shows a portal popover anchored to the textarea, and inserts well-formed
+// @[Name](uuid) tokens on selection. Pure UI — the parent owns the text and
+// is responsible for extracting/validating mentions on save.
+function MentionTextarea({
+  value,
+  onChange,
+  onSubmit,
+  members,
+  textareaRef,
+  ...textareaProps
+}) {
+  const internalRef = useRef(null);
+  const ref = textareaRef || internalRef;
+  const [mentionQuery,   setMentionQuery]   = useState(null);
+  const [mentionStart,   setMentionStart]   = useState(-1);
+  const [mentionResults, setMentionResults] = useState([]);
+  const [mentionIdx,     setMentionIdx]     = useState(0);
+
+  const searchTeammates = useCallback((q) => {
+    const ql = q.trim().toLowerCase();
+    const filtered = ql
+      ? members.filter(m => m.name.toLowerCase().includes(ql))
+      : members;
+    setMentionResults(filtered.slice(0, 10));
+    setMentionIdx(0);
+  }, [members]);
+
+  const handleChange = (e) => {
+    const val    = e.target.value;
+    const cursor = e.target.selectionStart;
+    onChange(val);
+
+    const before = val.slice(0, cursor);
+    const atIdx  = before.lastIndexOf('@');
+    if (atIdx === -1) { setMentionQuery(null); return; }
+
+    const fragment = before.slice(atIdx + 1);
+    if (/\s/.test(fragment)) { setMentionQuery(null); return; }
+
+    setMentionStart(atIdx);
+    setMentionQuery(fragment);
+    searchTeammates(fragment);
+  };
+
+  const insertMention = (member) => {
+    const token  = buildMentionToken(member.name, member.id);
+    const before = value.slice(0, mentionStart);
+    const after  = value.slice(ref.current.selectionStart);
+    const next   = `${before}${token}\u00a0${after}`;
+    onChange(next);
+    setMentionQuery(null);
+
+    setTimeout(() => {
+      if (!ref.current) return;
+      ref.current.focus();
+      const pos = before.length + token.length + 1;
+      ref.current.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const handleKeyDown = (e) => {
+    if (mentionQuery === null) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        onSubmit?.();
+      }
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setMentionIdx(i => Math.min(i + 1, mentionResults.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setMentionIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (mentionResults[mentionIdx]) {
+        e.preventDefault();
+        insertMention(mentionResults[mentionIdx]);
+      }
+    } else if (e.key === 'Escape') {
+      setMentionQuery(null);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        {...textareaProps}
+      />
+      {mentionQuery !== null && (
+        <MentionAutocomplete
+          results={mentionResults}
+          selectedIdx={mentionIdx}
+          onSelect={insertMention}
+          anchorRef={ref}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── notifyMentions ────────────────────────────────────────────────────────────
+// Writes mention rows + in-app notifications for @-mentioned users.
+// Skips self-mentions and respects per-deal mute preferences.
+async function notifyMentions({
+  orgId,
+  dealId,
+  authorId,
+  authorName,
+  body,
+  noteId,
+  validMentionedIds,
+}) {
+  const notifyIds = (validMentionedIds || []).filter(uid => uid && uid !== authorId);
+  if (!notifyIds.length || !supabase) return;
+
+  const { data: mutes } = await supabase
+    .from('deal_notification_mutes')
+    .select('user_id')
+    .eq('deal_id', dealId)
+    .in('user_id', notifyIds);
+  const mutedSet = new Set((mutes || []).map(m => m.user_id));
+
+  const preview = (body || '').replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/gi, '@$1').slice(0, 140);
+
+  await Promise.all(notifyIds.map(async (uid) => {
+    await supabase.from('mentions').insert({
+      org_id:               orgId,
+      mentioned_user_id:    uid,
+      mentioned_by_user_id: authorId,
+      target_type:          'activity_note',
+      target_id:            noteId,
+      deal_id:              dealId,
+    }).catch(e => console.warn('mention insert', e));
+
+    if (mutedSet.has(uid)) return;
+
+    await supabase.from('notifications').insert({
+      organization_id: orgId,
+      user_id:         uid,
+      type:            'mention.deal_activity',
+      title:           `${authorName || 'Someone'} mentioned you`,
+      body:            `"${preview}"`,
+      entity_type:     'activity_note',
+      entity_id:       noteId,
+    }).catch(e => console.warn('notification insert', e));
+  }));
+}
+
 // ── NoteBodyRenderer ──────────────────────────────────────────────────────────
 // Renders a note body, replacing @[Name](uuid) tokens with <MentionChip>.
 function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
