@@ -362,6 +362,8 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           value={paymentDueDay}
           onChange={onPaymentDueDayChange}
           capitalDeployedDate={capitalDeployedDate}
+          firstPaymentDate={firstPaymentDate}
+          onFirstPaymentDateChange={onFirstPaymentDateChange}
           readOnly={readOnly}
         />
         {/* Extension */}
