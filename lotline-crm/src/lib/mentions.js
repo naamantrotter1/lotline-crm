@@ -198,3 +198,28 @@ export function validateJvMentions(userIds, jvPermissions) {
 export function buildMentionToken(displayName, userId) {
   return `@[${displayName}](${userId})`;
 }
+
+/**
+ * Convert friendly @Name occurrences in a textarea body back into full
+ * @[Name](uuid) tokens for storage. Uses a map of { displayName: userId }
+ * built from autocomplete selections — only names the user explicitly
+ * picked from the popover are eligible. Longest names are matched first
+ * so multi-word names (e.g. "Sarah Smith") win over substrings ("Sarah").
+ *
+ * @param {string} body
+ * @param {Record<string, string>} mentionMap
+ * @returns {string}
+ */
+export function expandMentions(body, mentionMap) {
+  if (!body || !mentionMap) return body || '';
+  const names = Object.keys(mentionMap).sort((a, b) => b.length - a.length);
+  if (!names.length) return body;
+  let out = body;
+  for (const name of names) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Boundary on the end so we don't expand inside an already-emitted token.
+    const re = new RegExp(`@${escaped}(?=$|[\\s\\W])`, 'g');
+    out = out.replace(re, `@[${name}](${mentionMap[name]})`);
+  }
+  return out;
+}
