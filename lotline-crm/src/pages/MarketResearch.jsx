@@ -1323,38 +1323,44 @@ function HeatMap() {
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const allDealOverview = [...(isLotLine ? DEAL_OVERVIEW_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
+    const raw = [...(isLotLine ? DEAL_OVERVIEW_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'deal-overview')];
+    const allDealOverview = withGeocoords(raw);
+    geocodeAddresses(raw);
     if (dealOverviewLayer.current) { dealOverviewLayer.current.remove(); dealOverviewLayer.current = null; }
     if (showDealOverview) {
       dealOverviewLayer.current = makePipelineLayer(allDealOverview, '#3b82f6',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Deal Overview`);
       dealOverviewLayer.current.addTo(map);
     }
-  }, [showDealOverview, contextDeals]);
+  }, [showDealOverview, contextDeals, geocoords]); // eslint-disable-line
 
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const allLandAcq = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
+    const raw = [...(isLotLine ? LAND_DEALS : []), ...contextDeals.filter(d => d.pipeline === 'land-acquisition')];
+    const allLandAcq = withGeocoords(raw);
+    geocodeAddresses(raw);
     if (landAcqLayer.current) { landAcqLayer.current.remove(); landAcqLayer.current = null; }
     if (showLandAcq) {
       landAcqLayer.current = makePipelineLayer(allLandAcq, '#f59e0b',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Land Acquisition`);
       landAcqLayer.current.addTo(map);
     }
-  }, [showLandAcq, contextDeals]);
+  }, [showLandAcq, contextDeals, geocoords]); // eslint-disable-line
 
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    const salesDeals = contextDeals.filter(d => d.pipeline === 'sales');
+    const raw = contextDeals.filter(d => d.pipeline === 'sales');
+    const salesDeals = withGeocoords(raw);
+    geocodeAddresses(raw);
     if (salesLayer.current) { salesLayer.current.remove(); salesLayer.current = null; }
     if (showSales) {
       salesLayer.current = makePipelineLayer(salesDeals, '#10b981',
         d => `<strong>${d.address}</strong><br/>Stage: ${d.stage}<br/>Pipeline: Sales`);
       salesLayer.current.addTo(map);
     }
-  }, [showSales, contextDeals]);
+  }, [showSales, contextDeals, geocoords]); // eslint-disable-line
 
   return (
     <div className="space-y-0 -mx-1">
