@@ -663,6 +663,16 @@ function FinancingScenarioPanel({
               </select>
             </div>
           </div>
+
+          {/* Payment Schedule (profit-split scenario) */}
+          <div className="mt-3">
+            <PaymentScheduleSection
+              deal={deal}
+              investorName={investor}
+              allocation={null}
+              readOnly={readOnly}
+            />
+          </div>
         </div>
       )}
 
