@@ -209,8 +209,28 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
   }, [deal?.id]);
 
   const handleDeleteTask = async (id) => {
+    // Optimistic remove
+    const prevTasks = tasks;
     setTasks(prev => prev.filter(t => t.id !== id));
-    await deleteTask(id);
+
+    // Try soft-delete first (preferred — preserves audit trail)
+    const { data: softData, error: softErr } = await deleteTask(id);
+    const softSucceeded = !softErr && Array.isArray(softData) ? softData.length > 0 : !softErr;
+
+    if (softErr || !softSucceeded) {
+      // Soft-delete failed (RLS blocked it, column missing, or no row matched).
+      // Fall back to hard-delete so the task actually goes away on refresh.
+      const { error: hardErr } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+      if (hardErr) {
+        console.error('handleDeleteTask: both soft and hard delete failed', { softErr, hardErr });
+        // Restore optimistic state so the user sees the task is still there.
+        setTasks(prevTasks);
+        alert('Could not delete task: ' + (hardErr.message || 'permission denied'));
+      }
+    }
   };
 
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
