@@ -666,6 +666,7 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, replyProps, 
                     value={replyProps.replyText}
                     onChange={(v) => replyProps.onReplyTextChange(v)}
                     onSubmit={() => replyProps.onSubmitReply(event._dbId)}
+                    onMentionInserted={replyProps.onMentionInserted}
                     members={members || []}
                     placeholder="Write a reply… type @ to mention a teammate"
                     rows={2}
