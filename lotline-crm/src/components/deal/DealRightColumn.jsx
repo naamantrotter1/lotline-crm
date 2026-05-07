@@ -261,15 +261,18 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
         .single();
       if (newDoc) setDocuments(prev => [newDoc, ...prev]);
 
-      // Log to activity feed
+      // Log to activity feed — embed the doc URL as a markdown link so it's clickable
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        const linkBody = publicUrl
+          ? `Uploaded [${file.name}](${publicUrl}) (${docCategory})`
+          : `Uploaded "${file.name}" (${docCategory})`;
         await supabase.from('activity_notes').insert({
           organization_id: activeOrgId,
           deal_id:         deal.id,
           author_id:       session.user.id,
           note_type:       'document_upload',
-          body:            `Uploaded "${file.name}" (${docCategory})`,
+          body:            linkBody,
         });
       }
     }
