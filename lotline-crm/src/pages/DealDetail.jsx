@@ -681,7 +681,7 @@ function FinancingScenarioPanel({
                   {showEst && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-gray-500">If held full term ({holdPeriod} mo)</span>
-                      <span className="text-gray-400">${Math.round(netFull).toLocaleString()}</span>
+                      <span className="text-gray-400">${Math.round(netFullTerm).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
