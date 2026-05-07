@@ -136,6 +136,10 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const originationFlat = toNumber(data.originationFeeFlat ?? scenarioData.originationFeeFlat);
     const originationFee = round2(originationFlat || principal * originationPct);
     const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
+    const firstPaymentDateRaw = data.firstPaymentDate ?? scenarioData.firstPaymentDate ?? null;
+    const firstPaymentAnchor = firstPaymentDateRaw && !Number.isNaN(new Date(firstPaymentDateRaw).getTime())
+      ? new Date(firstPaymentDateRaw)
+      : null;
 
     if (originationFee > 0) {
       payments.push({
@@ -148,27 +152,43 @@ export function generatePaymentSchedule(deal, investor, allocation) {
 
     if (monthlyInterest > 0) {
       for (let m = 1; m <= holdMonths; m++) {
-        const d = new Date(startDate);
-        d.setMonth(d.getMonth() + m);
-        const adjusted = applyDueDay(d, paymentDueDay);
+        let due;
+        if (firstPaymentAnchor) {
+          due = new Date(firstPaymentAnchor);
+          if (m > 1) {
+            due.setMonth(due.getMonth() + (m - 1));
+            due = applyDueDay(due, paymentDueDay);
+          }
+        } else {
+          due = new Date(startDate);
+          due.setMonth(due.getMonth() + m);
+          due = applyDueDay(due, paymentDueDay);
+        }
         payments.push({
           payment_type: 'interest',
           payment_number: m,
           amount: monthlyInterest,
-          due_date: isoDate(adjusted),
+          due_date: isoDate(due),
         });
       }
     }
 
     if (principal > 0) {
-      const maturity = new Date(startDate);
-      maturity.setMonth(maturity.getMonth() + holdMonths);
-      const adjusted = applyDueDay(maturity, paymentDueDay);
+      let maturity;
+      if (firstPaymentAnchor) {
+        maturity = new Date(firstPaymentAnchor);
+        maturity.setMonth(maturity.getMonth() + (holdMonths - 1));
+        maturity = applyDueDay(maturity, paymentDueDay);
+      } else {
+        maturity = new Date(startDate);
+        maturity.setMonth(maturity.getMonth() + holdMonths);
+        maturity = applyDueDay(maturity, paymentDueDay);
+      }
       payments.push({
         payment_type: 'principal',
         payment_number: holdMonths + 1,
         amount: principal,
-        due_date: isoDate(adjusted),
+        due_date: isoDate(maturity),
       });
     }
   }
