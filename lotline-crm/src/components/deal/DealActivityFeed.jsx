@@ -621,18 +621,19 @@ function EventCard({ event, usersById, onDeleteNote, replyProps, members }) {
           <div className="mt-2">
             {isReplying ? (
               <div className="flex gap-2 mt-1">
-                <textarea
-                  autoFocus
-                  value={replyProps.replyText}
-                  onChange={e => replyProps.onReplyTextChange(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replyProps.onSubmitReply(event._dbId); }
-                    if (e.key === 'Escape') replyProps.onCancelReply();
-                  }}
-                  placeholder="Write a reply…"
-                  rows={2}
-                  className="flex-1 text-[12px] px-2.5 py-1.5 border border-gray-200 rounded-lg resize-none focus:outline-none focus:border-accent/40 bg-gray-50"
-                />
+                <div className="flex-1">
+                  <MentionTextarea
+                    autoFocus
+                    value={replyProps.replyText}
+                    onChange={(v) => replyProps.onReplyTextChange(v)}
+                    onSubmit={() => replyProps.onSubmitReply(event._dbId)}
+                    members={members || []}
+                    placeholder="Write a reply… type @ to mention a teammate"
+                    rows={2}
+                    className="w-full text-[12px] px-2.5 py-1.5 border border-gray-200 rounded-lg resize-none focus:outline-none focus:border-accent/40 bg-gray-50"
+                    onKeyDown={e => { if (e.key === 'Escape') replyProps.onCancelReply(); }}
+                  />
+                </div>
                 <div className="flex flex-col gap-1">
                   <button
                     onClick={() => replyProps.onSubmitReply(event._dbId)}
