@@ -2489,40 +2489,52 @@ function DealDetailContent({ deal }) {
     navigate('/pipelines/land');
   };
 
-  const handleSetStage = (val) => {
+  const handleSetStage = async (val) => {
     setStage(val);
-    if (deal?.id) {
-      localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
-      const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      const isMovingToContractSigned = val === 'Contract Signed';
-      // Auto-fill Contract Signed Date when moving to Deal Overview
-      if (isMovingToContractSigned && !deal.contractDate) {
-        setContractDate(todayStr);
+    if (!deal?.id) return;
+    localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const isMovingToContractSigned = val === 'Contract Signed';
+    if (isMovingToContractSigned && !deal.contractDate) {
+      setContractDate(todayStr);
+    }
+    const updated = {
+      ...deal,
+      stage: val,
+      // When crossing into Deal Overview stages, also flip pipeline so the
+      // deal appears on the correct kanban board.
+      ...(['Contract Signed', 'Due Diligence', 'Development', 'Complete'].includes(val)
+        ? { pipeline: 'deal-overview' }
+        : {}),
+      ...(isMovingToContractSigned && !deal.contractDate
+        ? { contractDate: todayStr }
+        : {}),
+      ...(isMovingToContractSigned && !deal.contractSignedAt
+        ? { contractSignedAt: new Date().toISOString() }
+        : {}),
+      ...(val !== 'Contract Signed' && !['Due Diligence', 'Development', 'Complete'].includes(val)
+        ? { contractSignedAt: null, pipeline: 'land-acquisition' }
+        : {}),
+    };
+    // Optimistic UI: localStorage + context update first.
+    saveDeal(updated, activeOrgId);
+    setDeals(prev => {
+      const idx = prev.findIndex(x => String(x.id) === String(updated.id));
+      if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
+      return [...prev, updated];
+    });
+    notifyPipelineChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
+    notifyStageChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
+    // Confirm the Supabase write actually committed; warn loudly if RLS
+    // silently rejected the update so we don't fail-quiet on next refresh.
+    try {
+      const { error } = await flushToSupabaseAsync(updated, activeOrgId);
+      if (error) {
+        console.error('[DealDetail] stage save failed', error);
+        alert(`Could not save stage change: ${error.message || error}. Refresh may revert.`);
       }
-      const updated = {
-        ...deal,
-        stage: val,
-        // Auto-fill contractDate if not already set
-        ...(isMovingToContractSigned && !deal.contractDate
-          ? { contractDate: todayStr }
-          : {}),
-        // Stamp the moment this deal moves into Deal Overview (only set once)
-        ...(isMovingToContractSigned && !deal.contractSignedAt
-          ? { contractSignedAt: new Date().toISOString() }
-          : {}),
-        // Clear the timestamp if moved back to a Land Acq stage
-        ...(val !== 'Contract Signed' && !['Due Diligence', 'Development', 'Complete'].includes(val)
-          ? { contractSignedAt: null }
-          : {}),
-      };
-      saveDeal(updated, activeOrgId);
-      notifyPipelineChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
-      notifyStageChange(deal, val, { orgId: activeOrgId, userId: profile?.id });
-      setDeals(prev => {
-        const idx = prev.findIndex(x => String(x.id) === String(updated.id));
-        if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-        return [...prev, updated];
-      });
+    } catch (e) {
+      console.error('[DealDetail] stage save threw', e);
     }
   };
 
