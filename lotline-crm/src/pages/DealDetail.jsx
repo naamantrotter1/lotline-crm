@@ -2170,7 +2170,10 @@ function calcDealNetProfit({
   const servicingFee = servicingFeeType === 'percentage'
     ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
     : (servicingFeeFlat || 0);
-  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee;
+  const otherFees = Number(deal?.scenarioData?.drawFeeHm || 0)
+                  + Number(deal?.scenarioData?.underwritingFee || 0)
+                  + Number(deal?.scenarioData?.attorneyDocFee || 0);
+  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee + otherFees;
 
   const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts
                           - (hasFinancing ? totalCostOfCapital : 0);
