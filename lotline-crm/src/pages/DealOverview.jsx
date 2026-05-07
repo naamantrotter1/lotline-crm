@@ -133,7 +133,7 @@ function DealCard({ deal, onClick, isAgent, onStar }) {
         <div className="flex items-center gap-1 ml-4 mb-2">
           <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
           <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-            ${Math.abs(netProfit).toLocaleString()}
+            ${Math.abs(Math.round(netProfit)).toLocaleString()}
           </span>
           {deal.financing && (
             <span className="text-xs text-gray-400">({deal.financing})</span>
