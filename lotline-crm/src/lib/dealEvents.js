@@ -132,19 +132,43 @@ export async function fetchOrgEvents(orgId, { from, to } = {}) {
     (ms || []).forEach(m => { msMap[m.id] = m; });
   }
 
+  // Enrich payment-due-sourced events with their schedule status (paid? overdue?)
+  const psIds = events
+    .filter(e => e.source_table === 'investor_payment_schedule' && e.source_id)
+    .map(e => e.source_id);
+  let psMap = {};
+  if (psIds.length > 0) {
+    const { data: ps } = await supabase
+      .from('investor_payment_schedule')
+      .select('id, status, paid_date')
+      .in('id', psIds);
+    (ps || []).forEach(p => { psMap[p.id] = p; });
+  }
+
   const now = Date.now();
   return events.map(e => {
     const ms = msMap[e.source_id];
-    const isCompleted = e.source_table === 'deal_milestones'
-      ? (ms?.status === 'complete' || !!ms?.completed_at)
-      : false;
+    const ps = psMap[e.source_id];
     const isPast = new Date(e.start_at).getTime() < now;
+
+    // Completed / overdue rules per source
+    let isCompleted = false;
+    let isOverdue   = false;
+    if (e.source_table === 'deal_milestones') {
+      isCompleted = ms?.status === 'complete' || !!ms?.completed_at;
+      isOverdue   = isPast && !isCompleted;
+    } else if (e.source_table === 'investor_payment_schedule') {
+      isCompleted = ps?.status === 'paid' || ps?.status === 'waived';
+      isOverdue   = isPast && !isCompleted;
+    }
+
     return {
       ...e,
       _milestoneKey:    ms?.milestone_key || null,
       _milestoneStatus: ms?.status || null,
+      _paymentStatus:   ps?.status || null,
       _isCompleted:     isCompleted,
-      _isOverdue:       isPast && !isCompleted && e.source_table === 'deal_milestones',
+      _isOverdue:       isOverdue,
     };
   });
 }
