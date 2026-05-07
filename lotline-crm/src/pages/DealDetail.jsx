@@ -2302,17 +2302,21 @@ function DealDetailContent({ deal }) {
   // Financing scenario state — restored from scenarioData if available
   const sd = deal?.scenarioData || {};
   const [selectedScenario, setSelectedScenario] = useState(() => {
-    const f = deal?.financing || '';
-    // Direct match first, then fuzzy fallback for legacy values like "Hard Money"
-    const exact = FINANCING_SCENARIOS.find(s => s.financingType === f);
-    if (exact) return exact.id;
-    if (f === 'Hard Money') return 'hard-money-loan';
-    if (f === 'Cash') return 'cash';
-    if (f === 'Line of Credit') return 'loc';
+    // Prefer the canonical DB enum (financing_scenario_type) — it's the field
+    // applyScenario() writes and the source of truth. The legacy `financing`
+    // text field is fallback only, and may drift if other code paths overwrite
+    // it with stale/legacy values, which used to flip the scenario on refresh.
     if (deal?.financingScenarioType) {
       const byDb = FINANCING_SCENARIOS.find(s => s.dbType === deal.financingScenarioType);
       if (byDb) return byDb.id;
     }
+    const f = deal?.financing || '';
+    const exact = FINANCING_SCENARIOS.find(s => s.financingType === f);
+    if (exact) return exact.id;
+    // Legacy display-name fallbacks
+    if (f === 'Hard Money') return 'hard-money-loan';
+    if (f === 'Cash') return 'cash';
+    if (f === 'Line of Credit') return 'loc';
     return '';
   });
   const [interestRate, setInterestRate] = useState(sd.interestRate ?? getDefaultRate(deal?.investor));
