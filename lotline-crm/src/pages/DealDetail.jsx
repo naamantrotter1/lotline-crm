@@ -628,11 +628,10 @@ function FinancingScenarioPanel({
             const totalCostEst   = interestEst  + totalClosingCosts;
             const totalCostFull  = interestFull + totalClosingCosts;
             const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - holdPeriod) > 0.01;
-            const holdingCostEst  = estHold * (deal.holdingPerMonth || 250);
             const holdingCostFull = holdPeriod * (deal.holdingPerMonth || 250);
-            const profitBeforeEst  = arvVal - allIn - sellingCosts - holdingCostEst  - totalCostEst;
             const profitBeforeFull = arvVal - allIn - sellingCosts - holdingCostFull - totalCostFull;
-            const netEst  = profitBeforeEst  - profitBeforeEst  * ((profitSharePct || 0) / 100);
+            // Primary display: use the parent's authoritative netProfit (same formula as header)
+            const netEst  = netProfitFromParent ?? 0;
             const netFull = profitBeforeFull - profitBeforeFull * ((profitSharePct || 0) / 100);
             return (
               <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
