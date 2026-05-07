@@ -2368,6 +2368,7 @@ function DealDetailContent({ deal }) {
   const [profitSharePct, setProfitSharePct] = useState(sd.profitSharePct ?? (deal?.investor === 'Atium Build Group LLC' ? 5 : 0));
   const [capitalDeployedDate, setCapitalDeployedDate] = useState('');
   const [capitalReturnedDate, setCapitalReturnedDate] = useState('');
+  const [estimatedSaleDate,   setEstimatedSaleDate]   = useState(deal?.estimatedSaleDate ?? '');
   const [investorCapitalContributed, setInvestorCapitalContributed] = useState(deal?.investorCapitalContributed ?? null);
   const [investorEquityPct, setInvestorEquityPct] = useState(deal?.investorEquityPct ?? null);
   const [projectedPayoutDate, setProjectedPayoutDate] = useState(deal?.projectedPayoutDate ?? null);
