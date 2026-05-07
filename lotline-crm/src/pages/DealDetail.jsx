@@ -267,6 +267,7 @@ function FinancingScenarioPanel({
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
   const [showLocAdvanced, setShowLocAdvanced] = useState(false);
+  const [showHmAdvanced, setShowHmAdvanced]   = useState(false);
 
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
