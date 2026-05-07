@@ -205,7 +205,11 @@ export async function addCustomCategory(orgId, { key, label, groupName, sortOrde
 
 export function resolveActual(line) {
   if (!line) return 0;
-  if (line.actual_overridden) return Number(line.actual_amount ?? 0);
+  if (line.actual_overridden) {
+    // After a DB fetch the view returns actual_amount_resolved (not raw actual_amount).
+    // After an optimistic update actual_amount is present on the local line object.
+    return Number(line.actual_amount ?? line.actual_amount_resolved ?? 0);
+  }
   return Number(line.estimated_amount ?? 0);
 }
 
