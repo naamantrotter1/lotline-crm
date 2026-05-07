@@ -2780,6 +2780,7 @@ function DealDetailContent({ deal }) {
     manufacturer, deliveryDate, holdPeriod, monthlyHoldCost, arv, listingUrl, costs,
     realtor, dateListed, dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate, estimatedSaleDate,
+    capitalDeployedDate, capitalReturnedDate,
     loanAmountOverride, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
