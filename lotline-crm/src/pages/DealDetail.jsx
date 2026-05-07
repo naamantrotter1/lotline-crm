@@ -3566,6 +3566,8 @@ function DealDetailContent({ deal }) {
             estimatedSaleDate={estimatedSaleDate}
             paymentDueDay={paymentDueDay}
             onPaymentDueDayChange={setPaymentDueDay}
+            firstPaymentDate={firstPaymentDate}
+            onFirstPaymentDateChange={setFirstPaymentDate}
           />
         )}
 
