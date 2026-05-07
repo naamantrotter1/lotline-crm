@@ -1300,7 +1300,7 @@ export default function InvestorPortal() {
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'commitments', 'directory', 'available-investments'];
+  const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'payments', 'commitments', 'directory', 'available-investments'];
   const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'by-investor';
   const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [investors, setInvestors] = useState(() => loadInvestors(activeOrgId, orgSlug));
