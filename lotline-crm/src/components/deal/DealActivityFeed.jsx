@@ -494,8 +494,22 @@ function EventCard({ event, usersById, onDeleteNote, replyProps }) {
   const cfg  = EVENT_CONFIG[event.type] || EVENT_CONFIG.note;
   const Icon = cfg.icon;
   const [exp, setExp] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const bodyRef = useRef(null);
 
-  const isLong = (event.body || '').length > 200;
+  // Measure actual DOM overflow when collapsed; only show "Show more" if the
+  // line-clamp is actually clipping content.
+  useEffect(() => {
+    if (exp) return; // already expanded; preserve last known overflow state
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => setHasOverflow(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [exp, event.body]);
+
   const replies = replyProps?.replies || [];
   const isReplying = replyProps?.replyingTo === event._dbId;
 
