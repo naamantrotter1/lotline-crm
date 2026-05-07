@@ -636,7 +636,7 @@ function FinancingScenarioPanel({
                   </div>
                   <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
                     <span className="font-semibold text-white">
-                      {showEst ? `Est. Total Cost (${estHold} mo)` : 'Total Cost of Capital'}
+                      {showEst ? `Est. Total Cost (${formatHoldPeriod(estHold)})` : 'Total Cost of Capital'}
                     </span>
                     <span className="font-bold text-accent">${Math.round(showEst ? totalCostEst : totalCostFull).toLocaleString()}</span>
                   </div>
