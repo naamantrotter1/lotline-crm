@@ -497,25 +497,38 @@ function FinancingScenarioPanel({
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Amount (calc)</p>
                 <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
-                <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
-                <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
-                <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
-                <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
-              </div>
-              <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Closing Costs (calc)</p>
-                <span className="text-sm font-bold text-accent">${Math.round(totalClosingCosts).toLocaleString()}</span>
+              {showHmAdvanced && (
+                <>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
+                    <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Draw Fee ($ per draw)</p>
+                    <DecimalInput value={drawFeeHm || 0} onChange={setDrawFeeHm} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Underwriting / Admin Fee ($)</p>
+                    <DecimalInput value={underwritingFee || 0} onChange={setUnderwritingFee} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
+                    <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
+                  </div>
+                </>
+              )}
+              <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowHmAdvanced(v => !v)}
+                  className="text-[10px] text-gray-400 hover:text-accent font-medium"
+                >
+                  {showHmAdvanced ? '− Hide advanced fees' : '+ Show advanced fees'}
+                </button>
+                <div className="text-right">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Total Closing Costs (calc)</p>
+                  <span className="text-sm font-bold text-accent">${Math.round(totalClosingCosts).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>
