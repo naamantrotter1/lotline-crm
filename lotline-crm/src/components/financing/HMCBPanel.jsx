@@ -130,7 +130,20 @@ export function HMCBSummaryCard({ data, draws = [] }) {
 }
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor }) {
+// Inline copy of getEstimatedHoldMonths so HMCBPanel can compute the
+// estimated hold without a cross-file import. Mirrors DealDetail.jsx.
+function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
+  if (!deployedDate || !saleDate) return fallbackMonths;
+  const d = new Date(deployedDate), s = new Date(saleDate);
+  if (Number.isNaN(d.getTime()) || Number.isNaN(s.getTime())) return fallbackMonths;
+  const months = (s.getFullYear() - d.getFullYear()) * 12
+               + (s.getMonth() - d.getMonth())
+               + (s.getDate() >= d.getDate() ? 0 : -1);
+  const clampMax = Number.isFinite(fallbackMonths) && fallbackMonths > 0 ? fallbackMonths : 12;
+  return Math.max(1, Math.min(months, clampMax));
+}
+
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
