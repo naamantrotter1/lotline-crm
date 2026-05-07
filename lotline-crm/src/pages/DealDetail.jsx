@@ -682,6 +682,7 @@ function FinancingScenarioPanel({
             <PaymentScheduleSection
               deal={deal}
               investorName={investor}
+              capitalDeployedDateOverride={capitalDeployedDate}
               allocation={null}
               readOnly={readOnly}
             />
