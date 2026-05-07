@@ -298,14 +298,19 @@ function MentionTextarea({
     }
   };
 
+  const { onKeyDown: extraKeyDown, ...restTextareaProps } = textareaProps;
+
   return (
     <div className="relative">
       <textarea
         ref={ref}
+        {...restTextareaProps}
         value={value}
         onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        {...textareaProps}
+        onKeyDown={(e) => {
+          handleKeyDown(e);
+          if (!e.defaultPrevented) extraKeyDown?.(e);
+        }}
       />
       {mentionQuery !== null && (
         <MentionAutocomplete
