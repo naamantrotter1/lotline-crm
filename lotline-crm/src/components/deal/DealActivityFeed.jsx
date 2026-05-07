@@ -954,7 +954,8 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const authorId = session.user.id;
-      const body = replyText.trim();
+      // Convert friendly @Name forms back to @[Name](uuid) tokens before save.
+      const body = expandMentions(replyText.trim(), replyMentionMap);
 
       // Extract + validate mentions from the reply body
       const extracted = extractMentions(body);
