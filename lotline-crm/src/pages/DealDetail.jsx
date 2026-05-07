@@ -241,6 +241,7 @@ function FinancingScenarioPanel({
   drawAmount, setDrawAmount,
   annualFeePct, setAnnualFeePct,
   // Profit Split
+  profitSharePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
   // CCP
   ccpInvestorId, setCcpInvestorId,
