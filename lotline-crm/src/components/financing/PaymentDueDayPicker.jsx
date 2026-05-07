@@ -112,7 +112,33 @@ export default function PaymentDueDayPicker({
           />
         )}
       </div>
-      {helper && <p className="text-[11px] text-gray-500 mt-1">{helper}</p>}
+      {noDeployedHelper && (
+        <p className="text-[11px] text-gray-400 mt-1">{noDeployedHelper}</p>
+      )}
+      {capitalDeployedDate && (
+        <div className="mt-2">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">
+            First Payment Date
+          </p>
+          <input
+            type="date"
+            value={firstPaymentValue || ''}
+            onChange={(e) => onFirstPaymentDateChange?.(e.target.value || null)}
+            disabled={readOnly}
+            className={inputCls}
+          />
+          {firstPaymentDate && firstPaymentDate !== computedFirstPayment && (
+            <button
+              type="button"
+              onClick={() => onFirstPaymentDateChange?.(null)}
+              disabled={readOnly}
+              className="text-[11px] text-accent hover:underline mt-1"
+            >
+              Reset to {computedFirstPayment ? new Date(computedFirstPayment + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'auto'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
