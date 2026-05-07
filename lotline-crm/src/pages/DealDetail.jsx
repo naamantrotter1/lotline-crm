@@ -8,7 +8,7 @@ import {
   Landmark, Handshake, XCircle, Info,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
-import { saveDeal, flushToSupabase } from '../lib/dealsSync';
+import { saveDeal, flushToSupabase, flushToSupabaseAsync } from '../lib/dealsSync';
 import { lookupInvestorByName, savePaymentSchedule } from '../lib/paymentScheduleData';
 import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
