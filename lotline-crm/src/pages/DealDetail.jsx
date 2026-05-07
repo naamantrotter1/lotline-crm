@@ -1027,31 +1027,28 @@ function OverviewTab({
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
   const arvVal = arv ?? deal.arv ?? 0;
-  // Use the estimated hold (deployed → sale) for both holding costs and
-  // financing interest accrual, so Net Profit reflects the realistic plan.
-  const effHoldMonths = getEstimatedHoldMonths(
-    capitalDeployedDate, estimatedSaleDate, deal.holdingMonths || holdPeriod || 4
-  );
-  const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  const holdingCosts = effHoldMonths * (deal.holdingPerMonth || 250);
-
-  // Financing calculations (computed before netProfit so we can deduct them)
-  const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || totalLent;
-  const monthlyInterest = effectiveLoanAmount * (interestRate / 100) / 12;
-  const originationFee = originationFeeType === 'percentage'
-    ? effectiveLoanAmount * (originationFeePct / 100)
-    : originationFeeFlat;
-  const servicingFee = servicingFeeType === 'percentage'
-    ? effectiveLoanAmount * (servicingFeePct / 100)
-    : servicingFeeFlat;
-  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee;
-
-  // Deduct financing costs from net profit when a scenario is active
-  const hasFinancing = !!selectedScenario && activeFinancing !== 'Cash';
-  const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts - (hasFinancing ? totalCostOfCapital : 0);
-  const profitShareAmount = hasFinancing ? profitBeforeShare * (profitSharePct / 100) : 0;
-  const netProfit = profitBeforeShare - profitShareAmount;
+  // Single source of truth — calcDealNetProfit handles all the math.
+  const _np = calcDealNetProfit({
+    deal, arv, allIn, costs,
+    capitalDeployedDate, estimatedSaleDate,
+    holdPeriod, monthlyHoldCost,
+    selectedScenario, interestRate,
+    originationFeeType, originationFeePct, originationFeeFlat,
+    servicingFeeType,  servicingFeePct,  servicingFeeFlat,
+    loanAmountOverride, profitSharePct,
+  });
+  const effHoldMonths      = _np.effHoldMonths;
+  const sellingCosts       = _np.sellingCosts;
+  const holdingCosts       = _np.holdingCosts;
+  const effectiveLoanAmount = _np.effectiveLoanAmount;
+  const monthlyInterest    = _np.monthlyInterest;
+  const originationFee     = _np.originationFee;
+  const servicingFee       = _np.servicingFee;
+  const totalCostOfCapital = _np.totalCostOfCapital;
+  const hasFinancing       = _np.hasFinancing;
+  const profitBeforeShare  = _np.profitBeforeShare;
+  const profitShareAmount  = _np.profitShareAmount;
+  const netProfit          = _np.netProfit;
   const roi = allIn > 0 ? ((netProfit / allIn) * 100).toFixed(1) : '0.0';
 
   return (
