@@ -79,6 +79,7 @@ import InvestorDealDetail from './pages/investor/InvestorDealDetail';
 import InvestorDocuments from './pages/investor/InvestorDocuments';
 import InvestorUpdates from './pages/investor/InvestorUpdates';
 import InvestorDistributions from './pages/investor/InvestorDistributions';
+import InvestorPayments from './pages/investor/InvestorPayments';
 import InvestorOpportunities from './pages/investor/InvestorOpportunities';
 import InvestorMessages from './pages/investor/InvestorMessages';
 import InvestorPerformance from './pages/investor/InvestorPerformance';
