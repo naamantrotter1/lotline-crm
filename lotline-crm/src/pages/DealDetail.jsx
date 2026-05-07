@@ -1023,8 +1023,13 @@ function OverviewTab({
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
     : deal.financing;
   const arvVal = arv ?? deal.arv ?? 0;
+  // Use the estimated hold (deployed → sale) for both holding costs and
+  // financing interest accrual, so Net Profit reflects the realistic plan.
+  const effHoldMonths = getEstimatedHoldMonths(
+    capitalDeployedDate, estimatedSaleDate, deal.holdingMonths || holdPeriod || 4
+  );
   const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  const holdingCosts = (deal.holdingMonths || 4) * (deal.holdingPerMonth || 250);
+  const holdingCosts = effHoldMonths * (deal.holdingPerMonth || 250);
 
   // Financing calculations (computed before netProfit so we can deduct them)
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
@@ -1036,7 +1041,7 @@ function OverviewTab({
   const servicingFee = servicingFeeType === 'percentage'
     ? effectiveLoanAmount * (servicingFeePct / 100)
     : servicingFeeFlat;
-  const totalCostOfCapital = (monthlyInterest * holdPeriod) + originationFee + servicingFee;
+  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee;
 
   // Deduct financing costs from net profit when a scenario is active
   const hasFinancing = !!selectedScenario && activeFinancing !== 'Cash';
