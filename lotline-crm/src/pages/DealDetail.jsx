@@ -382,13 +382,56 @@ function FinancingScenarioPanel({
       {/* ── Hard Money Loan / Hard Money (Land + Home) ── */}
       {!!selectedScenario && isHardMoney && (
         <>
+          {/* Cost of Capital Summary (lifted to TOP) */}
+          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Total Loan Amount</span>
+                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
+                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Origination Fee</span>
+                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Other Closing Costs</span>
+                <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                <span className="font-semibold text-white">Total Cost of Capital</span>
+                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                <span className="font-semibold text-white">Net Profit After Financing</span>
+                <span className="font-bold text-green-400">${Math.round(arvVal - allIn - totalCostOfCapital).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Lender & Loan Terms */}
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
             <div className="grid grid-cols-2 gap-x-6">
               <div className="py-2 col-span-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Lender Name</p>
-                <input type="text" value={lenderName} onChange={e => setLenderName(e.target.value)} placeholder="e.g. Low Tide Private Lending" className={iCls} readOnly={readOnly} />
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Lender / Investor</p>
+                  {!readOnly && (
+                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-semibold">
+                      + Add New Investor
+                    </button>
+                  )}
+                </div>
+                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                  <option value="">— No Investor —</option>
+                  {(investorList || []).map(inv => (
+                    <option key={inv.id} value={inv.name}>{inv.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
