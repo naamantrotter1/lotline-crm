@@ -56,9 +56,8 @@ export default function PaymentDueDayPicker({
 
   // Derived default: capital deployed + 1 month, adjusted for the dueDay rule.
   const computedFirstPayment = useMemo(() => {
-    if (!capitalDeployedDate) return '';
-    const start = new Date(capitalDeployedDate);
-    if (Number.isNaN(start.getTime())) return '';
+    const start = parseLocalDate(capitalDeployedDate);
+    if (!start) return '';
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
     return toIsoDate(applyDueDay(next, effectiveValue));
