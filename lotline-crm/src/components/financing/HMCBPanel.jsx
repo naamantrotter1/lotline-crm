@@ -365,7 +365,15 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         <Row>
           <div>
             {label('Purchase Price ($)')}
-            <input type="number" className={inp} value={d.purchasePrice || ''} onChange={e => { const v = parseFloat(e.target.value) || 0; set('purchasePrice', v); if (!d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice) set('fundedAtClosing', v); }} disabled={readOnly} />
+            <input type="number" className={inp} value={d.purchasePrice || ''} onChange={e => {
+              if (readOnly) return;
+              const v = parseFloat(e.target.value) || 0;
+              // Auto-mirror Funded at Closing only when it was tracking purchasePrice (or unset).
+              // Both updates must go in a single onChange call: two sequential `set()` calls
+              // would close over the same stale `d`, and the second would clobber the first.
+              const shouldMirror = !d.fundedAtClosing || d.fundedAtClosing === d.purchasePrice;
+              onChange({ ...d, purchasePrice: v, ...(shouldMirror ? { fundedAtClosing: v } : {}) });
+            }} disabled={readOnly} />
           </div>
           <div>
             {label('Construction Holdback ($)')}
