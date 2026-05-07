@@ -580,8 +580,72 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
 }
 
 // ── Tab: Directory ───────────────────────────────────────────────────────────
-function DirectoryTab({ investors }) {
-  const contacts = investors.filter(i => i.contact && i.name !== 'Cash');
+function EditInvestorModal({ investor, onClose, onSave }) {
+  const [form, setForm] = useState({
+    name:    investor?.name    || '',
+    contact: investor?.contact || '',
+    email:   investor?.email   || '',
+    phone:   investor?.phone   || '',
+    type:    investor?.type    || 'Private Lender',
+    preferredFinancing: investor?.preferredFinancing || '',
+    standardTerms:      investor?.standardTerms      || '',
+    notes:   investor?.notes   || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+  };
+  const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30';
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="text-base font-bold text-gray-900">Edit Investor</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div><label className="text-xs text-gray-500 mb-1 block">Name</label>
+            <input className={inputCls} value={form.name} onChange={e => update('name', e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="text-xs text-gray-500 mb-1 block">Contact</label>
+              <input className={inputCls} value={form.contact} onChange={e => update('contact', e.target.value)} /></div>
+            <div><label className="text-xs text-gray-500 mb-1 block">Type</label>
+              <input className={inputCls} value={form.type} onChange={e => update('type', e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="text-xs text-gray-500 mb-1 block">Email</label>
+              <input type="email" className={inputCls} value={form.email} onChange={e => update('email', e.target.value)} /></div>
+            <div><label className="text-xs text-gray-500 mb-1 block">Phone</label>
+              <input className={inputCls} value={form.phone} onChange={e => update('phone', e.target.value)} /></div>
+          </div>
+          <div><label className="text-xs text-gray-500 mb-1 block">Preferred Financing</label>
+            <input className={inputCls} value={form.preferredFinancing} onChange={e => update('preferredFinancing', e.target.value)} /></div>
+          <div><label className="text-xs text-gray-500 mb-1 block">Standard Terms</label>
+            <input className={inputCls} value={form.standardTerms} onChange={e => update('standardTerms', e.target.value)} /></div>
+          <div><label className="text-xs text-gray-500 mb-1 block">Notes</label>
+            <textarea rows={3} className={inputCls} value={form.notes} onChange={e => update('notes', e.target.value)} /></div>
+        </div>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100">
+          <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !form.name.trim()}
+            className="text-sm bg-accent text-white rounded-lg px-4 py-1.5 hover:bg-accent/90 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function DirectoryTab({ investors, onUpdate, onDelete }) {
+  // Show every investor in the org except the synthetic "Cash" placeholder.
+  const contacts = investors.filter(i => i.name && i.name !== 'Cash');
+  const [editing, setEditing] = useState(null);
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -592,9 +656,13 @@ function DirectoryTab({ investors }) {
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
+            <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
+          {contacts.length === 0 && (
+            <tr><td colSpan={6} className="px-4 py-6 text-xs text-gray-400 text-center">No investors yet</td></tr>
+          )}
           {contacts.map(inv => (
             <tr key={inv.id} className="hover:bg-gray-50">
               <td className="px-4 py-3">
@@ -623,10 +691,40 @@ function DirectoryTab({ investors }) {
               <td className="px-4 py-3">
                 <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
               </td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <button
+                  onClick={() => setEditing(inv)}
+                  title="Edit investor"
+                  className="text-gray-400 hover:text-accent transition-colors mr-2"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Permanently delete "${inv.name}"?\n\nThis removes them from the directory and clears any deal references — cannot be undone.`)) {
+                      onDelete?.(inv);
+                    }
+                  }}
+                  title="Delete investor"
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {editing && (
+        <EditInvestorModal
+          investor={editing}
+          onClose={() => setEditing(null)}
+          onSave={async (patch) => {
+            await onUpdate?.(editing.id, patch);
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
