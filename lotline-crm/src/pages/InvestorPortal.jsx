@@ -1136,7 +1136,13 @@ export default function InvestorPortal() {
         {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={investors} />}
         {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={investors} contextDeals={customDeals} />}
         {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && <DirectoryTab investors={investors} />}
+        {activeTab === 'directory' && (
+          <DirectoryTab
+            investors={investors}
+            onUpdate={handleUpdateInvestor}
+            onDelete={handleDeleteInvestor}
+          />
+        )}
         {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
       </div>
 
