@@ -2105,6 +2105,66 @@ function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
 }
 
 // Pretty format "4 months 5 days" given a fractional months value.
+// Shared net-profit calculation used by both the header summary bar and the
+// OverviewTab. Driving both off this single function guarantees the numbers
+// always agree.
+function calcDealNetProfit({
+  deal, arv, allIn, costs,
+  capitalDeployedDate, estimatedSaleDate,
+  holdPeriod, monthlyHoldCost,
+  selectedScenario, interestRate,
+  originationFeeType, originationFeePct, originationFeeFlat,
+  servicingFeeType,  servicingFeePct,  servicingFeeFlat,
+  loanAmountOverride, profitSharePct,
+}) {
+  const arvVal = arv ?? deal?.arv ?? 0;
+  const activeFinancing = selectedScenario
+    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
+    : deal?.financing;
+  const hasFinancing = !!selectedScenario && activeFinancing !== 'Cash';
+
+  const effHoldMonths = getEstimatedHoldMonths(
+    capitalDeployedDate, estimatedSaleDate, holdPeriod || deal?.holdingMonths || 4
+  );
+
+  const sellingCosts = arvVal * ((deal?.sellingCostPct || 4.5) / 100) + 4000;
+  const holdingCosts = effHoldMonths * (monthlyHoldCost || deal?.holdingPerMonth || 250);
+
+  const totalLent           = (costs?.mobileHome || 0) + (costs?.land || 0);
+  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const monthlyInterest     = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
+  const originationFee = originationFeeType === 'percentage'
+    ? effectiveLoanAmount * ((originationFeePct || 0) / 100)
+    : (originationFeeFlat || 0);
+  const servicingFee = servicingFeeType === 'percentage'
+    ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
+    : (servicingFeeFlat || 0);
+  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee;
+
+  const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts
+                          - (hasFinancing ? totalCostOfCapital : 0);
+  const profitShareAmount = hasFinancing
+    ? profitBeforeShare * ((profitSharePct || 0) / 100)
+    : 0;
+  const netProfit = profitBeforeShare - profitShareAmount;
+
+  return {
+    netProfit,
+    profitBeforeShare,
+    profitShareAmount,
+    totalCostOfCapital,
+    sellingCosts,
+    holdingCosts,
+    effHoldMonths,
+    hasFinancing,
+    activeFinancing,
+    effectiveLoanAmount,
+    monthlyInterest,
+    originationFee,
+    servicingFee,
+  };
+}
+
 function formatHoldPeriod(months) {
   if (!Number.isFinite(months) || months <= 0) return '0 days';
   const totalDays = Math.round(months * 30);
