@@ -358,6 +358,12 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             <input type="number" className={inp} value={d.termMonths || ''} onChange={e => set('termMonths', parseInt(e.target.value) || 0)} disabled={readOnly} />
           </div>
         </Row>
+        <PaymentDueDayPicker
+          value={paymentDueDay}
+          onChange={onPaymentDueDayChange}
+          capitalDeployedDate={capitalDeployedDate}
+          readOnly={readOnly}
+        />
         {/* Extension */}
         <div className="flex items-center gap-3">
           <button
