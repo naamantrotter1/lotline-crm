@@ -2379,6 +2379,24 @@ function DealDetailContent({ deal }) {
     ...(deal?.scenarioData?.hmcb || {}),
   }));
 
+  // ── HMCB lender ↔ deal.investor sync ────────────────────────────────────────
+  // The HMCB scenario has its own Lender / Investor dropdown (in HMCBPanel) which
+  // writes to scenario_data.hmcb.lenderName. Mirror that into the deal-level
+  // `investor` field so the Investor Portal, capital tracking, and payment
+  // schedule (which all key off deal.investor) stay in sync.
+  useEffect(() => {
+    if (selectedScenario !== 'hmcb') return;
+    const hmcbLender = (hmcbData?.lenderName || '').trim();
+    if (hmcbLender && hmcbLender !== investor) {
+      setInvestor(hmcbLender);
+    } else if (!hmcbLender && investor) {
+      // First time switching to HMCB with an existing deal-level investor:
+      // seed hmcbData.lenderName so the dropdown shows the current pick.
+      setHmcbData(prev => ({ ...prev, lenderName: investor }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedScenario, hmcbData?.lenderName]);
+
   // New fields added for financing tab redesign
   const [lenderName, setLenderName] = useState(sd.lenderName ?? '');
   const [drawAmount, setDrawAmount] = useState(
