@@ -1188,9 +1188,15 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                   mentionMap:      replyMentionMap,
                   onReply:         (id) => {
                     setReplyingTo(id);
-                    // Auto-tag the original note's author (skip self-replies)
-                    const authorName = usersById[evt.authorId]?.name;
-                    if (authorName && evt.authorId && evt.authorId !== currentUserId) {
+                    // Auto-tag the original note's author (skip self-replies).
+                    // Use the same name resolution chain that produced the note's title
+                    // so we always get a usable name, even when the profile lookup is stale.
+                    const authorName =
+                      usersById[evt.authorId]?.name ||
+                      evt.meta?.author ||
+                      members.find(m => m.id === evt.authorId)?.name ||
+                      null;
+                    if (authorName && authorName !== 'Unknown' && evt.authorId && evt.authorId !== currentUserId) {
                       setReplyText(`@${authorName} `);
                       setReplyMentionMap({ [authorName]: evt.authorId });
                     } else {
