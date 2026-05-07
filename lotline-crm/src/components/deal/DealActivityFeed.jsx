@@ -395,176 +395,12 @@ function NoteBodyRenderer({ body, usersById = {}, authorName, createdAt }) {
 }
 
 // ── NoteComposer ──────────────────────────────────────────────────────────────
-function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) {
+function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
   const [open,  setOpen]  = useState(false);
   const [text,  setText]  = useState('');
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState(null);
-
-  // Mention autocomplete state
-  const [mentionQuery,   setMentionQuery]   = useState(null); // null = closed
-  const [mentionStart,   setMentionStart]   = useState(-1);
-  const [mentionResults, setMentionResults] = useState([]);
-  const [mentionIdx,     setMentionIdx]     = useState(0);
-
-  const textRef      = useRef(null);
-  const allMembersRef = useRef([]); // cached full list — filtered client-side
-  const sessionRef   = useRef(null); // cached session for save
-
-  // Pre-fetch all active org members as soon as orgId is known.
-  // Uses /api/team/members (same endpoint as Team Settings) with a direct
-  // Supabase fallback for local dev where the API route isn't available.
-  useEffect(() => {
-    if (!orgId || !supabase) return;
-
-    (async () => {
-      // Cache session for save
-      const { data: { session } } = await supabase.auth.getSession();
-      sessionRef.current = session;
-      const currentUserId = session?.user?.id;
-      const token = session?.access_token;
-
-      // Try the server API first — uses admin client, bypasses RLS, always correct
-      if (token) {
-        try {
-          const res = await fetch('/api/team/members', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const { members } = await res.json();
-            allMembersRef.current = (members || [])
-              .filter(m => m.user_id !== currentUserId && m.status === 'active')
-              .map(m => ({
-                id:            m.user_id,
-                name:          m.profiles?.name
-                               || [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ')
-                               || m.profiles?.email?.split('@')[0]
-                               || 'Team member',
-                role:          m.role || 'member',
-                avatar_url:    m.profiles?.avatar_url || null,
-                is_jv_partner: false,
-              }))
-              .sort((a, b) => a.name.localeCompare(b.name));
-            return; // done — API succeeded
-          }
-        } catch {
-          // fall through to Supabase fallback
-        }
-      }
-
-      // Fallback for local dev: memberships + profiles via direct Supabase query
-      const { data: mems } = await supabase
-        .from('memberships')
-        .select('user_id, role')
-        .eq('organization_id', orgId)
-        .eq('status', 'active');
-
-      if (!mems?.length) return;
-
-      const memberIds = mems.map(m => m.user_id);
-      const roleMap   = Object.fromEntries(mems.map(m => [m.user_id, m.role]));
-
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, first_name, last_name, avatar_url')
-        .in('id', memberIds);
-
-      allMembersRef.current = (profiles || [])
-        .filter(p => p.id !== currentUserId)
-        .map(p => ({
-          id:            p.id,
-          name:          p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Team member',
-          role:          roleMap[p.id] || 'member',
-          avatar_url:    p.avatar_url || null,
-          is_jv_partner: false,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-    })();
-  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Filter the cached member list client-side — instant, no debounce needed
-  const searchTeammates = useCallback((q) => {
-    const all = allMembersRef.current;
-    const ql  = q.trim().toLowerCase();
-    const filtered = ql
-      ? all.filter(m => m.name.toLowerCase().includes(ql))
-      : all;
-    setMentionResults(filtered.slice(0, 10));
-    setMentionIdx(0);
-  }, []);
-
-  // Parse textarea input for @ trigger
-  const handleChange = (e) => {
-    const val    = e.target.value;
-    const cursor = e.target.selectionStart;
-    setText(val);
-    setError(null);
-
-    // Look backwards from cursor for an @ that started a mention token
-    const before = val.slice(0, cursor);
-    const atIdx  = before.lastIndexOf('@');
-
-    if (atIdx === -1) {
-      setMentionQuery(null);
-      return;
-    }
-
-    const fragment = before.slice(atIdx + 1);
-    // Only trigger if the fragment has no space (space = mention closed)
-    if (/\s/.test(fragment)) {
-      setMentionQuery(null);
-      return;
-    }
-
-    setMentionStart(atIdx);
-    setMentionQuery(fragment);
-    searchTeammates(fragment);
-  };
-
-  const insertMention = (member) => {
-    const token  = buildMentionToken(member.name, member.id);
-    const before = text.slice(0, mentionStart);
-    const after  = text.slice(textRef.current.selectionStart);
-    const next   = `${before}${token}\u00a0${after}`;
-    setText(next);
-    setMentionQuery(null);
-
-    // Restore focus + move cursor after the inserted token
-    setTimeout(() => {
-      if (!textRef.current) return;
-      textRef.current.focus();
-      const pos = before.length + token.length + 1;
-      textRef.current.setSelectionRange(pos, pos);
-    }, 0);
-  };
-
-  const handleKeyDown = (e) => {
-    if (mentionQuery === null) {
-      // Ctrl/Cmd+Enter or plain Enter (no shift) → save
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        save();
-      }
-      return;
-    }
-
-    // Autocomplete keyboard nav
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setMentionIdx(i => Math.min(i + 1, mentionResults.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setMentionIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-      if (mentionResults[mentionIdx]) {
-        e.preventDefault();
-        insertMention(mentionResults[mentionIdx]);
-      }
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setMentionQuery(null);
-    }
-  };
+  const textRef = useRef(null);
 
   const save = async () => {
     if (!text.trim() || saving) return;
@@ -572,7 +408,6 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
     setError(null);
 
     try {
-      // Refresh session if needed
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       const authorId = session.user.id;
@@ -601,49 +436,15 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 
       if (noteErr) throw new Error(noteErr.message);
 
-      // Fan out mentions rows + notifications (non-blocking, best-effort)
-      const notifyIds = validMentionedIds.filter(uid => uid !== authorId);
-      if (notifyIds.length > 0) {
-        const authorName =
-          allMembersRef.current.find(m => m.id === authorId)?.name ||
-          currentUser ||
-          'Someone';
-
-        // Check mutes for all notifyIds
-        const { data: mutes } = await supabase
-          .from('deal_notification_mutes')
-          .select('user_id')
-          .eq('deal_id', dealId)
-          .in('user_id', notifyIds);
-
-        const mutedSet = new Set((mutes || []).map(m => m.user_id));
-
-        await Promise.all(notifyIds.map(async (uid) => {
-          // Always write the mention row
-          await supabase.from('mentions').insert({
-            org_id:               orgId,
-            mentioned_user_id:    uid,
-            mentioned_by_user_id: authorId,
-            target_type:          'activity_note',
-            target_id:            note.id,
-            deal_id:              dealId,
-          }).catch(e => console.warn('mention insert', e));
-
-          // Skip in-app notification if muted
-          if (mutedSet.has(uid)) return;
-
-          const preview = body.replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/gi, '@$1').slice(0, 140);
-          await supabase.from('notifications').insert({
-            organization_id: orgId,
-            user_id:         uid,
-            type:            'mention.deal_activity',
-            title:           `${authorName} mentioned you`,
-            body:            `"${preview}"`,
-            entity_type:     'activity_note',
-            entity_id:       note.id,
-          }).catch(e => console.warn('notification insert', e));
-        }));
-      }
+      // Fan out mentions + notifications (best-effort)
+      const authorName =
+        members.find(m => m.id === authorId)?.name ||
+        currentUser ||
+        'Someone';
+      await notifyMentions({
+        orgId, dealId, authorId, authorName,
+        body, noteId: note.id, validMentionedIds,
+      });
 
       setText('');
       setOpen(false);
@@ -669,27 +470,16 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
 
   return (
     <div className="bg-white border border-accent/30 rounded-xl shadow-sm overflow-visible">
-      <div className="relative">
-        <textarea
-          ref={textRef}
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Write a note… type @ to mention a teammate"
-          rows={3}
-          className="w-full px-4 pt-3 pb-1 text-sm text-gray-800 resize-none focus:outline-none"
-        />
-
-        {/* Mention autocomplete popover — rendered into body via portal */}
-        {mentionQuery !== null && (
-          <MentionAutocomplete
-            results={mentionResults}
-            selectedIdx={mentionIdx}
-            onSelect={insertMention}
-            anchorRef={textRef}
-          />
-        )}
-      </div>
+      <MentionTextarea
+        textareaRef={textRef}
+        value={text}
+        onChange={(v) => { setText(v); setError(null); }}
+        onSubmit={save}
+        members={members}
+        placeholder="Write a note… type @ to mention a teammate"
+        rows={3}
+        className="w-full px-4 pt-3 pb-1 text-sm text-gray-800 resize-none focus:outline-none"
+      />
 
       {error && (
         <p className="text-[11px] text-red-500 px-4 pb-1">{error}</p>
@@ -705,7 +495,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, mentionsEnabled }) 
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { setText(''); setOpen(false); setMentionQuery(null); }}
+            onClick={() => { setText(''); setOpen(false); }}
             className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100"
           >
             Cancel
