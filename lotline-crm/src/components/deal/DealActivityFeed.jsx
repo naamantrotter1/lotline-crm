@@ -1148,7 +1148,18 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                   replyText,
                   replySubmitting,
                   mentionMap:      replyMentionMap,
-                  onReply:         (id) => { setReplyingTo(id); setReplyText(''); setReplyMentionMap({}); },
+                  onReply:         (id) => {
+                    setReplyingTo(id);
+                    // Auto-tag the original note's author (skip self-replies)
+                    const authorName = usersById[evt.authorId]?.name;
+                    if (authorName && evt.authorId && evt.authorId !== currentUserId) {
+                      setReplyText(`@${authorName} `);
+                      setReplyMentionMap({ [authorName]: evt.authorId });
+                    } else {
+                      setReplyText('');
+                      setReplyMentionMap({});
+                    }
+                  },
                   onReplyTextChange: setReplyText,
                   onMentionInserted: (m) => setReplyMentionMap(prev => ({ ...prev, [m.name]: m.id })),
                   onSubmitReply:   handleSubmitReply,
