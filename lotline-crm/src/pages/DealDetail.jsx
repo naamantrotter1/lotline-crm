@@ -265,6 +265,8 @@ function FinancingScenarioPanel({
   investorAssignmentStatus, setInvestorAssignmentStatus,
   // Estimated Sale Date — drives hold-based cost calcs across all scenarios
   estimatedSaleDate, setEstimatedSaleDate,
+  // Payment Due Day — drives schedule/calendar dates for HM Loan, HM L+H, LoC
+  paymentDueDay, setPaymentDueDay,
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
