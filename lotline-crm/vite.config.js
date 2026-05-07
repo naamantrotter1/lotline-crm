@@ -54,6 +54,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      '/nominatim': {
+        target: 'https://nominatim.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/nominatim/, ''),
+        headers: { 'User-Agent': 'LotLine-CRM/1.0 (land acquisition CRM)' },
+      },
     },
   },
 })
