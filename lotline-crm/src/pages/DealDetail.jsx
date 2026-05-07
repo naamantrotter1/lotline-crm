@@ -2081,20 +2081,28 @@ function CommittedCapitalPartnerPanel({
   );
 }
 
-// ── Estimated hold helper ────────────────────────────────────────────────────
-// Returns the number of full months between Capital Deployed Date and the
-// user-set Estimated Sale Date. Floor of 1 month. Not clamped to the term —
-// if you plan to hold past the term, the displayed cost reflects that.
-// Falls back to fallbackMonths (the contractual term) when either date is
-// missing or invalid.
+// ── Estimated hold helpers ──────────────────────────────────────────────────
+// Returns FRACTIONAL months between Capital Deployed Date and Estimated Sale
+// Date — based on a 30-day month so partial months are prorated. e.g. 4 months
+// 5 days = 4 + 5/30 = 4.1667 months. Used for cost math.
 function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
   if (!deployedDate || !saleDate) return fallbackMonths;
   const d = new Date(deployedDate), s = new Date(saleDate);
   if (Number.isNaN(d.getTime()) || Number.isNaN(s.getTime())) return fallbackMonths;
-  const months = (s.getFullYear() - d.getFullYear()) * 12
-               + (s.getMonth() - d.getMonth())
-               + (s.getDate() >= d.getDate() ? 0 : -1);
-  return Math.max(1, months);
+  const days = Math.round((s.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return Math.max(1 / 30, (fallbackMonths || 0));
+  return days / 30;
+}
+
+// Pretty format "4 months 5 days" given a fractional months value.
+function formatHoldPeriod(months) {
+  if (!Number.isFinite(months) || months <= 0) return '0 days';
+  const totalDays = Math.round(months * 30);
+  const whole = Math.floor(totalDays / 30);
+  const rem = totalDays - whole * 30;
+  if (whole === 0) return `${rem} day${rem === 1 ? '' : 's'}`;
+  if (rem === 0)   return `${whole} month${whole === 1 ? '' : 's'}`;
+  return `${whole} month${whole === 1 ? '' : 's'} ${rem} day${rem === 1 ? '' : 's'}`;
 }
 
 // ── Financing scenario types (matching Lovable CRM) ──────────────────────────
