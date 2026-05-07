@@ -613,12 +613,21 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, replyProps, 
         {replies.length > 0 && (
           <div className="mt-3 border-l-2 border-gray-100 pl-3 space-y-2.5">
             {replies.map(r => (
-              <div key={r.id}>
+              <div key={r.id} className="group">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[12px] font-semibold text-gray-700">
                     {usersById[r.author_id]?.name || r.author_name || 'Unknown'}
                   </span>
                   <span className="text-[11px] text-gray-400">{timeAgo(r.created_at)}</span>
+                  {onDeleteReply && r.author_id === currentUserId && (
+                    <button
+                      onClick={() => onDeleteReply(r.id)}
+                      title="Delete"
+                      className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded opacity-0 group-hover:opacity-100"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
                 </div>
                 <p className="text-[12px] text-gray-600 leading-relaxed mt-0.5">{r.body}</p>
               </div>
