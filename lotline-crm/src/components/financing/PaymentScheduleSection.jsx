@@ -155,7 +155,7 @@ export default function PaymentScheduleSection({
   };
 
   // Hide the section entirely until prerequisites are met
-  if (!deal?.capitalDeployedDate && !deal?.capital_deployed_date) return null;
+  if (!effectiveDeployedDate) return null;
   if (!investor && !investorName) return null;
 
   const showEmpty = rows.length === 0 && !loading;
