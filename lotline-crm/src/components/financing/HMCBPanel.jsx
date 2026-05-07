@@ -642,8 +642,6 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             </div>
           )}
         </div>
-          );
-        })()}
       </SectionCard>
 
       {/* ── Draw Schedule ── */}
