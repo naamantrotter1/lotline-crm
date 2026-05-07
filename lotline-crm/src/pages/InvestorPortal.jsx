@@ -422,6 +422,38 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
               <div className={row}><span className="text-gray-500">Investor Profit Split (%)</span><input type="number" value={investorProfitSplitPct} onChange={e => setInvestorProfitSplitPct(+e.target.value||0)} className={ni} /></div>
             </div>
           )}
+
+          {/* ── Hard Money – Construction Holdback ── */}
+          {scenario === 'hmcb' && (
+            <div className={sec}>
+              <p className={secTitle}>Construction Holdback Loan</p>
+              <div className={row}><span className="text-gray-500">Purchase Price ($)</span><input type="number" value={hmcbPurchasePrice} onChange={e => setHmcbPurchasePrice(+e.target.value||0)} className={wi} /></div>
+              <div className={row}><span className="text-gray-500">Construction Holdback ($)</span><input type="number" value={hmcbHoldbackAmount} onChange={e => setHmcbHoldbackAmount(+e.target.value||0)} className={wi} /></div>
+              <div className={row}><span className="text-gray-500">Annual Interest Rate (%)</span><input type="number" value={hmcbInterestRate} onChange={e => setHmcbInterestRate(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Loan Term (months)</span><input type="number" value={hmcbTermMonths} onChange={e => setHmcbTermMonths(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Origination Fee ($)</span><input type="number" value={hmcbOriginationFee} onChange={e => setHmcbOriginationFee(+e.target.value||0)} className={wi} /></div>
+            </div>
+          )}
+
+          {/* ── Committed Capital Partner ── */}
+          {scenario === 'committed-capital-partner' && (
+            <div className={sec}>
+              <p className={secTitle}>Committed Capital Partner</p>
+              <div className={row}><span className="text-gray-500">Allocation Amount ($)</span><input type="number" value={ccpAllocationAmount} onChange={e => setCcpAllocationAmount(+e.target.value||0)} className={wi} /></div>
+              <div className={row}><span className="text-gray-500">Preferred Return (%)</span><input type="number" value={ccpPrefReturnPct} onChange={e => setCcpPrefReturnPct(+e.target.value||0)} className={ni} /></div>
+              <div className={row}><span className="text-gray-500">Profit Split (%)</span><input type="number" value={ccpProfitSharePct} onChange={e => setCcpProfitSharePct(+e.target.value||0)} className={ni} /></div>
+            </div>
+          )}
+
+          {/* ── Pooled Loan ── */}
+          {scenario === 'pooled-loan' && (
+            <div className={sec}>
+              <p className={secTitle}>Pooled Loan</p>
+              <p className="text-xs text-gray-400 leading-snug">
+                Pooled loan terms are managed in the Deal Detail → Financing tab. Assigning the investor here will set the scenario type — configure the loan pool from the deal directly.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
