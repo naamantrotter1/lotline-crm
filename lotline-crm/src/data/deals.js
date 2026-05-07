@@ -12,6 +12,26 @@ function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
   return days / 30;
 }
 
+// Per-investor default terms — mirrors getDefaultRate / useState defaults in DealDetail.jsx.
+// Must stay in sync so that pipeline cards and the deal-detail header always use
+// the same values when scenarioData fields have not yet been saved.
+function _defaultInterestRate(investor) {
+  if (investor === 'Atium Build Group LLC') return 13;
+  if (investor === 'Louis Isom') return 13;
+  if (investor === 'Blue Bay Capital') return 14;
+  if (investor === 'Windstone') return 14;
+  return 12;
+}
+function _defaultOriginationFeePct(investor) {
+  return (investor === 'Louis Isom' || investor === 'Blue Bay Capital' || investor === 'Windstone') ? 3 : 0;
+}
+function _defaultServicingFeeFlat(investor) {
+  return investor === 'Louis Isom' ? 750 : 0;
+}
+function _defaultProfitSharePct(investor) {
+  return investor === 'Atium Build Group LLC' ? 5 : 0;
+}
+
 /**
  * Compute the Total Cost of Capital for a deal when a non-cash financing
  * scenario is active. Returns 0 for Cash / no scenario / missing data.
@@ -25,15 +45,19 @@ export function computeCostOfCapital(deal) {
   const loanFallback = deal.investorCapitalContributed || (deal.land || 0) + (deal.mobileHome || 0);
   const loan = sd.loanAmountOverride || loanFallback;
   if (!loan) return 0;
-  const monthlyInterest = loan * ((sd.interestRate || 0) / 100) / 12;
+  const inv = deal?.investor;
+  const rate = sd.interestRate != null ? sd.interestRate : _defaultInterestRate(inv);
+  const monthlyInterest = loan * (rate / 100) / 12;
   const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
   const effHold = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
+  const origPct = sd.originationFeePct != null ? sd.originationFeePct : _defaultOriginationFeePct(inv);
   const origFee = (sd.originationFeeType === 'percentage' || !sd.originationFeeType)
-    ? loan * ((sd.originationFeePct || 0) / 100)
+    ? loan * (origPct / 100)
     : (sd.originationFeeFlat || 0);
+  const servFlat = sd.servicingFeeFlat != null ? sd.servicingFeeFlat : _defaultServicingFeeFlat(inv);
   const servicingFee = sd.servicingFeeType === 'percentage'
     ? loan * ((sd.servicingFeePct || 0) / 100)
-    : (sd.servicingFeeFlat || 0);
+    : servFlat;
   const otherFees = (sd.drawFeeHm || 0) + (sd.underwritingFee || 0) + (sd.attorneyDocFee || 0);
   return (monthlyInterest * effHold) + origFee + servicingFee + otherFees;
 }
