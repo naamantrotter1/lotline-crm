@@ -25,8 +25,20 @@ const toNumber = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 const round2 = (n) => Math.round(n * 100) / 100;
-const isoDate = (d) => d.toISOString().slice(0, 10);
-const today = () => new Date().toISOString().slice(0, 10);
+const isoDate = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+const parseLocalDate = (yyyymmdd) => {
+  if (!yyyymmdd) return null;
+  const s = String(yyyymmdd).slice(0, 10);
+  const [y, m, d] = s.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+};
+const today = () => isoDate(new Date());
 
 /**
  * Adjust a payment date so its day-of-month matches the lender's payment_due_day.
