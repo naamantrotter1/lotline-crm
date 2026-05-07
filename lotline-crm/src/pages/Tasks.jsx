@@ -152,8 +152,21 @@ export default function Tasks() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this task?')) return;
+    const prevTasks = tasks;
     setTasks(prev => prev.filter(t => t.id !== id));
-    await deleteTask(id);
+
+    // Try soft-delete first; if it returns no rows (RLS blocked or column missing),
+    // fall back to hard-delete so the task actually disappears on refresh.
+    const { data: softData, error: softErr } = await deleteTask(id);
+    const softSucceeded = !softErr && Array.isArray(softData) ? softData.length > 0 : !softErr;
+    if (softErr || !softSucceeded) {
+      const { error: hardErr } = await supabase.from('tasks').delete().eq('id', id);
+      if (hardErr) {
+        console.error('handleDelete: both soft and hard delete failed', { softErr, hardErr });
+        setTasks(prevTasks);
+        alert('Could not delete task: ' + (hardErr.message || 'permission denied'));
+      }
+    }
   };
 
   // Client-side priority filter
