@@ -683,7 +683,7 @@ function FinancingScenarioPanel({
               </select>
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed</p>
               <input
                 type="text"
                 inputMode="numeric"
@@ -787,7 +787,7 @@ function FinancingScenarioPanel({
               </select>
             </div>
             <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed ($)</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed</p>
               <input
                 type="text"
                 inputMode="numeric"
