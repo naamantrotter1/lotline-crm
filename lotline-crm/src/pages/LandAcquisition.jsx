@@ -814,21 +814,30 @@ export default function LandAcquisition() {
   const handleDelete = async (id) => {
     const deal = customDeals.find(d => String(d.id) === String(id));
     if (!deal) return;
-    const confirmed = window.confirm(`Archive "${deal.address}"? It will be moved to Archived Deals.`);
+    const confirmed = window.confirm(
+      `Permanently delete "${deal.address}"?\n\nThis cannot be undone — all related tasks, notes, and events will also be deleted.`
+    );
     if (!confirmed) return;
 
-    // Optimistic removal from active state
     setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
+    const { error } = await deleteDeal(id);
+    if (error) {
+      setCustomDeals(prev => [...prev, deal]);
+      alert(`Could not delete: ${error.message || error}`);
+    }
+  };
 
-    // Targeted Supabase archive — ONLY sets is_archived: true
+  const handleArchive = async (id) => {
+    const deal = customDeals.find(d => String(d.id) === String(id));
+    if (!deal) return;
+    const confirmed = window.confirm(`Archive "${deal.address}"? It will be moved to Archived Deals.`);
+    if (!confirmed) return;
+    setCustomDeals(prev => prev.filter(d => String(d.id) !== String(id)));
     const { error } = await archiveDeal(deal);
     if (error) {
-      // Rollback on failure
       setCustomDeals(prev => [...prev, deal]);
       return;
     }
-
-    // Move to archived state on success
     const archived = { ...deal, isArchived: true, archivedAt: new Date().toISOString(), lastStage: deal.stage };
     setArchivedDeals(prev => {
       const idx = prev.findIndex(d => String(d.id) === String(id));
