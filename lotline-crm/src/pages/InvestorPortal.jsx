@@ -1036,6 +1036,17 @@ export default function InvestorPortal() {
       setInvestors(cached);
     });
   }, [JSON.stringify(scopeIds), activeOrgId, orgSlug, jvScope.includeOwn]);
+
+  // Directory tab actions — edit/delete update both Supabase and the local list
+  // optimistically, and the delete path also clears any deal.investor refs.
+  const handleUpdateInvestor = async (id, patch) => {
+    setInvestors(prev => prev.map(i => String(i.id) === String(id) ? { ...i, ...patch } : i));
+    await storeUpdateInvestor(id, patch, activeOrgId);
+  };
+  const handleDeleteInvestor = async (inv) => {
+    setInvestors(prev => prev.filter(i => String(i.id) !== String(inv.id)));
+    await storeDeleteInvestor(inv, activeOrgId);
+  };
   const findDealId = (address) => {
     const norm = a => a.trim().toLowerCase();
     const match = customDeals.find(d => norm(d.address || '') === norm(address));
