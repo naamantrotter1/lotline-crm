@@ -72,11 +72,12 @@ function fmtGCalTime(event) {
 }
 
 const FILTER_CHIPS = [
-  { key: 'all',       label: 'All'           },
-  { key: 'gcal',      label: 'Team Calendar' },
-  { key: 'meeting',   label: 'Meetings'      },
-  { key: 'task',      label: 'Tasks'         },
-  { key: 'milestone', label: 'Milestones'    },
+  { key: 'all',         label: 'All'           },
+  { key: 'gcal',        label: 'Team Calendar' },
+  { key: 'meeting',     label: 'Meetings'      },
+  { key: 'task',        label: 'Tasks'         },
+  { key: 'milestone',   label: 'Milestones'    },
+  { key: 'payment_due', label: 'Payments'      },
 ];
 
 // ── Meeting modal ──────────────────────────────────────────────────────────────
