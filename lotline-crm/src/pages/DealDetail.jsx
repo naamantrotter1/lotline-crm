@@ -485,9 +485,13 @@ function FinancingScenarioPanel({
               <div className="py-2 col-span-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
                 <input
-                  type="number"
-                  value={loanAmountOverride || totalLent}
-                  onChange={e => setLoanAmountOverride(Number(e.target.value) || 0)}
+                  type="text"
+                  inputMode="numeric"
+                  value={(() => { const v = loanAmountOverride || totalLent; return v ? `$${Number(v).toLocaleString()}` : ''; })()}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    setLoanAmountOverride(raw === '' ? 0 : Number(raw));
+                  }}
                   onFocus={e => e.target.select()}
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                   readOnly={readOnly}
