@@ -338,6 +338,24 @@ export async function fetchMyDistributions(investorId) {
   return { distributions: data ?? [], error };
 }
 
+/** Investor: fetch the current investor's full payment schedule across deals.
+ *  Promotes past-due 'scheduled' rows to 'overdue' for read-time display. */
+export async function fetchMyPaymentSchedule(investorId) {
+  const { data, error } = await supabase
+    .from('investor_payment_schedule')
+    .select('*, deals(address)')
+    .eq('investor_id', investorId)
+    .is('deleted_at', null)
+    .order('due_date', { ascending: true });
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = (data || []).map(r =>
+    r.status === 'scheduled' && r.due_date < today
+      ? { ...r, status: 'overdue' }
+      : r
+  );
+  return { schedule: rows, error };
+}
+
 /** Operator: fetch all distributions for a deal. */
 export async function fetchDealDistributions(dealId) {
   const { data, error } = await supabase
