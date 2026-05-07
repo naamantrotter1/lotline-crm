@@ -915,15 +915,13 @@ function HeatMap() {
     unresolved.forEach(d => geocodingInProgress.current.add(d.address));
     for (const deal of unresolved) {
       try {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 350));
         const res = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(deal.address)}&limit=1`
+          `/nominatim/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`
         );
         const data = await res.json();
-        const feat = data?.features?.[0];
-        if (feat) {
-          // GeoJSON coordinates are [longitude, latitude]
-          const coords = { lat: feat.geometry.coordinates[1], lng: feat.geometry.coordinates[0] };
+        if (data?.[0]) {
+          const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
           setGeocoords(prev => ({ ...prev, [deal.address]: coords }));
         }
       } catch {}
