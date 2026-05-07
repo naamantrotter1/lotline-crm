@@ -239,6 +239,16 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
   const [drawPct, setDrawPct] = useState(100);
   const [annualFeePct, setAnnualFeePct] = useState(0);
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(50);
+  // HMCB-specific
+  const [hmcbPurchasePrice, setHmcbPurchasePrice] = useState(0);
+  const [hmcbHoldbackAmount, setHmcbHoldbackAmount] = useState(0);
+  const [hmcbTermMonths, setHmcbTermMonths] = useState(9);
+  const [hmcbInterestRate, setHmcbInterestRate] = useState(13.5);
+  const [hmcbOriginationFee, setHmcbOriginationFee] = useState(0);
+  // CCP-specific
+  const [ccpAllocationAmount, setCcpAllocationAmount] = useState(0);
+  const [ccpPrefReturnPct, setCcpPrefReturnPct] = useState(0);
+  const [ccpProfitSharePct, setCcpProfitSharePct] = useState(50);
 
   const existingInv = investors.find(i => i.name === selected);
 
