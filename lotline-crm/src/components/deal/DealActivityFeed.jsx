@@ -260,17 +260,21 @@ function MentionTextarea({
   };
 
   const insertMention = (member) => {
-    const token  = buildMentionToken(member.name, member.id);
-    const before = value.slice(0, mentionStart);
-    const after  = value.slice(ref.current.selectionStart);
-    const next   = `${before}${token}\u00a0${after}`;
+    // Insert just the friendly form (@Name) so the textarea stays readable.
+    // The full @[Name](uuid) token is reconstructed at save time using the
+    // mention map tracked in the parent (see onMentionInserted).
+    const friendly = `@${member.name}`;
+    const before   = value.slice(0, mentionStart);
+    const after    = value.slice(ref.current.selectionStart);
+    const next     = `${before}${friendly}\u00a0${after}`;
     onChange(next);
     setMentionQuery(null);
+    onMentionInserted?.(member);
 
     setTimeout(() => {
       if (!ref.current) return;
       ref.current.focus();
-      const pos = before.length + token.length + 1;
+      const pos = before.length + friendly.length + 1;
       ref.current.setSelectionRange(pos, pos);
     }, 0);
   };
