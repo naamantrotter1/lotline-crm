@@ -202,6 +202,7 @@ function rowToDeal(row) {
     lng:                   row.lng,
     capitalDeployedDate:          row.capital_deployed_date,
     capitalReturnedDate:          row.capital_returned_date,
+    estimatedSaleDate:            row.estimated_sale_date,
     investorPaidOut:              row.investor_paid_out,
     investorCapitalContributed:   row.investor_capital_contributed,
     investorEquityPct:            row.investor_equity_pct,
