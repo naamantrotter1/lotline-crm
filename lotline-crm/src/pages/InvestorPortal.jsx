@@ -522,14 +522,42 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
     }
     setAssignments(prev => ({ ...prev, [modalDeal.address]: { funder: funderName, terms } }));
 
-    // Write investor + financing back to the deal
+    // Write investor + full financing data back to the deal
     const norm = a => (a || '').trim().toLowerCase();
     const matchedDeal = contextDeals.find(d => norm(d.address) === norm(modalDeal.address));
     if (matchedDeal) {
+      const scenarioMeta = FINANCING_SCENARIOS_LIST.find(s => s.id === terms?.scenario);
+      const newScenarioData = {
+        interestRate:           terms.interestRate,
+        originationFeeType:     terms.originationFeeType,
+        originationFeePct:      terms.originationFeePct,
+        originationFeeFlat:     terms.originationFeeFlat,
+        servicingFeeType:       terms.servicingFeeType,
+        servicingFeeFlat:       terms.servicingFeeFlat,
+        servicingFeePct:        terms.servicingFeePct,
+        balloonTerm:            terms.balloonTerm,
+        holdPeriod:             terms.holdPeriod,
+        monthlyHoldCost:        terms.monthlyHoldCost,
+        profitSharePct:         terms.profitSharePct,
+        ltcPct:                 terms.ltcPct,
+        originationPoints:      terms.originationPoints,
+        creditLimit:            terms.creditLimit,
+        drawPct:                terms.drawPct,
+        annualFeePct:           terms.annualFeePct,
+        investorProfitSplitPct: terms.investorProfitSplitPct,
+        hmcb:                   terms.hmcb,
+        ccpAllocationAmount:    terms.ccpAllocationAmount,
+        ccpPrefReturnPct:       terms.ccpPrefReturnPct,
+        ccpProfitSharePct:      terms.ccpProfitSharePct,
+      };
       const updatedDeal = {
         ...matchedDeal,
-        investor: funderName,
-        financing: terms?.scenario || matchedDeal.financing,
+        investor:              funderName,
+        financing:             scenarioMeta?.label || terms?.scenario || matchedDeal.financing,
+        financingScenarioType: scenarioMeta?.dbType || null,
+        capitalDeployedDate:   terms.capitalDeployedDate || matchedDeal.capitalDeployedDate || null,
+        capitalReturnedDate:   terms.capitalReturnedDate || matchedDeal.capitalReturnedDate || null,
+        scenarioData:          { ...(matchedDeal.scenarioData || {}), ...newScenarioData },
       };
       saveDeal(updatedDeal);
       setDeals(prev => prev.map(d => d.id === updatedDeal.id ? updatedDeal : d));
