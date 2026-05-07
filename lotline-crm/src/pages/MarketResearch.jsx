@@ -894,6 +894,40 @@ function HeatMap() {
   const landAcqLayer      = useRef(null);
   const salesLayer        = useRef(null);
 
+  // ── Geocoding cache (address → {lat,lng}, localStorage-backed) ───────────
+  const [geocoords, setGeocoords] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mkt_geocache') || '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mkt_geocache', JSON.stringify(geocoords)); } catch {}
+  }, [geocoords]);
+
+  async function geocodeAddresses(deals) {
+    const unresolved = deals.filter(d => !d.lat && !d.lng && d.address && !geocoords[d.address]);
+    if (!unresolved.length) return;
+    const updates = {};
+    for (const deal of unresolved) {
+      try {
+        await new Promise(r => setTimeout(r, 300)); // ~3 req/s — within Nominatim ToS
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'en', 'User-Agent': 'LotLine-CRM/1.0' } }
+        );
+        const data = await res.json();
+        if (data?.[0]) updates[deal.address] = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      } catch {}
+    }
+    if (Object.keys(updates).length) setGeocoords(prev => ({ ...prev, ...updates }));
+  }
+
+  function withGeocoords(deals) {
+    return deals.map(d => ({
+      ...d,
+      lat: d.lat ?? geocoords[d.address]?.lat,
+      lng: d.lng ?? geocoords[d.address]?.lng,
+    }));
+  }
+
   // ── Map state (declared early so searchQuery useEffect can reference geojson) ─
   const [geojson,     setGeojson]     = useState(null);
   const [zipGeojson,  setZipGeojson]  = useState(null);
