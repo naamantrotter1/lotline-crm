@@ -1415,6 +1415,7 @@ export default function InvestorPortal() {
         { key: 'all-deals',            label: 'All Deals'            },
         { key: 'needs-funding',        label: 'Needs Funding'         },
         { key: 'by-investor',          label: 'By Investor'          },
+        { key: 'payments',             label: 'Payments'             },
         { key: 'commitments',          label: 'Commitments'          },
         { key: 'directory',            label: 'Directory'            },
         { key: 'available-investments',label: 'Available Investments' },
