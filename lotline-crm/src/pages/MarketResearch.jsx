@@ -924,7 +924,11 @@ function HeatMap() {
         const res = await fetch(
           `${base}/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`
         );
-        if (res.status === 429) break; // rate-limited — stop the loop, retry next trigger
+        if (res.status === 429) {
+          // Rate-limited — release all pending addresses so they can retry on next trigger
+          unresolved.forEach(d => geocodingInProgress.current.delete(d.address));
+          return;
+        }
         if (!res.ok) { geocodingInProgress.current.delete(deal.address); continue; }
         const data = await res.json();
         if (data?.[0]) {
