@@ -520,7 +520,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { setText(''); setOpen(false); }}
+            onClick={() => { setText(''); setMentionMap({}); setOpen(false); }}
             className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100"
           >
             Cancel
