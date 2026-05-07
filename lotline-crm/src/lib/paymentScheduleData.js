@@ -28,6 +28,27 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const isoDate = (d) => d.toISOString().slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Adjust a payment date so its day-of-month matches the lender's payment_due_day.
+ * Accepts: 'same_as_closing' | 'last_day' | numeric day string ('1'..'28').
+ * Falls back to no-op for unrecognized values.
+ */
+function applyDueDay(date, dueDay) {
+  if (!dueDay || dueDay === 'same_as_closing') return date;
+  const d = new Date(date);
+  if (dueDay === 'last_day') {
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d;
+  }
+  const day = parseInt(dueDay, 10);
+  if (!Number.isFinite(day) || day < 1) return date;
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, daysInMonth));
+  return d;
+}
+
 const PAYMENT_TYPE_LABELS = {
   interest:        'Interest Payment',
   principal:       'Principal Return',
