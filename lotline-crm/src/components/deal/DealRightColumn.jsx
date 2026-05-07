@@ -261,12 +261,14 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
         .single();
       if (newDoc) setDocuments(prev => [newDoc, ...prev]);
 
-      // Log to activity feed — embed the doc URL as a markdown link so it's clickable
+      // Log to activity feed — body is a single clickable chip showing the
+      // category; clicking opens the document. Filename is preserved in the
+      // anchor's title attribute via the renderer if needed downstream.
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const linkBody = publicUrl
-          ? `Uploaded [${file.name}](${publicUrl}) (${docCategory})`
-          : `Uploaded "${file.name}" (${docCategory})`;
+          ? `[${docCategory}](${publicUrl})`
+          : `${docCategory}: ${file.name}`;
         await supabase.from('activity_notes').insert({
           organization_id: activeOrgId,
           deal_id:         deal.id,
