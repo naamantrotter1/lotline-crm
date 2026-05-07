@@ -174,7 +174,8 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
   // the full-term value stays visible as a secondary gray row.
   const estHold = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, d.termMonths);
   const totalInterestEstimated = monthly * estHold;
-  const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== d.termMonths;
+  // Use a small epsilon when comparing fractional months to the integer term
+  const showEst = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - d.termMonths) > 0.01;
 
   const effectiveOriginationFee = d.originationFeeMode === 'pct'
     ? (d.originationFee / 100) * totalLoan
