@@ -744,6 +744,9 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   const instanceId = useRef(Math.random().toString(36).slice(2));
   const mentionsEnabled = hasFlag('deal_activity.mentions.enabled');
 
+  // Org members for @-mention autocomplete (composer + replies share this list)
+  const { members } = useOrgMembers(activeOrgId);
+
   const [dbNotes,  setDbNotes]  = useState([]);
   const [legacyNotes, setLegacyNotes] = useState([]);
   const [events,   setEvents]   = useState([]);
