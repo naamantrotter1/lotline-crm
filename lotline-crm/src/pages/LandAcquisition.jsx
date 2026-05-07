@@ -805,7 +805,7 @@ function loadCustomDeals() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LandAcquisition() {
   const navigate = useNavigate();
-  const { deals: customDeals, setDeals: setCustomDeals, setArchivedDeals, archiveDeal, realtimeStatus } = useDeals();
+  const { deals: customDeals, setDeals: setCustomDeals, setArchivedDeals, archiveDeal, deleteDeal, realtimeStatus } = useDeals();
   const { profile, activeOrgId } = useAuth();
 
   const allDeals = customDeals
