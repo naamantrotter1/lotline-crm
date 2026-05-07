@@ -617,6 +617,19 @@ function FinancingScenarioPanel({
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
               <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
             </div>
+            <div className="py-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
+              <input type="date" value={capitalReturnedDate || ''} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
+            </div>
+            {monthlyInterestLoc > 0 && (
+              <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Total Interest</span>
+                <span className="text-sm font-semibold text-accent">
+                  ${Math.round(monthlyInterestLoc * (deal.holding_months || 6)).toLocaleString()}
+                  <span className="text-[10px] text-gray-400 font-normal ml-1">(Monthly × {deal.holding_months || 6} mo)</span>
+                </span>
+              </div>
+            )}
           </div>
           {/* Advanced fees toggle */}
           <div className="mt-2 border-t border-gray-100 pt-2">
