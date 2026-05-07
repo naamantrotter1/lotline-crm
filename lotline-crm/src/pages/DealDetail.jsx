@@ -2596,6 +2596,8 @@ function DealDetailContent({ deal }) {
   // Profit Split specific
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
   const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? 0);
+  // Payment Due Day — drives schedule/calendar generator (HM Loan, HM L+H, HMCB, LoC).
+  const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? 'same_as_closing');
 
   // Committed Capital Partner specific
   const [ccpInvestorId, setCcpInvestorId] = useState(sd.ccpInvestorId ?? '');
