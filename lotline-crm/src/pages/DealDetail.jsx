@@ -2439,17 +2439,22 @@ function DealDetailContent({ deal }) {
     return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
   });
 
-  // Persist subdivide / land clearing state so the kanban card reflects it
-  // both via localStorage (legacy) and via deal.tags (which the cards read).
-  const updateTagPresence = (tagName, on) => {
+  // Persist subdivide / land clearing state so the kanban card reflects it.
+  // We update three things in lock-step so isSubdividable()/isLandClearing()
+  // always agree: localStorage, deal.{subdividable|landClearing}, and deal.tags.
+  // Without this, an earlier 'No' on the legacy column shadowed a freshly
+  // toggled-on tag and the badge would not appear on the card.
+  const updateDealFlag = ({ tagName, legacyKey, on }) => {
     if (!deal?.id) return;
     const currentTags = Array.isArray(deal.tags) ? deal.tags : [];
     const nextTags = on
       ? (currentTags.includes(tagName) ? currentTags : [...currentTags, tagName])
       : currentTags.filter(t => t !== tagName);
-    if (nextTags.length === currentTags.length &&
-        nextTags.every((t, i) => t === currentTags[i])) return;
-    const updated = { ...deal, tags: nextTags };
+    const updated = {
+      ...deal,
+      tags: nextTags,
+      [legacyKey]: on ? 'Yes' : 'No',
+    };
     saveDeal(updated, activeOrgId);
     setDeals(prev => prev.map(d => String(d.id) === String(deal.id) ? updated : d));
   };
@@ -2457,13 +2462,13 @@ function DealDetailContent({ deal }) {
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
     if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
-    updateTagPresence('Subdivide', val === 'Yes');
+    updateDealFlag({ tagName: 'Subdivide', legacyKey: 'subdividable', on: val === 'Yes' });
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
     if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
-    updateTagPresence('Land Clearing', val === 'Yes');
+    updateDealFlag({ tagName: 'Land Clearing', legacyKey: 'landClearing', on: val === 'Yes' });
   };
 
   const handleSendToLandAcq = () => {
