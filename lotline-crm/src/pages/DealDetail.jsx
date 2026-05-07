@@ -2898,6 +2898,40 @@ function DealDetailContent({ deal }) {
     paymentDueDay,
   ]);
 
+  // ── Auto-regen payment schedule when paymentDueDay or capitalDeployedDate changes ──
+  // Only fires if a schedule already exists for this deal+investor; the first-time
+  // generation is still triggered explicitly from PaymentScheduleSection.
+  useEffect(() => {
+    if (!deal?.id || !activeOrgId) return;
+    if (!capitalDeployedDate) return;
+    if (!['hard-money-loan', 'hard-money-land-home', 'hmcb', 'loc'].includes(selectedScenario)) return;
+    const investorName = investor;
+    if (!investorName) return;
+    let cancelled = false;
+    (async () => {
+      const inv = await lookupInvestorByName(activeOrgId, investorName);
+      if (cancelled || !inv) return;
+      const { count } = await supabase
+        .from('investor_payment_schedule')
+        .select('id', { count: 'exact', head: true })
+        .eq('deal_id', String(deal.id))
+        .eq('investor_id', inv.id)
+        .is('deleted_at', null);
+      if (cancelled || !count) return;
+      // Build a deal snapshot with the latest scenarioData so the generator
+      // sees the new paymentDueDay value without waiting for context refresh.
+      const snapshot = {
+        ...deal,
+        capitalDeployedDate,
+        scenarioData: { ...(deal.scenarioData || {}), paymentDueDay },
+        organization_id: activeOrgId,
+      };
+      await savePaymentSchedule({ deal: snapshot, investor: inv, allocation: null, orgId: activeOrgId });
+    })().catch((err) => console.warn('auto-regen schedule failed', err));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentDueDay, capitalDeployedDate, selectedScenario, deal?.id, activeOrgId, investor]);
+
   // ── Load pooled loan links for this deal ──────────────────────────────────
   useEffect(() => {
     if (!deal?.id || !activeOrgId) return;
