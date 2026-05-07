@@ -734,6 +734,14 @@ function FinancingScenarioPanel({
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Monthly Interest on Draw (calc)</p>
               <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestLoc).toLocaleString()}</span>
             </div>
+            <div className="py-2 col-span-2">
+              <PaymentDueDayPicker
+                value={paymentDueDay}
+                onChange={setPaymentDueDay}
+                capitalDeployedDate={capitalDeployedDate}
+                readOnly={readOnly}
+              />
+            </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
               <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
