@@ -1752,9 +1752,16 @@ function CommittedCapitalPartnerPanel({
     })));
   };
 
-  // Projected cost of capital (simplified: full amount × pref rate × hold period)
+  // Projected cost of capital. Use estimated hold (deployed → sale) when set,
+  // falling back to the full hold period.
   const holdMonths = deal?.holdingMonths || 6;
-  const projectedPref = amountNum * (ccpPrefReturnPct / 100) * (holdMonths / 12);
+  const estHoldMonths = getEstimatedHoldMonths(
+    deal?.capitalDeployedDate, deal?.estimatedSaleDate, holdMonths
+  );
+  const projectedPrefFull = amountNum * (ccpPrefReturnPct / 100) * (holdMonths / 12);
+  const projectedPref     = amountNum * (ccpPrefReturnPct / 100) * (estHoldMonths / 12);
+  const showCcpEst        = !!(deal?.capitalDeployedDate && deal?.estimatedSaleDate)
+                            && estHoldMonths !== holdMonths;
   const projectedShare = ccpProfitSharePct != null && ccpProfitSharePct > 0
     ? netProfit * (ccpProfitSharePct / 100)
     : 0;
