@@ -945,6 +945,30 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     loadLegacyNotes();
   }, [loadDbNotes, loadLegacyNotes, refreshKey]);
 
+  // ── Scroll-to-and-highlight a specific note when arriving via ?activity=<id> ──
+  // Used by the global notification bell to deep-link into the activity feed.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetActivityId = searchParams.get('activity');
+  useEffect(() => {
+    if (!targetActivityId) return;
+    if (!dbNotes.length && !legacyNotes.length) return;
+    const el = document.getElementById(`activity-db-note-${targetActivityId}`)
+            || document.getElementById(`activity-${targetActivityId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-accent', 'ring-offset-2', 'rounded-xl', 'transition-all');
+    const t = setTimeout(() => {
+      el.classList.remove('ring-2', 'ring-accent', 'ring-offset-2');
+      // Remove the param so re-renders don't re-trigger.
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('activity');
+        return next;
+      }, { replace: true });
+    }, 2400);
+    return () => clearTimeout(t);
+  }, [targetActivityId, dbNotes, legacyNotes, setSearchParams]);
+
   // ── Realtime: new notes from other users ───────────────────────────────────
   const loadDbNotesRef = useRef(loadDbNotes);
   useEffect(() => { loadDbNotesRef.current = loadDbNotes; }, [loadDbNotes]);
