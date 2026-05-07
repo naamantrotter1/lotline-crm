@@ -1143,13 +1143,18 @@ export default function InvestorPortal() {
   };
 
   // Recompute activeDeals from live context using case-insensitive matching so
-  // minor capitalisation differences (e.g. "Low Tide Lending" vs "low tide lending")
-  // don't cause an investor to show 0 active deals.
+  // minor capitalisation differences or HMCB-only saves don't show 0.
+  // Checks: deal.investor, scenarioData.hmcb.lenderName (HMCB deals that saved
+  // the lender there but not yet reflected in deal.investor).
   const enrichedInvestors = useMemo(() => investors.map(inv => {
     const invNameLower = inv.name.trim().toLowerCase();
-    const liveCount = customDeals.filter(d =>
-      !d.isArchived && (d.investor || '').trim().toLowerCase() === invNameLower
-    ).length;
+    const liveCount = customDeals.filter(d => {
+      if (d.isArchived) return false;
+      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
+      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
+      if (hmcbLender && hmcbLender === invNameLower) return true;
+      return false;
+    }).length;
     return { ...inv, activeDeals: liveCount > 0 ? liveCount : (inv.activeDeals ?? 0) };
   }), [investors, customDeals]);
 
