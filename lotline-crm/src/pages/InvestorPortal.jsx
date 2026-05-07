@@ -267,7 +267,16 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    const terms = { scenario, interestRate, originationFeeType, originationFeePct, originationFeeFlat, servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm, holdPeriod, monthlyHoldCost, profitSharePct, capitalDeployedDate, capitalReturnedDate, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct, investorProfitSplitPct };
+    const terms = {
+      scenario, interestRate, originationFeeType, originationFeePct, originationFeeFlat,
+      servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm, holdPeriod,
+      monthlyHoldCost, profitSharePct, capitalDeployedDate, capitalReturnedDate,
+      ltcPct, originationPoints, creditLimit, drawPct, annualFeePct, investorProfitSplitPct,
+      // HMCB
+      hmcb: { interestRate: hmcbInterestRate, termMonths: hmcbTermMonths, purchasePrice: hmcbPurchasePrice, holdbackAmount: hmcbHoldbackAmount, originationFee: hmcbOriginationFee, originationFeeMode: 'flat' },
+      // CCP
+      ccpAllocationAmount, ccpPrefReturnPct, ccpProfitSharePct,
+    };
     onAssign({ funderName, terms, isNew: mode === 'new', newInvestor: mode === 'new' ? { name: funderName, standardTerms: '' } : null });
   };
 
