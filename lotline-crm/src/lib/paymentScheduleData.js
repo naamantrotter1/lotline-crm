@@ -216,16 +216,18 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const annualRate = toNumber(data.annualRate ?? data.interestRate ?? scenarioData.interestRate) / 100;
     const monthlyInterest = round2((drawn * annualRate) / 12);
     const months = Math.max(1, Math.round(toNumber(deal.holding_months ?? data.holdPeriod ?? 6)));
+    const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
 
     if (monthlyInterest > 0) {
       for (let m = 1; m <= months; m++) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + m);
+        const adjusted = applyDueDay(d, paymentDueDay);
         payments.push({
           payment_type: 'interest',
           payment_number: m,
           amount: monthlyInterest,
-          due_date: isoDate(d),
+          due_date: isoDate(adjusted),
         });
       }
     }
