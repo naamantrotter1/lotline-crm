@@ -221,6 +221,7 @@ function MentionTextarea({
   value,
   onChange,
   onSubmit,
+  onMentionInserted,
   members,
   textareaRef,
   ...textareaProps
