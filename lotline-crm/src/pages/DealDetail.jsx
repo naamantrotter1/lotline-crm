@@ -988,6 +988,7 @@ function OverviewTab({
   profitSharePct, setProfitSharePct,
   capitalDeployedDate, setCapitalDeployedDate,
   capitalReturnedDate, setCapitalReturnedDate,
+  estimatedSaleDate, setEstimatedSaleDate,
   investorCapitalContributed, setInvestorCapitalContributed,
   investorEquityPct, setInvestorEquityPct,
   projectedPayoutDate, setProjectedPayoutDate,
