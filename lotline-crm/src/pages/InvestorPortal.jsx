@@ -1151,20 +1151,30 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  // Recompute activeDeals from live context using case-insensitive matching so
-  // minor capitalisation differences or HMCB-only saves don't show 0.
-  // Checks: deal.investor, scenarioData.hmcb.lenderName (HMCB deals that saved
-  // the lender there but not yet reflected in deal.investor).
+  // Derive all investor stats from live deal data — never use stale cached/static values.
+  // Matches deals by deal.investor (case-insensitive) OR scenarioData.hmcb.lenderName
+  // for HMCB deals where the lender may not have been synced back to deal.investor.
   const enrichedInvestors = useMemo(() => investors.map(inv => {
     const invNameLower = inv.name.trim().toLowerCase();
-    const liveCount = customDeals.filter(d => {
+    const matchedDeals = customDeals.filter(d => {
       if (d.isArchived) return false;
       if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      if (hmcbLender && hmcbLender === invNameLower) return true;
-      return false;
-    }).length;
-    return { ...inv, activeDeals: liveCount > 0 ? liveCount : (inv.activeDeals ?? 0) };
+      return !!hmcbLender && hmcbLender === invNameLower;
+    });
+    const capitalInvested = matchedDeals.reduce((sum, d) => {
+      const cap = d.investorCapitalContributed != null
+        ? Number(d.investorCapitalContributed)
+        : d.totalActual != null
+          ? Number(d.totalActual)
+          : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
+      return sum + cap;
+    }, 0);
+    return {
+      ...inv,
+      activeDeals: matchedDeals.length,
+      capitalInvested,
+    };
   }), [investors, customDeals]);
 
   const totalCapital = enrichedInvestors.reduce((s, i) => s + i.capitalInvested, 0);
