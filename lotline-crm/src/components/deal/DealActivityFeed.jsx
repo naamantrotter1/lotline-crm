@@ -870,6 +870,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
           organization_id: activeOrgId,
           deal_id:         deal.id,
           author_id:       session.user.id,
+          author_name:     currentUser || null,
           body:            replyText.trim(),
           parent_note_id:  parentNoteId,
         })
