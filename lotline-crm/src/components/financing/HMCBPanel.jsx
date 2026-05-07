@@ -161,6 +161,11 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
   const totalInterestExtended = d.extensionAvailable
     ? monthly * (d.termMonths + (d.extensionMonths * d.numExtensions))
     : null;
+  // Estimated hold (deployed → sale) drives the primary interest number;
+  // the full-term value stays visible as a secondary gray row.
+  const estHold = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, d.termMonths);
+  const totalInterestEstimated = monthly * estHold;
+  const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== d.termMonths;
 
   const effectiveOriginationFee = d.originationFeeMode === 'pct'
     ? (d.originationFee / 100) * totalLoan
