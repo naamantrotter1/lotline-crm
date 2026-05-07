@@ -202,11 +202,14 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
 }
 
 const FINANCING_SCENARIOS_LIST = [
-  { id: 'cash',                 label: 'Cash' },
-  { id: 'hard-money-loan',      label: 'Hard Money Loan' },
-  { id: 'hard-money-land-home', label: 'Hard Money (Land + Home)' },
-  { id: 'loc',                  label: 'Line of Credit' },
-  { id: 'profit-split',         label: 'Profit Split' },
+  { id: 'cash',                      label: 'Cash',                                        dbType: 'cash' },
+  { id: 'hard-money-loan',           label: 'Hard Money Loan',                             dbType: 'hard_money_loan' },
+  { id: 'hard-money-land-home',      label: 'Hard Money (Land + Home)',                    dbType: 'hard_money_land_home' },
+  { id: 'hmcb',                      label: 'Hard Money – Construction Holdback',          dbType: 'hard_money_construction_holdback' },
+  { id: 'loc',                       label: 'Line of Credit',                              dbType: 'line_of_credit' },
+  { id: 'profit-split',              label: 'Profit Split',                                dbType: 'profit_split' },
+  { id: 'committed-capital-partner', label: 'Committed Capital Partner (Multi-Deal)',      dbType: 'committed_capital_partner' },
+  { id: 'pooled-loan',               label: 'Pooled Loan (Multi-Deal)',                    dbType: 'pooled_loan' },
 ];
 
 // ── Assign Investor Modal ─────────────────────────────────────────────────────
