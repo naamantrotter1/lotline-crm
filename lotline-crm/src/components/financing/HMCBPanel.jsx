@@ -152,7 +152,7 @@ function formatHoldPeriod(months) {
   return `${whole} month${whole === 1 ? '' : 's'} ${rem} day${rem === 1 ? '' : 's'}`;
 }
 
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate }) {
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate, paymentDueDay, onPaymentDueDayChange }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
