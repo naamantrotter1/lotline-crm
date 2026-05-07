@@ -514,7 +514,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
 }
 
 // ── Single event card ─────────────────────────────────────────────────────────
-function EventCard({ event, usersById, onDeleteNote, replyProps }) {
+function EventCard({ event, usersById, onDeleteNote, replyProps, members }) {
   const cfg  = EVENT_CONFIG[event.type] || EVENT_CONFIG.note;
   const Icon = cfg.icon;
   const [exp, setExp] = useState(false);
