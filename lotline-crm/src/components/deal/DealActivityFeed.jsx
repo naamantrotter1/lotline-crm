@@ -562,9 +562,14 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, replyProps, 
             <span className="text-[11px] text-gray-400 whitespace-nowrap">
               {timeAgo(event.date)}
             </span>
-            {['note', 'task', 'task_complete', 'task_update'].includes(event.type) && onDeleteNote && (
+            {['note', 'task', 'task_complete', 'task_update'].includes(event.type)
+              && onDeleteNote
+              // Only the author can delete their note. Legacy localStorage notes
+              // (no authorId on the event) keep the existing behavior.
+              && (!event.authorId || event.authorId === currentUserId) && (
               <button
                 onClick={() => onDeleteNote(event.id)}
+                title="Delete"
                 className="p-0.5 text-gray-300 hover:text-red-400 transition-colors rounded"
               >
                 <X size={12} />
