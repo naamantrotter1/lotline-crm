@@ -933,6 +933,238 @@ function AvailableInvestmentsTab({ onDealClick }) {
   );
 }
 
+// ── Tab: Payments (admin — all upcoming payments across all investors) ────────
+const PAYMENT_FILTERS = ['upcoming', 'overdue', 'all', 'paid'];
+const PAYMENT_FILTER_LABEL = { upcoming: 'Upcoming', overdue: 'Overdue', all: 'All', paid: 'Paid' };
+
+function RecordPaymentModal({ row, onClose, onSaved }) {
+  const [amount, setAmount]   = useState(String(row.amount ?? ''));
+  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10));
+  const [wireRef, setWireRef] = useState('');
+  const [notes, setNotes]     = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setErr('');
+    const { error } = await markPaymentPaid({
+      scheduleRow: row,
+      paidAmount: Number(amount),
+      paidDate: date,
+      wireRef: wireRef || null,
+      notes: notes || null,
+    });
+    setSaving(false);
+    if (error) { setErr(String(error?.message || error)); return; }
+    onSaved?.();
+  };
+
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-gray-50';
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-bold text-gray-900">Record Payment</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <p className="text-xs text-gray-400 mb-0.5">{row.investors?.name || 'Investor'} — {row.deals?.address || row.deal_id}</p>
+            <p className="text-xs text-gray-500">{formatPaymentType(row.payment_type)} #{row.payment_number || 1} · Due {row.due_date}</p>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Amount Paid</label>
+            <input type="number" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} min="0" step="0.01" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Date Paid</label>
+            <input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Wire / Ref # (optional)</label>
+            <input className={inputCls} value={wireRef} onChange={e => setWireRef(e.target.value)} placeholder="Wire reference" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
+            <textarea rows={2} className={inputCls} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any notes…" />
+          </div>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+        </div>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100">
+          <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !amount || !date}
+            className="text-sm bg-accent text-white rounded-lg px-4 py-1.5 hover:bg-accent/90 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Record Payment'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function PaymentsAdminTab({ orgId }) {
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [filter, setFilter]     = useState('upcoming');
+  const [markRow, setMarkRow]   = useState(null);
+
+  const loadRows = async () => {
+    if (!orgId) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('investor_payment_schedule')
+      .select('*, deals(address), investors(name)')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .order('due_date', { ascending: true });
+    if (!error) setRows(applyOverdue(data || []));
+    setLoading(false);
+  };
+
+  useEffect(() => { loadRows(); }, [orgId]);
+
+  const filtered = useMemo(() => {
+    if (filter === 'upcoming') return rows.filter(r => r.status === 'scheduled');
+    if (filter === 'overdue')  return rows.filter(r => r.status === 'overdue');
+    if (filter === 'paid')     return rows.filter(r => r.status === 'paid');
+    return rows;
+  }, [rows, filter]);
+
+  const totalOwed = useMemo(
+    () => rows.filter(r => r.status === 'scheduled' || r.status === 'overdue').reduce((s, r) => s + Number(r.amount ?? 0), 0),
+    [rows]
+  );
+  const totalOverdue = useMemo(
+    () => rows.filter(r => r.status === 'overdue').reduce((s, r) => s + Number(r.amount ?? 0), 0),
+    [rows]
+  );
+  const nextDue = rows.find(r => r.status === 'scheduled' || r.status === 'overdue');
+  const fmt = n => `$${Math.round(n ?? 0).toLocaleString()}`;
+  const fmtDate = d => d ? new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+  if (loading) {
+    return <div className="text-xs text-gray-400 text-center py-10">Loading payment schedule…</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[
+          { label: 'Next Payment Due', value: nextDue ? fmt(nextDue.amount) : '—', sub: nextDue ? fmtDate(nextDue.due_date) : 'No upcoming', accent: 'text-accent' },
+          { label: 'Total Outstanding', value: fmt(totalOwed), sub: `${rows.filter(r => r.status === 'scheduled' || r.status === 'overdue').length} payments`, accent: 'text-blue-600' },
+          { label: 'Overdue', value: fmt(totalOverdue), sub: `${rows.filter(r => r.status === 'overdue').length} payments`, accent: 'text-red-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${s.accent}`}>{s.label}</p>
+            <p className="text-xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Overdue banner */}
+      {rows.filter(r => r.status === 'overdue').length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+          <span>
+            <strong>{rows.filter(r => r.status === 'overdue').length} overdue payment{rows.filter(r => r.status === 'overdue').length === 1 ? '' : 's'}</strong> totaling {fmt(totalOverdue)}.
+          </span>
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-100 px-4 pt-3">
+          {PAYMENT_FILTERS.map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 pb-2.5 text-xs font-medium border-b-2 transition-colors mr-3 ${
+                filter === f ? 'border-accent text-accent' : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {PAYMENT_FILTER_LABEL[f]}
+              <span className="ml-1 text-[10px] font-bold opacity-70">
+                ({f === 'upcoming' ? rows.filter(r => r.status === 'scheduled').length
+                  : f === 'overdue' ? rows.filter(r => r.status === 'overdue').length
+                  : f === 'paid'   ? rows.filter(r => r.status === 'paid').length
+                  : rows.length})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-400">
+            <CreditCard size={28} className="mx-auto text-gray-300 mb-2" />
+            No {filter === 'all' ? '' : filter} payments.
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Investor</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Deal</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">Due Date</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Type</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Amount</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map(r => (
+                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-800">{r.investors?.name || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{r.deals?.address || r.deal_id}</td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{fmtDate(r.due_date)}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatPaymentType(r.payment_type)}
+                    {r.payment_number ? <span className="text-gray-400"> #{r.payment_number}</span> : null}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-800">
+                    ${Number(r.status === 'paid' ? (r.paid_amount ?? r.amount) : r.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_PILL[r.status] || 'bg-gray-100 text-gray-500'}`}>
+                      {STATUS_LABEL[r.status] || r.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {(r.status === 'scheduled' || r.status === 'overdue') && (
+                      <button
+                        onClick={() => setMarkRow(r)}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors whitespace-nowrap"
+                      >
+                        <CheckCircle size={11} /> Record Payment
+                      </button>
+                    )}
+                    {r.status === 'paid' && r.paid_date && (
+                      <span className="text-xs text-gray-400">Paid {fmtDate(r.paid_date)}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {markRow && (
+        <RecordPaymentModal
+          row={markRow}
+          onClose={() => setMarkRow(null)}
+          onSaved={() => { setMarkRow(null); loadRows(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Tab: Commitments (headroom overview) ─────────────────────────────────────
 function CommitmentsTab() {
   const { activeOrgId } = useAuth();
