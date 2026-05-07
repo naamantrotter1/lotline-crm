@@ -1057,7 +1057,9 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                 event={evt}
                 usersById={usersById}
                 members={members}
+                currentUserId={currentUserId}
                 onDeleteNote={!readOnly ? handleDeleteNote : null}
+                onDeleteReply={!readOnly ? handleDeleteReply : null}
                 replyProps={!readOnly && evt._dbId ? {
                   replies:         replyMap[evt._dbId] || [],
                   replyingTo,
