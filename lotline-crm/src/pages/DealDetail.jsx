@@ -2452,6 +2452,13 @@ function DealDetailContent({ deal }) {
       updateAllocation(ccpAllocationId, { status: 'orphaned_scenario_change' }).catch(console.warn);
       setCcpAllocationId(null);
     }
+    // When switching TO HMCB and no HMCB lender is set yet, clear the deal
+    // investor so the header doesn't keep showing a leftover from a previous
+    // scenario (e.g. "Cash"). The user will pick a lender via HMCBPanel and the
+    // sync effect will populate `investor` automatically.
+    if (scenarioId === 'hmcb' && !(hmcbData?.lenderName || '').trim()) {
+      setInvestor('');
+    }
     setSelectedScenario(scenarioId);
     const scenario = FINANCING_SCENARIOS.find(s => s.id === scenarioId);
     setFinancing(scenario?.financingType || '');
