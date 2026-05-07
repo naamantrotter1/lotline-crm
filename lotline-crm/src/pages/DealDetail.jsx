@@ -561,35 +561,69 @@ function FinancingScenarioPanel({
           </div>
 
           {/* Cost of Capital Summary (bottom) */}
-          <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Total Loan Amount</span>
-                <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+          {(() => {
+            const estHold        = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, holdPeriod);
+            const interestEst    = monthlyInterestHm * estHold;
+            const interestFull   = monthlyInterestHm * holdPeriod;
+            const totalCostEst   = interestEst  + totalClosingCosts;
+            const totalCostFull  = interestFull + totalClosingCosts;
+            const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && estHold !== holdPeriod;
+            const netEst         = arvVal - allIn - totalCostEst;
+            const netFull        = arvVal - allIn - totalCostFull;
+            return (
+              <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Total Loan Amount</span>
+                    <span className="font-medium">${effectiveLoanAmount.toLocaleString()}</span>
+                  </div>
+                  {showEst && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400">Monthly Interest × est. hold ({estHold} mo)</span>
+                      <span className="font-medium">${Math.round(interestEst).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs">
+                    <span className={showEst ? 'text-gray-500' : 'text-gray-400'}>
+                      Monthly Interest × {showEst ? 'full term' : ''} ({holdPeriod} mo)
+                    </span>
+                    <span className={showEst ? 'text-gray-500' : 'font-medium'}>${Math.round(interestFull).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Origination Fee</span>
+                    <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Other Closing Costs</span>
+                    <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                    <span className="font-semibold text-white">
+                      {showEst ? `Est. Total Cost (${estHold} mo)` : 'Total Cost of Capital'}
+                    </span>
+                    <span className="font-bold text-accent">${Math.round(showEst ? totalCostEst : totalCostFull).toLocaleString()}</span>
+                  </div>
+                  {showEst && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-500">Full Term Cost ({holdPeriod} mo)</span>
+                      <span className="text-gray-400">${Math.round(totalCostFull).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
+                    <span className="font-semibold text-white">Net Profit After Financing</span>
+                    <span className="font-bold text-green-400">${Math.round(showEst ? netEst : netFull).toLocaleString()}</span>
+                  </div>
+                  {showEst && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-500">If held full term ({holdPeriod} mo)</span>
+                      <span className="text-gray-400">${Math.round(netFull).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Monthly Interest × {holdPeriod} mo</span>
-                <span className="font-medium">${Math.round(monthlyInterestHm * holdPeriod).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Origination Fee</span>
-                <span className="font-medium">${Math.round(originationFee).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Other Closing Costs</span>
-                <span className="font-medium">${Math.round(totalClosingCosts - originationFee).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                <span className="font-semibold text-white">Total Cost of Capital</span>
-                <span className="font-bold text-accent">${Math.round(totalCostOfCapital).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-xs border-t border-white/20 pt-1.5 mt-1">
-                <span className="font-semibold text-white">Net Profit After Financing</span>
-                <span className="font-bold text-green-400">${Math.round(arvVal - allIn - totalCostOfCapital).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Payment Schedule (hard-money / hmcb scenarios) */}
           <PaymentScheduleSection
