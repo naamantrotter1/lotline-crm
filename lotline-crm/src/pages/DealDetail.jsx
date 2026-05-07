@@ -2905,37 +2905,20 @@ function DealDetailContent({ deal }) {
     ? Number(costSummary.total_actual ?? 0)
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 
-  const sellingCosts = (arv || 0) * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  // Estimated hold (deployed → sale) drives holding-cost AND financing-cost
-  // accrual when set, so Net Profit reflects the actual planned hold.
-  const headerEffHoldMonths = getEstimatedHoldMonths(
-    capitalDeployedDate, estimatedSaleDate, holdPeriod || 4
-  );
-  const holdingCosts = headerEffHoldMonths * (monthlyHoldCost || 250);
-
-  // Mirror the OverviewTab cost-of-capital calc so header Net Profit and
-  // overview Net Profit agree.
-  const headerActiveFinancing = selectedScenario
-    ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
-    : deal.financing;
-  const headerHasFinancing = !!selectedScenario && headerActiveFinancing !== 'Cash';
-  const headerTotalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const headerEffectiveLoanAmount = loanAmountOverride || headerTotalLent;
-  const headerMonthlyInterest = headerEffectiveLoanAmount * (interestRate / 100) / 12;
-  const headerOriginationFee = originationFeeType === 'percentage'
-    ? headerEffectiveLoanAmount * (originationFeePct / 100)
-    : (originationFeeFlat || 0);
-  const headerServicingFee = servicingFeeType === 'percentage'
-    ? headerEffectiveLoanAmount * ((servicingFeePct || 0) / 100)
-    : (servicingFeeFlat || 0);
-  const headerTotalCostOfCapital = (headerMonthlyInterest * headerEffHoldMonths)
-                                  + headerOriginationFee + headerServicingFee;
-  const headerProfitBeforeShare = (arv || 0) - allIn - sellingCosts - holdingCosts
-                                  - (headerHasFinancing ? headerTotalCostOfCapital : 0);
-  const headerProfitShareAmount = headerHasFinancing
-    ? headerProfitBeforeShare * ((profitSharePct || 0) / 100)
-    : 0;
-  const netProfit = headerProfitBeforeShare - headerProfitShareAmount;
+  // Single source of truth — same helper used by OverviewTab so header and
+  // overview Net Profit numbers agree by construction.
+  const _np = calcDealNetProfit({
+    deal, arv, allIn, costs,
+    capitalDeployedDate, estimatedSaleDate,
+    holdPeriod, monthlyHoldCost,
+    selectedScenario, interestRate,
+    originationFeeType, originationFeePct, originationFeeFlat,
+    servicingFeeType,  servicingFeePct,  servicingFeeFlat,
+    loanAmountOverride, profitSharePct,
+  });
+  const sellingCosts = _np.sellingCosts;
+  const holdingCosts = _np.holdingCosts;
+  const netProfit    = _np.netProfit;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
 
