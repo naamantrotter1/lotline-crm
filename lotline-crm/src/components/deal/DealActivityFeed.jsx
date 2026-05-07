@@ -994,6 +994,12 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     }
   };
 
+  const handleDeleteReply = async (replyId) => {
+    // RLS allows authors to delete their own activity_notes rows.
+    await supabase?.from('activity_notes').delete().eq('id', replyId);
+    setDbNotes(prev => prev.filter(n => n.id !== replyId));
+  };
+
   // ── Group by month ─────────────────────────────────────────────────────────
   const grouped = events.reduce((acc, evt) => {
     const label = monthLabel(evt.date);
