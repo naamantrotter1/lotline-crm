@@ -1141,9 +1141,18 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  const totalCapital = investors.reduce((s, i) => s + i.capitalInvested, 0);
-  const totalDeals = investors.reduce((s, i) => s + i.activeDeals, 0);
-  const totalROI = investors.reduce((s, i) => s + i.roiDollars, 0);
+  // Recompute activeDeals from live context so stale cached counts can't
+  // cause an investor (e.g. Low Tide Lending) to show 0 active deals.
+  const enrichedInvestors = useMemo(() => investors.map(inv => ({
+    ...inv,
+    activeDeals: customDeals.filter(d =>
+      !d.isArchived && (d.investor || '').trim() === inv.name.trim()
+    ).length || inv.activeDeals,
+  })), [investors, customDeals]);
+
+  const totalCapital = enrichedInvestors.reduce((s, i) => s + i.capitalInvested, 0);
+  const totalDeals = enrichedInvestors.reduce((s, i) => s + i.activeDeals, 0);
+  const totalROI = enrichedInvestors.reduce((s, i) => s + i.roiDollars, 0);
 
   const TABS = isInvestor
     ? [{ key: 'by-investor', label: 'My Deals' }]
