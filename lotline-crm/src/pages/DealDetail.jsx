@@ -743,6 +743,8 @@ function FinancingScenarioPanel({
                 value={paymentDueDay}
                 onChange={setPaymentDueDay}
                 capitalDeployedDate={capitalDeployedDate}
+                firstPaymentDate={firstPaymentDate}
+                onFirstPaymentDateChange={setFirstPaymentDate}
                 readOnly={readOnly}
               />
             </div>
