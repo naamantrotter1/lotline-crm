@@ -694,6 +694,13 @@ function FinancingScenarioPanel({
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Investor Split Amount (calc)</p>
               <span className="text-sm font-medium text-accent">${Math.round(profitSplitAmount).toLocaleString()}</span>
             </div>
+            <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2">
+              <p className="text-[11px] text-gray-500">
+                Investor receives <span className="font-semibold text-gray-700">{investorProfitSplitPct || 0}%</span> of{' '}
+                <span className="font-semibold text-gray-700">${Math.round(netProfitEst).toLocaleString()}</span> net profit ={' '}
+                <span className="font-semibold text-accent">${Math.round(profitSplitAmount).toLocaleString()}</span>
+              </p>
+            </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
               <input type="date" value={capitalDeployedDate || ''} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
@@ -704,12 +711,7 @@ function FinancingScenarioPanel({
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
-              <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
-                <option>Interest Only</option>
-                <option>Profit Split %</option>
-                <option>Flat Fee</option>
-                <option>Pooled</option>
-              </select>
+              <span className="inline-block text-[11px] font-semibold px-2 py-1 rounded-full bg-accent/10 text-accent">Profit Share</span>
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Status</p>
