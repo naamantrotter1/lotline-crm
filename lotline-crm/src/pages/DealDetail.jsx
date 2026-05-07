@@ -728,7 +728,7 @@ function FinancingScenarioPanel({
               const estMonths  = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, fullMonths);
               const interestEst  = Math.round(monthlyInterestLoc * estMonths);
               const interestFull = Math.round(monthlyInterestLoc * fullMonths);
-              const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estMonths !== fullMonths;
+              const showEst = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estMonths - fullMonths) > 0.01;
               return (
                 <>
                   <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
