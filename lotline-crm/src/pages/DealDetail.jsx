@@ -3119,6 +3119,7 @@ function DealDetailContent({ deal }) {
             profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
             capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
             capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+            estimatedSaleDate={estimatedSaleDate} setEstimatedSaleDate={setEstimatedSaleDate}
             investorCapitalContributed={investorCapitalContributed} setInvestorCapitalContributed={setInvestorCapitalContributed}
             investorEquityPct={investorEquityPct} setInvestorEquityPct={setInvestorEquityPct}
             projectedPayoutDate={projectedPayoutDate} setProjectedPayoutDate={setProjectedPayoutDate}
@@ -3242,6 +3243,7 @@ function DealDetailContent({ deal }) {
             ccpTranches={ccpTranches} setCcpTranches={setCcpTranches}
             capitalDeployedDate={capitalDeployedDate} setCapitalDeployedDate={setCapitalDeployedDate}
             capitalReturnedDate={capitalReturnedDate} setCapitalReturnedDate={setCapitalReturnedDate}
+            estimatedSaleDate={estimatedSaleDate} setEstimatedSaleDate={setEstimatedSaleDate}
             cashSource={cashSource} setCashSource={setCashSource}
             investor={investor} setInvestor={setInvestor}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
