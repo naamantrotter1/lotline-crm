@@ -95,7 +95,13 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const staticAddresses = new Set(staticDeals.map(d => (d.address || '').trim().toLowerCase()));
   const invNameLower = investor.name.trim().toLowerCase();
   const liveDeals = contextDeals
-    .filter(d => (d.investor || '').trim().toLowerCase() === invNameLower && !staticAddresses.has((d.address || '').trim().toLowerCase()))
+    .filter(d => {
+      const addrLower = (d.address || '').trim().toLowerCase();
+      if (staticAddresses.has(addrLower)) return false;
+      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
+      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
+      return hmcbLender === invNameLower && !!hmcbLender;
+    })
     .map(d => ({
       address: d.address,
       stage: d.stage,
