@@ -237,17 +237,30 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const monthlyInterest = round2((drawn * annualRate) / 12);
     const months = Math.max(1, Math.round(toNumber(deal.holding_months ?? data.holdPeriod ?? 6)));
     const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
+    const firstPaymentDateRaw = data.firstPaymentDate ?? scenarioData.firstPaymentDate ?? null;
+    const firstPaymentAnchor = firstPaymentDateRaw && !Number.isNaN(new Date(firstPaymentDateRaw).getTime())
+      ? new Date(firstPaymentDateRaw)
+      : null;
 
     if (monthlyInterest > 0) {
       for (let m = 1; m <= months; m++) {
-        const d = new Date(startDate);
-        d.setMonth(d.getMonth() + m);
-        const adjusted = applyDueDay(d, paymentDueDay);
+        let due;
+        if (firstPaymentAnchor) {
+          due = new Date(firstPaymentAnchor);
+          if (m > 1) {
+            due.setMonth(due.getMonth() + (m - 1));
+            due = applyDueDay(due, paymentDueDay);
+          }
+        } else {
+          due = new Date(startDate);
+          due.setMonth(due.getMonth() + m);
+          due = applyDueDay(due, paymentDueDay);
+        }
         payments.push({
           payment_type: 'interest',
           payment_number: m,
           amount: monthlyInterest,
-          due_date: isoDate(adjusted),
+          due_date: isoDate(due),
         });
       }
     }
