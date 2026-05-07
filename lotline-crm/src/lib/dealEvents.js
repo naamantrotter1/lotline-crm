@@ -18,6 +18,7 @@ export const EVENT_TYPE_COLORS = {
   permit:       '#a855f7',
   closing:      '#10b981',
   delivery:     '#f59e0b',
+  payment_due:  '#ea580c',
 };
 
 // Per-milestone-key colors (override the generic milestone blue)
