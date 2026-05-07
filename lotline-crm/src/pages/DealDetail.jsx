@@ -2849,7 +2849,12 @@ function DealDetailContent({ deal }) {
     : COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
 
   const sellingCosts = (arv || 0) * ((deal.sellingCostPct || 4.5) / 100) + 4000;
-  const holdingCosts = (holdPeriod || 4) * (monthlyHoldCost || 250);
+  // Estimated hold (deployed → sale) drives holding-cost accrual when set,
+  // so the header Net Profit reflects the actual planned hold not the full term.
+  const headerEffHoldMonths = getEstimatedHoldMonths(
+    capitalDeployedDate, estimatedSaleDate, holdPeriod || 4
+  );
+  const holdingCosts = headerEffHoldMonths * (monthlyHoldCost || 250);
   const netProfit = (arv || 0) - allIn - sellingCosts - holdingCosts;
   const devComplete = devTasks.filter(Boolean).length;
   const devTotal = DEV_GROUPS.flatMap(g => g.tasks).length;
