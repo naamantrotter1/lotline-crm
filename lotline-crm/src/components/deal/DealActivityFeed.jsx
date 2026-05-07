@@ -470,6 +470,7 @@ function NoteComposer({ dealId, orgId, onSaved, currentUser, members }) {
       });
 
       setText('');
+      setMentionMap({});
       setOpen(false);
       onSaved(note);
     } catch (err) {
