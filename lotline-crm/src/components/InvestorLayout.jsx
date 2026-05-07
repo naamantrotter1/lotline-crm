@@ -14,6 +14,7 @@ const NAV = [
   { to: '/investor/home',           icon: LayoutDashboard, label: 'Overview'        },
   { to: '/investor/deals',          icon: Briefcase,       label: 'My Deals'        },
   { to: '/investor/distributions',  icon: DollarSign,      label: 'Distributions'   },
+  { to: '/investor/payments',       icon: CreditCard,      label: 'Payments'        },
   { to: '/investor/documents',      icon: FileText,        label: 'Documents'       },
   { to: '/investor/performance',    icon: BarChart2,       label: 'Performance'     },
   { to: '/investor/opportunities',  icon: TrendingUp,      label: 'Opportunities'   },
