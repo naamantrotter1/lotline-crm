@@ -738,11 +738,12 @@ function MuteToggle({ dealId }) {
 
 // ── Main feed component ───────────────────────────────────────────────────────
 export default function DealActivityFeed({ deal, readOnly, currentUser, refreshKey }) {
-  const { profile, activeOrgId, hasFlag } = useAuth();
+  const { profile, session, activeOrgId, hasFlag } = useAuth();
   // Stable unique ID per component instance — prevents channel-name collisions when
   // DealPageLayout mounts this component twice (desktop + mobile) in the same tick.
   const instanceId = useRef(Math.random().toString(36).slice(2));
   const mentionsEnabled = hasFlag('deal_activity.mentions.enabled');
+  const currentUserId = session?.user?.id || null;
 
   // Org members for @-mention autocomplete (composer + replies share this list)
   const { members } = useOrgMembers(activeOrgId);
