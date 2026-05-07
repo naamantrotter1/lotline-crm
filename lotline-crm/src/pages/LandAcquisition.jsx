@@ -733,7 +733,7 @@ function LandCard({ deal, onClick, onDelete, onStar }) {
           <button
               onClick={e => { e.stopPropagation(); onDelete(deal.id); }}
               className="text-gray-400 hover:text-red-500 transition-colors"
-              title="Archive deal"
+              title="Delete deal (cannot be undone)"
             >
               <Trash2 size={13} />
             </button>
