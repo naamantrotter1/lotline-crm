@@ -81,10 +81,14 @@ export async function updateTask(id, fields) {
   return { data, error };
 }
 
-/** Soft-delete a task. */
+/** Soft-delete a task. Returns { data, error } where data is the updated rows. */
 export async function deleteTask(id) {
   if (!supabase) return { error: 'no supabase' };
-  return supabase.from('tasks').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  return supabase
+    .from('tasks')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .select();
 }
 
 /**
