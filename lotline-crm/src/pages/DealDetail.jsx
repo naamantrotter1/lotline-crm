@@ -687,15 +687,34 @@ function FinancingScenarioPanel({
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
               <input type="date" value={capitalReturnedDate || ''} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
             </div>
-            {monthlyInterestLoc > 0 && (
-              <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
-                <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Total Interest</span>
-                <span className="text-sm font-semibold text-accent">
-                  ${Math.round(monthlyInterestLoc * (deal.holding_months || 6)).toLocaleString()}
-                  <span className="text-[10px] text-gray-400 font-normal ml-1">(Monthly × {deal.holding_months || 6} mo)</span>
-                </span>
-              </div>
-            )}
+            {monthlyInterestLoc > 0 && (() => {
+              const fullMonths = deal.holding_months || 6;
+              const estMonths  = getEstimatedHoldMonths(capitalDeployedDate, estimatedSaleDate, fullMonths);
+              const interestEst  = Math.round(monthlyInterestLoc * estMonths);
+              const interestFull = Math.round(monthlyInterestLoc * fullMonths);
+              const showEst = !!(capitalDeployedDate && estimatedSaleDate) && estMonths !== fullMonths;
+              return (
+                <>
+                  <div className="py-2 col-span-2 border-t border-gray-100 mt-1 pt-2 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
+                      {showEst ? `Total Interest × est. hold (${estMonths} mo)` : 'Total Interest'}
+                    </span>
+                    <span className="text-sm font-semibold text-accent">
+                      ${(showEst ? interestEst : interestFull).toLocaleString()}
+                      {!showEst && (
+                        <span className="text-[10px] text-gray-400 font-normal ml-1">(Monthly × {fullMonths} mo)</span>
+                      )}
+                    </span>
+                  </div>
+                  {showEst && (
+                    <div className="py-1 col-span-2 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 font-medium">Full period ({fullMonths} mo)</span>
+                      <span className="text-[11px] text-gray-400">${interestFull.toLocaleString()}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           {/* Advanced fees toggle */}
           <div className="mt-2 border-t border-gray-100 pt-2">
