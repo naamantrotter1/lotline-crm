@@ -335,15 +335,39 @@ function MentionTextarea({
     }
   };
 
-  const { onKeyDown: extraKeyDown, ...restTextareaProps } = textareaProps;
+  const { onKeyDown: extraKeyDown, className: textareaClassName, style: textareaStyle, ...restTextareaProps } = textareaProps;
+
+  // Render a mirror div behind the textarea so @Name occurrences (chosen via
+  // autocomplete) appear as styled chips while the user types. The textarea
+  // itself uses transparent text + a visible caret so the mirror's styled
+  // text shows through. Both share identical typography/padding via the same
+  // className so positions align character-by-character.
+  const segments = splitMentionSegments(value, mentionMap);
 
   return (
     <div className="relative">
+      <div
+        ref={mirrorRef}
+        aria-hidden
+        className={`${textareaClassName || ''} absolute inset-0 pointer-events-none whitespace-pre-wrap break-words overflow-hidden`}
+        style={{ ...textareaStyle, color: 'inherit' }}
+      >
+        {segments.length === 0 ? '\u00a0' : segments.map((seg, i) =>
+          seg.type === 'mention'
+            ? <span key={i} className="bg-accent/15 text-accent rounded font-medium">{seg.content}</span>
+            : <span key={i}>{seg.content}</span>
+        )}
+        {/* Trailing space so the mirror has at least one char of height when empty */}
+        {'\u200b'}
+      </div>
       <textarea
         ref={ref}
         {...restTextareaProps}
+        className={`${textareaClassName || ''} relative bg-transparent`}
+        style={{ ...textareaStyle, color: 'transparent', caretColor: '#1f2937' }}
         value={value}
         onChange={handleChange}
+        onScroll={syncScroll}
         onKeyDown={(e) => {
           handleKeyDown(e);
           if (!e.defaultPrevented) extraKeyDown?.(e);
