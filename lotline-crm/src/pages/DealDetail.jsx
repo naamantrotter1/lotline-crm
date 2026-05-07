@@ -2861,6 +2861,7 @@ function DealDetailContent({ deal }) {
         investorReturnType, investorAssignmentStatus,
         // Payment Due Day — drives schedule generator
         paymentDueDay,
+        firstPaymentDate,
       },
       ...costs,
     };
