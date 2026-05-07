@@ -28,31 +28,36 @@ function applyDueDay(date, dueDay) {
   return d;
 }
 
-function formatDate(d) {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function toIsoDate(d) {
+  return d.toISOString().slice(0, 10);
 }
 
 export default function PaymentDueDayPicker({
   value,
   onChange,
   capitalDeployedDate,
+  firstPaymentDate,
+  onFirstPaymentDateChange,
   readOnly = false,
 }) {
   const effectiveValue = value || 'same_as_closing';
   const isCustom = !PRESET_VALUES.has(effectiveValue) && /^\d+$/.test(String(effectiveValue));
   const selectValue = isCustom ? 'custom' : effectiveValue;
 
-  const helper = useMemo(() => {
-    if (!capitalDeployedDate) {
-      return value ? 'Set capital deployed date to calculate payment dates' : '';
-    }
+  // Derived default: capital deployed + 1 month, adjusted for the dueDay rule.
+  const computedFirstPayment = useMemo(() => {
+    if (!capitalDeployedDate) return '';
     const start = new Date(capitalDeployedDate);
     if (Number.isNaN(start.getTime())) return '';
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
-    const adjusted = applyDueDay(next, effectiveValue);
-    return `First payment due: ${formatDate(adjusted)}`;
-  }, [capitalDeployedDate, effectiveValue, value]);
+    return toIsoDate(applyDueDay(next, effectiveValue));
+  }, [capitalDeployedDate, effectiveValue]);
+
+  const firstPaymentValue = firstPaymentDate || computedFirstPayment;
+  const noDeployedHelper = !capitalDeployedDate && value
+    ? 'Set capital deployed date to calculate payment dates'
+    : '';
 
   const handleSelectChange = (e) => {
     const v = e.target.value;
