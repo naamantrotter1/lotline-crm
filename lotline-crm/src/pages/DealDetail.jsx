@@ -764,8 +764,8 @@ function FinancingScenarioPanel({
       )}
 
       {/* ── Investor Assignment (non-cash, non-profit-split scenarios) ── */}
-      {/* HM (Land + Home) excluded: lender dropdown at top already covers it. */}
-      {!!selectedScenario && !isCash && !isProfitSplit && activeFinancing !== 'Hard Money (Land + Home)' && (
+      {/* HM (Land + Home) and HMCB excluded: their own lender dropdowns cover this. */}
+      {!!selectedScenario && !isCash && !isProfitSplit && activeFinancing !== 'Hard Money (Land + Home)' && selectedScenario !== 'hmcb' && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Investor Assignment</p>
           <p className="text-[10px] text-gray-400 mb-3">Assign an investor to this deal. Once assigned, this deal will appear in their Investor Portal with the numbers below.</p>
