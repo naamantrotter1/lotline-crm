@@ -1012,12 +1012,23 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         document_upload: 'Document uploaded',
       };
       const type = n.note_type || 'note';
+      // For document_upload notes, surface the category in the title.
+      // Body format is `[<Category>](<url>)` — extract the label.
+      let resolvedTitle = titles[n.note_type] || authorName;
+      if (n.note_type === 'document_upload' && n.body) {
+        const linkMatch = n.body.match(/\[([^\]]+)\]\(https?:\/\//);
+        if (linkMatch) resolvedTitle = `${linkMatch[1]} uploaded`;
+        else {
+          const colonMatch = n.body.match(/^([^:]+):/);
+          if (colonMatch) resolvedTitle = `${colonMatch[1].trim()} uploaded`;
+        }
+      }
       return {
         id:          `db-note-${n.id}`,
         _dbId:       n.id,
         authorId:    n.author_id,
         type,
-        title:       titles[n.note_type] || authorName,
+        title:       resolvedTitle,
         body:        n.body,
         date:        n.created_at,
         hasMentions: !!(n.mentioned_user_ids?.length),
