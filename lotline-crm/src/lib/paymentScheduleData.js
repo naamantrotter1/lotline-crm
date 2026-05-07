@@ -135,6 +135,7 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     const originationPct = toNumber(data.originationFeePct ?? scenarioData.originationFeePct) / 100;
     const originationFlat = toNumber(data.originationFeeFlat ?? scenarioData.originationFeeFlat);
     const originationFee = round2(originationFlat || principal * originationPct);
+    const paymentDueDay = data.paymentDueDay ?? scenarioData.paymentDueDay ?? 'same_as_closing';
 
     if (originationFee > 0) {
       payments.push({
@@ -149,11 +150,12 @@ export function generatePaymentSchedule(deal, investor, allocation) {
       for (let m = 1; m <= holdMonths; m++) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + m);
+        const adjusted = applyDueDay(d, paymentDueDay);
         payments.push({
           payment_type: 'interest',
           payment_number: m,
           amount: monthlyInterest,
-          due_date: isoDate(d),
+          due_date: isoDate(adjusted),
         });
       }
     }
@@ -161,11 +163,12 @@ export function generatePaymentSchedule(deal, investor, allocation) {
     if (principal > 0) {
       const maturity = new Date(startDate);
       maturity.setMonth(maturity.getMonth() + holdMonths);
+      const adjusted = applyDueDay(maturity, paymentDueDay);
       payments.push({
         payment_type: 'principal',
         payment_number: holdMonths + 1,
         amount: principal,
-        due_date: isoDate(maturity),
+        due_date: isoDate(adjusted),
       });
     }
   }
