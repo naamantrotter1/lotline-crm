@@ -13,6 +13,7 @@ import {
   Building2, User, DollarSign, Calendar, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import PaymentDueDayPicker from './PaymentDueDayPicker';
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 export const HMCB_DEFAULTS = {
