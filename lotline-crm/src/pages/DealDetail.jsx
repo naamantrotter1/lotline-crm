@@ -627,8 +627,10 @@ function FinancingScenarioPanel({
             const totalCostEst   = interestEst  + totalClosingCosts;
             const totalCostFull  = interestFull + totalClosingCosts;
             const showEst        = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - holdPeriod) > 0.01;
-            const netEst         = arvVal - allIn - totalCostEst;
-            const netFull        = arvVal - allIn - totalCostFull;
+            const holdingCostEst  = estHold * (deal.holdingPerMonth || 250);
+            const holdingCostFull = holdPeriod * (deal.holdingPerMonth || 250);
+            const netEst         = arvVal - allIn - sellingCosts - holdingCostEst  - totalCostEst;
+            const netFull        = arvVal - allIn - sellingCosts - holdingCostFull - totalCostFull;
             return (
               <div className="bg-[#1a2332] rounded-xl px-4 py-3 text-white">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">Cost of Capital Summary</p>
