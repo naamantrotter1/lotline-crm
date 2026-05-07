@@ -422,6 +422,7 @@ export default function App() {
               <Route path="deals"                 element={<InvestorDeals />} />
               <Route path="deals/:id"             element={<InvestorDealDetail />} />
               <Route path="distributions"         element={<InvestorDistributions />} />
+              <Route path="payments"              element={<InvestorPayments />} />
               <Route path="updates"               element={<InvestorUpdates />} />
               <Route path="documents"             element={<InvestorDocuments />} />
               <Route path="opportunities"         element={<InvestorOpportunities />} />
