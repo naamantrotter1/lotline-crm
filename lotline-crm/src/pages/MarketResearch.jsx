@@ -915,14 +915,15 @@ function HeatMap() {
     unresolved.forEach(d => geocodingInProgress.current.add(d.address));
     for (const deal of unresolved) {
       try {
-        await new Promise(r => setTimeout(r, 350)); // ~3 req/s — within Nominatim ToS
+        await new Promise(r => setTimeout(r, 200));
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(deal.address + ', USA')}&format=json&limit=1`,
-          { headers: { 'Accept-Language': 'en', 'User-Agent': 'LotLine-CRM/1.0' } }
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(deal.address)}&limit=1`
         );
         const data = await res.json();
-        if (data?.[0]) {
-          const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        const feat = data?.features?.[0];
+        if (feat) {
+          // GeoJSON coordinates are [longitude, latitude]
+          const coords = { lat: feat.geometry.coordinates[1], lng: feat.geometry.coordinates[0] };
           setGeocoords(prev => ({ ...prev, [deal.address]: coords }));
         }
       } catch {}
