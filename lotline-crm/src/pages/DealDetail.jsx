@@ -3382,6 +3382,8 @@ function DealDetailContent({ deal }) {
             readOnly={fromInvestorPortal || !canEdit}
             investorList={investorList}
             onAddInvestor={() => setShowInvestorPicker(true)}
+            capitalDeployedDate={capitalDeployedDate}
+            estimatedSaleDate={estimatedSaleDate}
           />
         )}
 
