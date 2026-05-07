@@ -349,26 +349,36 @@ async function notifyMentions({
   const preview = (body || '').replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/gi, '@$1').slice(0, 140);
 
   await Promise.all(notifyIds.map(async (uid) => {
-    await supabase.from('mentions').insert({
-      org_id:               orgId,
-      mentioned_user_id:    uid,
-      mentioned_by_user_id: authorId,
-      target_type:          'activity_note',
-      target_id:            noteId,
-      deal_id:              dealId,
-    }).catch(e => console.warn('mention insert', e));
+    try {
+      const { error: mErr } = await supabase.from('mentions').insert({
+        org_id:               orgId,
+        mentioned_user_id:    uid,
+        mentioned_by_user_id: authorId,
+        target_type:          'activity_note',
+        target_id:            noteId,
+        deal_id:              dealId,
+      });
+      if (mErr) console.warn('mention insert', mErr);
+    } catch (e) {
+      console.warn('mention insert threw', e);
+    }
 
     if (mutedSet.has(uid)) return;
 
-    await supabase.from('notifications').insert({
-      organization_id: orgId,
-      user_id:         uid,
-      type:            'mention.deal_activity',
-      title:           `${authorName || 'Someone'} mentioned you`,
-      body:            `"${preview}"`,
-      entity_type:     'activity_note',
-      entity_id:       noteId,
-    }).catch(e => console.warn('notification insert', e));
+    try {
+      const { error: nErr } = await supabase.from('notifications').insert({
+        organization_id: orgId,
+        user_id:         uid,
+        type:            'mention.deal_activity',
+        title:           `${authorName || 'Someone'} mentioned you`,
+        body:            `"${preview}"`,
+        entity_type:     'activity_note',
+        entity_id:       noteId,
+      });
+      if (nErr) console.warn('notification insert', nErr);
+    } catch (e) {
+      console.warn('notification insert threw', e);
+    }
   }));
 }
 
