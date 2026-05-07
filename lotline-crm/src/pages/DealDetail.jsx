@@ -362,17 +362,35 @@ function FinancingScenarioPanel({
         </select>
       </div>
 
-      {/* ── Estimated Sale Date (shared across all scenarios) ── */}
+      {/* ── Capital Dates (shared across all scenarios) ──
+           Both fields live here so every scenario — including HMCB and CCP
+           which don't render their own date inputs — drives the estimated-
+           hold calc consistently. */}
       {!!selectedScenario && (
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estimated Sale Date</p>
-          <input
-            type="date"
-            value={estimatedSaleDate || ''}
-            onChange={e => setEstimatedSaleDate(e.target.value)}
-            className={iCls}
-            readOnly={readOnly}
-          />
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Capital Dates</p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
+              <input
+                type="date"
+                value={capitalDeployedDate || ''}
+                onChange={e => setCapitalDeployedDate(e.target.value)}
+                className={iCls}
+                readOnly={readOnly}
+              />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Estimated Sale Date</p>
+              <input
+                type="date"
+                value={estimatedSaleDate || ''}
+                onChange={e => setEstimatedSaleDate(e.target.value)}
+                className={iCls}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
           {(() => {
             const fallback = holdPeriod || 12;
             if (capitalDeployedDate && estimatedSaleDate) {
