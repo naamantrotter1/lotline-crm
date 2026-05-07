@@ -895,8 +895,19 @@ function HeatMap() {
   const salesLayer        = useRef(null);
 
   // ── Geocoding cache (address → {lat,lng}, localStorage-backed) ───────────
+  // Only geocode addresses with enough location context: a comma, ZIP, or state abbreviation.
+  // This prevents bare street names ("Briarwood Dr"), stage names ("New Lead"), and city-only
+  // strings ("Charlotte") from geocoding to random US locations.
+  const looksGeocodable = (addr) =>
+    Boolean(addr) &&
+    (addr.includes(',') || /\b\d{5}\b/.test(addr) || /\b[A-Z]{2}\b/.test(addr));
+
   const [geocoords, setGeocoords] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('mkt_geocache') || '{}'); } catch { return {}; }
+    try {
+      const raw = JSON.parse(localStorage.getItem('mkt_geocache') || '{}');
+      // Remove any cached entries for addresses that don't pass the quality filter
+      return Object.fromEntries(Object.entries(raw).filter(([addr]) => looksGeocodable(addr)));
+    } catch { return {}; }
   });
   const geocodingInProgress = useRef(new Set());
   useEffect(() => {
@@ -908,6 +919,7 @@ function HeatMap() {
   const geocodeAddresses = useRef(async (deals, currentGeocoords) => {
     const unresolved = deals.filter(d =>
       !d.lat && !d.lng && d.address &&
+      looksGeocodable(d.address) &&
       !currentGeocoords[d.address] &&
       !geocodingInProgress.current.has(d.address)
     );
