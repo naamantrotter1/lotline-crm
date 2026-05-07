@@ -1147,6 +1147,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                   replyingTo,
                   replyText,
                   replySubmitting,
+                  mentionMap:      replyMentionMap,
                   onReply:         (id) => { setReplyingTo(id); setReplyText(''); setReplyMentionMap({}); },
                   onReplyTextChange: setReplyText,
                   onMentionInserted: (m) => setReplyMentionMap(prev => ({ ...prev, [m.name]: m.id })),
