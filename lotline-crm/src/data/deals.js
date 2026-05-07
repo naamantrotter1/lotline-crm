@@ -1,18 +1,33 @@
 /**
- * Compute the Total Cost of Capital for a deal when a Hard Money financing
+ * Estimated hold months: actual deployed→sale window (in fractional months),
+ * or fallback to the contractual term when either date is missing. Mirrors
+ * getEstimatedHoldMonths in DealDetail.jsx so card and detail agree.
+ */
+function getEstimatedHoldMonths(deployedDate, saleDate, fallbackMonths) {
+  if (!deployedDate || !saleDate) return fallbackMonths;
+  const d = new Date(deployedDate), s = new Date(saleDate);
+  if (Number.isNaN(d.getTime()) || Number.isNaN(s.getTime())) return fallbackMonths;
+  const days = Math.round((s.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return Math.max(1 / 30, fallbackMonths || 0);
+  return days / 30;
+}
+
+/**
+ * Compute the Total Cost of Capital for a deal when a non-cash financing
  * scenario is active. Returns 0 for Cash / no scenario / missing data.
  * Reads from deal.scenarioData (populated by the Financing tab).
  */
 export function computeCostOfCapital(deal) {
   const sd = deal?.scenarioData;
   if (!sd) return 0;
-  const financing = (deal?.financing || '').toLowerCase();
-  if (!financing.includes('hard money')) return 0;
+  const fin = (deal?.financing || '').toLowerCase().trim();
+  if (!fin || fin === 'cash') return 0;
   const loanFallback = deal.totalActual || (deal.land || 0) + (deal.mobileHome || 0);
   const loan = sd.loanAmountOverride || loanFallback;
   if (!loan) return 0;
   const monthlyInterest = loan * ((sd.interestRate || 0) / 100) / 12;
-  const holdMonths = sd.holdPeriod || 0;
+  const fullHold = sd.holdPeriod || deal.holdingMonths || 0;
+  const effHold = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
   const origFee = (sd.originationFeeType === 'percentage' || !sd.originationFeeType)
     ? loan * ((sd.originationFeePct || 0) / 100)
     : (sd.originationFeeFlat || 0);
@@ -20,7 +35,7 @@ export function computeCostOfCapital(deal) {
     ? loan * ((sd.servicingFeePct || 0) / 100)
     : (sd.servicingFeeFlat || 0);
   const otherFees = (sd.drawFeeHm || 0) + (sd.underwritingFee || 0) + (sd.attorneyDocFee || 0);
-  return (monthlyInterest * holdMonths) + origFee + servicingFee + otherFees;
+  return (monthlyInterest * effHold) + origFee + servicingFee + otherFees;
 }
 
 /**
