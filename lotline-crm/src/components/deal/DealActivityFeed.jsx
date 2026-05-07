@@ -840,11 +840,12 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       id:      `legacy-note-${note.id}`,
       _noteId: note.id,
       type:    'note',
-      title:   'Note added',
+      title:   note.author || 'Note added',
       body:    note.text,
       date:    note.createdAt,
       hasMentions: false,
       meta:    { author: note.author },
+      hideAuthorFooter: true,
     }));
 
     const systemEvents = [
