@@ -2926,14 +2926,14 @@ function DealDetailContent({ deal }) {
       const snapshot = {
         ...deal,
         capitalDeployedDate,
-        scenarioData: { ...(deal.scenarioData || {}), paymentDueDay },
+        scenarioData: { ...(deal.scenarioData || {}), paymentDueDay, firstPaymentDate },
         organization_id: activeOrgId,
       };
       await savePaymentSchedule({ deal: snapshot, investor: inv, allocation: null, orgId: activeOrgId });
     })().catch((err) => console.warn('auto-regen schedule failed', err));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentDueDay, capitalDeployedDate, selectedScenario, deal?.id, activeOrgId, investor]);
+  }, [paymentDueDay, firstPaymentDate, capitalDeployedDate, selectedScenario, deal?.id, activeOrgId, investor]);
 
   // ── Load pooled loan links for this deal ──────────────────────────────────
   useEffect(() => {
