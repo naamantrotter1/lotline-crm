@@ -2837,6 +2837,8 @@ function DealDetailContent({ deal }) {
         lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
         drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
         investorReturnType, investorAssignmentStatus,
+        // Payment Due Day — drives schedule generator
+        paymentDueDay,
       },
       ...costs,
     };
