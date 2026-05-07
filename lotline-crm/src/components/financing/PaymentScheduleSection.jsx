@@ -194,7 +194,7 @@ export default function PaymentScheduleSection({
         Investor: <span className="font-medium text-gray-700">{investor?.name || investorName || '—'}</span>
         {' · '}
         Capital Deployed: <span className="font-medium text-gray-700">
-          {fmtDate(deal.capitalDeployedDate || deal.capital_deployed_date)}
+          {fmtDate(effectiveDeployedDate)}
         </span>
       </p>
 
