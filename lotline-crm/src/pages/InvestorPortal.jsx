@@ -85,34 +85,28 @@ function AllDealsTab({ onDealClick }) {
 
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
 function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
-  const { orgSlug } = useAuth();
-  const { jvScope } = useJv();
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
 
-  // Merge static + context deals, deduplicating by address (static wins)
-  const staticDeals = ((orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : []).filter(d => d.lender === investor.name);
-  const staticAddresses = new Set(staticDeals.map(d => (d.address || '').trim().toLowerCase()));
+  // Only use live context deals — static ALL_DEALS_TABLE is hardcoded and stale.
   const invNameLower = investor.name.trim().toLowerCase();
-  const liveDeals = contextDeals
+  const allInvestorDeals = contextDeals
     .filter(d => {
-      const addrLower = (d.address || '').trim().toLowerCase();
-      if (staticAddresses.has(addrLower)) return false;
+      if (d.isArchived) return false;
       if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      return hmcbLender === invNameLower && !!hmcbLender;
+      return !!hmcbLender && hmcbLender === invNameLower;
     })
     .map(d => ({
       address: d.address,
       stage: d.stage,
       lender: investor.name,
-      totalCapital: d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      totalCapital: d.investorCapitalContributed != null ? Number(d.investorCapitalContributed) : d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
       landCost: d.land || 0,
       construction: d.totalActual != null ? Math.max(0, Number(d.totalActual) - (d.land || 0)) : (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
       arv: d.arv || 0,
       closeDate: d.closeDate || null,
     }));
-  const allInvestorDeals = [...staticDeals, ...liveDeals];
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
