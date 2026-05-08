@@ -678,6 +678,19 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, onTogglePin,
             <span className="text-[11px] text-gray-400 whitespace-nowrap">
               {timeAgo(event.date)}
             </span>
+            {event.type === 'note' && event._dbId && onTogglePin && (
+              <button
+                onClick={() => onTogglePin(event._dbId, !event.pinned)}
+                title={event.pinned ? 'Unpin note' : 'Pin note to top'}
+                className={`p-0.5 transition-colors rounded ${
+                  event.pinned
+                    ? 'text-accent hover:text-accent/70'
+                    : 'text-gray-300 hover:text-accent'
+                }`}
+              >
+                <Pin size={12} className={event.pinned ? 'fill-current' : ''} />
+              </button>
+            )}
             {['note', 'task', 'task_complete', 'task_update'].includes(event.type)
               && onDeleteNote
               // Only the author can delete their note. Legacy localStorage notes
