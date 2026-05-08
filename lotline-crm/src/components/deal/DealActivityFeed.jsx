@@ -1183,8 +1183,12 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     }
   };
 
-  // ── Group by month ─────────────────────────────────────────────────────────
-  const grouped = events.reduce((acc, evt) => {
+  // ── Separate pinned from unpinned ─────────────────────────────────────────
+  const pinnedEvents   = events.filter(e => e.pinned);
+  const unpinnedEvents = events.filter(e => !e.pinned);
+
+  // ── Group unpinned by month ────────────────────────────────────────────────
+  const grouped = unpinnedEvents.reduce((acc, evt) => {
     const label = monthLabel(evt.date);
     if (!acc[label]) acc[label] = [];
     acc[label].push(evt);
