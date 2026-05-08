@@ -895,7 +895,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     if (!supabase || !deal?.id) return;
     const { data, error } = await supabase
       .from('activity_notes')
-      .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id')
+      .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id, pinned')
       .eq('deal_id', deal.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
