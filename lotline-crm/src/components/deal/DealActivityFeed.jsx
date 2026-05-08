@@ -21,7 +21,7 @@ import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   StickyNote, RefreshCw, CheckCircle2, CheckSquare, Mail, Phone,
-  FileEdit, X, AtSign, BellOff, Bell, MessageSquare, Paperclip,
+  FileEdit, X, AtSign, BellOff, Bell, MessageSquare, Paperclip, Pin,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
