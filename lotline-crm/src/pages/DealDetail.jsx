@@ -3084,12 +3084,12 @@ function DealDetailContent({ deal }) {
           <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
           <span className="text-sm text-gray-400 hidden sm:block">{fromInvestorPortal ? 'Investor Portal' : isLandAcq ? 'Land Acquisition' : 'Deal Overview'}</span>
           <ChevronRight size={14} className="text-gray-300 hidden sm:block" />
-          <span className="text-sm text-gray-600 font-medium truncate max-w-[200px] md:max-w-xs">{deal.address}</span>
+          <span className="text-sm text-gray-600 font-medium truncate max-w-[200px] md:max-w-xs">{address}</span>
         </div>
 
         <div className="flex items-start justify-between mt-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-3 flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-[#1a2332]">{deal.address}</h1>
+            <h1 className="text-xl font-bold text-[#1a2332]">{address}</h1>
             <GradeBadge grade={deal.grade} />
             {(deal.tags || []).filter(t => t !== 'Subdivide' && t !== 'Land Clearing').map(t => <Tag key={t} type={t}>{t}</Tag>)}
             {!fromInvestorPortal && <>
