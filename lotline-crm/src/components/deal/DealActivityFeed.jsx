@@ -1228,6 +1228,59 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         </div>
       )}
 
+      {/* Pinned notes */}
+      {pinnedEvents.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-[11px] font-bold text-accent uppercase tracking-widest whitespace-nowrap flex items-center gap-1">
+              <Pin size={10} className="fill-current" />
+              Pinned
+            </span>
+            <div className="flex-1 border-t border-accent/20" />
+          </div>
+          <div className="space-y-3">
+            {pinnedEvents.map(evt => (
+              <EventCard
+                key={evt.id}
+                event={evt}
+                usersById={usersById}
+                members={members}
+                currentUserId={currentUserId}
+                onDeleteNote={!readOnly ? handleDeleteNote : null}
+                onDeleteReply={!readOnly ? handleDeleteReply : null}
+                onTogglePin={!readOnly ? handleTogglePin : null}
+                replyProps={!readOnly && evt._dbId ? {
+                  replies:         replyMap[evt._dbId] || [],
+                  replyingTo,
+                  replyText,
+                  replySubmitting,
+                  mentionMap:      replyMentionMap,
+                  onReply:         (id) => {
+                    setReplyingTo(id);
+                    const authorName =
+                      usersById[evt.authorId]?.name ||
+                      evt.meta?.author ||
+                      members.find(m => m.id === evt.authorId)?.name ||
+                      null;
+                    if (authorName && authorName !== 'Unknown' && evt.authorId && evt.authorId !== currentUserId) {
+                      setReplyText(`@${authorName} `);
+                      setReplyMentionMap({ [authorName]: evt.authorId });
+                    } else {
+                      setReplyText('');
+                      setReplyMentionMap({});
+                    }
+                  },
+                  onReplyTextChange: setReplyText,
+                  onMentionInserted: (m) => setReplyMentionMap(prev => ({ ...prev, [m.name]: m.id })),
+                  onSubmitReply:   handleSubmitReply,
+                  onCancelReply:   () => { setReplyingTo(null); setReplyText(''); setReplyMentionMap({}); },
+                } : null}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Month-grouped events */}
       {groups.map(([month, monthEvents]) => (
         <div key={month}>
@@ -1247,6 +1300,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
                 currentUserId={currentUserId}
                 onDeleteNote={!readOnly ? handleDeleteNote : null}
                 onDeleteReply={!readOnly ? handleDeleteReply : null}
+                onTogglePin={!readOnly ? handleTogglePin : null}
                 replyProps={!readOnly && evt._dbId ? {
                   replies:         replyMap[evt._dbId] || [],
                   replyingTo,
