@@ -3728,6 +3728,11 @@ function DealDetailContent({ deal }) {
                   lastStage: stage,
                 };
                 saveDeal(deadDeal, activeOrgId);
+                // Also call archiveDeal so is_archived=true is set in the DB via the
+                // archive_deal RPC. saveDeal intentionally omits is_archived (see
+                // dealToRow comment) so without this the deal stays is_archived=false
+                // in Supabase and reappears on the next loadAllDeals.
+                archiveDeal(deadDeal);
                 // Update context immediately so ArchivedDeals page shows it right away
                 setDeals(prev => prev.filter(d => String(d.id) !== String(deal.id)));
                 setArchivedDeals(prev => {
