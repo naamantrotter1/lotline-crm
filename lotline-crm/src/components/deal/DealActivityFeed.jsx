@@ -1170,6 +1170,19 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     setDbNotes(prev => prev.filter(n => n.id !== replyId));
   };
 
+  const handleTogglePin = async (dbId, newPinned) => {
+    // Optimistic update
+    setDbNotes(prev => prev.map(n => n.id === dbId ? { ...n, pinned: newPinned } : n));
+    const { error } = await supabase
+      ?.from('activity_notes')
+      .update({ pinned: newPinned })
+      .eq('id', dbId);
+    if (error) {
+      // Revert on failure
+      setDbNotes(prev => prev.map(n => n.id === dbId ? { ...n, pinned: !newPinned } : n));
+    }
+  };
+
   // ── Group by month ─────────────────────────────────────────────────────────
   const grouped = events.reduce((acc, evt) => {
     const label = monthLabel(evt.date);
