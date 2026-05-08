@@ -758,7 +758,9 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, onTogglePin,
                     </button>
                   )}
                 </div>
-                <p className="text-[12px] text-gray-600 leading-relaxed mt-0.5">{r.body}</p>
+                <div className="text-[12px] text-gray-600 leading-relaxed mt-0.5">
+                  <NoteBodyRenderer body={r.body} usersById={usersById} authorName={r.author_name} createdAt={r.created_at} />
+                </div>
               </div>
             ))}
           </div>
