@@ -906,13 +906,26 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   // ── Load DB notes ──────────────────────────────────────────────────────────
   const loadDbNotes = useCallback(async () => {
     if (!supabase || !deal?.id) return;
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('activity_notes')
       .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id, pinned')
       .eq('deal_id', deal.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(200);
+
+    // Fallback: if pinned column not yet migrated, retry without it
+    if (error) {
+      const res = await supabase
+        .from('activity_notes')
+        .select('id, author_id, author_name, note_type, body, mentioned_user_ids, created_at, parent_note_id')
+        .eq('deal_id', deal.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      data = (res.data || []).map(n => ({ ...n, pinned: false }));
+      error = res.error;
+    }
 
     if (!error && data) {
       setDbNotes(data);
