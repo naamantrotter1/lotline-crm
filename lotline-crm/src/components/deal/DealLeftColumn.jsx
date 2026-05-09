@@ -23,7 +23,6 @@ const DEFAULT_SECTIONS = [
   { key: 'financing',       label: 'Financing',        visible: true,  order: 2 },
   { key: 'closing',         label: 'Closing',          visible: true,  order: 3 },
   { key: 'important_dates', label: 'Important Dates',  visible: true,  order: 4 },
-  { key: 'key_contacts',    label: 'Key Contacts',     visible: true,  order: 5 },
   { key: 'deal_owner',      label: 'Deal Owner',       visible: true,  order: 6 },
 ];
 
