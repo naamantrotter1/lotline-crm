@@ -662,20 +662,19 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
     if (!address && !parno) return;
 
-    if (address) {
-      setSearchType('address');
-      setSearchQuery(address);
-      if (stateParam) setSearchState(stateParam);
-      if (countyParam) setSearchCounty(countyParam);
-      // Use direct address lookup — passes address to backend geocoder which returns the
-      // exact parcel. Pass lat/lng as null so if geometry is missing we don't fly to [0,0].
-      handleSearchSelect({ dealAddress: address, lat: null, lng: null, state: stateParam, county: countyParam });
-    } else if (parno) {
+    if (parno) {
+      // Parcel number + state + county is the most precise lookup — always prefer it
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
       setSearchQuery(parno);
       handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
+    } else if (address) {
+      setSearchType('address');
+      setSearchQuery(address);
+      if (stateParam) setSearchState(stateParam);
+      if (countyParam) setSearchCounty(countyParam);
+      handleSearchSelect({ dealAddress: address, lat: null, lng: null, state: stateParam, county: countyParam });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
