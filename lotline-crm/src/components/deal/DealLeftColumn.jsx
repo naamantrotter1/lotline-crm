@@ -736,11 +736,6 @@ export default function DealLeftColumn({
                 <ImportantDates deal={deal} readOnly={readOnly} />
               </Section>
             );
-            if (s.key === 'key_contacts') return (
-              <Section key="key_contacts" title="Key Contacts" defaultOpen={false}>
-                <KeyContacts deal={deal} />
-              </Section>
-            );
             if (s.key === 'deal_owner') return (
               <Section key="deal_owner" title="Deal Owner" defaultOpen={true}>
                 {readOnly
