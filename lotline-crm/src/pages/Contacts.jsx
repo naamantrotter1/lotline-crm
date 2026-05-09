@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../hooks/usePermissions';
+import { fmtPhone } from '../utils/format';
 import {
   fetchContacts, deleteContact, updateContact,
   LIFECYCLE_STAGES, CONTACT_TYPE_OPTIONS,
