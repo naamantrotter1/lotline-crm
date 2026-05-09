@@ -51,7 +51,7 @@ const DEAL_FIELDS = [
 
 const DEFAULT_CARD_FIELDS  = ['net_profit_after_financing', 'investor', 'total_estimated', 'arv'];
 const DEFAULT_LIST_FIELDS  = [
-  'arv', 'total_estimated', 'net_profit', 'net_profit_after_financing',
+  'arv', 'total_estimated', 'net_profit', 'net_profit_after_financing', 'cost_of_capital',
   'land', 'mobile_home',
   'county', 'state', 'acreage', 'parcel_id',
   'stage', 'deal_owner', 'investor', 'lead_source',
