@@ -103,6 +103,43 @@ function formatFieldValue(value, type, { compact = false } = {}) {
   }
 }
 
+// ── Card helper functions ─────────────────────────────────────────────────────
+
+const TAG_STYLES = {
+  'Land Clearing': { bg: '#dcfce7', text: '#15803d' },
+  'Subdivide':     { bg: '#fef3c7', text: '#b45309' },
+};
+
+function isSubdividable(deal) {
+  if (deal.subdividable === 'No'  || deal.subdividable === false) return false;
+  if (deal.subdividable === 'Yes' || deal.subdividable === true)  return true;
+  return (deal.tags || []).includes('Subdivide');
+}
+
+function isLandClearing(deal) {
+  if (deal.landClearing === 'No'  || deal.landClearing === false) return false;
+  if (deal.landClearing === 'Yes' || deal.landClearing === true)  return true;
+  return (deal.tags || []).includes('Land Clearing');
+}
+
+function closingCountdown(dateStr) {
+  if (!dateStr) return null;
+  const close = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  close.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today - close) / 86400000);
+  if (diff < 0) return { label: `${Math.abs(diff)}d to close`, past: false };
+  if (diff === 0) return { label: 'Closes today', past: false };
+  return { label: `Day ${diff}`, past: true };
+}
+
+function formatCloseDate(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-');
+  return `${m}/${d}/${y}`;
+}
+
 function loadPref(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
   catch { return fallback; }
