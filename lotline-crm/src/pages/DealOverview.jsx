@@ -527,7 +527,7 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
                 <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-tight">
                   {field.label}
                 </div>
-                <div className={`text-[11px] font-bold leading-tight ${isNeg ? 'text-red-500' : 'text-gray-700'}`}>
+                <div className={`text-[11px] font-bold leading-tight line-clamp-2 ${isNeg ? 'text-red-500' : 'text-gray-700'}`}>
                   {key === 'days_in_stage' && value != null
                     ? `Day ${value}`
                     : formatFieldValue(value, field.type, { compact: true })}
