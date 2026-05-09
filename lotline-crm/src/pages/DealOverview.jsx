@@ -604,7 +604,7 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
               }`}
             >
               <td
-                className="sticky left-0 z-10 bg-inherit px-3 py-3"
+                className={`sticky left-0 z-10 px-3 py-3 ${selectedIds.has(deal.id) ? 'bg-orange-50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                 onClick={e => e.stopPropagation()}
               >
                 <input
