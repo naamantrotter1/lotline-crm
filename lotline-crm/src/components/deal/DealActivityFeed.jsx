@@ -1070,7 +1070,6 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       title:   note.author || 'Note added',
       body:    note.text,
       date:    note.createdAt,
-      hasMentions: false,
       meta:    { author: note.author },
       hideAuthorFooter: true,
     }));
