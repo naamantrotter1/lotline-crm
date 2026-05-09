@@ -27,18 +27,132 @@ const DEFAULT_SECTIONS = [
 ];
 
 // ── Key Contacts section (reads deal_stage_contacts) ──────────────────────────
+function ContactPopup({ contact, onClose }) {
+  const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.company || 'Unknown';
+  const displayType = contact.contractor_type || (contact.types?.[0]) || null;
+  return (
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[300px] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="h-1 bg-accent w-full" />
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
+                <User size={14} className="text-accent" />
+              </div>
+              <div>
+                {displayType && <p className="text-[10px] text-accent font-semibold uppercase tracking-wide">{displayType}</p>}
+                <p className="text-[13px] font-bold text-gray-800 leading-tight">{fullName}</p>
+                {contact.company && <p className="text-[11px] text-gray-500">{contact.company}</p>}
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+          </div>
+          <div className="space-y-1.5">
+            {contact.phone && (
+              <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-[12px] text-gray-600 hover:text-accent transition-colors">
+                <Phone size={11} className="text-gray-400" />{contact.phone}
+              </a>
+            )}
+            {contact.email && (
+              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 text-[12px] text-gray-600 hover:text-accent transition-colors truncate">
+                <Mail size={11} className="text-gray-400" />{contact.email}
+              </a>
+            )}
+            {contact.title && (
+              <p className="text-[11px] text-gray-400">{contact.title}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactPickerModal({ dealId, orgId, existingIds, onAdd, onClose }) {
+  const [search, setSearch] = useState('');
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchContacts(orgId).then(c => { setContacts(c); setLoading(false); });
+  }, [orgId]);
+
+  const filtered = contacts.filter(c => {
+    if (existingIds.has(c.id)) return false;
+    const q = search.toLowerCase();
+    return !q ||
+      c.fullName?.toLowerCase().includes(q) ||
+      c.company?.toLowerCase().includes(q) ||
+      c.types?.some(t => t.toLowerCase().includes(q));
+  });
+
+  return (
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[340px] max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <p className="text-[13px] font-semibold text-gray-800">Add Contact</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+        </div>
+        <div className="px-3 pt-3">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+            <Search size={12} className="text-gray-400 flex-shrink-0" />
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search contacts…"
+              className="text-[12px] bg-transparent outline-none flex-1 text-gray-700 placeholder-gray-400"
+            />
+          </div>
+        </div>
+        <div className="overflow-y-auto p-2 flex-1 mt-2">
+          {loading && <p className="text-[12px] text-gray-400 text-center py-4">Loading…</p>}
+          {!loading && filtered.length === 0 && (
+            <p className="text-[12px] text-gray-400 text-center py-4 italic">No contacts found</p>
+          )}
+          {filtered.map(c => {
+            const displayType = c.types?.[0] || null;
+            const label = c.company || c.fullName;
+            return (
+              <button key={c.id} onClick={() => onAdd(c)}
+                className="w-full text-left flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
+                  <User size={11} className="text-accent" />
+                </div>
+                <div className="min-w-0">
+                  {displayType && <p className="text-[9px] text-accent font-semibold uppercase tracking-wide">{displayType}</p>}
+                  <p className="text-[12px] font-medium text-gray-800 truncate">{label}</p>
+                  {c.company && c.fullName !== label && <p className="text-[10px] text-gray-400 truncate">{c.fullName}</p>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function KeyContacts({ deal }) {
+  const { activeOrgId } = useAuth();
   const [items, setItems] = useState([]);
+  const [popup, setPopup] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
   const instanceId = useRef(Math.random().toString(36).slice(2));
 
   const load = useCallback(async () => {
     if (!supabase || !deal?.id) return;
     const { data } = await supabase
       .from('deal_stage_contacts')
-      .select('stage_key, contacts(id, first_name, last_name, company, phone, email, contractor_type)')
+      .select('stage_key, contacts(id, first_name, last_name, company, phone, email, title, contractor_type, contact_types(type))')
       .eq('deal_id', deal.id);
     if (data) {
-      setItems(data.filter(r => r.contacts).map(r => ({ stageKey: r.stage_key, ...r.contacts })));
+      setItems(data.filter(r => r.contacts).map(r => ({
+        stageKey: r.stage_key,
+        ...r.contacts,
+        types: (r.contacts.contact_types || []).map(t => t.type),
+      })));
     }
   }, [deal?.id]);
 
@@ -55,43 +169,66 @@ function KeyContacts({ deal }) {
     return () => supabase.removeChannel(ch);
   }, [deal?.id, load]);
 
-  if (items.length === 0) {
-    return (
-      <p className="text-[12px] text-gray-300 italic">
-        No key contacts assigned yet. Add contractors from the pipeline boards.
-      </p>
+  const handleAdd = async (contact) => {
+    setShowPicker(false);
+    if (!supabase || !deal?.id || !activeOrgId) return;
+    const stageKey = `contact_${contact.id}`;
+    await supabase.from('deal_stage_contacts').upsert(
+      { deal_id: deal.id, organization_id: activeOrgId, stage_key: stageKey, contact_id: contact.id },
+      { onConflict: 'deal_id,stage_key' }
     );
-  }
+    load();
+  };
+
+  const existingIds = new Set(items.map(c => c.id));
 
   return (
     <div className="space-y-2">
-      {items.map((c, i) => (
-        <div key={i} className="flex items-start gap-2 border-b border-gray-50 last:border-0 pb-2 last:pb-0">
-          <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <User size={10} className="text-accent" />
+      {items.map((c, i) => {
+        const displayType = c.contractor_type || c.types?.[0] || null;
+        const label = c.company || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+        return (
+          <div key={i} className="flex items-start gap-2 border-b border-gray-50 last:border-0 pb-2 last:pb-0">
+            <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <User size={10} className="text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {displayType && (
+                <p className="text-[9px] text-accent font-semibold uppercase tracking-wide mb-0.5">{displayType}</p>
+              )}
+              <button
+                onClick={() => setPopup(c)}
+                className="text-[12px] font-semibold text-gray-800 hover:text-accent transition-colors text-left truncate w-full">
+                {label}
+              </button>
+              {c.phone && (
+                <a href={`tel:${c.phone}`}
+                  className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5 mt-0.5">
+                  <Phone size={9} />{c.phone}
+                </a>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold text-gray-800">
-              {`${c.first_name || ''} ${c.last_name || ''}`.trim() || c.company || 'Unknown'}
-            </p>
-            {c.contractor_type && (
-              <p className="text-[10px] text-accent font-medium">{c.contractor_type}</p>
-            )}
-            {c.phone && (
-              <a href={`tel:${c.phone}`}
-                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5">
-                <Phone size={9} />{c.phone}
-              </a>
-            )}
-            {c.email && (
-              <a href={`mailto:${c.email}`}
-                className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5 truncate">
-                <Mail size={9} />{c.email}
-              </a>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
+
+      <button
+        onClick={() => setShowPicker(true)}
+        className="flex items-center gap-1 text-[11px] text-accent hover:text-accent/70 font-medium transition-colors mt-1">
+        <Plus size={11} /> Add Contact
+      </button>
+
+      {showPicker && (
+        <ContactPickerModal
+          dealId={deal.id}
+          orgId={activeOrgId}
+          existingIds={existingIds}
+          onAdd={handleAdd}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {popup && <ContactPopup contact={popup} onClose={() => setPopup(null)} />}
     </div>
   );
 }
