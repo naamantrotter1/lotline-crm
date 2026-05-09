@@ -159,6 +159,7 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
   const filterStage    = searchParams.get('stage')    || '';
   const filterOwner    = searchParams.get('owner')    || '';
   const filterFinancing = searchParams.get('financing') || '';
+  const filterLender   = searchParams.get('lender')   || '';
   const filterStarred  = searchParams.get('starred')  === '1';
   const filterSearch   = searchParams.get('q')        || '';
 
@@ -170,11 +171,12 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
 
   const owners    = useMemo(() => [...new Set(allDeals.map(d => d.dealOwner).filter(Boolean))].sort(), [allDeals]);
   const financings = useMemo(() => [...new Set(allDeals.map(d => d.financingScenarioType || d.financing).filter(Boolean))].sort(), [allDeals]);
-  const hasFilters = filterStage || filterOwner || filterFinancing || filterStarred || filterSearch;
+  const lenders   = useMemo(() => [...new Set(allDeals.map(d => d.investor).filter(Boolean))].sort(), [allDeals]);
+  const hasFilters = filterStage || filterOwner || filterFinancing || filterLender || filterStarred || filterSearch;
 
   const clearAll = () => setSearchParams(prev => {
     const n = new URLSearchParams(prev);
-    ['stage','owner','financing','starred','q'].forEach(k => n.delete(k));
+    ['stage','owner','financing','lender','starred','q'].forEach(k => n.delete(k));
     return n;
   });
 
