@@ -1110,7 +1110,8 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
     // Build parcel API URL
     let parcelUrl = result.parno
-      ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}&lat=${lat ?? 0}&lng=${lng ?? 0}`
+      ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(result.parno)}`
+        + (lat != null && lng != null ? `&lat=${lat}&lng=${lng}` : '')
       : result.dealAddress
         ? `${PROXY}/api/proxy/parcel?address=${encodeURIComponent(result.dealAddress)}`
         : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
