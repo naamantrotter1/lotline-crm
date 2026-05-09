@@ -760,7 +760,28 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       setSearchQuery(address);
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
-      handleSearchSelect({ dealAddress: address, lat: null, lng: null, state: stateParam, county: countyParam });
+      // Geocode address first so handleSearchSelect can use coordinates for a more accurate lookup
+      (async () => {
+        let lat = null, lng = null;
+        try {
+          const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
+          const nomData = await fetch(`/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0&countrycodes=us`).then(r => r.json());
+          if (nomData?.[0]?.lat) { lat = parseFloat(nomData[0].lat); lng = parseFloat(nomData[0].lon); }
+        } catch { /* fall through */ }
+        // County-level fallback so the map always moves away from the saved view
+        if (lat == null && (countyParam || stateParam)) {
+          try {
+            const countyQ = [countyParam ? `${countyParam} County` : null, stateParam || 'NC'].filter(Boolean).join(', ');
+            const countyData = await fetch(`/nominatim/search?q=${encodeURIComponent(countyQ)}&format=json&limit=1&addressdetails=0&countrycodes=us`).then(r => r.json());
+            if (countyData?.[0]?.lat) {
+              lat = parseFloat(countyData[0].lat); lng = parseFloat(countyData[0].lon);
+              leafletMap.current?.flyTo([lat, lng], 12, { animate: false });
+              return; // county-level only — handleSearchSelect will refine
+            }
+          } catch { /* fall through */ }
+        }
+        handleSearchSelect({ dealAddress: address, lat, lng, state: stateParam, county: countyParam });
+      })();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
