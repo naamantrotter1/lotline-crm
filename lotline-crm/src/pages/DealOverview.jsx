@@ -470,23 +470,6 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
         </div>
       </div>
 
-      {/* Tags */}
-      {(subdivide || landClearing) && (
-        <div className="flex flex-wrap gap-1.5 mb-2 ml-4">
-          {landClearing && (
-            <span style={{ backgroundColor: TAG_STYLES['Land Clearing'].bg, color: TAG_STYLES['Land Clearing'].text }}
-              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
-              <TreePine size={10} />Land Clearing
-            </span>
-          )}
-          {subdivide && (
-            <span style={{ backgroundColor: TAG_STYLES['Subdivide'].bg, color: TAG_STYLES['Subdivide'].text }}
-              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
-              <SplitSquareHorizontal size={10} />Subdivide
-            </span>
-          )}
-        </div>
-      )}
 
       {/* Closing date + countdown */}
       {(deal.closeDate || closing) && (
