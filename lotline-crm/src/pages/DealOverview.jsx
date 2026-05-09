@@ -75,6 +75,7 @@ function getFieldValue(deal, key) {
     case 'parcel_id':                  return deal.parcelId ?? null;
     case 'stage':                      return deal.stage ?? null;
     case 'deal_owner':                 return deal.dealOwner ?? null;
+    case 'investor':                   return deal.investor ?? null;
     case 'lead_source':                return deal.leadSource ?? null;
     case 'financing_scenario_type':    return snakeToTitle(deal.financingScenarioType || deal.financing || null);
     case 'days_in_stage': {
