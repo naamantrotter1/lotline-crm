@@ -31,7 +31,7 @@ function fetchNCTile(tileBbox, filters = {}) {
   const where = buildNCWhere(filters);
   const params = new URLSearchParams({
     geometry: tileBbox, geometryType: 'esriGeometryEnvelope', inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects', outFields: 'parno',
+    spatialRel: 'esriSpatialRelIntersects', outFields: 'parno,cntyname',
     where, returnGeometry: 'true', outSR: '4326', resultRecordCount: '1000', f: 'geojson',
   });
   return fetchJson(`https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/FeatureServer/1/query?${params}`)
