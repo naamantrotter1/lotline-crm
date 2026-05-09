@@ -48,7 +48,7 @@ const DEAL_FIELDS = [
   { key: 'contract_signed_at',         label: 'Contract Date',             type: 'date',     group: 'DEAL INFO' },
 ];
 
-const DEFAULT_CARD_FIELDS  = ['arv', 'net_profit', 'financing_scenario_type', 'days_in_stage'];
+const DEFAULT_CARD_FIELDS  = ['net_profit_after_financing', 'investor', 'total_estimated', 'arv'];
 const DEFAULT_LIST_FIELDS  = [
   'arv', 'total_estimated', 'net_profit', 'net_profit_after_financing',
   'land', 'mobile_home',
