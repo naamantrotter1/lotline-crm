@@ -449,13 +449,6 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
           >
             <Star size={13} fill={starred ? 'currentColor' : 'none'} />
           </button>
-          {deal.grade && (
-            <span className={`text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
-              deal.grade === 'A' ? 'bg-green-100 text-green-700' :
-              deal.grade === 'B' ? 'bg-blue-100 text-blue-700'  :
-              'bg-gray-100 text-gray-600'
-            }`}>{deal.grade}</span>
-          )}
         </div>
       </div>
 
