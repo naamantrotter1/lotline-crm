@@ -60,7 +60,8 @@ function getFieldValue(deal, key) {
     case 'address':                    return deal.address;
     case 'arv':                        return deal.arv ?? null;
     case 'total_estimated':            return deal.totalEstimated ?? null;
-    case 'net_profit':                 return calcNetProfit(deal, null /* no financing */);
+    // net_profit = before financing costs; net_profit_after_financing = with CoC deducted
+    case 'net_profit':                 return calcNetProfit({ ...deal, financing: null, financingScenarioType: null });
     case 'net_profit_after_financing': return calcNetProfit(deal);
     // Land / home cost: prefer direct column, fall back to cost summary portions
     case 'land':                       return deal.land ?? null;
