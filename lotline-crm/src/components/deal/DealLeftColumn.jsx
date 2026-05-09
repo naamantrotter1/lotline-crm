@@ -205,7 +205,7 @@ function KeyContacts({ deal }) {
               {c.phone && (
                 <a href={`tel:${c.phone}`}
                   className="text-[10px] text-gray-400 hover:text-accent flex items-center gap-0.5 mt-0.5">
-                  <Phone size={9} />{c.phone}
+                  <Phone size={9} />{fmtPhone(c.phone)}
                 </a>
               )}
             </div>
