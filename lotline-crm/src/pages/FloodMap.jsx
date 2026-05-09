@@ -663,13 +663,31 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     if (!address && !parno) return;
 
     if (address) {
-      // Pass the address to the backend, which geocodes server-side and returns the parcel.
-      // More reliable than client-side geocoding for rural addresses without house numbers.
       setSearchType('address');
       setSearchQuery(address);
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
-      handleSearchSelect({ dealAddress: address, lat: 0, lng: 0, state: stateParam, county: countyParam });
+      // Mirror the manual search flow: call parcel-search to geocode the address and get
+      // real lat/lng, then select the first result. This is more reliable than calling
+      // /api/proxy/parcel?address= directly, which can fail for rural road addresses.
+      (async () => {
+        try {
+          const params = new URLSearchParams({ type: 'address', q: address });
+          if (stateParam) params.set('state', stateParam);
+          if (countyParam) params.set('county', countyParam);
+          const r = await fetch(`${PROXY}/api/proxy/parcel-search?${params}`);
+          const results = await r.json();
+          if (Array.isArray(results) && results.length > 0) {
+            const first = results.find(x => !x._hint) || results[0];
+            if (!first._hint) {
+              handleSearchSelect({ ...first, state: stateParam || first.state, county: countyParam || first.county });
+              return;
+            }
+          }
+        } catch { /* fall through */ }
+        // Fallback: direct address lookup
+        handleSearchSelect({ dealAddress: address, lat: 0, lng: 0, state: stateParam, county: countyParam });
+      })();
     } else if (parno) {
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
