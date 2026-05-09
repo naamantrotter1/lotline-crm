@@ -296,14 +296,19 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
               <div className="flex items-center gap-1">
                 <span className="text-[12px] text-gray-400">$</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={arvInput}
-                  onFocus={() => { arvFocused.current = true; }}
-                  onChange={e => setArvInput(e.target.value)}
+                  onFocus={() => {
+                    arvFocused.current = true;
+                    const raw = Number(String(arvInput).replace(/,/g, '')) || 0;
+                    setArvInput(raw ? String(raw) : '');
+                  }}
+                  onChange={e => setArvInput(e.target.value.replace(/[^0-9]/g, ''))}
                   onBlur={() => {
                     arvFocused.current = false;
-                    const v = Number(arvInput) || 0;
-                    setArvInput(String(v || ''));
+                    const v = Number(String(arvInput).replace(/,/g, '')) || 0;
+                    setArvInput(v ? v.toLocaleString() : '');
                     onArvChange(v);
                   }}
                   className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
@@ -419,14 +424,19 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
               <div className="flex items-center gap-1">
                 <span className="text-[12px] text-gray-400">$</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={arvInput}
-                  onFocus={() => { arvFocused.current = true; }}
-                  onChange={e => setArvInput(e.target.value)}
+                  onFocus={() => {
+                    arvFocused.current = true;
+                    const raw = Number(String(arvInput).replace(/,/g, '')) || 0;
+                    setArvInput(raw ? String(raw) : '');
+                  }}
+                  onChange={e => setArvInput(e.target.value.replace(/[^0-9]/g, ''))}
                   onBlur={() => {
                     arvFocused.current = false;
-                    const v = Number(arvInput) || 0;
-                    setArvInput(String(v || ''));
+                    const v = Number(String(arvInput).replace(/,/g, '')) || 0;
+                    setArvInput(v ? v.toLocaleString() : '');
                     onArvChange(v);
                   }}
                   className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
