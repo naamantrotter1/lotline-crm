@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Home, UserCircle, FileText, CheckSquare, Scale,
+  Users, UserCircle, FileText, CheckSquare, Scale,
   TrendingDown, ChevronDown, ChevronRight, Plus,
   ExternalLink, Circle, CheckCircle2, Clock, AlertCircle,
   Mail, Phone, MapPin, Upload, Trash2, Download, Calendar,
