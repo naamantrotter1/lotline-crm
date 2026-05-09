@@ -398,8 +398,12 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
 
 // ── DealCard ──────────────────────────────────────────────────────────────────
 
-function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect }) {
+function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect, isAgent }) {
   const [starred, setStarred] = useState(deal.is_starred ?? false);
+  const netProfit    = calcNetProfit(deal);
+  const closing      = closingCountdown(deal.closeDate);
+  const subdivide    = isSubdividable(deal);
+  const landClearing = isLandClearing(deal);
 
   useEffect(() => { setStarred(deal.is_starred ?? false); }, [deal.is_starred]);
 
@@ -412,7 +416,7 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect 
     >
       {/* Checkbox — always visible when selected, hover otherwise */}
       <div
-        className={`absolute top-3.5 left-3 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        className={`absolute top-3.5 left-3 z-10 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         onClick={e => { e.stopPropagation(); onToggleSelect(deal.id); }}
       >
         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${
@@ -422,9 +426,16 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect 
         </div>
       </div>
 
-      {/* Address row */}
-      <div className="flex items-start gap-2 mb-1">
-        <span className="text-sm font-semibold text-gray-900 leading-snug flex-1 pl-5 pr-1">{deal.address}</span>
+      {/* Drag handle + address + star + grade */}
+      <div className="flex items-start gap-2 mb-2">
+        <div className="flex flex-col gap-0.5 mt-1 opacity-30 group-hover:opacity-60 transition-opacity flex-shrink-0">
+          {[0,1,2].map(r => (
+            <div key={r} className="flex gap-0.5">
+              {[0,1].map(c => <div key={c} className="w-1 h-1 rounded-full bg-gray-400" />)}
+            </div>
+          ))}
+        </div>
+        <span className="text-sm font-semibold text-gray-900 leading-snug flex-1">{deal.address}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={e => { e.stopPropagation(); const n = !starred; setStarred(n); onStar?.(deal.id, n); }}
@@ -442,11 +453,69 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect 
         </div>
       </div>
 
-      {/* Custom fields */}
+      {/* Investor + tags */}
+      {(deal.investor || subdivide || landClearing) && (
+        <div className="flex flex-wrap gap-1.5 mb-2 ml-4">
+          {deal.investor && (
+            <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
+              <User size={10} />{deal.investor}
+            </span>
+          )}
+          {landClearing && (
+            <span style={{ backgroundColor: TAG_STYLES['Land Clearing'].bg, color: TAG_STYLES['Land Clearing'].text }}
+              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
+              <TreePine size={10} />Land Clearing
+            </span>
+          )}
+          {subdivide && (
+            <span style={{ backgroundColor: TAG_STYLES['Subdivide'].bg, color: TAG_STYLES['Subdivide'].text }}
+              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
+              <SplitSquareHorizontal size={10} />Subdivide
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ARV */}
+      <div className="text-xs text-gray-500 ml-4 mb-1">
+        ARV: <span className="font-semibold text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
+      </div>
+
+      {/* Profit + financing — hidden for agents */}
+      {!isAgent && (
+        <div className="flex items-center gap-1 ml-4 mb-2">
+          <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
+          <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            ${Math.abs(Math.round(netProfit)).toLocaleString()}
+          </span>
+          {deal.financing && (
+            <span className="text-xs text-gray-400">({deal.financing})</span>
+          )}
+        </div>
+      )}
+
+      {/* Closing date + countdown */}
+      {(deal.closeDate || closing) && (
+        <div className="flex items-center justify-between ml-4 mb-1">
+          {deal.closeDate ? (
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <Calendar size={10} className="text-orange-400" />
+              {formatCloseDate(deal.closeDate)}
+            </span>
+          ) : <span />}
+          {closing && (
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+              closing.past ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+            }`}>{closing.label}</span>
+          )}
+        </div>
+      )}
+
+      {/* Custom fields strip */}
       {cardFields.length > 0 && (
-        <div className={`grid gap-x-3 gap-y-2.5 mt-3 pl-5 ${
+        <div className={`grid gap-x-3 gap-y-2 mt-2 pt-2 border-t border-gray-100 ml-4 ${
           cardFields.length <= 2 ? 'grid-cols-2' :
-          cardFields.length <= 4 ? 'grid-cols-2' :
+          cardFields.length === 3 ? 'grid-cols-3' :
           'grid-cols-3'
         }`}>
           {cardFields.slice(0, 5).map(key => {
@@ -459,8 +528,8 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect 
                 <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-tight">
                   {field.label}
                 </div>
-                <div className={`text-[12px] font-bold leading-tight truncate ${isNeg ? 'text-red-500' : 'text-gray-800'}`}>
-                  {field.type === 'number' && key === 'days_in_stage' && value != null
+                <div className={`text-[11px] font-bold leading-tight truncate ${isNeg ? 'text-red-500' : 'text-gray-700'}`}>
+                  {key === 'days_in_stage' && value != null
                     ? `Day ${value}`
                     : formatFieldValue(value, field.type, { compact: true })}
                 </div>
