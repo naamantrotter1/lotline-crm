@@ -272,7 +272,7 @@ export default function ContractorPicker({ dealId, stageKey, contractorType, rea
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-gray-800 truncate">{displayName(c)}</p>
-                    {c.phone && <p className="text-[10px] text-gray-400">{c.phone}</p>}
+                    {c.phone && <p className="text-[10px] text-gray-400">{fmtPhone(c.phone)}</p>}
                   </div>
                 </button>
               ))
