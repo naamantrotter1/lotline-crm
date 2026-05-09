@@ -621,7 +621,7 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
                   <td
                     key={col.key}
                     className={`px-3 py-3 text-sm whitespace-nowrap ${
-                      i === 0 ? 'sticky left-10 z-10 bg-inherit font-semibold text-gray-900 border-r border-gray-100' : ''
+                      i === 0 ? `sticky left-10 z-10 font-semibold text-gray-900 border-r border-gray-100 ${selectedIds.has(deal.id) ? 'bg-orange-50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}` : ''
                     } ${isNeg ? 'text-red-500 font-semibold' : i > 0 ? 'text-gray-700' : ''}`}
                   >
                     {col.type === 'badge' ? (
