@@ -632,19 +632,16 @@ export default function DealLeftColumn({
             )
           }
         </div>
-        {/* Location sub-line */}
-        <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap mt-0.5">
-          {county && <span className="flex items-center gap-0.5"><MapPin size={10} />{county}{dealState ? `, ${dealState}` : ''}</span>}
-          {acreage && <span className="flex items-center gap-0.5"><Layers size={10} />{acreage} ac</span>}
-          {onOpenMapSearch && (
+        {onOpenMapSearch && (
+          <div className="mt-0.5">
             <button
               onClick={onOpenMapSearch}
-              className="ml-auto flex items-center gap-0.5 text-[10px] font-semibold text-accent hover:text-accent/70 border border-accent/30 hover:border-accent/60 rounded px-1.5 py-0.5 transition-colors flex-shrink-0"
+              className="flex items-center gap-0.5 text-[10px] font-semibold text-accent hover:text-accent/70 border border-accent/30 hover:border-accent/60 rounded px-1.5 py-0.5 transition-colors"
             >
               <MapPin size={9} />Map
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
 
