@@ -231,17 +231,18 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
         </select>
       )}
 
-      {/* Lender / Investor */}
-      {lenders.length > 0 && (
-        <select
-          value={filterLender}
-          onChange={e => setParam('lender', e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-[#c8613a] text-gray-600 bg-white"
-        >
-          <option value="">All Lenders</option>
-          {lenders.map(l => <option key={l} value={l}>{l}</option>)}
-        </select>
-      )}
+      {/* Lender / Investor toggle */}
+      <button
+        onClick={() => setParam('lender', filterLender ? '' : '1')}
+        className={`${pill} transition-colors ${
+          filterLender
+            ? 'bg-teal-50 border-teal-300 text-teal-700'
+            : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white'
+        }`}
+      >
+        <User size={11} />
+        Lender
+      </button>
 
       {/* Starred */}
       <button
