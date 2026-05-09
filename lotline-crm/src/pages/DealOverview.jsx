@@ -470,14 +470,9 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
         </div>
       </div>
 
-      {/* Investor + tags */}
-      {(deal.investor || subdivide || landClearing) && (
+      {/* Tags */}
+      {(subdivide || landClearing) && (
         <div className="flex flex-wrap gap-1.5 mb-2 ml-4">
-          {deal.investor && (
-            <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
-              <User size={10} />{deal.investor}
-            </span>
-          )}
           {landClearing && (
             <span style={{ backgroundColor: TAG_STYLES['Land Clearing'].bg, color: TAG_STYLES['Land Clearing'].text }}
               className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 font-medium border border-current/10">
