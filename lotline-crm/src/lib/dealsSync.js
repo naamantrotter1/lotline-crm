@@ -219,6 +219,8 @@ function rowToDeal(row) {
     deadDeal:               row.dead_deal ?? false,
     deadDealDate:           row.dead_deal_date ?? null,
     is_starred:             row.is_starred ?? false,
+    createdAt:              row.created_at ?? null,
+    updatedAt:              row.updated_at ?? null,
   };
 }
 
