@@ -702,71 +702,57 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       (async () => {
         const map = leafletMap.current;
         if (!map) return;
-        let lat = null;
-        let lng = null;
-        // Try Nominatim first for approximate coordinates
-        try {
-          const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
-          const nomRes = await fetch(`/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0`);
-          const nomData = await nomRes.json();
-          if (nomData?.[0]?.lat) { lat = parseFloat(nomData[0].lat); lng = parseFloat(nomData[0].lon); }
-        } catch { /* fall through */ }
+        let lat = null, lng = null;
+
+        // Tier 1: Nominatim with full address (most precise — parcel-level coordinates)
+        if (address) {
+          try {
+            const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
+            const nomData = await fetch(`/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0&countrycodes=us`).then(r => r.json());
+            if (nomData?.[0]?.lat) { lat = parseFloat(nomData[0].lat); lng = parseFloat(nomData[0].lon); }
+          } catch { /* fall through */ }
+        }
+
+        // Tier 2: Nominatim with county + state (county-level coordinates — always reliable)
+        if (lat == null && (countyParam || stateParam)) {
+          try {
+            const countyQ = [countyParam ? `${countyParam} County` : null, stateParam || 'NC'].filter(Boolean).join(', ');
+            const countyData = await fetch(`/nominatim/search?q=${encodeURIComponent(countyQ)}&format=json&limit=1&addressdetails=0&countrycodes=us`).then(r => r.json());
+            if (countyData?.[0]?.lat) { lat = parseFloat(countyData[0].lat); lng = parseFloat(countyData[0].lon); }
+          } catch { /* fall through */ }
+        }
+
+        const liveMap = leafletMap.current;
+        if (!liveMap) return;
 
         if (lat != null && lng != null) {
-          map.flyTo([lat, lng], 16, { animate: false });
+          // Fly to address-level zoom if we have a precise address, county-level if not
+          const zoom = address ? 16 : 12;
+          liveMap.flyTo([lat, lng], zoom, { animate: false });
 
-          // Try parcel API with coordinates to get exact parcel geometry.
-          // This works even when the stored parno format doesn't match the boundary layer.
-          try {
-            let apiUrl = `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}&state=${encodeURIComponent(stateParam)}`;
-            if (countyParam) apiUrl += `&county=${encodeURIComponent(countyParam)}`;
-            if (address) apiUrl += `&address=${encodeURIComponent(address)}`;
-            const apiData = await fetch(apiUrl).then(r => r.json());
-            if (!apiData.error && apiData.geometry) {
-              const liveMap = leafletMap.current;
-              if (!liveMap) return;
-              if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
-              const hl = L.geoJSON({ type: 'Feature', geometry: apiData.geometry }, {
-                style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-                renderer: L.canvas(),
-              });
-              hl.addTo(liveMap);
-              selectedHighlightRef.current = hl;
-              selectedParnoRef.current = apiData.parcelId || parno;
-              pendingHighlightParnoRef.current = null; // parcel found — cancel boundary layer matching
-              const bounds = hl.getBounds();
-              if (bounds?.isValid()) {
-                liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+          // If address-level precision, try parcel API with coordinates to get exact geometry
+          if (address) {
+            try {
+              let apiUrl = `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}&state=${encodeURIComponent(stateParam)}&address=${encodeURIComponent(address)}`;
+              if (countyParam) apiUrl += `&county=${encodeURIComponent(countyParam)}`;
+              const apiData = await fetch(apiUrl).then(r => r.json());
+              if (!apiData.error && apiData.geometry) {
+                if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
+                const hl = L.geoJSON({ type: 'Feature', geometry: apiData.geometry }, {
+                  style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+                  renderer: L.canvas(),
+                });
+                hl.addTo(liveMap);
+                selectedHighlightRef.current = hl;
+                selectedParnoRef.current = apiData.parcelId || parno;
+                pendingHighlightParnoRef.current = null;
+                const bounds = hl.getBounds();
+                if (bounds?.isValid()) {
+                  liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+                }
               }
-            }
-          } catch { /* fall through to boundary layer parno matching */ }
-        } else if (address) {
-          // Nominatim failed — fall back to parcel API address lookup for centroid
-          try {
-            const fb = await fetch(`${PROXY}/api/proxy/parcel?address=${encodeURIComponent(address)}&state=${encodeURIComponent(stateParam)}&county=${encodeURIComponent(countyParam)}`);
-            const fd = await fb.json();
-            if (!fd.error && fd.geometry) {
-              const turf = (await import('@turf/turf'));
-              const c = turf.centroid({ type: 'Feature', geometry: fd.geometry });
-              const fLat = c.geometry.coordinates[1]; const fLng = c.geometry.coordinates[0];
-              const liveMap = leafletMap.current;
-              if (!liveMap) return;
-              if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
-              const hl = L.geoJSON({ type: 'Feature', geometry: fd.geometry }, {
-                style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
-                renderer: L.canvas(),
-              });
-              hl.addTo(liveMap);
-              selectedHighlightRef.current = hl;
-              pendingHighlightParnoRef.current = null;
-              const bounds = hl.getBounds();
-              if (bounds?.isValid()) {
-                liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
-              } else {
-                liveMap.flyTo([fLat, fLng], 17, { animate: false });
-              }
-            }
-          } catch { /* fall through */ }
+            } catch { /* fall through to boundary layer parno matching */ }
+          }
         }
       })();
     } else if (address) {
