@@ -297,8 +297,15 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
                 <span className="text-[12px] text-gray-400">$</span>
                 <input
                   type="number"
-                  value={arv || ''}
-                  onChange={e => onArvChange(Number(e.target.value) || 0)}
+                  value={arvInput}
+                  onFocus={() => { arvFocused.current = true; }}
+                  onChange={e => setArvInput(e.target.value)}
+                  onBlur={() => {
+                    arvFocused.current = false;
+                    const v = Number(arvInput) || 0;
+                    setArvInput(String(v || ''));
+                    onArvChange(v);
+                  }}
                   className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
                   placeholder="0"
                 />
@@ -413,8 +420,15 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
                 <span className="text-[12px] text-gray-400">$</span>
                 <input
                   type="number"
-                  value={arv || ''}
-                  onChange={e => onArvChange(Number(e.target.value) || 0)}
+                  value={arvInput}
+                  onFocus={() => { arvFocused.current = true; }}
+                  onChange={e => setArvInput(e.target.value)}
+                  onBlur={() => {
+                    arvFocused.current = false;
+                    const v = Number(arvInput) || 0;
+                    setArvInput(String(v || ''));
+                    onArvChange(v);
+                  }}
                   className="w-28 text-right text-[12px] font-semibold text-[#1a2332] bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-accent"
                   placeholder="0"
                 />
