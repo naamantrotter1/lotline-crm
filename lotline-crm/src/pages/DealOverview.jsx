@@ -521,7 +521,7 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
           cardFields.length === 3 ? 'grid-cols-3' :
           'grid-cols-3'
         }`}>
-          {cardFields.slice(0, 5).map(key => {
+          {cardFields.map(key => {
             const field = DEAL_FIELDS.find(f => f.key === key);
             if (!field) return null;
             const value = getFieldValue(deal, key);
