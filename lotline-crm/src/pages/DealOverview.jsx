@@ -1122,7 +1122,7 @@ export default function DealOverview() {
           currentFields={view === 'list' ? listFields : cardFields}
           onApply={view === 'list' ? applyListFields : applyCardFields}
           onClose={() => setShowCustomize(false)}
-          maxFields={view === 'list' ? 12 : null}
+          maxFields={null}
           isListView={view === 'list'}
         />
       )}
