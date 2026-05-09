@@ -687,35 +687,45 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
     if (!address && !parno) return;
 
-    if (parno && address) {
-      // Parcel number + real lat/lng is the most accurate lookup.
-      // Geocode the address via Nominatim first so the parno API gets real coordinates
-      // (not 0,0) — the backend needs them to locate the parcel within the right region.
+    if (parno) {
+      // Use the parcel boundary layer to find + highlight the parcel by parno.
+      // This is always accurate — the boundary layer has exact geometries keyed by parno.
+      // Strategy: geocode the address via Nominatim to get into the right area, then
+      // the boundary-layer load will match parno and zoom to the exact parcel.
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
       setSearchQuery(parno);
+      pendingHighlightParnoRef.current = parno;
       (async () => {
+        const map = leafletMap.current;
+        if (!map) return;
         let lat = null;
         let lng = null;
+        // Try Nominatim first for precise coordinates
         try {
           const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
-          const nomUrl = `/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0`;
-          const nomRes = await fetch(nomUrl);
+          const nomRes = await fetch(`/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0`);
           const nomData = await nomRes.json();
-          if (nomData?.[0]?.lat) {
-            lat = parseFloat(nomData[0].lat);
-            lng = parseFloat(nomData[0].lon);
-          }
-        } catch { /* proceed with null coords */ }
-        handleSearchSelect({ parno, lat, lng, state: stateParam, county: countyParam, fallbackAddress: address });
+          if (nomData?.[0]?.lat) { lat = parseFloat(nomData[0].lat); lng = parseFloat(nomData[0].lon); }
+        } catch { /* fall through */ }
+        // Fall back: try the parcel API for approximate coords (ignore parcel result, just use centroid)
+        if (lat == null && address) {
+          try {
+            const fb = await fetch(`${PROXY}/api/proxy/parcel?address=${encodeURIComponent(address)}&state=${encodeURIComponent(stateParam)}&county=${encodeURIComponent(countyParam)}`);
+            const fd = await fb.json();
+            if (!fd.error && fd.geometry) {
+              const turf = (await import('@turf/turf'));
+              const c = turf.centroid({ type: 'Feature', geometry: fd.geometry });
+              lat = c.geometry.coordinates[1]; lng = c.geometry.coordinates[0];
+            }
+          } catch { /* fall through */ }
+        }
+        if (lat != null && lng != null) {
+          // Fly to zoom 14 — wide enough to capture the parcel even with slight geocoding offset
+          map.flyTo([lat, lng], 14, { animate: false });
+        }
       })();
-    } else if (parno) {
-      setSearchType('parno');
-      if (stateParam) setSearchState(stateParam);
-      if (countyParam) setSearchCounty(countyParam);
-      setSearchQuery(parno);
-      handleSearchSelect({ parno, lat: null, lng: null, state: stateParam, county: countyParam });
     } else if (address) {
       setSearchType('address');
       setSearchQuery(address);
