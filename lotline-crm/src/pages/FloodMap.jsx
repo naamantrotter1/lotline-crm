@@ -704,28 +704,69 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
         if (!map) return;
         let lat = null;
         let lng = null;
-        // Try Nominatim first for precise coordinates
+        // Try Nominatim first for approximate coordinates
         try {
           const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
           const nomRes = await fetch(`/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0`);
           const nomData = await nomRes.json();
           if (nomData?.[0]?.lat) { lat = parseFloat(nomData[0].lat); lng = parseFloat(nomData[0].lon); }
         } catch { /* fall through */ }
-        // Fall back: try the parcel API for approximate coords (ignore parcel result, just use centroid)
-        if (lat == null && address) {
+
+        if (lat != null && lng != null) {
+          map.flyTo([lat, lng], 16, { animate: false });
+
+          // Try parcel API with coordinates to get exact parcel geometry.
+          // This works even when the stored parno format doesn't match the boundary layer.
+          try {
+            let apiUrl = `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}&state=${encodeURIComponent(stateParam)}`;
+            if (countyParam) apiUrl += `&county=${encodeURIComponent(countyParam)}`;
+            if (address) apiUrl += `&address=${encodeURIComponent(address)}`;
+            const apiData = await fetch(apiUrl).then(r => r.json());
+            if (!apiData.error && apiData.geometry) {
+              const liveMap = leafletMap.current;
+              if (!liveMap) return;
+              if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
+              const hl = L.geoJSON({ type: 'Feature', geometry: apiData.geometry }, {
+                style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+                renderer: L.canvas(),
+              });
+              hl.addTo(liveMap);
+              selectedHighlightRef.current = hl;
+              selectedParnoRef.current = apiData.parcelId || parno;
+              pendingHighlightParnoRef.current = null; // parcel found — cancel boundary layer matching
+              const bounds = hl.getBounds();
+              if (bounds?.isValid()) {
+                liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+              }
+            }
+          } catch { /* fall through to boundary layer parno matching */ }
+        } else if (address) {
+          // Nominatim failed — fall back to parcel API address lookup for centroid
           try {
             const fb = await fetch(`${PROXY}/api/proxy/parcel?address=${encodeURIComponent(address)}&state=${encodeURIComponent(stateParam)}&county=${encodeURIComponent(countyParam)}`);
             const fd = await fb.json();
             if (!fd.error && fd.geometry) {
               const turf = (await import('@turf/turf'));
               const c = turf.centroid({ type: 'Feature', geometry: fd.geometry });
-              lat = c.geometry.coordinates[1]; lng = c.geometry.coordinates[0];
+              const fLat = c.geometry.coordinates[1]; const fLng = c.geometry.coordinates[0];
+              const liveMap = leafletMap.current;
+              if (!liveMap) return;
+              if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
+              const hl = L.geoJSON({ type: 'Feature', geometry: fd.geometry }, {
+                style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+                renderer: L.canvas(),
+              });
+              hl.addTo(liveMap);
+              selectedHighlightRef.current = hl;
+              pendingHighlightParnoRef.current = null;
+              const bounds = hl.getBounds();
+              if (bounds?.isValid()) {
+                liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+              } else {
+                liveMap.flyTo([fLat, fLng], 17, { animate: false });
+              }
             }
           } catch { /* fall through */ }
-        }
-        if (lat != null && lng != null) {
-          // Fly to zoom 14 — wide enough to capture the parcel even with slight geocoding offset
-          map.flyTo([lat, lng], 14, { animate: false });
         }
       })();
     } else if (address) {
