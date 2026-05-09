@@ -230,6 +230,18 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
         </select>
       )}
 
+      {/* Lender / Investor */}
+      {lenders.length > 0 && (
+        <select
+          value={filterLender}
+          onChange={e => setParam('lender', e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-[#c8613a] text-gray-600 bg-white"
+        >
+          <option value="">All Lenders</option>
+          {lenders.map(l => <option key={l} value={l}>{l}</option>)}
+        </select>
+      )}
+
       {/* Starred */}
       <button
         onClick={() => setParam('starred', filterStarred ? '' : '1')}
