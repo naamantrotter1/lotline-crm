@@ -333,7 +333,7 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <p className="font-bold text-gray-900">Customize {isListView ? 'List' : 'Card'} View</p>
-            <p className="text-xs text-gray-400 mt-0.5">Drag to reorder · Max {maxFields} fields</p>
+            <p className="text-xs text-gray-400 mt-0.5">Drag to reorder{maxFields ? ` · Max ${maxFields} fields` : ''}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={16} /></button>
         </div>
