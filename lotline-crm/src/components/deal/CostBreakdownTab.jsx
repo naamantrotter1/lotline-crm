@@ -139,6 +139,13 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
 
   const [lines,   setLines]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [arvInput, setArvInput] = useState(String(arv || ''));
+
+  // Keep local display in sync when prop changes from outside (e.g. realtime) but only when not focused
+  const arvFocused = useRef(false);
+  useEffect(() => {
+    if (!arvFocused.current) setArvInput(String(arv || ''));
+  }, [arv]);
 
   const loadLines = useCallback(async () => {
     setLoading(true);
