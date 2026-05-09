@@ -482,24 +482,6 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
         </div>
       )}
 
-      {/* ARV */}
-      <div className="text-xs text-gray-500 ml-4 mb-1">
-        ARV: <span className="font-semibold text-gray-800">${(deal.arv || 0).toLocaleString()}</span>
-      </div>
-
-      {/* Profit + financing — hidden for agents */}
-      {!isAgent && (
-        <div className="flex items-center gap-1 ml-4 mb-2">
-          <DollarSign size={11} className={netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
-          <span className={`text-sm font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-            ${Math.abs(Math.round(netProfit)).toLocaleString()}
-          </span>
-          {deal.financing && (
-            <span className="text-xs text-gray-400">({deal.financing})</span>
-          )}
-        </div>
-      )}
-
       {/* Closing date + countdown */}
       {(deal.closeDate || closing) && (
         <div className="flex items-center justify-between ml-4 mb-1">
