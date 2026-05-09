@@ -4,7 +4,7 @@ import {
   Star, Search, ClipboardList, Hammer, CheckCircle2,
   Settings, List, Grid3x3, ChevronUp, ChevronDown, X,
   Download, Check, GripVertical, ArrowUpDown, Plus,
-  User, DollarSign, Calendar, TreePine, SplitSquareHorizontal,
+  User, Calendar, TreePine, SplitSquareHorizontal,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { useDeals } from '../lib/DealsContext';
