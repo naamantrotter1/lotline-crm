@@ -33,8 +33,6 @@ const DEAL_FIELDS = [
   { key: 'net_profit_after_financing', label: 'Net Profit (After Fin.)',   type: 'currency', group: 'FINANCIAL' },
   { key: 'land',                       label: 'Land Cost',                 type: 'currency', group: 'FINANCIAL' },
   { key: 'mobile_home',                label: 'Home Cost',                 type: 'currency', group: 'FINANCIAL' },
-  { key: 'holding_months',             label: 'Hold Period (mo)',          type: 'number',   group: 'FINANCIAL' },
-  { key: 'holding_per_month',          label: 'Monthly Hold Cost',         type: 'currency', group: 'FINANCIAL' },
   // Property
   { key: 'county',                     label: 'County',                    type: 'text',     group: 'PROPERTY' },
   { key: 'state',                      label: 'State',                     type: 'text',     group: 'PROPERTY' },
