@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useDeals } from '../lib/DealsContext';
+import { fmtPhone } from '../utils/format';
 import {
   fetchContact, updateContact, deleteContact,
   CONTACT_TYPE_OPTIONS,
