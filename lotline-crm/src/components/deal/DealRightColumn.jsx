@@ -366,65 +366,6 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
           )}
         </Section>
 
-        {/* E-Sign Envelopes */}
-        <Section
-          icon={FileText}
-          title="E-Sign Envelopes"
-          count={envelopes.length}
-          onAdd={!readOnly ? () => navigate('/esign', { state: { dealId: deal.id } }) : undefined}
-          addLabel="New envelope"
-        >
-          {envelopes.length > 0
-            ? envelopes.map(e => (
-              <button
-                key={e.id}
-                onClick={() => navigate(`/esign/${e.id}`)}
-                className="flex items-center gap-2 w-full text-left py-1.5 hover:bg-gray-50 rounded-lg px-1 -mx-1 group transition-colors"
-              >
-                <FileText size={12} className="text-gray-400 flex-shrink-0" />
-                <span className="text-[12px] text-gray-700 flex-1 truncate group-hover:text-accent">{e.name}</span>
-                <EnvelopeStatusBadge status={e.pandadoc_status || e.status} />
-              </button>
-            ))
-            : <p className="text-[12px] text-gray-300 italic">No envelopes</p>
-          }
-        </Section>
-
-        {/* Capital Stack */}
-        <Section
-          icon={Scale}
-          title="Capital Stack"
-          count={allocations.length}
-        >
-          {allocations.length > 0
-            ? allocations.map((a, i) => {
-                const name = a.investors?.name || a.investor_name || 'Investor';
-                return (
-                  <div key={a.id || i} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Avatar name={name} size="sm" />
-                      <span className="text-[12px] text-gray-700 truncate">{name}</span>
-                    </div>
-                    <span className="text-[12px] font-semibold text-gray-800 flex-shrink-0">{fmt(a.amount)}</span>
-                  </div>
-                );
-              })
-            : (
-              <div>
-                {deal?.investor && (
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-[12px] text-gray-600">{deal.investor}</span>
-                    {deal.investorCapitalContributed && (
-                      <span className="text-[12px] font-semibold text-gray-800">{fmt(deal.investorCapitalContributed)}</span>
-                    )}
-                  </div>
-                )}
-                {!deal?.investor && <p className="text-[12px] text-gray-300 italic">No capital allocated</p>}
-              </div>
-            )
-          }
-        </Section>
-
         {/* Important Dates */}
         <Section
           icon={Calendar}
