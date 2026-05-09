@@ -43,6 +43,7 @@ const DEAL_FIELDS = [
   // Deal info
   { key: 'stage',                      label: 'Stage',                     type: 'badge',    group: 'DEAL INFO' },
   { key: 'deal_owner',                 label: 'Deal Owner',                type: 'text',     group: 'DEAL INFO' },
+  { key: 'investor',                   label: 'Lender / Investor',         type: 'text',     group: 'DEAL INFO' },
   { key: 'lead_source',                label: 'Lead Source',               type: 'text',     group: 'DEAL INFO' },
   { key: 'financing_scenario_type',    label: 'Financing',                 type: 'text',     group: 'DEAL INFO' },
   { key: 'days_in_stage',              label: 'Days in Stage',             type: 'number',   group: 'DEAL INFO' },
