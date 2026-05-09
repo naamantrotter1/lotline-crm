@@ -379,7 +379,7 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
               <div className="space-y-0.5">
                 {fieldsByGroup[group].map(field => {
                   const selected = local.includes(field.key);
-                  const disabled = !selected && local.length >= maxFields;
+                  const disabled = !selected && maxFields != null && local.length >= maxFields;
                   return (
                     <label
                       key={field.key}
