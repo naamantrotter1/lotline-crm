@@ -52,7 +52,7 @@ function ContactPopup({ contact, onClose }) {
           <div className="space-y-1.5">
             {contact.phone && (
               <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-[12px] text-gray-600 hover:text-accent transition-colors">
-                <Phone size={11} className="text-gray-400" />{contact.phone}
+                <Phone size={11} className="text-gray-400" />{fmtPhone(contact.phone)}
               </a>
             )}
             {contact.email && (
