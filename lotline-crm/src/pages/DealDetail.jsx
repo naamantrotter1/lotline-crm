@@ -2161,19 +2161,38 @@ function calcDealNetProfit({
   const sellingCosts = arvVal * ((deal?.sellingCostPct || 4.5) / 100) + 4000;
   const holdingCosts = effHoldMonths * (monthlyHoldCost || deal?.holdingPerMonth || 250);
 
-  const totalLent           = (costs?.mobileHome || 0) + (costs?.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || totalLent;
-  const monthlyInterest     = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
-  const originationFee = originationFeeType === 'percentage'
-    ? effectiveLoanAmount * ((originationFeePct || 0) / 100)
-    : (originationFeeFlat || 0);
-  const servicingFee = servicingFeeType === 'percentage'
-    ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
-    : (servicingFeeFlat || 0);
-  const otherFees = Number(deal?.scenarioData?.drawFeeHm || 0)
-                  + Number(deal?.scenarioData?.underwritingFee || 0)
-                  + Number(deal?.scenarioData?.attorneyDocFee || 0);
-  const totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee + otherFees;
+  let totalCostOfCapital;
+  if (selectedScenario === 'hmcb') {
+    // HMCB stores its own loan structure in scenarioData.hmcb — use that instead of the generic fields.
+    const hmcb = { ...HMCB_DEFAULTS, ...(deal?.scenarioData?.hmcb || {}) };
+    const totalLoan       = (hmcb.purchasePrice || 0) + (hmcb.holdbackAmount || 0);
+    const fundedAtClosing = hmcb.fundedAtClosing || hmcb.purchasePrice || 0;
+    const basisAmount     = hmcb.interestBasis === 'funded' ? fundedAtClosing : totalLoan;
+    const monthlyAuto     = basisAmount * ((hmcb.interestRate || 0) / 100) / 12;
+    const monthly         = hmcb.monthlyPaymentOverride || monthlyAuto;
+    const effOrigFee      = hmcb.originationFeeMode === 'pct'
+      ? (hmcb.originationFee / 100) * totalLoan : (hmcb.originationFee || 0);
+    const effBrokerFee    = hmcb.brokerFeeMode === 'pct'
+      ? (hmcb.brokerFee / 100) * totalLoan : (hmcb.brokerFee || 0);
+    const hmcbFees        = effOrigFee + effBrokerFee
+      + (hmcb.underwritingFee || 0) + (hmcb.appraisalFee || 0)
+      + (hmcb.attDocPrepFee || 0) + (hmcb.servicingFee || 0);
+    totalCostOfCapital    = (monthly * effHoldMonths) + hmcbFees;
+  } else {
+    const totalLent           = (costs?.mobileHome || 0) + (costs?.land || 0);
+    const effectiveLoanAmount = loanAmountOverride || totalLent;
+    const monthlyInterest     = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
+    const originationFee = originationFeeType === 'percentage'
+      ? effectiveLoanAmount * ((originationFeePct || 0) / 100)
+      : (originationFeeFlat || 0);
+    const servicingFee = servicingFeeType === 'percentage'
+      ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
+      : (servicingFeeFlat || 0);
+    const otherFees = Number(deal?.scenarioData?.drawFeeHm || 0)
+                    + Number(deal?.scenarioData?.underwritingFee || 0)
+                    + Number(deal?.scenarioData?.attorneyDocFee || 0);
+    totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee + otherFees;
+  }
 
   const profitBeforeShare = arvVal - allIn - sellingCosts - holdingCosts
                           - (hasFinancing ? totalCostOfCapital : 0);
