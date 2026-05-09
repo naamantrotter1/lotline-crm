@@ -1055,7 +1055,6 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         title:       resolvedTitle,
         body:        n.body,
         date:        n.created_at,
-        hasMentions: !!(n.mentioned_user_ids?.length),
         isTask,
         pinned:      !!n.pinned,
         meta:        { author: authorName },
