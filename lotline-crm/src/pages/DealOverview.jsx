@@ -302,7 +302,7 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
   const toggle = (key) => {
     if (local.includes(key)) {
       setLocal(prev => prev.filter(k => k !== key));
-    } else if (local.length < maxFields) {
+    } else if (maxFields == null || local.length < maxFields) {
       setLocal(prev => [...prev, key]);
     }
   };
