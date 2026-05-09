@@ -60,7 +60,7 @@ function getFieldValue(deal, key) {
     case 'address':                    return deal.address;
     case 'arv':                        return deal.arv ?? null;
     case 'total_estimated':            return deal.totalEstimated ?? null;
-    case 'net_profit':                 return deal.arv != null ? (deal.arv - (deal.totalEstimated ?? 0)) : null;
+    case 'net_profit':                 return calcNetProfit(deal);
     case 'net_profit_after_financing': return calcNetProfit(deal);
     case 'land':                       return deal.land ?? null;
     case 'mobile_home':                return deal.mobileHome ?? null;
