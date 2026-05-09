@@ -304,14 +304,46 @@ export default function Development() {
   return (
     <div className="space-y-0">
       {/* Header */}
-      <div className="flex items-center mb-4">
+      <div className="flex items-center mb-3">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-sidebar">Development</h1>
             <LiveBadge status={realtimeStatus} />
           </div>
-          <p className="text-sm text-gray-500">{devDeals.length} deals in pipeline</p>
+          <p className="text-sm text-gray-500">
+            {devDeals.length === allDevDeals.length ? `${allDevDeals.length} deals in pipeline` : `${devDeals.length} of ${allDevDeals.length} deals`}
+          </p>
         </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input type="text" placeholder="Search deals…" value={filterSearch}
+            onChange={e => setParam('q', e.target.value)}
+            className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#c8613a] w-44 bg-white" />
+        </div>
+        {owners.length > 0 && (
+          <select value={filterOwner} onChange={e => setParam('owner', e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-[#c8613a] text-gray-600 bg-white">
+            <option value="">All Owners</option>
+            {owners.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        )}
+        <select value={filterLender} onChange={e => setParam('lender', e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-[#c8613a] text-gray-600 bg-white">
+          <option value="">All Lenders</option>
+          <option value="has">Has Lender</option>
+          <option value="none">No Lender</option>
+        </select>
+        <button onClick={() => setParam('starred', filterStarred ? '' : '1')}
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStarred ? 'bg-yellow-50 border-yellow-300 text-yellow-700' : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white'}`}>
+          <Star size={11} fill={filterStarred ? 'currentColor' : 'none'} />Starred
+        </button>
+        {(filterSearch || filterOwner || filterLender || filterStarred) && (
+          <button onClick={() => setSearchParams({})} className="text-xs text-gray-400 hover:text-gray-600 underline">Clear All</button>
+        )}
       </div>
 
       {/* Kanban board */}
