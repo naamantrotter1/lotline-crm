@@ -844,12 +844,15 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
       const parno = clickedParnoRef.current;
       const clickedState = clickedStateRef.current;
+      const clickedCounty = clickedCountyRef.current;
       clickedParnoRef.current = null;
       clickedStateRef.current = null;
+      clickedCountyRef.current = null;
       let parcelUrl = parno
         ? `${PROXY}/api/proxy/parcel?parno=${encodeURIComponent(parno)}&lat=${lat}&lng=${lng}`
         : `${PROXY}/api/proxy/parcel?lat=${lat}&lng=${lng}`;
       if (clickedState) parcelUrl += `&state=${clickedState}`;
+      if (clickedCounty) parcelUrl += `&county=${encodeURIComponent(clickedCounty)}`;
       fetch(parcelUrl, { signal: parcelInfoCtrl.signal })
         .then(r => r.json())
         .then(data => {
