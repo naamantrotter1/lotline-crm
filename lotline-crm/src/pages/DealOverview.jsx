@@ -83,6 +83,11 @@ function getFieldValue(deal, key) {
   }
 }
 
+function snakeToTitle(str) {
+  if (!str) return str;
+  return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function formatFieldValue(value, type, { compact = false } = {}) {
   if (value == null || value === '') return '—';
   switch (type) {
