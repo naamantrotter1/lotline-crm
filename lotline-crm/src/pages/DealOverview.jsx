@@ -179,6 +179,7 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
 
   const owners    = useMemo(() => [...new Set(allDeals.map(d => d.dealOwner).filter(Boolean))].sort(), [allDeals]);
   const financings = useMemo(() => [...new Set(allDeals.map(d => d.financingScenarioType || d.financing).filter(Boolean))].sort(), [allDeals]);
+  const investors  = useMemo(() => [...new Set(allDeals.map(d => d.investor).filter(Boolean))].sort(), [allDeals]);
   const hasFilters = filterStage || filterOwner || filterFinancing || filterLender || filterStarred || filterSearch;
 
   const clearAll = () => setSearchParams(prev => {
