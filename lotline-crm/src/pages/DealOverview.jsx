@@ -516,12 +516,7 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
 
       {/* Custom fields strip */}
       {cardFields.length > 0 && (
-        <div className={`grid gap-x-3 gap-y-2 mt-2 pt-2 border-t border-gray-100 ml-4 ${
-          cardFields.length <= 2 ? 'grid-cols-2' :
-          cardFields.length === 3 ? 'grid-cols-3' :
-          cardFields.length === 4 ? 'grid-cols-4' :
-          'grid-cols-3'
-        }`}>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-2 pt-2 border-t border-gray-100 ml-4">
           {cardFields.map(key => {
             const field = DEAL_FIELDS.find(f => f.key === key);
             if (!field) return null;
