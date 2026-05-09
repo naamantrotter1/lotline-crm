@@ -1247,7 +1247,7 @@ function OverviewTab({
                     <span className="text-sm font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
                   </div>
                   <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Holding Costs ({deal.holdingMonths || 4} mo × ${deal.holdingPerMonth || 250}/mo)</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Holding Costs ({formatHoldPeriod(effHoldMonths)} × ${monthlyHoldCost || deal.holdingPerMonth || 250}/mo)</p>
                     <span className="text-sm font-medium text-red-500">-${holdingCosts.toLocaleString()}</span>
                   </div>
                   {hasFinancing && (
