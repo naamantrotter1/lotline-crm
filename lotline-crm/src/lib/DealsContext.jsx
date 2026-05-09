@@ -156,6 +156,26 @@ export function DealsProvider({ children }) {
     };
   }, [session?.user?.id, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
 
+  // Auto-promote deals past their close date to "Development"
+  useEffect(() => {
+    if (!deals.length || !activeOrgId) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const PRE_DEV = new Set(['Contract Signed', 'Due Diligence']);
+    const toPromote = deals.filter(d =>
+      PRE_DEV.has(d.stage) &&
+      d.closeDate &&
+      new Date(d.closeDate) < today
+    );
+    if (!toPromote.length) return;
+    // Update state immediately
+    setDeals(prev => prev.map(d =>
+      toPromote.some(p => p.id === d.id) ? { ...d, stage: 'Development' } : d
+    ));
+    // Persist to DB / LS
+    toPromote.forEach(d => syncSaveDeal({ ...d, stage: 'Development' }, activeOrgId));
+  }, [deals.length, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
   const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
