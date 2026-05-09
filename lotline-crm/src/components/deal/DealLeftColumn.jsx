@@ -609,28 +609,6 @@ export default function DealLeftColumn({
             <Settings2 size={13} />
           </button>
 
-          {/* Stage badge / editor */}
-          {stageEditing && !readOnly
-            ? (
-              <select
-                value={stage}
-                onChange={e => { setStage(e.target.value); setStageEditing(false); }}
-                onBlur={() => setStageEditing(false)}
-                autoFocus
-                className="text-[11px] font-semibold rounded-full px-2 py-0.5 border focus:outline-none bg-white border-accent/60"
-              >
-                {(stageOptions || []).map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )
-            : (
-              <button
-                onClick={() => !readOnly && setStageEditing(true)}
-                className={`flex-shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${stageBadge} ${!readOnly ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} transition-opacity`}
-              >
-                {stage}
-              </button>
-            )
-          }
         </div>
         {onOpenMapSearch && (
           <div className="mt-0.5">
