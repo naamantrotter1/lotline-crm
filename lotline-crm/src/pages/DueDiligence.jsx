@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import LiveBadge from '../components/UI/LiveBadge';
-import { CheckCircle2, Calendar, User, ChevronDown } from 'lucide-react';
+import { CheckCircle2, Calendar, User, ChevronDown, Search, Star, X } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions ────────────────────────────────────────────────────────
