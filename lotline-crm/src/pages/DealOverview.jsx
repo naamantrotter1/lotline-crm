@@ -619,12 +619,13 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
               {columns.map((col, i) => {
                 const value = getFieldValue(deal, col.key);
                 const isNeg = col.type === 'currency' && typeof value === 'number' && value < 0;
+                const isGreen = col.green && typeof value === 'number' && value >= 0;
                 return (
                   <td
                     key={col.key}
                     className={`px-3 py-3 text-sm whitespace-nowrap ${
                       i === 0 ? `sticky left-10 z-10 font-semibold text-gray-900 border-r border-gray-100 ${selectedIds.has(deal.id) ? 'bg-orange-50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}` : ''
-                    } ${isNeg ? 'text-red-500 font-semibold' : i > 0 ? 'text-gray-700' : ''}`}
+                    } ${isNeg ? 'text-red-500 font-semibold' : isGreen ? 'text-green-600 font-semibold' : i > 0 ? 'text-gray-700' : ''}`}
                   >
                     {col.type === 'badge' ? (
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STAGE_META[value]?.pill || 'bg-gray-100 text-gray-600'}`}>
