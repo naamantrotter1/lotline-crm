@@ -209,7 +209,7 @@ function ConnectDrawer({ open, builder, county, onClose }) {
                     <p className="text-xs font-bold text-accent uppercase tracking-widest mb-1">Builder Contact</p>
                     {builder.contact.phone && (
                       <a href={`tel:${builder.contact.phone}`} className="flex items-center gap-2 text-sm text-sidebar hover:text-accent transition-colors">
-                        <Phone size={13} className="text-gray-400 flex-shrink-0" />{builder.contact.phone}
+                        <Phone size={13} className="text-gray-400 flex-shrink-0" />{fmtPhone(builder.contact.phone)}
                       </a>
                     )}
                     {builder.contact.website && (
