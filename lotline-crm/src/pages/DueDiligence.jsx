@@ -204,13 +204,39 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
 export default function DueDiligence() {
   const { deals, realtimeStatus } = useDeals();
   const { activeOrgId } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // milestones: { [dealId]: { [colKey]: { status, date, contractor } } }
   const [milestones, setMilestones] = useState({});
 
-  const ddDeals = useMemo(() => (
+  const filterSearch   = searchParams.get('q')       || '';
+  const filterOwner    = searchParams.get('owner')   || '';
+  const filterLender   = searchParams.get('lender')  || '';
+  const filterStarred  = searchParams.get('starred') === '1';
+
+  const setParam = (k, v) => setSearchParams(prev => {
+    const n = new URLSearchParams(prev);
+    v ? n.set(k, v) : n.delete(k);
+    return n;
+  });
+
+  const allDdDeals = useMemo(() => (
     deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
   ), [deals]);
+
+  const owners = useMemo(() => [...new Set(allDdDeals.map(d => d.dealOwner).filter(Boolean))].sort(), [allDdDeals]);
+
+  const ddDeals = useMemo(() => allDdDeals.filter(deal => {
+    if (filterOwner && deal.dealOwner !== filterOwner) return false;
+    if (filterLender === 'has'  && !deal.investor)  return false;
+    if (filterLender === 'none' && deal.investor)   return false;
+    if (filterStarred && !deal.is_starred) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      if (![deal.address, deal.county, deal.state, deal.dealOwner].some(v => v?.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }), [allDdDeals, filterOwner, filterLender, filterStarred, filterSearch]);
 
   const sortedDeals = useMemo(() => (
     [...ddDeals].sort((a, b) => {
