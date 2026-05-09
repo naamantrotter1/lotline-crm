@@ -60,8 +60,9 @@ function getFieldValue(deal, key) {
     case 'address':                    return deal.address;
     case 'arv':                        return deal.arv ?? null;
     case 'total_estimated':            return deal.totalEstimated ?? null;
-    case 'net_profit':                 return calcNetProfit(deal);
+    case 'net_profit':                 return calcNetProfit(deal, null /* no financing */);
     case 'net_profit_after_financing': return calcNetProfit(deal);
+    // Land / home cost: prefer direct column, fall back to cost summary portions
     case 'land':                       return deal.land ?? null;
     case 'mobile_home':                return deal.mobileHome ?? null;
     case 'holding_months':             return deal.holdingMonths ?? null;
@@ -75,7 +76,7 @@ function getFieldValue(deal, key) {
     case 'lead_source':                return deal.leadSource ?? null;
     case 'financing_scenario_type':    return snakeToTitle(deal.financingScenarioType || deal.financing || null);
     case 'days_in_stage': {
-      const ref = deal.contractSignedAt || deal.created_at;
+      const ref = deal.contractSignedAt || deal.createdAt;
       return ref ? Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000) : null;
     }
     case 'contract_signed_at':         return deal.contractSignedAt ?? null;
