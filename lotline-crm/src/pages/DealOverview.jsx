@@ -274,6 +274,12 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
           <button onClick={() => setParam('financing', '')} className="hover:text-purple-900"><X size={10} /></button>
         </span>
       )}
+      {filterLender && (
+        <span className={`${pill} bg-teal-50 border-teal-200 text-teal-700`}>
+          {filterLender}
+          <button onClick={() => setParam('lender', '')} className="hover:text-teal-900"><X size={10} /></button>
+        </span>
+      )}
 
       {hasFilters && (
         <button onClick={clearAll} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">
