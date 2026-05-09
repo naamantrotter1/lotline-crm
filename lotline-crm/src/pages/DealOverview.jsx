@@ -1078,11 +1078,12 @@ export default function DealOverview() {
                     <DealCard
                       key={deal.id}
                       deal={deal}
-                      cardFields={isAgent ? cardFields.filter(k => !['net_profit','net_profit_after_financing','total_estimated','arv','land','mobile_home'].includes(k)) : cardFields}
+                      cardFields={cardFields}
                       onClick={() => navigate(`/deal/${deal.id}`, { state: { pipeline: 'deal-overview', deal } })}
                       onStar={handleStar}
                       selected={selectedIds.has(deal.id)}
                       onToggleSelect={toggleSelect}
+                      isAgent={isAgent}
                     />
                   ))}
                   {deals.length === 0 && (
