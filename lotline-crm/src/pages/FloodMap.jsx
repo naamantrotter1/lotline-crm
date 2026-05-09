@@ -197,6 +197,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const parcelInfoAbortRef = useRef(null);  // AbortController for in-flight parcel info fetch
   const selectedHighlightRef = useRef(null); // separate top-layer for the selected parcel highlight
   const fromSearchRef = useRef(false);       // true when click was triggered by search result (use data.geometry directly)
+  const pendingHighlightParnoRef = useRef(null); // parno to highlight once boundary layer loads (set by auto-load)
 
   const [state,    setState]    = useState('Both');
   const [searchParams, setSearchParams] = useSearchParams();
