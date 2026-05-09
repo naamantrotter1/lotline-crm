@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HardHat, Phone, Star, Plus, X } from 'lucide-react';
+import { fmtPhone } from '../utils/format';
 
 const TRADE_OPTIONS = [
   'Setup Crew', "Dealer's License", 'Septic Installation', 'Well Drilling',
