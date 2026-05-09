@@ -710,16 +710,12 @@ function EventCard({ event, usersById, onDeleteNote, onDeleteReply, onTogglePin,
         {/* Body — renders @mention chips */}
         {event.body && (
           <div ref={bodyRef} className={`mt-2 ${!exp ? 'line-clamp-3' : ''}`}>
-            {event.hasMentions ? (
-              <NoteBodyRenderer
-                body={event.body}
-                usersById={usersById}
-                authorName={event.meta?.author}
-                createdAt={event.date}
-              />
-            ) : (
-              <p className="text-[13px] text-gray-600 leading-relaxed">{event.body}</p>
-            )}
+            <NoteBodyRenderer
+              body={event.body}
+              usersById={usersById}
+              authorName={event.meta?.author}
+              createdAt={event.date}
+            />
           </div>
         )}
         {(hasOverflow || exp) && (
