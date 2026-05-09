@@ -1098,7 +1098,24 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     try {
       const r = await fetch(parcelUrl, { signal: parcelInfoCtrl.signal });
       const data = await r.json();
-      if (data.error) { setParcelData({ error: data.error }); return; }
+      if (data.error) {
+        // If the parno lookup failed and we have a fallback address, retry with address
+        if (result.parno && result.fallbackAddress) {
+          const fallbackUrl = `${PROXY}/api/proxy/parcel?address=${encodeURIComponent(result.fallbackAddress)}`
+            + (result.state  ? `&state=${encodeURIComponent(result.state)}`  : '')
+            + (result.county ? `&county=${encodeURIComponent(result.county)}` : '');
+          try {
+            const fr = await fetch(fallbackUrl, { signal: parcelInfoCtrl.signal });
+            const fd = await fr.json();
+            if (!fd.error) {
+              // Re-invoke with the address result by patching data
+              Object.assign(data, fd);
+              delete data.error;
+            }
+          } catch { /* ignore — fall through to show original error */ }
+        }
+        if (data.error) { setParcelData({ error: data.error }); return; }
+      }
       setParcelData(data);
       // Compute centroid from geometry for Street View; fall back to search result coords
       try {
