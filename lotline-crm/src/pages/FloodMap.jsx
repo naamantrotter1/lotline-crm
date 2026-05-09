@@ -192,6 +192,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const parcelBoundariesRef = useRef(false);
   const clickedParnoRef = useRef(null);  // set by boundary polygon click before map click fires
   const clickedStateRef = useRef(null);  // 'NC' | 'SC' — from boundary feature property
+  const clickedCountyRef = useRef(null); // county name from boundary feature (cntyname field)
   const selectedParnoRef = useRef(null); // currently highlighted parcel parno
   const parcelFetchAbortRef = useRef(null); // AbortController for in-flight boundary fetch
   const parcelInfoAbortRef = useRef(null);  // AbortController for in-flight parcel info fetch
