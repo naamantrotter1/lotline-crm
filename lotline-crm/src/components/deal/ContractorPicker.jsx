@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, ChevronDown, Plus, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { fmtPhone } from '../../utils/format';
 
 // ── Quick-add modal ───────────────────────────────────────────────────────────
 function QuickAddContact({ contractorType, orgId, onSaved, onClose }) {
