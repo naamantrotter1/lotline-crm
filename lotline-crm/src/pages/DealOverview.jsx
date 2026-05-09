@@ -30,7 +30,7 @@ const DEAL_FIELDS = [
   { key: 'arv',                        label: 'ARV',                       type: 'currency', group: 'FINANCIAL' },
   { key: 'total_estimated',            label: 'All-In Cost',               type: 'currency', group: 'FINANCIAL' },
   { key: 'net_profit',                 label: 'Net Profit',                type: 'currency', group: 'FINANCIAL' },
-  { key: 'net_profit_after_financing', label: 'Net Profit (After Fin.)',   type: 'currency', group: 'FINANCIAL' },
+  { key: 'net_profit_after_financing', label: 'Net Profit (After Fin.)',   type: 'currency', group: 'FINANCIAL', green: true },
   { key: 'cost_of_capital',           label: 'Cost of Capital',           type: 'currency', group: 'FINANCIAL' },
   { key: 'land',                       label: 'Land Cost',                 type: 'currency', group: 'FINANCIAL' },
   { key: 'mobile_home',                label: 'Home Cost',                 type: 'currency', group: 'FINANCIAL' },
