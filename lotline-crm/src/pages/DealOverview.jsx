@@ -546,16 +546,17 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
 
 function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect, onToggleAll, navigate }) {
   // columns = address (sticky) + stage (always in list) + selected fields minus address/stage
-  const extraFields = listFields
-    .filter(k => k !== 'address' && k !== 'stage')
-    .map(k => DEAL_FIELDS.find(f => f.key === k))
-    .filter(Boolean);
-
-  const columns = [
-    DEAL_FIELDS.find(f => f.key === 'address'),
-    DEAL_FIELDS.find(f => f.key === 'stage'),
-    ...extraFields,
-  ].filter(Boolean);
+  const columns = useMemo(() => {
+    const extra = listFields
+      .filter(k => k !== 'address' && k !== 'stage')
+      .map(k => DEAL_FIELDS.find(f => f.key === k))
+      .filter(Boolean);
+    return [
+      DEAL_FIELDS.find(f => f.key === 'address'),
+      DEAL_FIELDS.find(f => f.key === 'stage'),
+      ...extra,
+    ].filter(Boolean);
+  }, [listFields]);
 
   const allChecked = deals.length > 0 && deals.every(d => selectedIds.has(d.id));
   const someChecked = deals.some(d => selectedIds.has(d.id));
