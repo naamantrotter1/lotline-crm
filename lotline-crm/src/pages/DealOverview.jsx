@@ -951,13 +951,14 @@ export default function DealOverview() {
     if (filterStage && deal.stage !== filterStage)                          return false;
     if (filterOwner && deal.dealOwner !== filterOwner)                      return false;
     if (filterFinancing && (deal.financingScenarioType || deal.financing) !== filterFinancing) return false;
+    if (filterLender && deal.investor !== filterLender)                     return false;
     if (filterStarred && !deal.is_starred)                                  return false;
     if (filterSearch) {
       const q = filterSearch.toLowerCase();
       if (![deal.address, deal.county, deal.state, deal.dealOwner].some(v => v?.toLowerCase().includes(q))) return false;
     }
     return true;
-  }), [allDeals, filterStage, filterOwner, filterFinancing, filterStarred, filterSearch]);
+  }), [allDeals, filterStage, filterOwner, filterFinancing, filterLender, filterStarred, filterSearch]);
 
   const sortedDeals = useMemo(() => {
     if (!sort.key || !sort.dir) return filteredDeals;
