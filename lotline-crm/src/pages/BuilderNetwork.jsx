@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { fmtPhone } from '../utils/format';
 import {
   ArrowLeft, Search, X, Building2, Send, CheckCircle, ChevronRight,
   Users, TrendingUp, Phone, Globe, Mail, MapPin, Home, BarChart2, Info,
