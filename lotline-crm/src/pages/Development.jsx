@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
 import LiveBadge from '../components/UI/LiveBadge';
-import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText, Search, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions (matches Lovable CRM) ──────────────────────────────────
