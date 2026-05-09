@@ -172,7 +172,15 @@ export default async function handler(req, res) {
           const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '5', f: 'json' });
           const data = await fetchJson(`${NC_MAPSERVER}?${p}`).catch(() => ({}));
           if (data.features?.length) {
-            const parno = data.features[0].attributes?.parno;
+            // Prefer the feature whose siteadd starts with the house number from the search address
+            let features = data.features;
+            const houseNumMatch = qAddress.match(/^(\d+[A-Za-z]?)\s/);
+            if (houseNumMatch) {
+              const num = houseNumMatch[1].toUpperCase();
+              const exact = features.filter(f => String(f.attributes?.siteadd || '').toUpperCase().startsWith(num));
+              if (exact.length) features = exact;
+            }
+            const parno = features[0].attributes?.parno;
             if (parno) {
               const pp = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
               return `${NC_MAPSERVER}?${pp}`;
