@@ -186,7 +186,7 @@ export default function ContractorDatabase() {
             {c.phone && (
               <div className="flex items-center gap-1.5 mb-2">
                 <Phone size={12} className="text-gray-400" />
-                <span className="text-xs text-gray-500">{c.phone}</span>
+                <span className="text-xs text-gray-500">{fmtPhone(c.phone)}</span>
               </div>
             )}
 
