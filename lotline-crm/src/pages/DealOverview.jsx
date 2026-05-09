@@ -342,7 +342,7 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
         {local.length > 0 && (
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Selected ({local.length}/{maxFields})
+              Selected ({local.length}{maxFields ? `/${maxFields}` : ''})
             </p>
             <div className="space-y-1.5">
               {local.map(key => {
