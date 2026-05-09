@@ -154,7 +154,7 @@ function ContactRow({ contact, onDelete, canDelete, onEmail, onTypeChange }) {
         {contact.phone ? (
           <a href={`tel:${contact.phone}`} onClick={e => e.stopPropagation()}
             className="text-sm text-gray-600 flex items-center gap-1 hover:text-accent">
-            <Phone size={12} />{contact.phone}
+            <Phone size={12} />{fmtPhone(contact.phone)}
           </a>
         ) : <span className="text-gray-300">—</span>}
       </td>
