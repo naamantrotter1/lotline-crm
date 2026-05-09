@@ -261,19 +261,45 @@ function DevTaskCard({ deal, column, onUpdate }) {
 export default function Development() {
   const { deals, realtimeStatus } = useDeals();
   const [tick, setTick] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
 
-  const devDeals = useMemo(() =>
+  const filterSearch  = searchParams.get('q')       || '';
+  const filterOwner   = searchParams.get('owner')   || '';
+  const filterLender  = searchParams.get('lender')  || '';
+  const filterStarred = searchParams.get('starred') === '1';
+
+  const setParam = (k, v) => setSearchParams(prev => {
+    const n = new URLSearchParams(prev);
+    v ? n.set(k, v) : n.delete(k);
+    return n;
+  });
+
+  const allDevDeals = useMemo(() =>
     deals.filter(d => DEAL_OVERVIEW_STAGES.has(d.stage) && !d.isArchived)
   , [deals]);
 
-  const sortedDeals = [...devDeals].sort((a, b) => {
+  const owners = useMemo(() => [...new Set(allDevDeals.map(d => d.dealOwner).filter(Boolean))].sort(), [allDevDeals]);
+
+  const devDeals = useMemo(() => allDevDeals.filter(deal => {
+    if (filterOwner && deal.dealOwner !== filterOwner) return false;
+    if (filterLender === 'has'  && !deal.investor)  return false;
+    if (filterLender === 'none' && deal.investor)   return false;
+    if (filterStarred && !deal.is_starred) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      if (![deal.address, deal.county, deal.state, deal.dealOwner].some(v => v?.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }), [allDevDeals, filterOwner, filterLender, filterStarred, filterSearch]);
+
+  const sortedDeals = useMemo(() => [...devDeals].sort((a, b) => {
     if (!a.closeDate && !b.closeDate) return 0;
     if (!a.closeDate) return 1;
     if (!b.closeDate) return -1;
     return new Date(a.closeDate) - new Date(b.closeDate);
-  });
+  }), [devDeals]);
 
   return (
     <div className="space-y-0">
