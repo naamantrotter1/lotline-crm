@@ -649,7 +649,7 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STAGE_META[value]?.pill || 'bg-gray-100 text-gray-600'}`}>
                         {value || '—'}
                       </span>
-                    ) : key === 'days_in_stage' && value != null ? (
+                    ) : col.key === 'days_in_stage' && value != null ? (
                       `Day ${value}`
                     ) : (
                       formatFieldValue(value, col.type)
