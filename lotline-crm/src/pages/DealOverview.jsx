@@ -928,8 +928,9 @@ export default function DealOverview() {
     if (filterStage && deal.stage !== filterStage)                          return false;
     if (filterOwner && deal.dealOwner !== filterOwner)                      return false;
     if (filterFinancing && (deal.financingScenarioType || deal.financing) !== filterFinancing) return false;
-    if (filterLender === 'has'  && !deal.investor)  return false;
-    if (filterLender === 'none' && deal.investor)   return false;
+    if (filterLender === 'has'  && !deal.investor)               return false;
+    if (filterLender === 'none' && deal.investor)                return false;
+    if (filterLender && filterLender !== 'has' && filterLender !== 'none' && deal.investor !== filterLender) return false;
     if (filterStarred && !deal.is_starred)                                  return false;
     if (filterSearch) {
       const q = filterSearch.toLowerCase();
