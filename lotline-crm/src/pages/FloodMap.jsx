@@ -386,6 +386,7 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                 layer.on('click', () => {
                   if (feature.properties?.parno) clickedParnoRef.current = feature.properties.parno;
                   if (feature.properties?.state) clickedStateRef.current = feature.properties.state;
+                  clickedCountyRef.current = feature.properties?.cntyname || null;
                 });
               },
             })
