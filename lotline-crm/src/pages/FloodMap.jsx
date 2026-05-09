@@ -662,14 +662,35 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
 
     if (!address && !parno) return;
 
-    if (parno) {
-      // Parcel number + state + county is the most precise lookup — always prefer it.
-      // Pass fallbackAddress so if the parno isn't found, the address geocoder runs automatically.
+    if (parno && address) {
+      // Parcel number + real lat/lng is the most accurate lookup.
+      // Geocode the address via Nominatim first so the parno API gets real coordinates
+      // (not 0,0) — the backend needs them to locate the parcel within the right region.
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
       setSearchQuery(parno);
-      handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam, fallbackAddress: address || undefined });
+      (async () => {
+        let lat = null;
+        let lng = null;
+        try {
+          const nomQ = [address, countyParam, stateParam].filter(Boolean).join(', ');
+          const nomUrl = `/nominatim/search?q=${encodeURIComponent(nomQ)}&format=json&limit=1&addressdetails=0`;
+          const nomRes = await fetch(nomUrl);
+          const nomData = await nomRes.json();
+          if (nomData?.[0]?.lat) {
+            lat = parseFloat(nomData[0].lat);
+            lng = parseFloat(nomData[0].lon);
+          }
+        } catch { /* proceed with null coords */ }
+        handleSearchSelect({ parno, lat, lng, state: stateParam, county: countyParam, fallbackAddress: address });
+      })();
+    } else if (parno) {
+      setSearchType('parno');
+      if (stateParam) setSearchState(stateParam);
+      if (countyParam) setSearchCounty(countyParam);
+      setSearchQuery(parno);
+      handleSearchSelect({ parno, lat: null, lng: null, state: stateParam, county: countyParam });
     } else if (address) {
       setSearchType('address');
       setSearchQuery(address);
