@@ -2180,7 +2180,7 @@ function calcDealNetProfit({
   const profitShareAmount = hasFinancing
     ? profitBeforeShare * ((profitSharePct || 0) / 100)
     : 0;
-  const netProfit = profitBeforeShare - profitShareAmount;
+  const netProfit = profitBeforeShare;
 
   return {
     netProfit,
