@@ -396,6 +396,30 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
           parcelBoundaryLayerRef.current = newLayer;
           if (oldLayer) oldLayer.remove();
           if (parcelBoundaryLayerRef.current) parcelBoundaryLayerRef.current.bringToFront();
+
+          // If an auto-load requested parno highlighting, find the feature and zoom to it
+          const pendingParno = pendingHighlightParnoRef.current;
+          if (pendingParno && newLayer && liveMap._mapPane) {
+            newLayer.eachLayer(l => {
+              const fp = l.feature?.properties?.parno;
+              if (fp && String(fp).trim() === String(pendingParno).trim()) {
+                pendingHighlightParnoRef.current = null; // clear so it doesn't re-fire
+                if (selectedHighlightRef.current) { selectedHighlightRef.current.remove(); selectedHighlightRef.current = null; }
+                const hl = L.geoJSON(l.toGeoJSON(), {
+                  style: { color: '#00ff00', weight: 6, fillOpacity: 0.08, opacity: 1 },
+                  renderer: L.canvas(),
+                });
+                hl.addTo(liveMap);
+                selectedHighlightRef.current = hl;
+                selectedParnoRef.current = pendingParno;
+                const bounds = hl.getBounds();
+                if (bounds?.isValid()) {
+                  liveMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 19, animate: true });
+                }
+              }
+            });
+          }
+
           // Re-raise highlight above freshly added boundary layer
           if (selectedHighlightRef.current) selectedHighlightRef.current.bringToFront?.();
         } catch (_e) { /* map invalidated mid-render, retry on next pan */ }
