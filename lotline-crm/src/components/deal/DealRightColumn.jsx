@@ -318,7 +318,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
                 return (
                   <div key={t.id} className="flex items-center gap-2 py-1.5 group">
                     <TaskStatusIcon status={t.status} />
-                    <span className={`text-[12px] flex-1 truncate ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
+                    <span className={`text-[12px] flex-1 ${t.status === 'done' ? 'line-through text-gray-300' : 'text-gray-700'}`}>
                       {t.title}
                     </span>
                     {t.due_date && (
