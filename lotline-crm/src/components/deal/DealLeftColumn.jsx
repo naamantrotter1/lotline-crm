@@ -12,6 +12,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { fetchContacts } from '../../lib/contactsData';
+import { fmtPhone } from '../../utils/format';
 import CustomizeRecordDrawer from './CustomizeRecordDrawer';
 import ImportantDates from './ImportantDates';
 
