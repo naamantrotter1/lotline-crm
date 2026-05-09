@@ -135,7 +135,7 @@ function ContactPickerModal({ dealId, orgId, existingIds, onAdd, onClose }) {
   );
 }
 
-function KeyContacts({ deal }) {
+export function KeyContacts({ deal }) {
   const { activeOrgId } = useAuth();
   const [items, setItems] = useState([]);
   const [popup, setPopup] = useState(null);
