@@ -338,7 +338,7 @@ export default function ContactDetail() {
             <EditableField label="Phone" value={contact.phone} onSave={v => save({ phone: v })} type="tel">
               {contact.phone && (
                 <a href={`tel:${contact.phone}`} className="text-sm text-gray-700 flex items-center gap-1 hover:text-accent">
-                  <Phone size={12} />{contact.phone}
+                  <Phone size={12} />{fmtPhone(contact.phone)}
                 </a>
               )}
             </EditableField>
