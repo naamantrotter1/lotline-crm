@@ -361,10 +361,11 @@ function CustomizePanel({ currentFields, onApply, onClose, maxFields, isListView
                   return (
                     <label
                       key={field.key}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none ${
-                        selected   ? 'bg-[#c8613a]/8 text-gray-800' :
+                      onClick={() => !disabled && toggle(field.key)}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors select-none ${
+                        selected   ? 'bg-[#c8613a]/8 text-gray-800 cursor-pointer' :
                         disabled   ? 'opacity-35 cursor-not-allowed' :
-                                     'hover:bg-gray-50 text-gray-600'
+                                     'hover:bg-gray-50 text-gray-600 cursor-pointer'
                       }`}
                     >
                       <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
