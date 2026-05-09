@@ -663,12 +663,13 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     if (!address && !parno) return;
 
     if (parno) {
-      // Parcel number + state + county is the most precise lookup — always prefer it
+      // Parcel number + state + county is the most precise lookup — always prefer it.
+      // Pass fallbackAddress so if the parno isn't found, the address geocoder runs automatically.
       setSearchType('parno');
       if (stateParam) setSearchState(stateParam);
       if (countyParam) setSearchCounty(countyParam);
       setSearchQuery(parno);
-      handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam });
+      handleSearchSelect({ parno, lat: 0, lng: 0, state: stateParam, county: countyParam, fallbackAddress: address || undefined });
     } else if (address) {
       setSearchType('address');
       setSearchQuery(address);
