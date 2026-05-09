@@ -247,6 +247,8 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
         <option value="">All Lenders</option>
         <option value="has">Has Lender</option>
         <option value="none">No Lender</option>
+        {investors.length > 0 && <option disabled>──────────</option>}
+        {investors.map(inv => <option key={inv} value={inv}>{inv}</option>)}
       </select>
 
       {/* Starred */}
