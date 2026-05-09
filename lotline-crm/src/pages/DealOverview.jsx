@@ -161,7 +161,7 @@ function FilterBar({ allDeals, searchParams, setSearchParams }) {
   const filterStage    = searchParams.get('stage')    || '';
   const filterOwner    = searchParams.get('owner')    || '';
   const filterFinancing = searchParams.get('financing') || '';
-  const filterLender   = searchParams.get('lender')   || '';
+  const filterLender   = searchParams.get('lender')   === '1';
   const filterStarred  = searchParams.get('starred')  === '1';
   const filterSearch   = searchParams.get('q')        || '';
 
@@ -911,7 +911,7 @@ export default function DealOverview() {
   const filterStage    = searchParams.get('stage')    || '';
   const filterOwner    = searchParams.get('owner')    || '';
   const filterFinancing = searchParams.get('financing') || '';
-  const filterLender   = searchParams.get('lender')   || '';
+  const filterLender   = searchParams.get('lender')   === '1';
   const filterStarred  = searchParams.get('starred')  === '1';
   const filterSearch   = searchParams.get('q')        || '';
 
