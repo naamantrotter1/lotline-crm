@@ -147,7 +147,11 @@ export default async function handler(req, res) {
 
   const getAttrUrl = async () => {
     if (qParno) {
-      const where = `parno='${qParno.replace(/'/g,"''")}'`;
+      let where = `parno='${qParno.replace(/'/g,"''")}'`;
+      if (qCounty) {
+        const cntyTitle = qCounty.trim().replace(/\w+/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase());
+        where += ` AND cntyname LIKE '${cntyTitle.replace(/'/g,"''")}%'`;
+      }
       const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
       return `${NC_MAPSERVER}?${p}`;
     }
