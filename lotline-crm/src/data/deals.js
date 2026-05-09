@@ -117,12 +117,8 @@ export function calcNetProfit(deal, totalActualOverride) {
   const coc = hasFinancing ? computeCostOfCapital(deal) : 0;
 
   const profitBeforeShare = arv - totalCosts - sellingCosts - holdingCosts - coc;
-  const profitSharePct = sd.profitSharePct != null ? sd.profitSharePct : _defaultProfitSharePct(deal?.investor);
-  const profitShareAmount = hasFinancing
-    ? profitBeforeShare * (profitSharePct / 100)
-    : 0;
 
-  return profitBeforeShare - profitShareAmount;
+  return profitBeforeShare;
 }
 
 export const DEAL_OVERVIEW_DEALS = [
