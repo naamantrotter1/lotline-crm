@@ -303,36 +303,6 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
           <KeyContacts deal={deal} />
         </Section>
 
-        {/* Contacts */}
-        <Section
-          icon={UserCircle}
-          title="Contacts"
-          count={contacts.length}
-          onAdd={!readOnly ? () => navigate('/contacts/new', { state: { dealId: deal.id } }) : undefined}
-          addLabel="Link contact"
-        >
-          {contacts.length > 0
-            ? contacts.map(c => {
-                const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => navigate(`/contacts/${c.id}`)}
-                    className="flex items-center gap-2 w-full text-left py-1.5 hover:bg-gray-50 rounded-lg px-1 -mx-1 group transition-colors"
-                  >
-                    <Avatar name={name} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium text-gray-800 truncate group-hover:text-accent">{name}</p>
-                      {c.title && <p className="text-[10px] text-gray-400 truncate">{c.title}{c.company ? ` · ${c.company}` : ''}</p>}
-                    </div>
-                    <ExternalLink size={11} className="text-gray-300 group-hover:text-accent flex-shrink-0 opacity-0 group-hover:opacity-100" />
-                  </button>
-                );
-              })
-            : <p className="text-[12px] text-gray-300 italic">No contacts linked</p>
-          }
-        </Section>
-
         {/* Tasks */}
         <Section
           icon={CheckSquare}
