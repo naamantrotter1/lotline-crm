@@ -315,6 +315,8 @@ function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, memberCol
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  const [overflowDay, setOverflowDay] = useState(null);
+
   const eventsForDay = (day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return allEvents.filter(e => {
@@ -322,6 +324,45 @@ function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, memberCol
       return ts?.startsWith(dateStr);
     });
   };
+
+  const renderEventPill = (ev, onClick) => {
+    if (ev._isGCal) {
+      const color = memberColors[ev.user_id] || '#9E9E9E';
+      const name  = ev.profiles?.first_name || 'Team';
+      const label = `${name} — ${ev.title}`;
+      return (
+        <div key={ev.id} onClick={onClick}
+          className="text-xs px-2 py-1 rounded font-medium truncate cursor-pointer text-white opacity-90 hover:opacity-100 transition-opacity"
+          style={{ backgroundColor: color }} title={label}>
+          {label}
+        </div>
+      );
+    }
+    if (ev._isMeeting) {
+      return (
+        <div key={ev.id} onClick={onClick}
+          className="text-xs px-2 py-1 rounded font-medium truncate transition-colors flex items-center gap-1 cursor-pointer bg-accent/10 text-accent hover:bg-accent/20">
+          <span className="truncate">{ev.title}</span>
+        </div>
+      );
+    }
+    const bg      = eventColor(ev);
+    const street  = streetAddress(ev._dealAddress);
+    const fullLbl = street ? `${street} — ${ev.title}` : ev.title;
+    const dispLbl = ev._isCompleted ? `✓ ${fullLbl}` : fullLbl;
+    const isOvr   = ev._isOverdue && !ev._isCompleted;
+    return (
+      <div key={ev.id} onClick={onClick}
+        className="text-xs px-2 py-1 rounded font-medium truncate cursor-pointer text-white transition-all hover:brightness-110"
+        style={{ backgroundColor: bg, opacity: ev._isCompleted ? 0.5 : undefined, borderLeft: isOvr ? '3px solid #b91c1c' : undefined }}
+        title={fullLbl}>
+        {dispLbl}
+      </div>
+    );
+  };
+
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const overflowEvents = overflowDay ? eventsForDay(overflowDay) : [];
 
   return (
     <div>
@@ -344,57 +385,38 @@ function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, memberCol
                 {day}
               </div>
               <div className="space-y-1">
-                {dayEvents.slice(0, 4).map(ev => {
-                  // Google Calendar event
-                  if (ev._isGCal) {
-                    const color = memberColors[ev.user_id] || '#9E9E9E';
-                    const name  = ev.profiles?.first_name || 'Team';
-                    const label = `${name} — ${ev.title}`;
-                    return (
-                      <div key={ev.id} onClick={e => { e.stopPropagation(); onEventClick(ev); }}
-                        className="text-xs px-2 py-1 rounded font-medium truncate cursor-pointer text-white opacity-90 hover:opacity-100 transition-opacity"
-                        style={{ backgroundColor: color }}
-                        title={label}>
-                        {label}
-                      </div>
-                    );
-                  }
-                  // CRM meeting
-                  if (ev._isMeeting) {
-                    return (
-                      <div key={ev.id} onClick={e => { e.stopPropagation(); onEventClick(ev); }}
-                        className="text-xs px-2 py-1 rounded font-medium truncate transition-colors flex items-center gap-1 cursor-pointer bg-accent/10 text-accent hover:bg-accent/20">
-                        <span className="truncate">{ev.title}</span>
-                      </div>
-                    );
-                  }
-                  // Deal event
-                  const bg      = eventColor(ev);
-                  const street  = streetAddress(ev._dealAddress);
-                  const fullLbl = street ? `${street} — ${ev.title}` : ev.title;
-                  const dispLbl = ev._isCompleted ? `✓ ${fullLbl}` : fullLbl;
-                  const isOvr   = ev._isOverdue && !ev._isCompleted;
-                  return (
-                    <div key={ev.id} onClick={e => { e.stopPropagation(); onEventClick(ev); }}
-                      className="text-xs px-2 py-1 rounded font-medium truncate cursor-pointer text-white transition-all hover:brightness-110"
-                      style={{
-                        backgroundColor: bg,
-                        opacity: ev._isCompleted ? 0.5 : undefined,
-                        borderLeft: isOvr ? '3px solid #b91c1c' : undefined,
-                      }}
-                      title={fullLbl}>
-                      {dispLbl}
-                    </div>
-                  );
-                })}
+                {dayEvents.slice(0, 4).map(ev =>
+                  renderEventPill(ev, e => { e.stopPropagation(); onEventClick(ev); })
+                )}
                 {dayEvents.length > 4 && (
-                  <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 4} more</div>
+                  <button
+                    onClick={e => { e.stopPropagation(); setOverflowDay(day); }}
+                    className="text-xs text-accent hover:text-accent/70 px-1 font-medium transition-colors">
+                    +{dayEvents.length - 4} more
+                  </button>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Overflow day modal */}
+      {overflowDay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setOverflowDay(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[340px] max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">{MONTH_NAMES[month]} {overflowDay}</h3>
+              <button onClick={() => setOverflowDay(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            </div>
+            <div className="p-3 space-y-1.5 overflow-y-auto">
+              {overflowEvents.map(ev =>
+                renderEventPill(ev, e => { e.stopPropagation(); setOverflowDay(null); onEventClick(ev); })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
