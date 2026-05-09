@@ -519,6 +519,7 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
         <div className={`grid gap-x-3 gap-y-2 mt-2 pt-2 border-t border-gray-100 ml-4 ${
           cardFields.length <= 2 ? 'grid-cols-2' :
           cardFields.length === 3 ? 'grid-cols-3' :
+          cardFields.length === 4 ? 'grid-cols-4' :
           'grid-cols-3'
         }`}>
           {cardFields.map(key => {
