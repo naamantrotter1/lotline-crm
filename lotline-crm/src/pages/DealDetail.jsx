@@ -1253,7 +1253,7 @@ function OverviewTab({
                   {hasFinancing && (
                     <div className="py-2">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Financing Costs</p>
-                      <span className="text-sm font-medium text-red-500">-${Math.round(totalCostOfCapital + profitShareAmount).toLocaleString()}</span>
+                      <span className="text-sm font-medium text-red-500">-${Math.round(totalCostOfCapital).toLocaleString()}</span>
                     </div>
                   )}
                   <div className="py-2">
