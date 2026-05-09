@@ -299,7 +299,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
       <div className="flex-1">
 
         {/* Key Contacts */}
-        <Section icon={Users} title="Key Contacts" defaultOpen>
+        <Section icon={Users} title="Key Contacts">
           <KeyContacts deal={deal} />
         </Section>
 
