@@ -297,23 +297,6 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
 
       <div className="flex-1">
 
-        {/* Property */}
-        <Section icon={Home} title="Property" defaultOpen>
-          {deal?.address
-            ? (
-              <div className="text-[12px] bg-gray-50 rounded-lg px-3 py-2.5">
-                <p className="font-semibold text-gray-800">{deal.address}</p>
-                {deal.county && (
-                  <p className="text-gray-400 mt-0.5 flex items-center gap-1">
-                    <MapPin size={10} />{deal.county}, {deal.state || deal.dealState}
-                  </p>
-                )}
-                {deal.acreage && <p className="text-gray-400">{deal.acreage} acres · Parcel {deal.parcelId || 'N/A'}</p>}
-              </div>
-            )
-            : <p className="text-[12px] text-gray-300 italic">No address set</p>
-          }
-        </Section>
 
         {/* Contacts */}
         <Section
