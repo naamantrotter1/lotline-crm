@@ -6,7 +6,7 @@ import {
   Download, Check, GripVertical, ArrowUpDown, Plus,
   User, Calendar, TreePine, SplitSquareHorizontal,
 } from 'lucide-react';
-import { calcNetProfit } from '../data/deals';
+import { calcNetProfit, computeCostOfCapital } from '../data/deals';
 import { useDeals } from '../lib/DealsContext';
 import { saveDeal } from '../lib/dealsSync';
 import { useAuth } from '../lib/AuthContext';
