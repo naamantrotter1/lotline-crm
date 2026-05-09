@@ -158,8 +158,34 @@ export default async function handler(req, res) {
 
     // ── Address-based lookup (deal opened from CRM) ──────────────────────────
     if (qAddress) {
-      // Strategy 1: Search NC OneMap by siteadd road keyword + county.
-      // This works even when geocoding is imprecise (rural roads, no house number).
+      // Strategy 1 (PREFERRED when coords available): point containment → bbox closest centroid
+      if (latN && lngN) {
+        // First try point-containment query — finds the parcel whose polygon contains the point
+        const ptGeom = JSON.stringify({ x: lngN, y: latN, spatialReference: { wkid: 4326 } });
+        const ptParams = new URLSearchParams({ geometry: ptGeom, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'false', resultRecordCount: '1', f: 'json' });
+        const ptData = await fetchJson(`${NC_FEATSERVER}?${ptParams}`).catch(() => ({}));
+        let coordParno = ptData.features?.[0]?.attributes?.parno;
+
+        // Fall back to 500m bbox, pick the feature whose centroid is closest to the geocoded point
+        if (!coordParno) {
+          const d = 0.005;
+          const bboxParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '20', f: 'geojson' });
+          const bboxData = await fetchJson(`${NC_FEATSERVER}?${bboxParams}`).catch(() => ({}));
+          let bestDist = Infinity;
+          for (const f of bboxData.features || []) {
+            const [fLat, fLng] = centroidOf(f.geometry);
+            const dist = (fLat - latN) ** 2 + (fLng - lngN) ** 2;
+            if (dist < bestDist) { bestDist = dist; coordParno = f.properties?.parno; }
+          }
+        }
+
+        if (coordParno) {
+          const pp = new URLSearchParams({ where: `parno='${coordParno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
+          return `${NC_MAPSERVER}?${pp}`;
+        }
+      }
+
+      // Strategy 2 fallback: keyword search by siteadd + county (used when no coords available)
       if (qCounty) {
         const stopWords = new Set(['RD','ST','DR','AVE','LN','CT','BLVD','HWY','SE','NE','SW','NW','N','S','E','W','LOT','TBD','0']);
         const streetPart = qAddress.split(',')[0].replace(/^\d+\w?\s+/, '').trim();
@@ -172,7 +198,6 @@ export default async function handler(req, res) {
           const p = new URLSearchParams({ where, outFields: ATTR_FIELDS, returnGeometry: 'false', resultRecordCount: '5', f: 'json' });
           const data = await fetchJson(`${NC_MAPSERVER}?${p}`).catch(() => ({}));
           if (data.features?.length) {
-            // Prefer the feature whose siteadd starts with the house number from the search address
             let features = data.features;
             const houseNumMatch = qAddress.match(/^(\d+[A-Za-z]?)\s/);
             if (houseNumMatch) {
@@ -185,26 +210,6 @@ export default async function handler(req, res) {
               const pp = new URLSearchParams({ where: `parno='${parno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
               return `${NC_MAPSERVER}?${pp}`;
             }
-          }
-        }
-      }
-
-      // Strategy 2: Geocoded coords with large bbox — pick parcel centroid closest to geocoded pt
-      if (latN && lngN) {
-        const d = 0.005; // ~500m
-        const geoParams = new URLSearchParams({ geometry: `${lngN-d},${latN-d},${lngN+d},${latN+d}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'parno', returnGeometry: 'true', outSR: '4326', resultRecordCount: '20', f: 'geojson' });
-        const geoData = await fetchJson(`${NC_FEATSERVER}?${geoParams}`).catch(() => ({}));
-        const geoFeatures = geoData.features || [];
-        if (geoFeatures.length) {
-          let bestParno = null, bestDist = Infinity;
-          for (const f of geoFeatures) {
-            const [fLat, fLng] = centroidOf(f.geometry);
-            const dist = (fLat - latN) ** 2 + (fLng - lngN) ** 2;
-            if (dist < bestDist) { bestDist = dist; bestParno = f.properties?.parno; }
-          }
-          if (bestParno) {
-            const pp = new URLSearchParams({ where: `parno='${bestParno.replace(/'/g,"''")}'`, outFields: ATTR_FIELDS, returnGeometry: 'false', f: 'json' });
-            return `${NC_MAPSERVER}?${pp}`;
           }
         }
       }
