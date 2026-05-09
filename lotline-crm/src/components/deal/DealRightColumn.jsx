@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { fetchTasks, deleteTask } from '../../lib/tasksData';
 import { fetchEnvelopes } from '../../lib/esignData';
 import ImportantDates from './ImportantDates';
+import { KeyContacts } from './DealLeftColumn';
 
 // ── Collapsible section ───────────────────────────────────────────────────────
 function Section({ icon: Icon, title, count, defaultOpen = false, children, onAdd, addLabel = 'Add' }) {
