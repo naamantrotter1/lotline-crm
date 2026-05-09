@@ -7,10 +7,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, ChevronDown, ChevronRight,
   Edit3, Check, X, StickyNote, Mail, Phone, CheckSquare,
-  CalendarPlus, Layers, Settings2, Landmark, Handshake, User,
+  CalendarPlus, Layers, Settings2, Landmark, Handshake, User, Plus, Search, Building2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { fetchContacts } from '../../lib/contactsData';
 import CustomizeRecordDrawer from './CustomizeRecordDrawer';
 import ImportantDates from './ImportantDates';
 
