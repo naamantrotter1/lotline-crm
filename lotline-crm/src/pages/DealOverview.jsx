@@ -524,42 +524,47 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
 
 // ── ListView ──────────────────────────────────────────────────────────────────
 
-function EditableOwnerCell({ value, dealId, onSave }) {
+function EditableOwnerCell({ value, dealId, onSave, users }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value || '');
-  const inputRef = useRef(null);
 
-  const commit = () => {
+  const handleChange = (e) => {
+    e.stopPropagation();
+    onSave(dealId, e.target.value);
     setEditing(false);
-    if (draft !== (value || '')) onSave(dealId, draft);
   };
 
   if (editing) {
     return (
-      <input
-        ref={inputRef}
+      <select
         autoFocus
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); } }}
+        defaultValue={value || ''}
+        onChange={handleChange}
+        onBlur={() => setEditing(false)}
         onClick={e => e.stopPropagation()}
-        className="w-full px-1 py-0.5 text-sm border border-accent/50 rounded focus:outline-none focus:ring-1 focus:ring-accent/40 bg-white"
-      />
+        className="w-full text-sm border border-accent/50 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-accent/40 bg-white"
+      >
+        <option value="">— Unassigned —</option>
+        {value && !users.some(u => u.name === value) && (
+          <option value={value}>{value}</option>
+        )}
+        {users.map(u => (
+          <option key={u.id} value={u.name}>{u.name}</option>
+        ))}
+      </select>
     );
   }
   return (
     <span
-      onClick={e => { e.stopPropagation(); setDraft(value || ''); setEditing(true); }}
-      className="cursor-text hover:bg-gray-100 px-1 py-0.5 rounded block w-full min-w-[80px]"
-      title="Click to edit"
+      onClick={e => { e.stopPropagation(); setEditing(true); }}
+      className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block w-full min-w-[80px]"
+      title="Click to change"
     >
       {value || <span className="text-gray-300">—</span>}
     </span>
   );
 }
 
-function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect, onToggleAll, navigate, onUpdateDealOwner }) {
+function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect, onToggleAll, navigate, onUpdateDealOwner, orgUsers = [] }) {
   // columns = address (sticky) + stage (always in list) + selected fields minus address/stage
   const columns = useMemo(() => {
     const extra = listFields
