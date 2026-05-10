@@ -922,6 +922,12 @@ export default function DealOverview() {
     if (deal) saveDeal({ ...deal, is_starred: val }, activeOrgId);
   };
 
+  const handleUpdateDealOwner = (id, newOwner) => {
+    setDeals(prev => prev.map(d => String(d.id) === String(id) ? { ...d, dealOwner: newOwner } : d));
+    const deal = rawDeals.find(d => String(d.id) === String(id));
+    if (deal) saveDeal({ ...deal, dealOwner: newOwner }, activeOrgId);
+  };
+
   const allDeals = useMemo(() =>
     rawDeals.filter(d => STAGES.includes(d.stage) && !d.isArchived),
     [rawDeals]
