@@ -234,6 +234,7 @@ export default function TeamSettings() {
   const [members,     setMembers]     = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading,     setLoading]     = useState(true);
+  const [fetchError,  setFetchError]  = useState(null);
   const [showInvite,  setShowInvite]  = useState(false);
   const [saving,      setSaving]      = useState(null); // memberId being updated
   const [toast,       setToast]       = useState(null);
