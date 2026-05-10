@@ -13,6 +13,7 @@ export default async function handler(req, res) {
   if (!auth) return;
 
   const { adminClient, userId, orgId, orgRole } = auth;
+  if (!ensureAdminClient(adminClient, res)) return;
 
   if (!isAdmin(orgRole)) {
     return res.status(403).json({ error: 'Only owners and admins can invite team members.' });
