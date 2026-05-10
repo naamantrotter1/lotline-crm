@@ -250,17 +250,20 @@ export default function TeamSettings() {
 
   const fetchTeam = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const { data: sess } = await import('../../lib/supabase').then(m => m.supabase.auth.getSession());
       const token = sess?.session?.access_token;
-      if (!token) return;
+      if (!token) { setFetchError('Not signed in — please refresh the page.'); return; }
       const res = await fetch('/api/team/members', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!res.ok) return;
       const json = await res.json();
+      if (!res.ok) { setFetchError(json?.error || `API error ${res.status}`); return; }
       setMembers(json.members || []);
       setInvitations(json.invitations || []);
+    } catch (e) {
+      setFetchError(e.message || 'Network error loading team');
     } finally {
       setLoading(false);
     }
