@@ -1180,6 +1180,7 @@ export default function DealOverview() {
             navigate={navigate}
             isAgent={isAgent}
             onUpdateDealOwner={handleUpdateDealOwner}
+            orgUsers={orgUsers}
           />
         </div>
       )}
