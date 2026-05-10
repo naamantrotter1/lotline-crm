@@ -437,6 +437,13 @@ export default function TeamSettings() {
           <div className="flex items-center justify-center py-10">
             <Loader2 size={20} className="animate-spin text-gray-300" />
           </div>
+        ) : fetchError ? (
+          <div className="px-5 py-8 text-center">
+            <AlertCircle size={20} className="text-red-400 mx-auto mb-2" />
+            <p className="text-sm text-red-500 font-medium">Failed to load team</p>
+            <p className="text-xs text-gray-400 mt-1">{fetchError}</p>
+            <button onClick={fetchTeam} className="mt-3 text-xs text-accent underline">Retry</button>
+          </div>
         ) : members.length === 0 ? (
           <p className="px-5 py-8 text-sm text-gray-400 text-center">No members yet.</p>
         ) : (
