@@ -965,6 +965,32 @@ export default function DealOverview() {
     if (deal) saveDeal({ ...deal, dealOwner: newOwner }, activeOrgId);
   };
 
+  const [orgUsers, setOrgUsers] = useState([]);
+  useEffect(() => {
+    if (!activeOrgId || !session) return;
+    (async () => {
+      const token = session?.access_token;
+      if (token) {
+        try {
+          const res = await fetch('/api/team/members', { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const { members } = await res.json();
+            const users = (members || [])
+              .filter(m => m.status !== 'removed')
+              .map(m => {
+                const p = m.profiles || {};
+                const name = p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email || null;
+                return name ? { id: m.user_id, name } : null;
+              })
+              .filter(Boolean)
+              .sort((a, b) => a.name.localeCompare(b.name));
+            if (users.length > 0) { setOrgUsers(users); return; }
+          }
+        } catch { /* fall through */ }
+      }
+    })();
+  }, [activeOrgId, session]);
+
   const allDeals = useMemo(() =>
     rawDeals.filter(d => STAGES.includes(d.stage) && !d.isArchived),
     [rawDeals]
