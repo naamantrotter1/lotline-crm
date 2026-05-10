@@ -41,15 +41,37 @@ export function computeCostOfCapital(deal) {
   const sd = deal?.scenarioData;
   if (!sd) return 0;
   const fin = (deal?.financing || '').toLowerCase().trim();
+  const scenarioType = (deal?.financingScenarioType || '').toLowerCase().trim();
   if (!fin || fin === 'cash') return 0;
+
+  const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
+  const effHold = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
+
+  // HMCB stores its loan structure in scenarioData.hmcb — use dedicated calculation.
+  if (scenarioType === 'hmcb' || fin.includes('construction holdback')) {
+    const hmcb = sd.hmcb || {};
+    const totalLoan       = (hmcb.purchasePrice || 0) + (hmcb.holdbackAmount || 0);
+    if (!totalLoan) return 0;
+    const fundedAtClosing = hmcb.fundedAtClosing || hmcb.purchasePrice || 0;
+    const basisAmount     = hmcb.interestBasis === 'funded' ? fundedAtClosing : totalLoan;
+    const monthlyAuto     = basisAmount * ((hmcb.interestRate || 13.5) / 100) / 12;
+    const monthly         = hmcb.monthlyPaymentOverride || monthlyAuto;
+    const effOrigFee      = hmcb.originationFeeMode === 'pct'
+      ? (hmcb.originationFee / 100) * totalLoan : (hmcb.originationFee || 0);
+    const effBrokerFee    = hmcb.brokerFeeMode === 'pct'
+      ? (hmcb.brokerFee / 100) * totalLoan : (hmcb.brokerFee || 0);
+    const totalFees       = effOrigFee + effBrokerFee
+      + (hmcb.underwritingFee || 0) + (hmcb.appraisalFee || 0)
+      + (hmcb.attDocPrepFee || 0) + (hmcb.servicingFee || 0);
+    return (monthly * effHold) + totalFees;
+  }
+
   const loanFallback = deal.investorCapitalContributed || (deal.land || 0) + (deal.mobileHome || 0);
   const loan = sd.loanAmountOverride || loanFallback;
   if (!loan) return 0;
   const inv = deal?.investor;
   const rate = sd.interestRate != null ? sd.interestRate : _defaultInterestRate(inv);
   const monthlyInterest = loan * (rate / 100) / 12;
-  const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
-  const effHold = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
   const origPct = sd.originationFeePct != null ? sd.originationFeePct : _defaultOriginationFeePct(inv);
   const origFee = (sd.originationFeeType === 'percentage' || !sd.originationFeeType)
     ? loan * (origPct / 100)
