@@ -2162,6 +2162,11 @@ function calcDealNetProfit({
   const holdingCosts = effHoldMonths * (monthlyHoldCost || deal?.holdingPerMonth || 250);
 
   let totalCostOfCapital;
+  let effectiveLoanAmount = 0;
+  let monthlyInterest = 0;
+  let originationFee = 0;
+  let servicingFee = 0;
+
   if (selectedScenario === 'hmcb') {
     // HMCB stores its own loan structure in scenarioData.hmcb — use that instead of the generic fields.
     const hmcb = { ...HMCB_DEFAULTS, ...(deal?.scenarioData?.hmcb || {}) };
@@ -2177,15 +2182,18 @@ function calcDealNetProfit({
     const hmcbFees        = effOrigFee + effBrokerFee
       + (hmcb.underwritingFee || 0) + (hmcb.appraisalFee || 0)
       + (hmcb.attDocPrepFee || 0) + (hmcb.servicingFee || 0);
+    effectiveLoanAmount   = totalLoan;
+    monthlyInterest       = monthly;
+    originationFee        = effOrigFee;
     totalCostOfCapital    = (monthly * effHoldMonths) + hmcbFees;
   } else {
-    const totalLent           = (costs?.mobileHome || 0) + (costs?.land || 0);
-    const effectiveLoanAmount = loanAmountOverride || totalLent;
-    const monthlyInterest     = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
-    const originationFee = originationFeeType === 'percentage'
+    const totalLent = (costs?.mobileHome || 0) + (costs?.land || 0);
+    effectiveLoanAmount   = loanAmountOverride || totalLent;
+    monthlyInterest       = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
+    originationFee = originationFeeType === 'percentage'
       ? effectiveLoanAmount * ((originationFeePct || 0) / 100)
       : (originationFeeFlat || 0);
-    const servicingFee = servicingFeeType === 'percentage'
+    servicingFee = servicingFeeType === 'percentage'
       ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
       : (servicingFeeFlat || 0);
     const otherFees = Number(deal?.scenarioData?.drawFeeHm || 0)
