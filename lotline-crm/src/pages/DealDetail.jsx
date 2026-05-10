@@ -2315,7 +2315,7 @@ function DealDetailContent({ deal }) {
           if (res.ok) {
             const { members } = await res.json();
             const users = (members || [])
-              .filter(m => m.status === 'active' || m.status === 'disabled')
+              .filter(m => m.status !== 'removed')
               .map(m => {
                 const p = m.profiles || {};
                 const name = p.name
