@@ -3,7 +3,7 @@
 // Body: { invitationId: string }
 // Returns: { success: true }
 // Requires: owner | admin.
-import { requireOrgMember, isAdmin } from '../_lib/teamAuth.js';
+import { requireOrgMember, isAdmin, ensureAdminClient } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   if (!auth) return;
 
   const { adminClient, orgId, orgRole } = auth;
+  if (!ensureAdminClient(adminClient, res)) return;
 
   if (!isAdmin(orgRole)) {
     return res.status(403).json({ error: 'Only owners and admins can cancel invitations.' });
