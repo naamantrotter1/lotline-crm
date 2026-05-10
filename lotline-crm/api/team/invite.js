@@ -3,7 +3,7 @@
 // Body: { email: string, role: 'admin'|'operator'|'viewer' }
 // Returns: { inviteUrl, invitation }
 // Requires: owner | admin membership.
-import { requireOrgMember, isAdmin } from '../_lib/teamAuth.js';
+import { requireOrgMember, isAdmin, ensureAdminClient } from '../_lib/teamAuth.js';
 import { sendInviteEmail } from '../_lib/sendInviteEmail.js';
 
 export default async function handler(req, res) {
