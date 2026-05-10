@@ -5,19 +5,42 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * Creates a Supabase client using the service role key (bypasses RLS).
+ * Returns null (does NOT throw) when SUPABASE_SERVICE_ROLE_KEY is absent —
+ * callers that truly need admin access must check for null and return an error.
+ */
 export function makeAdminClient() {
   const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Server misconfigured: missing Supabase credentials');
+  if (!url || !key) return null;
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
 /**
- * Authenticates the request and returns { adminClient, userId, orgId, orgRole }.
- * Sends an HTTP error response and returns null if auth fails.
+ * Creates a Supabase client that authenticates as the given user (anon key +
+ * Bearer token). Queries respect RLS policies. Does not require the service
+ * role key — works with just VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+ */
+function makeUserClient(token) {
+  const url  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
+  const anon = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !anon) throw new Error('Server misconfigured: missing Supabase URL or anon key');
+  return createClient(url, anon, {
+    auth:   { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
+/**
+ * Authenticates the request and returns
+ * { adminClient, userClient, userId, orgId, orgRole }.
  *
- * @param {import('http').IncomingMessage} req
- * @param {import('http').ServerResponse}  res
+ * adminClient may be null when SUPABASE_SERVICE_ROLE_KEY is not configured.
+ * Endpoints that truly need admin access should check:
+ *   if (!auth.adminClient) return res.status(503).json({ error: 'Service role key not configured' });
+ *
+ * Sends an HTTP error response and returns null if auth fails.
  */
 export async function requireOrgMember(req, res) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
@@ -26,21 +49,26 @@ export async function requireOrgMember(req, res) {
     return null;
   }
 
-  let adminClient;
+  // userClient always works (anon key + bearer token, RLS-aware).
+  // adminClient is optional — null when service role key is absent.
+  let userClient, adminClient;
   try {
-    adminClient = makeAdminClient();
+    userClient  = makeUserClient(token);
+    adminClient = makeAdminClient(); // may be null
   } catch (e) {
     res.status(500).json({ error: e.message });
     return null;
   }
 
-  const { data: { user }, error: userErr } = await adminClient.auth.getUser(token);
+  // Validate the JWT via the user client (no service role key required).
+  const { data: { user }, error: userErr } = await userClient.auth.getUser(token);
   if (userErr || !user) {
     res.status(401).json({ error: 'Invalid or expired token' });
     return null;
   }
 
-  const { data: profile } = await adminClient
+  // Use userClient for profile/membership lookup (RLS allows users to read their own rows).
+  const { data: profile } = await userClient
     .from('profiles')
     .select('active_organization_id')
     .eq('id', user.id)
@@ -52,7 +80,7 @@ export async function requireOrgMember(req, res) {
     return null;
   }
 
-  const { data: mem } = await adminClient
+  const { data: mem } = await userClient
     .from('memberships')
     .select('role')
     .eq('user_id', user.id)
@@ -60,7 +88,7 @@ export async function requireOrgMember(req, res) {
     .eq('status', 'active')
     .maybeSingle();
 
-  return { adminClient, userId: user.id, orgId, orgRole: mem?.role ?? null };
+  return { adminClient, userClient, userId: user.id, orgId, orgRole: mem?.role ?? null };
 }
 
 /** Returns true if the role is owner or admin */
