@@ -97,6 +97,20 @@ export function isAdmin(orgRole) {
 }
 
 /**
+ * Call this at the top of any endpoint that requires the service role key.
+ * Returns false and sends a 503 if adminClient is null (key not configured).
+ * Usage:
+ *   if (!ensureAdminClient(auth.adminClient, res)) return;
+ */
+export function ensureAdminClient(adminClient, res) {
+  if (adminClient) return true;
+  res.status(503).json({
+    error: 'Service role key not configured. Add SUPABASE_SERVICE_ROLE_KEY to your Vercel environment variables and redeploy.',
+  });
+  return false;
+}
+
+/**
  * Like requireOrgMember, but additionally verifies the caller's org is the JV hub.
  * Used by hub-only endpoints: propose, update-permissions, search-orgs.
  */
