@@ -3,7 +3,7 @@
 // Body: { memberId: string, role?: string, status?: 'active'|'disabled' }
 // Returns: { membership }
 // Requires: owner | admin. Cannot demote/remove owner.
-import { requireOrgMember, isAdmin } from '../_lib/teamAuth.js';
+import { requireOrgMember, isAdmin, ensureAdminClient } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
