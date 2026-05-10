@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     .from('memberships')
     .select('id, role, status, created_at, user_id')
     .eq('organization_id', orgId)
-    .in('status', ['active', 'disabled', 'invited', 'pending'])
+    .in('status', ['active', 'disabled'])
     .order('created_at', { ascending: true });
 
   if (memErr) return res.status(500).json({ error: memErr.message });
