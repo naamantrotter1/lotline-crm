@@ -1116,6 +1116,7 @@ export default function DealOverview() {
             onToggleAll={toggleAll}
             navigate={navigate}
             isAgent={isAgent}
+            onUpdateDealOwner={handleUpdateDealOwner}
           />
         </div>
       )}
