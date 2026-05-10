@@ -668,7 +668,7 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
                     } ${isNeg ? 'text-red-500 font-semibold' : isGreen ? 'text-green-600 font-semibold' : i > 0 ? 'text-gray-700' : ''}`}
                   >
                     {col.key === 'deal_owner' ? (
-                      <EditableOwnerCell value={value} dealId={deal.id} onSave={onUpdateDealOwner} />
+                      <EditableOwnerCell value={value} dealId={deal.id} onSave={onUpdateDealOwner} users={orgUsers} />
                     ) : col.type === 'badge' ? (
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STAGE_META[value]?.pill || 'bg-gray-100 text-gray-600'}`}>
                         {value || '—'}
