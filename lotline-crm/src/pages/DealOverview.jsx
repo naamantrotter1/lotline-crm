@@ -525,42 +525,21 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
 // ── ListView ──────────────────────────────────────────────────────────────────
 
 function EditableOwnerCell({ value, dealId, onSave, users }) {
-  const [editing, setEditing] = useState(false);
-
-  const handleChange = (e) => {
-    e.stopPropagation();
-    onSave(dealId, e.target.value);
-    setEditing(false);
-  };
-
-  if (editing) {
-    return (
-      <select
-        autoFocus
-        defaultValue={value || ''}
-        onChange={handleChange}
-        onBlur={() => setEditing(false)}
-        onClick={e => e.stopPropagation()}
-        className="w-full text-sm border border-accent/50 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-accent/40 bg-white"
-      >
-        <option value="">— Unassigned —</option>
-        {value && !users.some(u => u.name === value) && (
-          <option value={value}>{value}</option>
-        )}
-        {users.map(u => (
-          <option key={u.id} value={u.name}>{u.name}</option>
-        ))}
-      </select>
-    );
-  }
   return (
-    <span
-      onClick={e => { e.stopPropagation(); setEditing(true); }}
-      className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block w-full min-w-[80px]"
-      title="Click to change"
+    <select
+      value={value || ''}
+      onChange={e => { e.stopPropagation(); onSave(dealId, e.target.value); }}
+      onClick={e => e.stopPropagation()}
+      className="w-full text-sm text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 cursor-pointer hover:bg-gray-100 rounded px-0 py-0"
     >
-      {value || <span className="text-gray-300">—</span>}
-    </span>
+      <option value="">— Unassigned —</option>
+      {value && !users.some(u => u.name === value) && (
+        <option value={value}>{value}</option>
+      )}
+      {users.map(u => (
+        <option key={u.id} value={u.name}>{u.name}</option>
+      ))}
+    </select>
   );
 }
 
