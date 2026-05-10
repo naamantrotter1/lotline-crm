@@ -11,12 +11,12 @@ export default async function handler(req, res) {
 
   const { adminClient, orgId } = auth;
 
-  // Active members
+  // Active members — include any status except explicitly removed
   const { data: members, error: memErr } = await adminClient
     .from('memberships')
     .select('id, role, status, created_at, user_id')
     .eq('organization_id', orgId)
-    .in('status', ['active', 'disabled'])
+    .or('status.in.(active,disabled,invited,pending),status.is.null')
     .order('created_at', { ascending: true });
 
   if (memErr) return res.status(500).json({ error: memErr.message });
