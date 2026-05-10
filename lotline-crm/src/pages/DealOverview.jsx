@@ -524,7 +524,42 @@ function DealCard({ deal, cardFields, onClick, onStar, selected, onToggleSelect,
 
 // ── ListView ──────────────────────────────────────────────────────────────────
 
-function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect, onToggleAll, navigate }) {
+function EditableOwnerCell({ value, dealId, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const inputRef = useRef(null);
+
+  const commit = () => {
+    setEditing(false);
+    if (draft !== (value || '')) onSave(dealId, draft);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        autoFocus
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); } }}
+        onClick={e => e.stopPropagation()}
+        className="w-full px-1 py-0.5 text-sm border border-accent/50 rounded focus:outline-none focus:ring-1 focus:ring-accent/40 bg-white"
+      />
+    );
+  }
+  return (
+    <span
+      onClick={e => { e.stopPropagation(); setDraft(value || ''); setEditing(true); }}
+      className="cursor-text hover:bg-gray-100 px-1 py-0.5 rounded block w-full min-w-[80px]"
+      title="Click to edit"
+    >
+      {value || <span className="text-gray-300">—</span>}
+    </span>
+  );
+}
+
+function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect, onToggleAll, navigate, onUpdateDealOwner }) {
   // columns = address (sticky) + stage (always in list) + selected fields minus address/stage
   const columns = useMemo(() => {
     const extra = listFields
