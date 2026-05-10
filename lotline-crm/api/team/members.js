@@ -9,10 +9,13 @@ export default async function handler(req, res) {
   const auth = await requireOrgMember(req, res);
   if (!auth) return; // response already sent
 
-  const { adminClient, orgId } = auth;
+  const { adminClient, userClient, orgId } = auth;
+  // Use adminClient (bypasses RLS) when available; fall back to userClient (RLS-aware).
+  // userClient can read all org memberships thanks to the "members_are_viewable_by_org_members" RLS policy.
+  const queryClient = adminClient || userClient;
 
   // All members for this org
-  const { data: members, error: memErr } = await adminClient
+  const { data: members, error: memErr } = await queryClient
     .from('memberships')
     .select('id, role, status, created_at, user_id')
     .eq('organization_id', orgId)
@@ -25,20 +28,22 @@ export default async function handler(req, res) {
   if (membersWithProfiles.length > 0) {
     const userIds = membersWithProfiles.map(m => m.user_id);
 
-    // Fetch profile rows (name fields) and auth users (email) in parallel
-    const [{ data: profiles }, { data: authData }] = await Promise.all([
-      adminClient
-        .from('profiles')
-        .select('id, name, first_name, last_name, avatar_url')
-        .in('id', userIds),
-      adminClient.auth.admin.listUsers({ perPage: 1000 }),
-    ]);
+    // Fetch profile rows. auth.admin.listUsers requires service role key — skip gracefully if unavailable.
+    const { data: profiles } = await queryClient
+      .from('profiles')
+      .select('id, name, first_name, last_name, avatar_url, email')
+      .in('id', userIds);
+
+    // Only call auth.admin.listUsers when the admin client is available (service role key present).
+    let authMap = {};
+    if (adminClient) {
+      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      authMap = Object.fromEntries(
+        ((authData?.users) || []).filter(u => userIds.includes(u.id)).map(u => [u.id, u])
+      );
+    }
 
     const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-    // authData is { users: [...] } from the auth admin API
-    const authMap = Object.fromEntries(
-      ((authData?.users) || []).filter(u => userIds.includes(u.id)).map(u => [u.id, u])
-    );
 
     membersWithProfiles = membersWithProfiles.map(m => {
       const prof = profileMap[m.user_id] || {};
@@ -56,15 +61,15 @@ export default async function handler(req, res) {
                       || null,
           first_name: prof.first_name || authUser.user_metadata?.given_name  || authUser.user_metadata?.first_name || null,
           last_name:  prof.last_name  || authUser.user_metadata?.family_name || authUser.user_metadata?.last_name  || null,
-          // Email always from auth.users (profiles table may not have it)
-          email:      authUser.email  || null,
+          // Email: prefer auth.users (full accuracy); fall back to profiles.email
+          email:      authUser.email || prof.email || null,
         },
       };
     });
   }
 
   // Pending (non-expired, non-canceled) invitations
-  const { data: invitations, error: invErr } = await adminClient
+  const { data: invitations, error: invErr } = await queryClient
     .from('organization_invitations')
     .select('id, email, role, status, resent_count, created_at, expires_at, invited_by')
     .eq('organization_id', orgId)
