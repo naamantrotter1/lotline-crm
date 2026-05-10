@@ -2,7 +2,7 @@
 // Either party (hub or partner, owner/admin) can permanently terminate a JV.
 // Revokes all visibility immediately. Not reversible (re-propose creates a new row).
 // Body: { jvId, reason }
-import { requireOrgMember, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

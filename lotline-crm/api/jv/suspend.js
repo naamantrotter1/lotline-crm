@@ -2,7 +2,7 @@
 // Either party (hub or partner, owner/admin) can suspend an active JV.
 // Revokes visibility immediately. Reversible via /api/jv/reactivate.
 // Body: { jvId, reason }
-import { requireOrgMember, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

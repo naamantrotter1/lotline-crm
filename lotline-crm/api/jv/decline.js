@@ -1,7 +1,7 @@
 // POST /api/jv/decline
 // Partner-only. Permanently declines a pending JV proposal (status → terminated).
 // Body: { jvId, reason }
-import { requireOrgMember, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

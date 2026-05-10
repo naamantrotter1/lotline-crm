@@ -1,7 +1,7 @@
 // POST /api/jv/accept
 // Partner-only. Accepts a pending JV proposal — activates immediately.
 // Body: { jvId }
-import { requireOrgMember, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient, isAdmin, logJvAccess } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

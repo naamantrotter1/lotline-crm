@@ -2,7 +2,7 @@
 // Returns jv_access_logs where the current org is the TARGET (partner activity transparency feed).
 // Also used by hub org to see their own cross-org actions (acting_organization_id = current org).
 // Query params: limit, offset, type (partner_on_me | i_on_partner | all)
-import { requireOrgMember } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

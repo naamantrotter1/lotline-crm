@@ -20,7 +20,7 @@
 // Cross-org results are never returned unless an active JV with the correct
 // permissions explicitly grants access.
 
-import { requireOrgMember } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient } from '../_lib/teamAuth.js';
 
 const JV_MENTION_PERMISSIONS = ['thread.reply', 'comment.create'];
 
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
   if (!auth) return;
 
   const { adminClient, userId: callerId, orgId } = auth;
+  if (!ensureAdminClient(adminClient, res)) return;
   const q       = (req.query.q || '').trim().toLowerCase();
   const dealId  = req.query.deal_id || null;
 

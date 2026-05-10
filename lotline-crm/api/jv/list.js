@@ -2,7 +2,7 @@
 // Returns all JVs for the current org (as host or as partner).
 // Hub org sees all JVs they proposed.
 // Partner org sees all JVs proposed to them.
-import { requireOrgMember } from '../_lib/teamAuth.js';
+import { requireOrgMember, ensureAdminClient } from '../_lib/teamAuth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
