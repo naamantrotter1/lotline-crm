@@ -603,7 +603,7 @@ function ListView({ deals, listFields, sort, onSort, selectedIds, onToggleSelect
                 key={col.key}
                 onClick={() => onSort(col.key)}
                 className={`text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 py-3 whitespace-nowrap cursor-pointer hover:text-gray-800 select-none ${
-                  i === 0 ? 'sticky left-10 z-20 bg-white border-r border-gray-100 min-w-[200px]' : 'min-w-[120px]'
+                  i === 0 ? 'sticky left-10 z-20 bg-white border-r border-gray-100 min-w-[200px]' : col.key === 'deal_owner' ? 'min-w-[160px]' : 'min-w-[120px]'
                 }`}
               >
                 <span className="flex items-center gap-0.5">

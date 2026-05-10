@@ -11,6 +11,7 @@ export default async function handler(req, res) {
   if (!auth) return;
 
   const { adminClient, orgId } = auth;
+  if (!ensureAdminClient(adminClient, res)) return;
 
   const { data: jvs, error } = await adminClient
     .from('joint_ventures')

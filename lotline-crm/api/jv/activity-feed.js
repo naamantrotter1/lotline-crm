@@ -11,6 +11,7 @@ export default async function handler(req, res) {
   if (!auth) return;
 
   const { adminClient, orgId } = auth;
+  if (!ensureAdminClient(adminClient, res)) return;
 
   const limit  = Math.min(parseInt(req.query.limit  || '20', 10), 100);
   const offset = parseInt(req.query.offset || '0', 10);
