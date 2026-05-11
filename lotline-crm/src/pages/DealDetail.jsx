@@ -2697,7 +2697,7 @@ function DealDetailContent({ deal }) {
   const [annualFeePct, setAnnualFeePct] = useState(sd.annualFeePct ?? 0);
   // Profit Split specific
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
-  const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? 0);
+  const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? null);
   // Payment Due Day — drives schedule/calendar generator (HM Loan, HM L+H, HMCB, LoC).
   const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? 'same_as_closing');
   // Optional override: anchor the schedule on a user-picked first payment date.
