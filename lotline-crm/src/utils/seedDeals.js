@@ -5,13 +5,35 @@ import { lsKey } from '../lib/dealsSync';
 // ── They only run when orgSlug === 'lotline-homes', so new tenants never see
 // ── LotLine's static seed data.
 
+const SEEDED_IDS = new Set([...DEAL_OVERVIEW_DEALS, ...LAND_DEALS].map(d => String(d.id)));
+
 export function seedDeals(orgId) {
   const seedKey = `lotline_deals_seeded_v2_${orgId}`;
-  if (localStorage.getItem(seedKey)) return;
   const key = lsKey(orgId);
   const existing = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } })();
+
+  if (localStorage.getItem(seedKey)) {
+    // Already seeded — but backfill organizationId on any seeded deals that are missing it.
+    // This prevents loadAllDeals from treating them as "unsynced" and re-flushing them to
+    // Supabase after they've been deleted, which would resurrect deleted deals.
+    const needsBackfill = existing.some(d => SEEDED_IDS.has(String(d.id)) && !d.organizationId);
+    if (needsBackfill) {
+      localStorage.setItem(key, JSON.stringify(
+        existing.map(d => SEEDED_IDS.has(String(d.id)) && !d.organizationId
+          ? { ...d, organizationId: orgId }
+          : d
+        )
+      ));
+    }
+    return;
+  }
+
   const existingIds = new Set(existing.map(d => String(d.id)));
-  const toSeed = [...DEAL_OVERVIEW_DEALS, ...LAND_DEALS].filter(d => !existingIds.has(String(d.id)));
+  // Stamp organizationId on seeded deals so loadAllDeals treats them as "DB-origin"
+  // and never re-flushes them to Supabase after deletion.
+  const toSeed = [...DEAL_OVERVIEW_DEALS, ...LAND_DEALS]
+    .filter(d => !existingIds.has(String(d.id)))
+    .map(d => ({ ...d, organizationId: orgId }));
   localStorage.setItem(key, JSON.stringify([...existing, ...toSeed]));
   localStorage.setItem(seedKey, '1');
 }
