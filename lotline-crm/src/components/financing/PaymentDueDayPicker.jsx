@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 const OPTIONS = [
   { value: 'same_as_closing', label: 'Same day as closing' },
+  { value: 'one_month_after_closing', label: '1 month after closing' },
   { value: '1', label: '1st of month' },
   { value: '5', label: '5th of month' },
   { value: '10', label: '10th of month' },
