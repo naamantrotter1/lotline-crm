@@ -56,9 +56,15 @@ export default function PaymentDueDayPicker({
   const selectValue = isCustom ? 'custom' : effectiveValue;
 
   // Derived default: capital deployed + 1 month, adjusted for the dueDay rule.
+  // For 'one_month_after_closing': first payment = closing date + exactly 1 calendar month.
   const computedFirstPayment = useMemo(() => {
     const start = parseLocalDate(capitalDeployedDate);
     if (!start) return '';
+    if (effectiveValue === 'one_month_after_closing') {
+      const next = new Date(start);
+      next.setMonth(next.getMonth() + 1);
+      return toIsoDate(next);
+    }
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
     return toIsoDate(applyDueDay(next, effectiveValue));
