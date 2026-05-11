@@ -947,7 +947,7 @@ export default function DealOverview() {
   const [showCustomize, setShowCustomize] = useState(false);
   const [selectedIds, setSelectedIds]     = useState(new Set());
   const [showExport, setShowExport]       = useState(false);
-  const [sort, setSort]                   = useState({ key: 'contract_signed_at', dir: 'desc' });
+  const [sort, setSort]                   = useState({ key: 'created_at', dir: 'desc' });
 
   // Save prefs when userId becomes available (e.g. after login)
   useEffect(() => {
