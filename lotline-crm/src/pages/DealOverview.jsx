@@ -149,10 +149,11 @@ function isLandClearing(deal) {
 
 function closingCountdown(dateStr) {
   if (!dateStr) return null;
-  const close = new Date(dateStr);
+  // Parse as local date (YYYY-MM-DD) to avoid UTC-offset off-by-one in US timezones
+  const [cy, cm, cd] = String(dateStr).split('-').map(Number);
+  const close = new Date(cy, cm - 1, cd);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  close.setHours(0, 0, 0, 0);
   const diff = Math.floor((today - close) / 86400000);
   if (diff < 0) return { label: `${Math.abs(diff)}d to close`, past: false };
   if (diff === 0) return { label: 'Closes today', past: false };
