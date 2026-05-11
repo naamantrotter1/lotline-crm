@@ -98,7 +98,7 @@ function getFieldValue(deal, key) {
       const ref = deal.contractSignedAt || deal.createdAt;
       return ref ? Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000) : null;
     }
-    case 'contract_signed_at':         return deal.contractSignedAt ?? null;
+    case 'contract_signed_at':         return deal.contractDate ?? deal.contractSignedAt ?? null;
     case 'created_at':                 return deal.createdAt ?? null;
     default:                           return null;
   }
