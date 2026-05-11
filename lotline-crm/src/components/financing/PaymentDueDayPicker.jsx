@@ -14,7 +14,7 @@ const OPTIONS = [
 const PRESET_VALUES = new Set(OPTIONS.map((o) => o.value));
 
 function applyDueDay(date, dueDay) {
-  if (!dueDay || dueDay === 'same_as_closing') return date;
+  if (!dueDay || dueDay === 'same_as_closing' || dueDay === 'one_month_after_closing') return date;
   const d = new Date(date);
   if (dueDay === 'last_day') {
     d.setDate(1);
