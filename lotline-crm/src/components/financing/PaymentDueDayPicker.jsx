@@ -55,20 +55,20 @@ export default function PaymentDueDayPicker({
   const isCustom = !PRESET_VALUES.has(effectiveValue) && /^\d+$/.test(String(effectiveValue));
   const selectValue = isCustom ? 'custom' : effectiveValue;
 
-  // Derived default: capital deployed + 1 month, adjusted for the dueDay rule.
-  // For 'one_month_after_closing': first payment = closing date + exactly 1 calendar month.
-  const computedFirstPayment = useMemo(() => {
-    const start = parseLocalDate(capitalDeployedDate);
+  // Compute first payment date for any given dueDay value + deployedDate.
+  function computeFirst(dueDay, deployedDate) {
+    const start = parseLocalDate(deployedDate);
     if (!start) return '';
-    if (effectiveValue === 'one_month_after_closing') {
-      const next = new Date(start);
-      next.setMonth(next.getMonth() + 1);
-      return toIsoDate(next);
-    }
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
-    return toIsoDate(applyDueDay(next, effectiveValue));
-  }, [capitalDeployedDate, effectiveValue]);
+    if (dueDay === 'one_month_after_closing') return toIsoDate(next);
+    return toIsoDate(applyDueDay(next, dueDay));
+  }
+
+  const computedFirstPayment = useMemo(
+    () => computeFirst(effectiveValue, capitalDeployedDate),
+    [capitalDeployedDate, effectiveValue],
+  );
 
   const firstPaymentValue = firstPaymentDate || computedFirstPayment;
   const noDeployedHelper = !capitalDeployedDate && value
@@ -77,21 +77,19 @@ export default function PaymentDueDayPicker({
 
   const handleSelectChange = (e) => {
     const v = e.target.value;
-    if (v === 'custom') {
-      onChange?.(isCustom ? String(effectiveValue) : '15');
-    } else {
-      onChange?.(v);
-    }
+    const newDueDay = v === 'custom' ? (isCustom ? String(effectiveValue) : '15') : v;
+    onChange?.(newDueDay);
+    const newFirst = computeFirst(newDueDay, capitalDeployedDate);
+    if (newFirst) onFirstPaymentDateChange?.(newFirst);
   };
 
   const handleCustomChange = (e) => {
     const raw = e.target.value.replace(/[^0-9]/g, '');
-    if (raw === '') {
-      onChange?.('custom');
-      return;
-    }
+    if (raw === '') { onChange?.('custom'); return; }
     const n = Math.max(1, Math.min(28, parseInt(raw, 10)));
     onChange?.(String(n));
+    const newFirst = computeFirst(String(n), capitalDeployedDate);
+    if (newFirst) onFirstPaymentDateChange?.(newFirst);
   };
 
   const inputCls =
