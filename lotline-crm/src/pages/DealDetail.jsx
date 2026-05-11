@@ -218,19 +218,45 @@ function DecimalInput({ value, onChange, className }) {
 }
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
+// Normalise an investor record to camelCase term fields.
+// Accepts both the InvestorPortal-mapped shape (camelCase) and the raw Supabase
+// shape (snake_case from fetchAllInvestors). This makes auto-populate work
+// regardless of which loader produced the list.
+function normaliseInvestorTerms(inv) {
+  if (!inv) return null;
+  return {
+    name:                      inv.name,
+    defaultScenarioType:       inv.defaultScenarioType       ?? inv.default_scenario_type       ?? null,
+    defaultInterestRate:       inv.defaultInterestRate       ?? inv.default_interest_rate       ?? null,
+    defaultHoldPeriodMonths:   inv.defaultHoldPeriodMonths   ?? inv.default_hold_period_months  ?? null,
+    defaultTermMonths:         inv.defaultTermMonths         ?? inv.default_term_months         ?? null,
+    defaultOriginationFeePct:  inv.defaultOriginationFeePct  ?? inv.default_origination_fee_pct ?? null,
+    defaultOriginationFeeType: inv.defaultOriginationFeeType ?? inv.default_origination_fee_type ?? 'percentage',
+    defaultDrawFee:            inv.defaultDrawFee            ?? inv.default_draw_fee            ?? null,
+    defaultServicingFee:       inv.defaultServicingFee       ?? inv.default_servicing_fee       ?? null,
+    defaultExtensionAvailable: inv.defaultExtensionAvailable ?? inv.default_extension_available ?? false,
+    defaultExtensionMonths:    inv.defaultExtensionMonths    ?? inv.default_extension_months    ?? null,
+    defaultExtensionFeePoints: inv.defaultExtensionFeePoints ?? inv.default_extension_fee_points ?? null,
+    defaultPaymentDueDay:      inv.defaultPaymentDueDay      ?? inv.default_payment_due_day     ?? null,
+    defaultProfitSharePct:     inv.defaultProfitSharePct     ?? inv.default_profit_share_pct    ?? null,
+    defaultPosition:           inv.defaultPosition           ?? inv.default_position            ?? null,
+  };
+}
+
 // Detects whether an investor has any structured standard-terms set.
 function hasStandardTermsLocal(inv) {
-  if (!inv) return false;
+  const n = normaliseInvestorTerms(inv);
+  if (!n) return false;
   return Boolean(
-    inv.defaultScenarioType ||
-    inv.defaultInterestRate ||
-    inv.defaultHoldPeriodMonths ||
-    inv.defaultTermMonths ||
-    inv.defaultOriginationFeePct ||
-    inv.defaultDrawFee ||
-    inv.defaultServicingFee ||
-    inv.defaultExtensionAvailable ||
-    inv.defaultProfitSharePct
+    n.defaultScenarioType ||
+    n.defaultInterestRate ||
+    n.defaultHoldPeriodMonths ||
+    n.defaultTermMonths ||
+    n.defaultOriginationFeePct ||
+    n.defaultDrawFee ||
+    n.defaultServicingFee ||
+    n.defaultExtensionAvailable ||
+    n.defaultProfitSharePct
   );
 }
 
@@ -253,50 +279,52 @@ function StandardTermsIndicator({ investor, fields, onClear }) {
 // Only fills empty/zero fields by default — never overwrites user-entered values.
 // Returns the list of field labels that were actually filled (for the toast/indicator).
 function applyInvestorStandardTerms(inv, ctx) {
+  const n = normaliseInvestorTerms(inv);
+  if (!n) return [];
   const filled = [];
   const shouldFill = (cur) => cur === null || cur === undefined || cur === '' || cur === 0;
 
   // Switch scenario if investor has one set and current is empty
-  if (inv.defaultScenarioType && !ctx.selectedScenario) {
-    ctx.applyScenario?.(inv.defaultScenarioType);
+  if (n.defaultScenarioType && !ctx.selectedScenario) {
+    ctx.applyScenario?.(n.defaultScenarioType);
     filled.push('scenario');
   }
 
-  if (inv.defaultInterestRate != null && shouldFill(ctx.interestRate)) {
-    ctx.setInterestRate?.(Number(inv.defaultInterestRate));
+  if (n.defaultInterestRate != null && shouldFill(ctx.interestRate)) {
+    ctx.setInterestRate?.(Number(n.defaultInterestRate));
     filled.push('rate');
   }
-  if (inv.defaultHoldPeriodMonths != null && shouldFill(ctx.holdPeriod)) {
-    ctx.setHoldPeriod?.(Number(inv.defaultHoldPeriodMonths));
+  if (n.defaultHoldPeriodMonths != null && shouldFill(ctx.holdPeriod)) {
+    ctx.setHoldPeriod?.(Number(n.defaultHoldPeriodMonths));
     filled.push('hold period');
-  } else if (inv.defaultTermMonths != null && shouldFill(ctx.holdPeriod)) {
-    ctx.setHoldPeriod?.(Number(inv.defaultTermMonths));
+  } else if (n.defaultTermMonths != null && shouldFill(ctx.holdPeriod)) {
+    ctx.setHoldPeriod?.(Number(n.defaultTermMonths));
     filled.push('term');
   }
-  if (inv.defaultOriginationFeePct != null && shouldFill(ctx.originationFeePct)) {
-    ctx.setOriginationFeePct?.(Number(inv.defaultOriginationFeePct));
+  if (n.defaultOriginationFeePct != null && shouldFill(ctx.originationFeePct)) {
+    ctx.setOriginationFeePct?.(Number(n.defaultOriginationFeePct));
     filled.push('origination');
   }
-  if (inv.defaultDrawFee != null && shouldFill(ctx.drawFeeHm)) {
-    ctx.setDrawFeeHm?.(Number(inv.defaultDrawFee));
+  if (n.defaultDrawFee != null && shouldFill(ctx.drawFeeHm)) {
+    ctx.setDrawFeeHm?.(Number(n.defaultDrawFee));
     filled.push('draw fee');
   }
-  if (inv.defaultServicingFee != null && shouldFill(ctx.servicingFeeFlat)) {
-    ctx.setServicingFeeFlat?.(Number(inv.defaultServicingFee));
+  if (n.defaultServicingFee != null && shouldFill(ctx.servicingFeeFlat)) {
+    ctx.setServicingFeeFlat?.(Number(n.defaultServicingFee));
     filled.push('servicing fee');
   }
-  if (inv.defaultExtensionAvailable && !ctx.extensionAvailable) {
+  if (n.defaultExtensionAvailable && !ctx.extensionAvailable) {
     ctx.setExtensionAvailable?.(true);
-    if (inv.defaultExtensionMonths != null) ctx.setExtensionMonths?.(Number(inv.defaultExtensionMonths));
-    if (inv.defaultExtensionFeePoints != null) ctx.setExtensionFee?.(Number(inv.defaultExtensionFeePoints));
+    if (n.defaultExtensionMonths != null) ctx.setExtensionMonths?.(Number(n.defaultExtensionMonths));
+    if (n.defaultExtensionFeePoints != null) ctx.setExtensionFee?.(Number(n.defaultExtensionFeePoints));
     filled.push('extension');
   }
-  if (inv.defaultPaymentDueDay && (ctx.paymentDueDay === 'same_as_closing' || !ctx.paymentDueDay)) {
-    ctx.setPaymentDueDay?.(inv.defaultPaymentDueDay);
+  if (n.defaultPaymentDueDay && (ctx.paymentDueDay === 'same_as_closing' || !ctx.paymentDueDay)) {
+    ctx.setPaymentDueDay?.(n.defaultPaymentDueDay);
     filled.push('due day');
   }
-  if (inv.defaultProfitSharePct != null && shouldFill(ctx.investorProfitSplitPct)) {
-    ctx.setInvestorProfitSplitPct?.(Number(inv.defaultProfitSharePct));
+  if (n.defaultProfitSharePct != null && shouldFill(ctx.investorProfitSplitPct)) {
+    ctx.setInvestorProfitSplitPct?.(Number(n.defaultProfitSharePct));
     filled.push('profit share');
   }
   return filled;
