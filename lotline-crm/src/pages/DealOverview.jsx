@@ -170,6 +170,13 @@ function loadPref(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
   catch { return fallback; }
 }
+function migrateListFields(fields) {
+  if (!Array.isArray(fields) || !fields.includes('investor')) return fields;
+  const without = fields.filter(k => k !== 'investor');
+  const idx = without.indexOf('net_profit_after_financing');
+  if (idx === -1) return fields;
+  return [...without.slice(0, idx + 1), 'investor', ...without.slice(idx + 1)];
+}
 function savePref(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
