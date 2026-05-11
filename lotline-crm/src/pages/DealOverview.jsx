@@ -65,7 +65,17 @@ function getFieldValue(deal, key) {
   switch (key) {
     case 'address':                    return deal.address;
     case 'arv':                        return deal.arv ?? null;
-    case 'total_estimated':            return deal.totalEstimated ?? null;
+    case 'total_estimated': {
+      if (deal.totalEstimated != null) return deal.totalEstimated;
+      if (deal.totalActual != null) return deal.totalActual;
+      const legacySum = (deal.land || 0) + (deal.mobileHome || 0) + (deal.hudEngineer || 0) +
+        (deal.percTest || 0) + (deal.survey || 0) + (deal.footers || 0) + (deal.setup || 0) +
+        (deal.clearLand || 0) + (deal.water || 0) + (deal.septic || 0) + (deal.electric || 0) +
+        (deal.hvac || 0) + (deal.underpinning || 0) + (deal.decks || 0) + (deal.driveway || 0) +
+        (deal.landscaping || 0) + (deal.waterSewer || 0) + (deal.mailbox || 0) +
+        (deal.gutters || 0) + (deal.photos || 0) + (deal.mobileTax || 0) + (deal.staging || 0);
+      return legacySum > 0 ? legacySum : null;
+    }
     // net_profit = before financing costs; net_profit_after_financing = with CoC deducted
     case 'net_profit':                 return calcNetProfit({ ...deal, financing: null, financingScenarioType: null });
     case 'net_profit_after_financing': return calcNetProfit(deal);
