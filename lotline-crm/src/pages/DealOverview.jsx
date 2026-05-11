@@ -1017,8 +1017,11 @@ export default function DealOverview() {
   const sortedDeals = useMemo(() => {
     if (!sort.key || !sort.dir) return filteredDeals;
     return [...filteredDeals].sort((a, b) => {
-      const av = getFieldValue(a, sort.key);
-      const bv = getFieldValue(b, sort.key);
+      let av = getFieldValue(a, sort.key);
+      let bv = getFieldValue(b, sort.key);
+      // Fall back to createdAt so null-date deals still sort deterministically
+      if (av == null) av = a.createdAt ?? null;
+      if (bv == null) bv = b.createdAt ?? null;
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;
