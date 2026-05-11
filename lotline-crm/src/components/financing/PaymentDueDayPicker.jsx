@@ -59,6 +59,7 @@ export default function PaymentDueDayPicker({
   function computeFirst(dueDay, deployedDate) {
     const start = parseLocalDate(deployedDate);
     if (!start) return '';
+    if (dueDay === 'same_as_closing') return toIsoDate(start);
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
     if (dueDay === 'one_month_after_closing') return toIsoDate(next);
