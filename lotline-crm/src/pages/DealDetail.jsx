@@ -284,7 +284,7 @@ function FinancingScenarioPanel({
   const arvVal = arv ?? deal.arv ?? 0;
 
   const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
-  const effectiveLoanAmount = loanAmountOverride || totalLent;
+  const effectiveLoanAmount = loanAmountOverride != null ? loanAmountOverride : totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
   const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
   const monthlyInterestHm = effectiveLoanAmount * (interestRate / 100) / 12;
