@@ -941,7 +941,7 @@ export default function DealOverview() {
   const listPrefKey = userId ? `deal_list_fields_${userId}` : null;
 
   const [cardFields, setCardFields] = useState(() => loadPref(cardPrefKey, DEFAULT_CARD_FIELDS));
-  const [listFields, setListFields] = useState(() => loadPref(listPrefKey, DEFAULT_LIST_FIELDS));
+  const [listFields, setListFields] = useState(() => migrateListFields(loadPref(listPrefKey, DEFAULT_LIST_FIELDS)));
 
   const [showCustomize, setShowCustomize] = useState(false);
   const [selectedIds, setSelectedIds]     = useState(new Set());
