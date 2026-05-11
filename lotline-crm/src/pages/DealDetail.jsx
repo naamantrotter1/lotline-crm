@@ -218,6 +218,90 @@ function DecimalInput({ value, onChange, className }) {
 }
 
 // ── Financing Scenario Panel ──────────────────────────────────────────────────
+// Detects whether an investor has any structured standard-terms set.
+function hasStandardTermsLocal(inv) {
+  if (!inv) return false;
+  return Boolean(
+    inv.defaultScenarioType ||
+    inv.defaultInterestRate ||
+    inv.defaultHoldPeriodMonths ||
+    inv.defaultTermMonths ||
+    inv.defaultOriginationFeePct ||
+    inv.defaultDrawFee ||
+    inv.defaultServicingFee ||
+    inv.defaultExtensionAvailable ||
+    inv.defaultProfitSharePct
+  );
+}
+
+// Renders the "✓ Standard terms applied" indicator below the lender dropdown.
+function StandardTermsIndicator({ investor, fields, onClear }) {
+  if (!investor || !fields?.length) return null;
+  return (
+    <div className="mt-1 flex items-center gap-2 text-[11px]">
+      <span className="inline-flex items-center gap-1 text-accent font-semibold">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clipRule="evenodd"/></svg>
+        Standard terms applied
+      </span>
+      <span className="text-gray-400">— {fields.join(', ')}</span>
+      <button type="button" onClick={onClear} className="text-gray-400 hover:text-red-500 underline">Clear & reset</button>
+    </div>
+  );
+}
+
+// Apply an investor's standard terms to the current deal financing state.
+// Only fills empty/zero fields by default — never overwrites user-entered values.
+// Returns the list of field labels that were actually filled (for the toast/indicator).
+function applyInvestorStandardTerms(inv, ctx) {
+  const filled = [];
+  const shouldFill = (cur) => cur === null || cur === undefined || cur === '' || cur === 0;
+
+  // Switch scenario if investor has one set and current is empty
+  if (inv.defaultScenarioType && !ctx.selectedScenario) {
+    ctx.applyScenario?.(inv.defaultScenarioType);
+    filled.push('scenario');
+  }
+
+  if (inv.defaultInterestRate != null && shouldFill(ctx.interestRate)) {
+    ctx.setInterestRate?.(Number(inv.defaultInterestRate));
+    filled.push('rate');
+  }
+  if (inv.defaultHoldPeriodMonths != null && shouldFill(ctx.holdPeriod)) {
+    ctx.setHoldPeriod?.(Number(inv.defaultHoldPeriodMonths));
+    filled.push('hold period');
+  } else if (inv.defaultTermMonths != null && shouldFill(ctx.holdPeriod)) {
+    ctx.setHoldPeriod?.(Number(inv.defaultTermMonths));
+    filled.push('term');
+  }
+  if (inv.defaultOriginationFeePct != null && shouldFill(ctx.originationFeePct)) {
+    ctx.setOriginationFeePct?.(Number(inv.defaultOriginationFeePct));
+    filled.push('origination');
+  }
+  if (inv.defaultDrawFee != null && shouldFill(ctx.drawFeeHm)) {
+    ctx.setDrawFeeHm?.(Number(inv.defaultDrawFee));
+    filled.push('draw fee');
+  }
+  if (inv.defaultServicingFee != null && shouldFill(ctx.servicingFeeFlat)) {
+    ctx.setServicingFeeFlat?.(Number(inv.defaultServicingFee));
+    filled.push('servicing fee');
+  }
+  if (inv.defaultExtensionAvailable && !ctx.extensionAvailable) {
+    ctx.setExtensionAvailable?.(true);
+    if (inv.defaultExtensionMonths != null) ctx.setExtensionMonths?.(Number(inv.defaultExtensionMonths));
+    if (inv.defaultExtensionFeePoints != null) ctx.setExtensionFee?.(Number(inv.defaultExtensionFeePoints));
+    filled.push('extension');
+  }
+  if (inv.defaultPaymentDueDay && (ctx.paymentDueDay === 'same_as_closing' || !ctx.paymentDueDay)) {
+    ctx.setPaymentDueDay?.(inv.defaultPaymentDueDay);
+    filled.push('due day');
+  }
+  if (inv.defaultProfitSharePct != null && shouldFill(ctx.investorProfitSplitPct)) {
+    ctx.setInvestorProfitSplitPct?.(Number(inv.defaultProfitSharePct));
+    filled.push('profit share');
+  }
+  return filled;
+}
+
 function FinancingScenarioPanel({
   deal, costs, arv, allIn, netProfit: netProfitFromParent,
   selectedScenario, applyScenario,
@@ -276,6 +360,51 @@ function FinancingScenarioPanel({
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
   const [showLocAdvanced, setShowLocAdvanced] = useState(false);
   const [showHmAdvanced, setShowHmAdvanced]   = useState(false);
+  // Tracks which investor's standard terms were last auto-applied,
+  // so we can show a "Standard terms applied" indicator + a clear/reset action.
+  const [autoFilledInvestor, setAutoFilledInvestor] = useState(null);
+  const [autoFilledFields, setAutoFilledFields] = useState([]);
+
+  // Wraps the investor dropdown onChange — applies standard terms if available.
+  function handleInvestorSelect(name) {
+    setInvestor(name);
+    if (!name) { setAutoFilledInvestor(null); setAutoFilledFields([]); return; }
+    const inv = (investorList || []).find(i => i.name === name);
+    if (!inv) { setAutoFilledInvestor(null); setAutoFilledFields([]); return; }
+    if (!hasStandardTermsLocal(inv)) { setAutoFilledInvestor(null); setAutoFilledFields([]); return; }
+    const filled = applyInvestorStandardTerms(inv, {
+      selectedScenario, applyScenario,
+      interestRate, setInterestRate,
+      holdPeriod, setHoldPeriod,
+      originationFeePct, setOriginationFeePct,
+      drawFeeHm, setDrawFeeHm,
+      servicingFeeFlat, setServicingFeeFlat,
+      extensionAvailable, setExtensionAvailable, setExtensionMonths, setExtensionFee,
+      paymentDueDay, setPaymentDueDay,
+      investorProfitSplitPct, setInvestorProfitSplitPct,
+    });
+    if (filled.length) {
+      setAutoFilledInvestor(inv);
+      setAutoFilledFields(filled);
+    }
+  }
+
+  function clearAutoFilled() {
+    // Reset only the fields we filled — preserve everything else the user touched
+    if (autoFilledFields.includes('rate')) setInterestRate?.(0);
+    if (autoFilledFields.includes('hold period') || autoFilledFields.includes('term')) setHoldPeriod?.(0);
+    if (autoFilledFields.includes('origination')) setOriginationFeePct?.(0);
+    if (autoFilledFields.includes('draw fee')) setDrawFeeHm?.(0);
+    if (autoFilledFields.includes('servicing fee')) setServicingFeeFlat?.(0);
+    if (autoFilledFields.includes('extension')) {
+      setExtensionAvailable?.(false);
+      setExtensionMonths?.(0);
+      setExtensionFee?.(0);
+    }
+    if (autoFilledFields.includes('profit share')) setInvestorProfitSplitPct?.(0);
+    setAutoFilledInvestor(null);
+    setAutoFilledFields([]);
+  }
 
   const activeFinancing = selectedScenario
     ? FINANCING_SCENARIOS.find(s => s.id === selectedScenario)?.financingType
@@ -434,12 +563,13 @@ function FinancingScenarioPanel({
                   </button>
                 )}
               </div>
-              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+              <select value={investor} onChange={e => handleInvestorSelect(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
                 {(investorList || []).map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
+              <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Amount (from costs)</p>
@@ -473,12 +603,13 @@ function FinancingScenarioPanel({
                     </button>
                   )}
                 </div>
-                <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+                <select value={investor} onChange={e => handleInvestorSelect(e.target.value)} className={iCls} disabled={readOnly}>
                   <option value="">— No Investor —</option>
                   {(investorList || []).map(inv => (
                     <option key={inv.id} value={inv.name}>{inv.name}</option>
                   ))}
                 </select>
+                <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
@@ -714,12 +845,13 @@ function FinancingScenarioPanel({
                   </button>
                 )}
               </div>
-              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+              <select value={investor} onChange={e => handleInvestorSelect(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
                 {(investorList || []).map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
+              <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Credit Line Limit ($)</p>
@@ -834,12 +966,13 @@ function FinancingScenarioPanel({
                   </button>
                 )}
               </div>
-              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+              <select value={investor} onChange={e => handleInvestorSelect(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
                 {(investorList || []).map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
+              <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed</p>
@@ -938,12 +1071,13 @@ function FinancingScenarioPanel({
                   </button>
                 )}
               </div>
-              <select value={investor} onChange={e => setInvestor(e.target.value)} className={iCls} disabled={readOnly}>
+              <select value={investor} onChange={e => handleInvestorSelect(e.target.value)} className={iCls} disabled={readOnly}>
                 <option value="">— No Investor —</option>
                 {(investorList || []).map(inv => (
                   <option key={inv.id} value={inv.name}>{inv.name}</option>
                 ))}
               </select>
+              <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed</p>

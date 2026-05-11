@@ -121,7 +121,16 @@ export async function fetchInvestors(orgIds) {
   if (!supabase) return [];
   let q = supabase
     .from('investors')
-    .select('id, name, contact, email, phone, type, preferred_financing, standard_terms, notes, organization_id, auth_user_id, invited_at, status')
+    .select(`
+      id, name, contact, email, phone, type, preferred_financing, standard_terms, notes,
+      organization_id, auth_user_id, invited_at, status,
+      default_scenario_type, default_interest_rate, default_hold_period_months, default_term_months,
+      default_origination_fee_pct, default_origination_fee_type, default_origination_fee_flat,
+      default_position, default_preferred_return_pct, default_profit_share_pct,
+      default_payment_timing, default_payment_due_day, default_draw_fee, default_servicing_fee,
+      default_ltc_pct, default_max_loan_amount, default_extension_available, default_extension_months,
+      default_extension_fee_points, terms_notes
+    `)
     .neq('is_archived', true)
     .order('name');
   if (orgIds) {

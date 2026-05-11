@@ -121,7 +121,18 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
             </div>
             <div>
               <h3 className="font-semibold text-[#1a2332]">{investor.name}</h3>
-              <p className="text-xs text-gray-400">{isCash ? 'Cash Deals' : investor.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-400">{isCash ? 'Cash Deals' : investor.name}</p>
+                {!isCash && (
+                  hasStandardTerms(investor) ? (
+                    <span className="text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                      {termsBadgeText(investor)}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium text-gray-400 italic">No terms set</span>
+                  )
+                )}
+              </div>
             </div>
           </div>
           <span className="bg-accent/10 text-accent text-xs font-bold px-2.5 py-1 rounded-full">
@@ -668,6 +679,287 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
   );
 }
 
+// ── Standard Terms ───────────────────────────────────────────────────────────
+const SCENARIO_LABELS = {
+  'hard-money-loan':           'Hard Money Loan',
+  'hard-money-land-home':      'Hard Money (Land + Home)',
+  'hmcb':                      'Hard Money – Construction Holdback',
+  'loc':                       'Line of Credit',
+  'profit-split':              'Profit Split',
+  'committed-capital-partner': 'Committed Capital Partner',
+};
+
+const SCENARIO_SHORT = {
+  'hard-money-loan':           'HML',
+  'hard-money-land-home':      'HM L+H',
+  'hmcb':                      'HMCB',
+  'loc':                       'LoC',
+  'profit-split':              'Profit Split',
+  'committed-capital-partner': 'CCP',
+};
+
+const PAYMENT_DUE_DAYS = ['1st', '5th', '10th', '15th', '20th', '25th', 'same_as_closing'];
+
+function hasStandardTerms(inv) {
+  return Boolean(
+    inv?.defaultScenarioType ||
+    inv?.defaultInterestRate ||
+    inv?.defaultHoldPeriodMonths ||
+    inv?.defaultTermMonths ||
+    inv?.defaultOriginationFeePct ||
+    inv?.defaultDrawFee ||
+    inv?.defaultServicingFee
+  );
+}
+
+function termsBadgeText(inv) {
+  if (!hasStandardTerms(inv)) return null;
+  const parts = [];
+  if (inv.defaultInterestRate != null) parts.push(`${inv.defaultInterestRate}%`);
+  if (inv.defaultScenarioType) parts.push(SCENARIO_SHORT[inv.defaultScenarioType] || inv.defaultScenarioType);
+  const months = inv.defaultTermMonths ?? inv.defaultHoldPeriodMonths;
+  if (months) parts.push(`${months}mo`);
+  return parts.join(' • ');
+}
+
+function StandardTermsSlideover({ investor, onClose, onSave }) {
+  const [form, setForm] = useState({
+    defaultScenarioType:       investor?.defaultScenarioType       || '',
+    defaultInterestRate:       investor?.defaultInterestRate       ?? '',
+    defaultHoldPeriodMonths:   investor?.defaultHoldPeriodMonths   ?? '',
+    defaultTermMonths:         investor?.defaultTermMonths         ?? '',
+    defaultOriginationFeePct:  investor?.defaultOriginationFeePct  ?? '',
+    defaultOriginationFeeType: investor?.defaultOriginationFeeType || 'percentage',
+    defaultOriginationFeeFlat: investor?.defaultOriginationFeeFlat ?? '',
+    defaultDrawFee:            investor?.defaultDrawFee            ?? '',
+    defaultServicingFee:       investor?.defaultServicingFee       ?? '',
+    defaultExtensionAvailable: investor?.defaultExtensionAvailable ?? false,
+    defaultExtensionMonths:    investor?.defaultExtensionMonths    ?? '',
+    defaultExtensionFeePoints: investor?.defaultExtensionFeePoints ?? '',
+    defaultPaymentDueDay:      investor?.defaultPaymentDueDay      || '',
+    defaultPaymentTiming:      investor?.defaultPaymentTiming      || 'at_exit',
+    defaultLtcPct:             investor?.defaultLtcPct             ?? '',
+    defaultMaxLoanAmount:      investor?.defaultMaxLoanAmount      ?? '',
+    defaultPosition:           investor?.defaultPosition           || '1st Position',
+    defaultPreferredReturnPct: investor?.defaultPreferredReturnPct ?? '',
+    defaultProfitSharePct:     investor?.defaultProfitSharePct     ?? '',
+    termsNotes:                investor?.termsNotes                || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const patch = {
+      defaultScenarioType:       form.defaultScenarioType || null,
+      defaultInterestRate:       numOrNull(form.defaultInterestRate),
+      defaultHoldPeriodMonths:   numOrNull(form.defaultHoldPeriodMonths),
+      defaultTermMonths:         numOrNull(form.defaultTermMonths),
+      defaultOriginationFeePct:  numOrNull(form.defaultOriginationFeePct),
+      defaultOriginationFeeType: form.defaultOriginationFeeType || 'percentage',
+      defaultOriginationFeeFlat: numOrNull(form.defaultOriginationFeeFlat),
+      defaultDrawFee:            numOrNull(form.defaultDrawFee),
+      defaultServicingFee:       numOrNull(form.defaultServicingFee),
+      defaultExtensionAvailable: !!form.defaultExtensionAvailable,
+      defaultExtensionMonths:    numOrNull(form.defaultExtensionMonths),
+      defaultExtensionFeePoints: numOrNull(form.defaultExtensionFeePoints),
+      defaultPaymentDueDay:      form.defaultPaymentDueDay || null,
+      defaultPaymentTiming:      form.defaultPaymentTiming || 'at_exit',
+      defaultLtcPct:             numOrNull(form.defaultLtcPct),
+      defaultMaxLoanAmount:      numOrNull(form.defaultMaxLoanAmount),
+      defaultPosition:           form.defaultPosition || '1st Position',
+      defaultPreferredReturnPct: numOrNull(form.defaultPreferredReturnPct),
+      defaultProfitSharePct:     numOrNull(form.defaultProfitSharePct),
+      termsNotes:                form.termsNotes || '',
+    };
+    await onSave(patch);
+    setSaving(false);
+  };
+
+  const inp = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:bg-white';
+  const lbl = 'text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-1 block';
+  const section = 'text-[11px] uppercase tracking-wider text-gray-400 font-bold mt-4 mb-2';
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/40 z-50 flex justify-end">
+      <div className="bg-white w-full max-w-xl h-full overflow-y-auto shadow-2xl flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between sticky top-0 bg-white z-10">
+          <div>
+            <h3 className="text-base font-bold text-[#1a2332]">Standard Terms — {investor?.name}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              These defaults auto-populate when this investor is selected in any deal's financing tab.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 ml-3"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 flex-1">
+          <p className={section}>Default Scenario</p>
+          <select
+            className={inp}
+            value={form.defaultScenarioType}
+            onChange={e => update('defaultScenarioType', e.target.value)}
+          >
+            <option value="">— No default —</option>
+            {Object.entries(SCENARIO_LABELS).map(([id, label]) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+
+          <p className={section}>Loan Terms</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Annual Interest Rate (%)</label>
+              <input type="number" step="0.01" className={inp} value={form.defaultInterestRate}
+                onChange={e => update('defaultInterestRate', e.target.value)} placeholder="13.5" />
+            </div>
+            <div>
+              <label className={lbl}>Term Length (Months)</label>
+              <input type="number" className={inp} value={form.defaultTermMonths}
+                onChange={e => update('defaultTermMonths', e.target.value)} placeholder="9" />
+            </div>
+            <div>
+              <label className={lbl}>Hold Period (Months)</label>
+              <input type="number" className={inp} value={form.defaultHoldPeriodMonths}
+                onChange={e => update('defaultHoldPeriodMonths', e.target.value)} placeholder="6" />
+            </div>
+            <div>
+              <label className={lbl}>Position</label>
+              <select className={inp} value={form.defaultPosition} onChange={e => update('defaultPosition', e.target.value)}>
+                <option>1st Position</option>
+                <option>2nd Position</option>
+                <option>Pari-passu</option>
+              </select>
+            </div>
+          </div>
+
+          <p className={section}>Fees</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Origination Fee Type</label>
+              <select className={inp} value={form.defaultOriginationFeeType}
+                onChange={e => update('defaultOriginationFeeType', e.target.value)}>
+                <option value="percentage">% of loan</option>
+                <option value="flat">Flat $</option>
+              </select>
+            </div>
+            {form.defaultOriginationFeeType === 'percentage' ? (
+              <div>
+                <label className={lbl}>Origination Fee (%)</label>
+                <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeePct}
+                  onChange={e => update('defaultOriginationFeePct', e.target.value)} placeholder="2.75" />
+              </div>
+            ) : (
+              <div>
+                <label className={lbl}>Origination Fee ($)</label>
+                <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeeFlat}
+                  onChange={e => update('defaultOriginationFeeFlat', e.target.value)} placeholder="2500" />
+              </div>
+            )}
+            <div>
+              <label className={lbl}>Draw Fee ($ per draw)</label>
+              <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
+                onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
+            </div>
+            <div>
+              <label className={lbl}>Servicing Fee ($)</label>
+              <input type="number" step="0.01" className={inp} value={form.defaultServicingFee}
+                onChange={e => update('defaultServicingFee', e.target.value)} placeholder="400" />
+            </div>
+          </div>
+
+          <p className={section}>Extension</p>
+          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+            <input type="checkbox" checked={!!form.defaultExtensionAvailable}
+              onChange={e => update('defaultExtensionAvailable', e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent/50" />
+            <span className="text-sm text-gray-700">Extension available</span>
+          </label>
+          {form.defaultExtensionAvailable && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Extension Months</label>
+                <input type="number" className={inp} value={form.defaultExtensionMonths}
+                  onChange={e => update('defaultExtensionMonths', e.target.value)} placeholder="3" />
+              </div>
+              <div>
+                <label className={lbl}>Extension Fee (points)</label>
+                <input type="number" step="0.25" className={inp} value={form.defaultExtensionFeePoints}
+                  onChange={e => update('defaultExtensionFeePoints', e.target.value)} placeholder="1" />
+              </div>
+            </div>
+          )}
+
+          <p className={section}>Payments & Limits</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Payment Due Day</label>
+              <select className={inp} value={form.defaultPaymentDueDay}
+                onChange={e => update('defaultPaymentDueDay', e.target.value)}>
+                <option value="">— Not set —</option>
+                {PAYMENT_DUE_DAYS.map(d => <option key={d} value={d}>{d === 'same_as_closing' ? 'Same as closing' : d + ' of month'}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Payment Timing</label>
+              <select className={inp} value={form.defaultPaymentTiming}
+                onChange={e => update('defaultPaymentTiming', e.target.value)}>
+                <option value="at_exit">At exit</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>LTC (%)</label>
+              <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
+                onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
+            </div>
+            <div>
+              <label className={lbl}>Max Loan Amount ($)</label>
+              <input type="number" className={inp} value={form.defaultMaxLoanAmount}
+                onChange={e => update('defaultMaxLoanAmount', e.target.value)} placeholder="500000" />
+            </div>
+          </div>
+
+          {(form.defaultScenarioType === 'profit-split' || form.defaultScenarioType === 'committed-capital-partner') && (
+            <>
+              <p className={section}>Profit / Pref</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Preferred Return (%)</label>
+                  <input type="number" step="0.01" className={inp} value={form.defaultPreferredReturnPct}
+                    onChange={e => update('defaultPreferredReturnPct', e.target.value)} placeholder="12" />
+                </div>
+                <div>
+                  <label className={lbl}>Profit Share (%)</label>
+                  <input type="number" step="0.01" className={inp} value={form.defaultProfitSharePct}
+                    onChange={e => update('defaultProfitSharePct', e.target.value)} placeholder="50" />
+                </div>
+              </div>
+            </>
+          )}
+
+          <p className={section}>Terms Notes (optional)</p>
+          <textarea rows={4} className={inp} value={form.termsNotes}
+            onChange={e => update('termsNotes', e.target.value)}
+            placeholder="Anything else? E.g. Requires MCO, property inspection, insurance with lender as mortgagee, clear title."
+          />
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 bg-white sticky bottom-0">
+          <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5">Cancel</button>
+          <button onClick={handleSave} disabled={saving}
+            className="text-sm bg-accent text-white rounded-lg px-4 py-1.5 hover:bg-accent/90 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save Standard Terms'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Tab: Directory ───────────────────────────────────────────────────────────
 function EditInvestorModal({ investor, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -735,6 +1027,7 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
   // Show every investor in the org except the synthetic "Cash" placeholder.
   const contacts = investors.filter(i => i.name && i.name !== 'Cash');
   const [editing, setEditing] = useState(null);
+  const [termsFor, setTermsFor] = useState(null);
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -745,14 +1038,18 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Email</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
             <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
           {contacts.length === 0 && (
-            <tr><td colSpan={6} className="px-4 py-6 text-xs text-gray-400 text-center">No investors yet</td></tr>
+            <tr><td colSpan={7} className="px-4 py-6 text-xs text-gray-400 text-center">No investors yet</td></tr>
           )}
-          {contacts.map(inv => (
+          {contacts.map(inv => {
+            const hasTerms = hasStandardTerms(inv);
+            const badge = termsBadgeText(inv);
+            return (
             <tr key={inv.id} className="hover:bg-gray-50">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -780,6 +1077,25 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
               <td className="px-4 py-3">
                 <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
               </td>
+              <td className="px-4 py-3">
+                {hasTerms ? (
+                  <button
+                    onClick={() => setTermsFor(inv)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent hover:text-accent/80 bg-accent/10 hover:bg-accent/15 px-2 py-1 rounded-full transition-colors"
+                    title="View standard terms"
+                  >
+                    <CheckCircle size={11} /> {badge}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setTermsFor(inv)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-full transition-colors"
+                    title="Set standard terms"
+                  >
+                    <AlertCircle size={11} /> Set Terms
+                  </button>
+                )}
+              </td>
               <td className="px-4 py-3 text-right whitespace-nowrap">
                 <button
                   onClick={() => setEditing(inv)}
@@ -801,7 +1117,8 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
                 </button>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {editing && (
@@ -811,6 +1128,16 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
           onSave={async (patch) => {
             await onUpdate?.(editing.id, patch);
             setEditing(null);
+          }}
+        />
+      )}
+      {termsFor && (
+        <StandardTermsSlideover
+          investor={termsFor}
+          onClose={() => setTermsFor(null)}
+          onSave={async (patch) => {
+            await onUpdate?.(termsFor.id, patch);
+            setTermsFor(null);
           }}
         />
       )}
@@ -1339,6 +1666,27 @@ export default function InvestorPortal() {
           preferredFinancing: r.preferred_financing || '',
           standardTerms: r.standard_terms || '',
           notes: r.notes || '',
+          // Structured standard terms (auto-populate deal Financing tab)
+          defaultScenarioType:       r.default_scenario_type        ?? null,
+          defaultInterestRate:       r.default_interest_rate        ?? null,
+          defaultHoldPeriodMonths:   r.default_hold_period_months   ?? null,
+          defaultTermMonths:         r.default_term_months          ?? null,
+          defaultOriginationFeePct:  r.default_origination_fee_pct  ?? null,
+          defaultOriginationFeeType: r.default_origination_fee_type ?? 'percentage',
+          defaultOriginationFeeFlat: r.default_origination_fee_flat ?? null,
+          defaultPosition:           r.default_position             ?? '1st Position',
+          defaultPreferredReturnPct: r.default_preferred_return_pct ?? null,
+          defaultProfitSharePct:     r.default_profit_share_pct     ?? null,
+          defaultPaymentTiming:      r.default_payment_timing       ?? 'at_exit',
+          defaultPaymentDueDay:      r.default_payment_due_day      ?? null,
+          defaultDrawFee:            r.default_draw_fee             ?? null,
+          defaultServicingFee:       r.default_servicing_fee        ?? null,
+          defaultLtcPct:             r.default_ltc_pct              ?? null,
+          defaultMaxLoanAmount:      r.default_max_loan_amount      ?? null,
+          defaultExtensionAvailable: r.default_extension_available  ?? false,
+          defaultExtensionMonths:    r.default_extension_months     ?? null,
+          defaultExtensionFeePoints: r.default_extension_fee_points ?? null,
+          termsNotes:                r.terms_notes                  ?? '',
           activeDeals:      c.activeDeals      ?? 0,
           capitalInvested:  c.capitalInvested  ?? 0,
           totalReturns:     c.totalReturns     ?? 0,

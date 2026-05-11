@@ -87,6 +87,27 @@ export async function updateInvestor(id, patch, orgId) {
     if (patch.preferredFinancing !== undefined) dbPatch.preferred_financing = patch.preferredFinancing;
     if (patch.standardTerms !== undefined)      dbPatch.standard_terms = patch.standardTerms;
     if (patch.notes !== undefined)              dbPatch.notes = patch.notes;
+    // Structured standard terms — auto-populate fields in deal Financing tab
+    if (patch.defaultScenarioType !== undefined)       dbPatch.default_scenario_type        = patch.defaultScenarioType || null;
+    if (patch.defaultInterestRate !== undefined)       dbPatch.default_interest_rate        = patch.defaultInterestRate;
+    if (patch.defaultHoldPeriodMonths !== undefined)   dbPatch.default_hold_period_months   = patch.defaultHoldPeriodMonths;
+    if (patch.defaultTermMonths !== undefined)         dbPatch.default_term_months          = patch.defaultTermMonths;
+    if (patch.defaultOriginationFeePct !== undefined)  dbPatch.default_origination_fee_pct  = patch.defaultOriginationFeePct;
+    if (patch.defaultOriginationFeeType !== undefined) dbPatch.default_origination_fee_type = patch.defaultOriginationFeeType;
+    if (patch.defaultOriginationFeeFlat !== undefined) dbPatch.default_origination_fee_flat = patch.defaultOriginationFeeFlat;
+    if (patch.defaultPosition !== undefined)           dbPatch.default_position             = patch.defaultPosition;
+    if (patch.defaultPreferredReturnPct !== undefined) dbPatch.default_preferred_return_pct = patch.defaultPreferredReturnPct;
+    if (patch.defaultProfitSharePct !== undefined)     dbPatch.default_profit_share_pct     = patch.defaultProfitSharePct;
+    if (patch.defaultPaymentTiming !== undefined)      dbPatch.default_payment_timing       = patch.defaultPaymentTiming;
+    if (patch.defaultPaymentDueDay !== undefined)      dbPatch.default_payment_due_day      = patch.defaultPaymentDueDay;
+    if (patch.defaultDrawFee !== undefined)            dbPatch.default_draw_fee             = patch.defaultDrawFee;
+    if (patch.defaultServicingFee !== undefined)       dbPatch.default_servicing_fee        = patch.defaultServicingFee;
+    if (patch.defaultLtcPct !== undefined)             dbPatch.default_ltc_pct              = patch.defaultLtcPct;
+    if (patch.defaultMaxLoanAmount !== undefined)      dbPatch.default_max_loan_amount      = patch.defaultMaxLoanAmount;
+    if (patch.defaultExtensionAvailable !== undefined) dbPatch.default_extension_available  = patch.defaultExtensionAvailable;
+    if (patch.defaultExtensionMonths !== undefined)    dbPatch.default_extension_months     = patch.defaultExtensionMonths;
+    if (patch.defaultExtensionFeePoints !== undefined) dbPatch.default_extension_fee_points = patch.defaultExtensionFeePoints;
+    if (patch.termsNotes !== undefined)                dbPatch.terms_notes                  = patch.termsNotes;
     if (Object.keys(dbPatch).length > 0) {
       const { error } = await supabase
         .from('investors')
