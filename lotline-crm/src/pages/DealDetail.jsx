@@ -493,10 +493,10 @@ function FinancingScenarioPanel({
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={(() => { const v = loanAmountOverride || totalLent; return v ? `$${Number(v).toLocaleString()}` : ''; })()}
+                  value={(() => { const v = loanAmountOverride != null ? loanAmountOverride : totalLent; return v ? `$${Number(v).toLocaleString()}` : ''; })()}
                   onChange={e => {
                     const raw = e.target.value.replace(/[^0-9]/g, '');
-                    setLoanAmountOverride(raw === '' ? 0 : Number(raw));
+                    setLoanAmountOverride(raw === '' ? null : Number(raw));
                   }}
                   onFocus={e => e.target.select()}
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
