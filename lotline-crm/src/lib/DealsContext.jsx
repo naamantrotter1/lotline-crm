@@ -116,6 +116,7 @@ export function DealsProvider({ children }) {
         }
       },
       (deletedId) => {
+        removeFromLS(deletedId, activeOrgId);
         setDeals(prev => prev.filter(d => String(d.id) !== deletedId));
         setArchivedDeals(prev => prev.filter(d => String(d.id) !== deletedId));
       },
