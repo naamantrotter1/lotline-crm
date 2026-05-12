@@ -30,7 +30,6 @@ export function AuthProvider({ children }) {
         .single();
       if (!error && data) {
         setProfile(data);
-        localStorage.setItem('crm_user', JSON.stringify({ name: data.name, email: data.email, phone: data.phone || '' }));
 
         // Resolve active org: slug, plan, seat_limit + membership role.
         // Both queries are awaited in parallel so setLoading(false) only fires
@@ -153,7 +152,6 @@ export function AuthProvider({ children }) {
           setOrgSeatLimit(null);
           setInvestorRecord(null);
           setImpersonating(null);
-          localStorage.removeItem('crm_user');
           setLoading(false);
         }
       }
@@ -175,11 +173,6 @@ export function AuthProvider({ children }) {
       .eq('id', session.user.id);
     if (!error) {
       setProfile(prev => ({ ...prev, ...updates }));
-      localStorage.setItem('crm_user', JSON.stringify({
-        name: updates.name ?? profile?.name,
-        email: profile?.email,
-        phone: updates.phone ?? profile?.phone ?? '',
-      }));
     }
     return { error };
   };

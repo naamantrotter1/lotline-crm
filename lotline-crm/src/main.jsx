@@ -22,7 +22,8 @@ if (window.location.pathname === '/') {
   }
 }
 
-// crm_user is now set by AuthContext after login (based on the user's profile)
+// User profile lives in AuthContext (sourced from the `profiles` table) — no
+// localStorage copy needed.
 // Run one-time migration to Supabase (no-op if already done or Supabase not configured)
 migrateToSupabase();
 

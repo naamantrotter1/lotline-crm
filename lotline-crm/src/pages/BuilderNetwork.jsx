@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import Button from '../components/UI/Button';
 import { COUNTIES, totalPermits, topBuilder } from '../data/builderNetwork';
+import { useAuth } from '../lib/AuthContext';
 
 // ── Style helpers ────────────────────────────────────────────────────────────
 const inp = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition-colors';
@@ -132,19 +133,21 @@ const EMPTY_FORM = {
 };
 
 function ConnectDrawer({ open, builder, county, onClose }) {
+  const { profile } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(EMPTY_FORM);
   const [confirmed, setConfirmed] = useState(null);
 
   const handleOpen = () => {
     if (!open) return;
-    try {
-      const u = JSON.parse(localStorage.getItem('crm_user') || '{}');
-      const msg = `Hi ${builder?.name || 'there'}, I own ${form.acreage || '[X]'} acres in ${county?.county || '[County]'} County and believe it may be a great fit for your pipeline. I'd love to connect.`;
-      setForm({ ...EMPTY_FORM, county: county?.county || '', name: u.name || '', email: u.email || '', message: msg });
-    } catch {
-      setForm({ ...EMPTY_FORM, county: county?.county || '' });
-    }
+    const msg = `Hi ${builder?.name || 'there'}, I own ${form.acreage || '[X]'} acres in ${county?.county || '[County]'} County and believe it may be a great fit for your pipeline. I'd love to connect.`;
+    setForm({
+      ...EMPTY_FORM,
+      county: county?.county || '',
+      name: profile?.name || '',
+      email: profile?.email || '',
+      message: msg,
+    });
     setStep(1);
     setConfirmed(null);
   };

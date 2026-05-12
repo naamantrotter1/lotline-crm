@@ -2583,7 +2583,7 @@ function DealDetailContent({ deal }) {
   const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
   const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
-  const currentStageVal = localStorage.getItem(`lotline_deal_stage_${deal.id}`) || deal?.stage || '';
+  const currentStageVal = deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
   const STAGE_OPTIONS = isLandAcq ? LAND_ACQ_STAGES : DEAL_OVERVIEW_STAGES;
@@ -2625,14 +2625,15 @@ function DealDetailContent({ deal }) {
   const [sewerCompany, setSewerCompany] = useState(deal?.sewerCompany || '');
   const [electricCompany, setElectricCompany] = useState(deal?.electricCompany || '');
   const [homeModel, setHomeModel] = useState(deal?.homeModel || '');
+  // Subdivide / land-clearing flags read from the deal row only. The legacy
+  // `subdividable` and `landClearing` columns sit alongside the canonical
+  // `tags` array; both are kept in sync by updateDealFlag() below.
   const [subdividable, setSubdividable] = useState(() => {
-    const saved = localStorage.getItem(`lotline_subdivide_${deal?.id}`);
-    if (saved !== null) return saved;
+    if (deal?.subdividable === 'Yes' || deal?.subdividable === 'No') return deal.subdividable;
     return (deal?.tags || []).includes('Subdivide') ? 'Yes' : 'No';
   });
   const [landClearing, setLandClearing] = useState(() => {
-    const saved = localStorage.getItem(`lotline_land_clearing_${deal?.id}`);
-    if (saved !== null) return saved;
+    if (deal?.landClearing === 'Yes' || deal?.landClearing === 'No') return deal.landClearing;
     return (deal?.tags || []).includes('Land Clearing') ? 'Yes' : 'No';
   });
 
@@ -2658,13 +2659,11 @@ function DealDetailContent({ deal }) {
 
   const handleSetSubdividable = (val) => {
     setSubdividable(val);
-    if (deal?.id) localStorage.setItem(`lotline_subdivide_${deal.id}`, val);
     updateDealFlag({ tagName: 'Subdivide', legacyKey: 'subdividable', on: val === 'Yes' });
   };
 
   const handleSetLandClearing = (val) => {
     setLandClearing(val);
-    if (deal?.id) localStorage.setItem(`lotline_land_clearing_${deal.id}`, val);
     updateDealFlag({ tagName: 'Land Clearing', legacyKey: 'landClearing', on: val === 'Yes' });
   };
 
@@ -2676,7 +2675,6 @@ function DealDetailContent({ deal }) {
       stage: 'Waiting on Contract',
       contractSignedAt: null,
     };
-    localStorage.setItem(`lotline_deal_stage_${deal.id}`, 'Waiting on Contract');
     saveDeal(updated, activeOrgId);
     setDeals(prev => {
       const idx = prev.findIndex(x => String(x.id) === String(updated.id));
@@ -2689,7 +2687,6 @@ function DealDetailContent({ deal }) {
   const handleSetStage = async (val) => {
     setStage(val);
     if (!deal?.id) return;
-    localStorage.setItem(`lotline_deal_stage_${deal.id}`, val);
     const todayStr = new Date().toISOString().slice(0, 10);
     const isMovingToContractSigned = val === 'Contract Signed';
     if (isMovingToContractSigned && !deal.contractDate) {
@@ -2791,7 +2788,6 @@ function DealDetailContent({ deal }) {
       remoteStage !== last.stage && stage === last.stage
     ) {
       setStage(remoteStage);
-      if (deal?.id) localStorage.setItem(`lotline_deal_stage_${deal.id}`, remoteStage);
     }
 
     sync(address,                setAddress,                'address');

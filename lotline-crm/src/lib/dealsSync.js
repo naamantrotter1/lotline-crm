@@ -257,11 +257,12 @@ export async function loadAllDeals(orgIds) {
     q = ids.length === 1 ? q.eq('organization_id', ids[0]) : q.in('organization_id', ids);
     const { data, error } = await q;
     if (error) throw error;
-    // Merge Supabase rows with any locally-stored fields not yet synced to DB
-    // (e.g. contractSignedAt, listingUrl before those columns exist in Supabase)
+    // We still read localStorage to detect "unsynced" LS-only deals (deals
+    // created offline that never reached Supabase) — but we no longer merge
+    // individual fields from LS into Supabase rows. Supabase is the only
+    // source of truth for field values; LS is just a cache + offline buffer.
     const lsDeals = lsGet(orgId);
     console.log('[dealsSync] loadAllDeals: orgId =', orgId, '| supabase rows =', data.length, '| ls deals =', lsDeals.length);
-    const lsById = Object.fromEntries(lsDeals.map(d => [String(d.id), d]));
     // Batch-fetch cost summaries for all orgs in scope and build a lookup map.
     // This is the canonical source of truth for total costs — always use
     // deal.totalActual in downstream consumers instead of legacy flat columns.
@@ -270,7 +271,6 @@ export async function loadAllDeals(orgIds) {
 
     const deals = data.map(row => {
       const fromSupabase = rowToDeal(row);
-      const fromLS = lsById[String(fromSupabase.id)] || {};
       const id = String(fromSupabase.id);
       const seededDate = SEEDED_CONTRACT_SIGNED_DATES[id] || null;
       const summary = summaryByDealId[id];
@@ -280,28 +280,16 @@ export async function loadAllDeals(orgIds) {
         // and all dashboard / analytics surfaces instead of legacy flat columns.
         totalActual:     summary ? Number(summary.total_actual    ?? 0) : null,
         totalEstimated:  summary ? Number(summary.total_estimated ?? 0) : null,
-        // Seeded deals use the hardcoded date (overrides stale LS migration values)
-        // User-created deals fall back to LS then null
-        contractSignedAt: fromSupabase.contractSignedAt
-          || seededDate
-          || fromLS.contractSignedAt
-          || null,
-        listingUrl: fromSupabase.listingUrl || fromLS.listingUrl || null,
-        // Trust Supabase first, fall back to localStorage, then seeded date
-        contractDate: fromSupabase.contractDate || fromLS.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
-        // LS fallbacks for date/closing fields — prevents Supabase returning null
-        // (column missing or write failed) from overwriting a locally-saved value.
-        closeDate:             fromSupabase.closeDate             || fromLS.closeDate             || null,
-        closingDate:           fromSupabase.closingDate           || fromLS.closingDate           || null,
-        deliveryDate:          fromSupabase.deliveryDate          || fromLS.deliveryDate          || null,
-        ddDeadline:            fromSupabase.ddDeadline            || fromLS.ddDeadline            || null,
-        appraisalDate:         fromSupabase.appraisalDate         || fromLS.appraisalDate         || null,
-        financingContingency:  fromSupabase.financingContingency  || fromLS.financingContingency  || null,
-        closingAttorney:       fromSupabase.closingAttorney       || fromLS.closingAttorney       || null,
-        closingAttorneyPhone:  fromSupabase.closingAttorneyPhone  || fromLS.closingAttorneyPhone  || null,
-        closingAttorneyAddress: fromSupabase.closingAttorneyAddress || fromLS.closingAttorneyAddress || null,
-        dealOwner:             fromSupabase.dealOwner             || fromLS.dealOwner             || null,
-        manufacturer:          fromSupabase.manufacturer          || fromLS.manufacturer          || null,
+        // Seeded LotLine demo deals use a hardcoded contract date when the DB
+        // column hasn't been populated yet. This is the ONLY remaining LS-style
+        // override — and it's a code constant, not localStorage.
+        contractSignedAt: fromSupabase.contractSignedAt || seededDate || null,
+        contractDate:     fromSupabase.contractDate || (seededDate ? seededDate.slice(0, 10) : null),
+        // All other fields: trust Supabase as the only source of truth.
+        // Previously we fell back to localStorage when the Supabase value was
+        // falsy — but that caused user-cleared dates and edited addresses to
+        // "revert" because the LS copy still held the old value while Supabase
+        // correctly held null/empty/new.
       };
     });
 
@@ -372,12 +360,18 @@ export async function loadAllDeals(orgIds) {
   }
 }
 
-/** Load archived deals */
+/** Load archived deals — Supabase is the only source. No LS cache.
+ *  Archived deals are infrequently accessed; querying on demand keeps things
+ *  consistent across devices and removes the `lotline_archived_deals_{orgId}`
+ *  cache that was drifting from the DB. */
 export async function loadArchivedDeals(orgId) {
-  const archivedKey = orgId ? `lotline_archived_deals_${orgId}` : 'lotline_archived_deals';
-  if (!supabase) {
-    try { return JSON.parse(localStorage.getItem(archivedKey) || '[]'); } catch { return []; }
-  }
+  // Best-effort: purge any legacy archived-deals cache that previous versions
+  // of this app wrote. Safe to remove — Supabase has the canonical list.
+  try {
+    const legacyKey = orgId ? `lotline_archived_deals_${orgId}` : 'lotline_archived_deals';
+    if (localStorage.getItem(legacyKey)) localStorage.removeItem(legacyKey);
+  } catch { /* localStorage unavailable, ignore */ }
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('deals')
@@ -386,8 +380,9 @@ export async function loadArchivedDeals(orgId) {
       .eq('is_archived', true);
     if (error) throw error;
     return data.map(rowToDeal);
-  } catch {
-    try { return JSON.parse(localStorage.getItem(archivedKey) || '[]'); } catch { return []; }
+  } catch (e) {
+    console.warn('[dealsSync] loadArchivedDeals: Supabase unavailable', e.message);
+    return [];
   }
 }
 
