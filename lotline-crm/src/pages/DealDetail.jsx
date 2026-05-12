@@ -2751,63 +2751,97 @@ function DealDetailContent({ deal }) {
   // The DealsContext subscription (subscribeToDeals) already fires on UPDATE events,
   // keeping the `deals` array in context fresh. Here we react to those changes and
   // push updated field values into local state so this page updates without a refresh.
-  // EditableField manages its own internal `draft` state while editing, so syncing
-  // the parent's value won't disturb a user who is actively typing in a field.
+  //
+  // CRITICAL: we MUST NOT unconditionally overwrite local state from `remoteDeal` on
+  // every context change. Doing so causes a feedback loop:
+  //   1. user edits address → setAddress(new) → saveNow saves → setDeals(updated)
+  //   2. this effect fires (deals changed) → setAddress(remoteDeal.address)
+  //   3. realtime echoes our own write back later, possibly with stale-looking values
+  //      from an in-flight intermediate write → setDeals(merged) → this effect fires
+  //      → setAddress(stale) → auto-save effect picks up the diff → writes STALE back
+  //      to LS + Supabase → field "reverts" some time after a successful edit.
+  //
+  // Fix: track the previous remote value per field. Only adopt a remote value when
+  // the user hasn't diverged from it locally (i.e., currentLocal === lastRemote).
+  // This preserves user edits while still letting genuine remote changes propagate.
+  const lastRemoteRef = useRef(null);
   useEffect(() => {
     const remoteDeal = deals.find(d => String(d.id) === String(deal.id));
     if (!remoteDeal) return;
-    // Sync stage from remote so a fresher DB value propagates after async loads
-    // (DealsContext typically hydrates from localStorage first, then from Supabase).
-    // Without this, local state could keep showing a stale stage even though the
-    // DB has the new value — the symptom users see as a stage "reverting on refresh".
+    const last = lastRemoteRef.current;
+    // On first run, just record — useState initializers already populated local state
+    // from the deal prop (which itself was resolved from the freshest available source).
+    if (!last) { lastRemoteRef.current = remoteDeal; return; }
+
+    // Sync a field only if (a) remote actually changed since last sync, and
+    // (b) local state still matches the previous remote (user hasn't edited).
+    const sync = (currentLocal, setter, key, normalize = v => (v ?? '')) => {
+      const remoteVal = normalize(remoteDeal[key]);
+      const lastVal   = normalize(last[key]);
+      if (remoteVal === lastVal) return;                 // remote unchanged → nothing to do
+      if (normalize(currentLocal) !== lastVal) return;   // user edited locally → don't clobber
+      setter(remoteVal);
+    };
+
+    // Stage: special-case to keep the localStorage stage cache in sync too.
     const allStages = [...LAND_ACQ_STAGES, ...DEAL_OVERVIEW_STAGES];
-    if (remoteDeal.stage && allStages.includes(remoteDeal.stage) && remoteDeal.stage !== stage) {
-      setStage(remoteDeal.stage);
-      if (deal?.id) localStorage.setItem(`lotline_deal_stage_${deal.id}`, remoteDeal.stage);
+    const remoteStage = remoteDeal.stage;
+    if (
+      remoteStage && allStages.includes(remoteStage) &&
+      remoteStage !== last.stage && stage === last.stage
+    ) {
+      setStage(remoteStage);
+      if (deal?.id) localStorage.setItem(`lotline_deal_stage_${deal.id}`, remoteStage);
     }
-    setAddress(remoteDeal.address || '');
-    setCounty(remoteDeal.county || '');
-    setDealState(remoteDeal.state || '');
-    setZip(remoteDeal.zip || '');
-    setAcreage(remoteDeal.acreage?.toString() || '');
-    setParcelId(remoteDeal.parcelId || '');
-    setLeadSource(remoteDeal.leadSource || '');
-    setOwnerType(remoteDeal.ownerType || '');
-    setUtilityScenario(remoteDeal.utilityScenario || '');
-    setOwnerName(remoteDeal.ownerName || '');
-    setSellerName(remoteDeal.sellerName || '');
-    setPhone(remoteDeal.phone || '');
-    setEmail(remoteDeal.email || '');
-    setInvestor(remoteDeal.investor || '');
-    // Re-sync the scenario selector + canonical DB enum when remote update
-    // brings new values. We treat `financing_scenario_type` as the source of
-    // truth — the legacy `financing` text field is derived. We deliberately
-    // do NOT set `financing` from remote here: applyScenario already keeps it
-    // in sync locally, and a stale remote `financing` (e.g. echoing before our
-    // own write commits) would otherwise flip the dropdown back.
-    if (remoteDeal.financingScenarioType) {
+
+    sync(address,                setAddress,                'address');
+    sync(county,                 setCounty,                 'county');
+    sync(dealState,              setDealState,              'state');
+    sync(zip,                    setZip,                    'zip');
+    sync(acreage,                setAcreage,                'acreage', v => (v == null ? '' : String(v)));
+    sync(parcelId,               setParcelId,               'parcelId');
+    sync(leadSource,             setLeadSource,             'leadSource');
+    sync(ownerType,              setOwnerType,              'ownerType');
+    sync(utilityScenario,        setUtilityScenario,        'utilityScenario');
+    sync(ownerName,              setOwnerName,              'ownerName');
+    sync(sellerName,             setSellerName,             'sellerName');
+    sync(phone,                  setPhone,                  'phone');
+    sync(email,                  setEmail,                  'email');
+    sync(investor,               setInvestor,               'investor');
+    sync(closingAttorney,        setClosingAttorney,        'closingAttorney');
+    sync(closingAttorneyPhone,   setClosingAttorneyPhone,   'closingAttorneyPhone');
+    sync(closingAttorneyAddress, setClosingAttorneyAddress, 'closingAttorneyAddress');
+    sync(dealOwner,              setDealOwner,              'dealOwner');
+
+    // Date fields: same divergence guard. We still want to allow null (legitimate clear)
+    // to propagate, which the generic sync() handles because the null-vs-empty mismatch
+    // is normalised away.
+    sync(closeDate,    setCloseDate,    'closeDate');
+    sync(contractDate, setContractDate, 'contractDate');
+
+    // ARV (numeric — compare without string normalize)
+    if (
+      remoteDeal.arv != null && remoteDeal.arv !== last.arv &&
+      arv === last.arv
+    ) setArv(remoteDeal.arv);
+
+    // Financing scenario — keep the previous behaviour but only adopt remote when the
+    // user hasn't diverged from the previous remote scenario.
+    if (
+      remoteDeal.financingScenarioType &&
+      remoteDeal.financingScenarioType !== last.financingScenarioType
+    ) {
       const byDb = FINANCING_SCENARIOS.find(s => s.dbType === remoteDeal.financingScenarioType);
-      if (byDb) {
+      if (byDb && (financingScenarioType === last.financingScenarioType)) {
         setSelectedScenario(byDb.id);
         setFinancingScenarioType(remoteDeal.financingScenarioType);
         setFinancing(byDb.financingType);
       }
-    } else if (!selectedScenario) {
-      // No scenario locally and remote also has no enum → trust remote text
+    } else if (!selectedScenario && !last.financing && remoteDeal.financing) {
       setFinancing(remoteDeal.financing || '');
     }
-    setClosingAttorney(remoteDeal.closingAttorney || '');
-    setClosingAttorneyPhone(remoteDeal.closingAttorneyPhone || '');
-    setClosingAttorneyAddress(remoteDeal.closingAttorneyAddress || '');
-    // Date fields: only overwrite local state when remote has a non-null value.
-    // A null remote close_date can mean the DB write hasn't committed yet (realtime
-    // race) — accepting null here would clear the field and trigger auto-save,
-    // which would then overwrite localStorage with an empty date and lose the value
-    // on the next hard refresh.
-    if (remoteDeal.closeDate != null) setCloseDate(remoteDeal.closeDate || '');
-    if (remoteDeal.contractDate != null) setContractDate(remoteDeal.contractDate || '');
-    setDealOwner(remoteDeal.dealOwner || '');
-    if (remoteDeal.arv != null) setArv(remoteDeal.arv);
+
+    lastRemoteRef.current = remoteDeal;
   }, [deals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Financing scenario state — restored from scenarioData if available
