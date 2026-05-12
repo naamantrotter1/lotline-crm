@@ -1,10 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { HOME_MODELS } from '../data/homeModels';
+import { useState, useEffect } from 'react';
 import { Search, Plus, ExternalLink, ChevronUp, ChevronDown, Pencil, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/UI/Button';
-
-const STORAGE_KEY = 'homeModels_data_v2';
-const HIDDEN_KEY = 'hiddenOrderHomeIds';
+import { useAuth } from '../lib/AuthContext';
+import {
+  fetchHomeModels,
+  seedHomeModelsIfEmpty,
+  createHomeModel,
+  updateHomeModel,
+  deleteHomeModel,
+  fetchHiddenOrderHomeNames,
+  setOrderHomeHidden,
+} from '../lib/homeModelsData';
 
 const EMPTY_MODEL = {
   model: '',
@@ -18,22 +24,28 @@ const EMPTY_MODEL = {
 };
 
 export default function HomeModels() {
-  const [models, setModels] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : HOME_MODELS;
-    } catch {
-      return HOME_MODELS;
-    }
-  });
+  const { activeOrgId } = useAuth();
+  const [models, setModels] = useState([]);
+  const [hiddenHomes, setHiddenHomes] = useState(new Set());
+  const [loading, setLoading] = useState(true);
 
-  const [hiddenHomes, setHiddenHomes] = useState(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'));
-    } catch {
-      return new Set();
-    }
-  });
+  // Load + seed on mount / org change
+  useEffect(() => {
+    if (!activeOrgId) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      // Try to seed first — no-op if rows already exist.
+      const seeded = await seedHomeModelsIfEmpty(activeOrgId);
+      const list = seeded.length > 0 ? seeded : await fetchHomeModels(activeOrgId);
+      const hidden = await fetchHiddenOrderHomeNames(activeOrgId);
+      if (cancelled) return;
+      setModels(list);
+      setHiddenHomes(hidden);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [activeOrgId]);
 
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('price');
@@ -42,26 +54,18 @@ export default function HomeModels() {
   const [editingModel, setEditingModel] = useState(null); // null = add new
   const [form, setForm] = useState(EMPTY_MODEL);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(models));
-  }, [models]);
-
-  const hiddenMounted = useRef(false);
-  useEffect(() => {
-    if (!hiddenMounted.current) { hiddenMounted.current = true; return; }
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenHomes]));
-  }, [hiddenHomes]);
-
   const getOrderHomeName = (modelName) => modelName.replace(/\s*\([^)]*\)\s*$/, '').trim();
 
-  const toggleOrderHomeVisibility = (modelName) => {
+  const toggleOrderHomeVisibility = async (modelName) => {
     const name = getOrderHomeName(modelName);
-    setHiddenHomes((prev) => {
+    const isHidden = hiddenHomes.has(name);
+    // Optimistic toggle
+    setHiddenHomes(prev => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+      if (isHidden) next.delete(name); else next.add(name);
       return next;
     });
+    if (activeOrgId) await setOrderHomeHidden(activeOrgId, name, !isHidden);
   };
 
   const handleSort = (key) => {
@@ -95,7 +99,8 @@ export default function HomeModels() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!activeOrgId) return;
     const parsed = {
       ...form,
       beds: parseInt(form.beds) || 0,
@@ -105,18 +110,22 @@ export default function HomeModels() {
     };
 
     if (editingModel) {
-      setModels((prev) => prev.map((m) => (m.id === editingModel.id ? { ...parsed, id: editingModel.id } : m)));
+      const { data, error } = await updateHomeModel(editingModel.id, parsed);
+      if (error) { alert('Could not save model. Please try again.'); return; }
+      setModels(prev => prev.map(m => m.id === editingModel.id ? data : m));
     } else {
-      const newId = Math.max(0, ...models.map((m) => m.id)) + 1;
-      setModels((prev) => [...prev, { ...parsed, id: newId }]);
+      const { data, error } = await createHomeModel(activeOrgId, parsed);
+      if (error) { alert('Could not add model. Please try again.'); return; }
+      setModels(prev => [...prev, data]);
     }
     closeModal();
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this model?')) {
-      setModels((prev) => prev.filter((m) => m.id !== id));
-    }
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this model?')) return;
+    const { error } = await deleteHomeModel(id);
+    if (error) { alert('Could not delete model. Please try again.'); return; }
+    setModels(prev => prev.filter(m => m.id !== id));
   };
 
   const filtered = models
