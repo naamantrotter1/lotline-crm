@@ -8,22 +8,12 @@ import {
 } from 'lucide-react';
 import Button from '../components/UI/Button';
 import { fetchPooledLoans, createPooledLoan, monthlyInterest } from '../lib/pooledLoanData';
-
-// ── Storage ────────────────────────────────────────────────────────────────
-const loanKey    = (orgId) => orgId ? `lending_requests_${orgId}`        : 'lending_requests';
-const partnerKey = (orgId) => orgId ? `partnership_submissions_${orgId}` : 'partnership_submissions';
-
-// ── Dummy seed data ────────────────────────────────────────────────────────
-const DUMMY_LOANS = [
-  { ref: 'LND-4821', address: '142 Pinewood Dr, Hamlet, NC 28345',       loanAmount: 87000, loanType: 'Fix & Flip',  dateSubmitted: '2026-03-18', status: 'In Review' },
-  { ref: 'LND-3607', address: '88 Oak Ridge Rd, Rockingham, NC 28379',   loanAmount: 52500, loanType: 'Bridge Loan', dateSubmitted: '2026-02-27', status: 'Approved'  },
-  { ref: 'LND-3201', address: '305 Elm St, Laurinburg, NC 28352',         loanAmount: 34000, loanType: 'Land Loan',   dateSubmitted: '2026-01-14', status: 'Declined'  },
-];
-const DUMMY_PARTNERSHIPS = [
-  { ref: 'PRT-7291', address: '417 Cedar Lane, Rockingham, NC 28379', dealType: 'Fix & Flip',  projectedProfit: 28000, dateSubmitted: '2026-03-22', status: 'Interested'   },
-  { ref: 'PRT-6043', address: '92 Birch Ave, Hamlet, NC 28345',       dealType: 'Wholesale',   projectedProfit: 12500, dateSubmitted: '2026-02-11', status: 'In Discussion'},
-  { ref: 'PRT-5187', address: '1024 Maple Dr, Laurinburg, NC 28352',  dealType: 'Land Deal',   projectedProfit: 45000, dateSubmitted: '2026-01-30', status: 'Pass'         },
-];
+import {
+  fetchLendingRequests,
+  createLendingRequest,
+  fetchLendingPartnerships,
+  createLendingPartnership,
+} from '../lib/lendingData';
 
 // ── Empty forms ────────────────────────────────────────────────────────────
 const COST_FIELDS = [
@@ -150,7 +140,7 @@ const EMPTY_POOLED = {
 export default function Lending() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeOrgId, orgSlug } = useAuth();
+  const { activeOrgId } = useAuth();
   const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership' | 'pooled'
   const [activeTab, setActiveTab] = useState('loans');
 
@@ -177,16 +167,12 @@ export default function Lending() {
   const [partnerConfirm, setPartnerConfirm] = useState(null);
   const [partnerships, setPartnerships]     = useState([]);
 
-  // Load from org-scoped localStorage once orgId is available
+  // Load from Supabase once orgId is available
   useEffect(() => {
     if (!activeOrgId) return;
-    const defaultLoans = orgSlug === 'lotline-homes' ? DUMMY_LOANS : [];
-    const defaultPartnerships = orgSlug === 'lotline-homes' ? DUMMY_PARTNERSHIPS : [];
-    try { const s = localStorage.getItem(loanKey(activeOrgId)); setLoanRequests(s ? JSON.parse(s) : defaultLoans); }
-    catch { setLoanRequests(defaultLoans); }
-    try { const s = localStorage.getItem(partnerKey(activeOrgId)); setPartnerships(s ? JSON.parse(s) : defaultPartnerships); }
-    catch { setPartnerships(defaultPartnerships); }
-  }, [activeOrgId, orgSlug]);
+    fetchLendingRequests(activeOrgId).then(setLoanRequests);
+    fetchLendingPartnerships(activeOrgId).then(setPartnerships);
+  }, [activeOrgId]);
 
   // Pre-populate form if navigated from Land Acquisition
   useEffect(() => {
@@ -216,15 +202,17 @@ export default function Lending() {
   };
   const totalPartnerCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(partnerForm.costs?.[f.key]) || 0), 0);
 
-  const handleLoanSubmit = (e) => {
+  const handleLoanSubmit = async (e) => {
     e.preventDefault();
-    const ref = 'LND-' + Math.floor(1000 + Math.random() * 9000);
-    const row = { ref, address: loanForm.address, loanAmount: parseInt(loanForm.loanAmount) || 0, loanType: loanForm.loanType, dateSubmitted: new Date().toISOString().split('T')[0], status: 'Pending Review' };
-    console.log('💰 Loan Request:', { ref, ...loanForm, dateSubmitted: row.dateSubmitted });
-    const updated = [row, ...loanRequests];
-    setLoanRequests(updated);
-    localStorage.setItem(loanKey(activeOrgId), JSON.stringify(updated));
-    setLoanConfirm(ref);
+    if (!activeOrgId) return;
+    const { data, error } = await createLendingRequest(activeOrgId, loanForm);
+    if (error) {
+      console.error('💰 Loan Request insert failed:', error.message || error);
+      alert('Could not save loan request. Please try again.');
+      return;
+    }
+    setLoanRequests(prev => [data, ...prev]);
+    setLoanConfirm(data.ref);
     setLoanForm(EMPTY_LOAN);
   };
 
@@ -255,15 +243,17 @@ export default function Lending() {
     setPartnerForm(p => ({ ...p, [field]: name }));
   };
 
-  const handlePartnerSubmit = (e) => {
+  const handlePartnerSubmit = async (e) => {
     e.preventDefault();
-    const ref = 'PRT-' + Math.floor(1000 + Math.random() * 9000);
-    const row = { ref, address: partnerForm.address, dealType: partnerForm.dealType, projectedProfit: parseInt(partnerForm.projectedProfit) || 0, dateSubmitted: new Date().toISOString().split('T')[0], status: 'Under Review' };
-    console.log('🤝 Partnership Submission:', { ref, ...partnerForm, dateSubmitted: row.dateSubmitted });
-    const updated = [row, ...partnerships];
-    setPartnerships(updated);
-    localStorage.setItem(partnerKey(activeOrgId), JSON.stringify(updated));
-    setPartnerConfirm(ref);
+    if (!activeOrgId) return;
+    const { data, error } = await createLendingPartnership(activeOrgId, partnerForm);
+    if (error) {
+      console.error('🤝 Partnership insert failed:', error.message || error);
+      alert('Could not save partnership submission. Please try again.');
+      return;
+    }
+    setPartnerships(prev => [data, ...prev]);
+    setPartnerConfirm(data.ref);
     setPartnerForm(EMPTY_PARTNER);
   };
 

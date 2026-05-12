@@ -11,6 +11,7 @@ import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
 import { supabase } from '../lib/supabase';
 import { markPaymentPaid, formatPaymentType, STATUS_LABEL, STATUS_PILL, applyOverdue } from '../lib/paymentScheduleData';
+import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingData';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -1160,8 +1161,23 @@ const PARTNER_STATUS_COLORS = {
 };
 
 function AvailableInvestmentsTab({ onDealClick }) {
-  const loanRequests = (() => { try { return JSON.parse(localStorage.getItem('lending_requests') || '[]'); } catch { return []; } })();
-  const partnerships = (() => { try { return JSON.parse(localStorage.getItem('partnership_submissions') || '[]'); } catch { return []; } })();
+  const { activeOrgId } = useAuth();
+  const [loanRequests, setLoanRequests] = useState([]);
+  const [partnerships, setPartnerships] = useState([]);
+
+  useEffect(() => {
+    if (!activeOrgId) return;
+    let cancelled = false;
+    Promise.all([
+      fetchLendingRequests(activeOrgId),
+      fetchLendingPartnerships(activeOrgId),
+    ]).then(([loans, parts]) => {
+      if (cancelled) return;
+      setLoanRequests(loans);
+      setPartnerships(parts);
+    });
+    return () => { cancelled = true; };
+  }, [activeOrgId]);
 
   const hasAny = loanRequests.length > 0 || partnerships.length > 0;
 
