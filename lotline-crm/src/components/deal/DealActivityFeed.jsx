@@ -892,7 +892,6 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   const { members } = useOrgMembers(activeOrgId);
 
   const [dbNotes,  setDbNotes]  = useState([]);
-  const [legacyNotes, setLegacyNotes] = useState([]);
   const [events,   setEvents]   = useState([]);
   const [replyMap, setReplyMap] = useState({}); // { [parentNoteId]: reply[] }
   const [usersById, setUsersById] = useState({}); // { [userId]: { name, role, email } }
@@ -954,20 +953,9 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
     }
   }, [deal?.id]);
 
-  // ── Load legacy localStorage notes ────────────────────────────────────────
-  const loadLegacyNotes = useCallback(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(`lotline_notes_${deal.id}`) || '[]');
-      setLegacyNotes(stored);
-    } catch {
-      setLegacyNotes([]);
-    }
-  }, [deal?.id]);
-
   useEffect(() => {
     loadDbNotes();
-    loadLegacyNotes();
-  }, [loadDbNotes, loadLegacyNotes, refreshKey]);
+  }, [loadDbNotes, refreshKey]);
 
   // ── Scroll-to-and-highlight a specific note when arriving via ?activity=<id> ──
   // Used by the global notification bell to deep-link into the activity feed.
@@ -975,7 +963,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   const targetActivityId = searchParams.get('activity');
   useEffect(() => {
     if (!targetActivityId) return;
-    if (!dbNotes.length && !legacyNotes.length) return;
+    if (!dbNotes.length) return;
     const el = document.getElementById(`activity-db-note-${targetActivityId}`)
             || document.getElementById(`activity-${targetActivityId}`);
     if (!el) return;
@@ -991,7 +979,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       }, { replace: true });
     }, 2400);
     return () => clearTimeout(t);
-  }, [targetActivityId, dbNotes, legacyNotes, setSearchParams]);
+  }, [targetActivityId, dbNotes, setSearchParams]);
 
   // ── Realtime: new notes from other users ───────────────────────────────────
   const loadDbNotesRef = useRef(loadDbNotes);
@@ -1063,17 +1051,6 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       };
     });
 
-    const legacyEvents = legacyNotes.map(note => ({
-      id:      `legacy-note-${note.id}`,
-      _noteId: note.id,
-      type:    'note',
-      title:   note.author || 'Note added',
-      body:    note.text,
-      date:    note.createdAt,
-      meta:    { author: note.author },
-      hideAuthorFooter: true,
-    }));
-
     const systemEvents = [
       deal.createdAt && {
         id:       `created-${deal.id}`,
@@ -1092,11 +1069,11 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       },
     ].filter(Boolean);
 
-    const all = [...dbNoteEvents, ...legacyEvents, ...systemEvents]
+    const all = [...dbNoteEvents, ...systemEvents]
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     setEvents(all);
-  }, [deal, dbNotes, legacyNotes, usersById]);
+  }, [deal, dbNotes, usersById]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNoteAdded = (note) => {
@@ -1158,19 +1135,11 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
   };
 
   const handleDeleteNote = async (eventId) => {
-    if (eventId.startsWith('db-note-')) {
-      const dbId = eventId.replace('db-note-', '');
-      // Soft-delete via update (or hard-delete — RLS allows authors)
-      await supabase?.from('activity_notes').delete().eq('id', dbId);
-      setDbNotes(prev => prev.filter(n => n.id !== dbId));
-    } else if (eventId.startsWith('legacy-note-')) {
-      const noteId = eventId.replace('legacy-note-', '');
-      const key    = `lotline_notes_${deal.id}`;
-      const stored = JSON.parse(localStorage.getItem(key) || '[]');
-      const updated = stored.filter(n => String(n.id) !== String(noteId));
-      localStorage.setItem(key, JSON.stringify(updated));
-      setLegacyNotes(updated);
-    }
+    if (!eventId.startsWith('db-note-')) return;
+    const dbId = eventId.replace('db-note-', '');
+    // Soft-delete via update (or hard-delete — RLS allows authors)
+    await supabase?.from('activity_notes').delete().eq('id', dbId);
+    setDbNotes(prev => prev.filter(n => n.id !== dbId));
   };
 
   const handleDeleteReply = async (replyId) => {

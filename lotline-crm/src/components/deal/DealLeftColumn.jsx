@@ -422,7 +422,7 @@ function NoteComposer({ dealId, orgId, onClose }) {
       const authorName = profile?.name
         || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
         || null;
-      await supabase.from('activity_notes').insert({
+      const { error } = await supabase.from('activity_notes').insert({
         organization_id: orgId,
         deal_id: dealId,
         author_id: session?.user?.id || null,
@@ -430,11 +430,18 @@ function NoteComposer({ dealId, orgId, onClose }) {
         body: text.trim(),
         mentioned_user_ids: [],
       });
+      if (error) {
+        console.error('[NoteComposer] activity_notes insert failed:', error.message);
+        alert('Could not save note. Check your connection and try again.');
+        setSaving(false);
+        return;
+      }
     } else {
-      // Fallback: legacy localStorage (no Supabase available)
-      const notes = JSON.parse(localStorage.getItem(`lotline_notes_${dealId}`) || '[]');
-      notes.unshift({ id: Date.now(), text: text.trim(), createdAt: new Date().toISOString() });
-      localStorage.setItem(`lotline_notes_${dealId}`, JSON.stringify(notes));
+      // No Supabase available — surface the failure instead of silently writing
+      // to localStorage where the note would be unreachable to teammates.
+      alert('Note could not be saved (offline). Please retry once connected.');
+      setSaving(false);
+      return;
     }
     setSaving(false);
     onClose();
