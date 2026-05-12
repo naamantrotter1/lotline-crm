@@ -1568,28 +1568,20 @@ const DD_STATUS_CONFIG = {
 };
 const STATUS_CYCLE = { not_started: 'in_progress', in_progress: 'complete', complete: 'not_started' };
 
-function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
-  const lk = `dd_${dealId}_${col.key}`;
-  const [status, setStatus]   = useState(() => localStorage.getItem(lk) || 'not_started');
+function DDTaskRow({ col, readOnly, milestone, onUpdate }) {
+  const status   = milestone?.status         ?? 'not_started';
+  const cName    = milestone?.contact_name    ?? '';
+  const cPhone   = milestone?.contact_phone   ?? '';
+  const cEmail   = milestone?.contact_email   ?? '';
+  const cCompany = milestone?.contact_company ?? '';
+  const taskNotes = milestone?.notes ?? '';
+  const files    = milestone?.files          ?? [];
   const [expanded, setExpanded] = useState(false);
-  const [cName,    setCName]   = useState(() => localStorage.getItem(`${lk}_cont`)    || '');
-  const [cPhone,   setCPhone]  = useState(() => localStorage.getItem(`${lk}_phone`)   || '');
-  const [cEmail,   setCEmail]  = useState(() => localStorage.getItem(`${lk}_email`)   || '');
-  const [cCompany, setCCompany]= useState(() => localStorage.getItem(`${lk}_company`) || '');
-  const [taskNotes, setTaskNotes] = useState(() => localStorage.getItem(`${lk}_notes`) || '');
-  const [files, setFiles] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`${lk}_files`) || '[]'); } catch { return []; }
-  });
-
-  const save = (suffix, val) => localStorage.setItem(`${lk}_${suffix}`, val);
 
   const cycleStatus = (e) => {
     e.stopPropagation();
     if (readOnly) return;
-    const next = STATUS_CYCLE[status];
-    localStorage.setItem(lk, next);
-    setStatus(next);
-    onCountChange();
+    onUpdate({ status: STATUS_CYCLE[status] });
   };
 
   const handleFileUpload = (e) => {
@@ -1597,17 +1589,15 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const updated = [...files, { name: file.name, url: ev.target.result }];
-      setFiles(updated);
-      localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+      const next = [...files, { name: file.name, url: ev.target.result }];
+      onUpdate({ files: next });
     };
     reader.readAsDataURL(file);
   };
 
   const removeFile = (idx) => {
-    const updated = files.filter((_, i) => i !== idx);
-    setFiles(updated);
-    localStorage.setItem(`${lk}_files`, JSON.stringify(updated));
+    const next = files.filter((_, i) => i !== idx);
+    onUpdate({ files: next });
   };
 
   const sc = DD_STATUS_CONFIG[status];
@@ -1644,7 +1634,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
           <div className="flex items-center gap-3">
             {isComplete ? (
               <button
-                onClick={(e) => { e.stopPropagation(); if (!readOnly) { localStorage.setItem(lk, 'not_started'); setStatus('not_started'); onCountChange(); } }}
+                onClick={(e) => { e.stopPropagation(); if (!readOnly) onUpdate({ status: 'not_started' }); }}
                 disabled={readOnly}
                 className="text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
               >
@@ -1667,16 +1657,16 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
             <p className="text-xs font-semibold text-gray-500 mb-2">Contractor</p>
             <div className="space-y-2">
               {[
-                { icon: User,     val: cName,    set: setCName,    sfx: 'cont',    ph: 'Contractor name' },
-                { icon: Phone,    val: cPhone,   set: setCPhone,   sfx: 'phone',   ph: 'Phone' },
-                { icon: Mail,     val: cEmail,   set: setCEmail,   sfx: 'email',   ph: 'Email' },
-                { icon: Building, val: cCompany, set: setCCompany, sfx: 'company', ph: 'Company (optional)' },
-              ].map(({ icon: FieldIcon, val, set, sfx, ph }) => (
-                <div key={sfx} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2">
+                { icon: User,     val: cName,    field: 'contact_name',    ph: 'Contractor name' },
+                { icon: Phone,    val: cPhone,   field: 'contact_phone',   ph: 'Phone' },
+                { icon: Mail,     val: cEmail,   field: 'contact_email',   ph: 'Email' },
+                { icon: Building, val: cCompany, field: 'contact_company', ph: 'Company (optional)' },
+              ].map(({ icon: FieldIcon, val, field, ph }) => (
+                <div key={field} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2">
                   <FieldIcon size={14} className="text-gray-400 flex-shrink-0" />
                   <input
                     value={val}
-                    onChange={e => { set(e.target.value); save(sfx, e.target.value); }}
+                    onChange={e => onUpdate({ [field]: e.target.value })}
                     placeholder={ph}
                     disabled={readOnly}
                     className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
@@ -1694,7 +1684,7 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
             </div>
             <textarea
               value={taskNotes}
-              onChange={e => { setTaskNotes(e.target.value); save('notes', e.target.value); }}
+              onChange={e => onUpdate({ notes: e.target.value })}
               placeholder="Add notes for this task..."
               disabled={readOnly}
               rows={3}
@@ -1740,27 +1730,122 @@ function DDTaskRow({ dealId, col, readOnly, onCountChange }) {
 }
 
 function DDTab({ deal, readOnly, onStatusChange }) {
-  const [completeCount, setCompleteCount] = useState(() =>
-    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
-  );
+  // Map of milestone_key → milestone row from Supabase. Optimistic updates write
+  // here immediately and the upsert happens in the background.
+  const [milestones, setMilestones] = useState({});
+  const orgId = deal?.organizationId;
 
-  // Seed legacy ddTasksCompleted on first render
+  // ── Load milestones for this deal ───────────────────────────────────────────
   useEffect(() => {
-    for (const name of (deal.ddTasksCompleted || [])) {
-      const k = DD_LS_INIT_MAP[name];
-      if (k) {
-        const lk = `dd_${deal.id}_${k}`;
-        if (!localStorage.getItem(lk)) localStorage.setItem(lk, 'complete');
+    if (!supabase || !deal?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('deal_milestones')
+        .select('*')
+        .eq('deal_id', String(deal.id));
+      if (cancelled || error) {
+        if (error) console.error('[DDTab] load deal_milestones failed:', error.message);
+        return;
       }
-    }
-    setCompleteCount(DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length);
-  }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
+      const byKey = {};
+      for (const row of data || []) byKey[row.milestone_key] = row;
+      // Seed legacy ddTasksCompleted (set on some seeded deals) into Supabase the
+      // first time we load — only fires when no row exists yet for that key.
+      if (orgId) {
+        const toSeed = [];
+        for (const name of (deal.ddTasksCompleted || [])) {
+          const k = DD_LS_INIT_MAP[name];
+          if (k && !byKey[k]) {
+            toSeed.push({
+              organization_id: orgId,
+              deal_id: String(deal.id),
+              milestone_key: k,
+              status: 'complete',
+            });
+          }
+        }
+        if (toSeed.length > 0) {
+          const { data: inserted, error: insErr } = await supabase
+            .from('deal_milestones')
+            .upsert(toSeed, { onConflict: 'deal_id,milestone_key' })
+            .select('*');
+          if (!cancelled && !insErr && inserted) {
+            for (const row of inserted) byKey[row.milestone_key] = row;
+          }
+        }
+      }
+      if (!cancelled) setMilestones(byKey);
+    })();
+    return () => { cancelled = true; };
+  }, [deal?.id, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCountChange = () => {
-    const count = DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length;
-    setCompleteCount(count);
-    onStatusChange?.(count);
-  };
+  // ── Realtime updates for other teammates' edits ─────────────────────────────
+  useEffect(() => {
+    if (!supabase || !deal?.id) return;
+    const channel = supabase
+      .channel(`deal-milestones-${deal.id}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'deal_milestones', filter: `deal_id=eq.${deal.id}` },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setMilestones(prev => {
+              const next = { ...prev };
+              if (payload.old?.milestone_key) delete next[payload.old.milestone_key];
+              return next;
+            });
+          } else {
+            setMilestones(prev => ({ ...prev, [payload.new.milestone_key]: payload.new }));
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [deal?.id]);
+
+  // ── Update handler passed to each row — optimistic + upsert ────────────────
+  const handleUpdate = useCallback((milestoneKey, patch) => {
+    if (readOnly || !supabase || !deal?.id || !orgId) return;
+    const existing = milestones[milestoneKey] || {
+      organization_id: orgId,
+      deal_id: String(deal.id),
+      milestone_key: milestoneKey,
+      status: 'not_started',
+      files: [],
+    };
+    const next = { ...existing, ...patch };
+    // Optimistic UI update first
+    setMilestones(prev => ({ ...prev, [milestoneKey]: next }));
+    // Fire upsert async
+    supabase
+      .from('deal_milestones')
+      .upsert(
+        {
+          organization_id: orgId,
+          deal_id: String(deal.id),
+          milestone_key: milestoneKey,
+          status: next.status,
+          completed_date: next.completed_date ?? null,
+          notes: next.notes ?? null,
+          contact_name: next.contact_name ?? null,
+          contact_phone: next.contact_phone ?? null,
+          contact_email: next.contact_email ?? null,
+          contact_company: next.contact_company ?? null,
+          files: next.files ?? [],
+        },
+        { onConflict: 'deal_id,milestone_key' }
+      )
+      .then(({ error }) => {
+        if (error) console.error('[DDTab] upsert milestone failed:', error.message);
+      });
+  }, [readOnly, deal?.id, orgId, milestones]);
+
+  const completeCount = DD_COLS.filter(c => milestones[c.key]?.status === 'complete').length;
+
+  useEffect(() => {
+    onStatusChange?.(completeCount);
+  }, [completeCount, onStatusChange]);
 
   return (
     <div className="max-w-2xl">
@@ -1773,7 +1858,13 @@ function DDTab({ deal, readOnly, onStatusChange }) {
       </div>
       <div className="space-y-2">
         {DD_COLS.map(col => (
-          <DDTaskRow key={col.key} dealId={deal.id} col={col} readOnly={readOnly} onCountChange={handleCountChange} />
+          <DDTaskRow
+            key={col.key}
+            col={col}
+            readOnly={readOnly}
+            milestone={milestones[col.key]}
+            onUpdate={(patch) => handleUpdate(col.key, patch)}
+          />
         ))}
       </div>
     </div>
@@ -2554,10 +2645,9 @@ function DealDetailContent({ deal }) {
   const initCosts = {};
   COST_FIELDS.forEach(f => { initCosts[f.key] = deal?.[f.key] || 0; });
 
-  // DD complete count for tab label (updated via callback from DDTab)
-  const [ddCompleteCount, setDdCompleteCount] = useState(() =>
-    DD_COLS.filter(c => localStorage.getItem(`dd_${deal.id}_${c.key}`) === 'complete').length
-  );
+  // DD complete count for tab label (updated via onStatusChange callback from DDTab).
+  // Starts at 0 and is populated once DDTab loads milestones from Supabase.
+  const [ddCompleteCount, setDdCompleteCount] = useState(0);
 
   // Initial dev tasks — Swanson has 1/38 complete (land cleared)
   const totalDevTasks = DEV_GROUPS.flatMap(g => g.tasks).length;
