@@ -4000,16 +4000,18 @@ export default function DealDetail() {
   const { activeOrgId, loading: authLoading } = useAuth();
   const { deals: customDeals, dealsLoading } = useDeals();
 
-  // 1. Deal passed via navigation state (most reliable — always available immediately)
-  const stateDeal = location.state?.deal;
-
+  // 1. Live context (always fresh — updated by saveDeal + realtime subscriptions)
   // 2. Org-specific localStorage (updated synchronously on every edit via saveToLS)
+  // 3. Navigation state (snapshot at click time — can become stale after edits,
+  //    so we use it only as a last resort, e.g. before dealsLoading completes
+  //    and LS isn't seeded yet)
+  const stateDeal = location.state?.deal;
   const lsKey = activeOrgId ? `lotline_deals_${activeOrgId}` : 'lotline_custom_deals';
   const lsDeals = (() => { try { return JSON.parse(localStorage.getItem(lsKey) || '[]'); } catch { return []; } })();
 
-  const deal = (stateDeal && String(stateDeal.id) === String(id) ? stateDeal : null)
+  const deal = customDeals.find(d => String(d.id) === String(id))
     || lsDeals.find(d => String(d.id) === String(id))
-    || customDeals.find(d => String(d.id) === String(id));
+    || (stateDeal && String(stateDeal.id) === String(id) ? stateDeal : null);
 
   if ((authLoading || dealsLoading) && !deal) {
     return (
