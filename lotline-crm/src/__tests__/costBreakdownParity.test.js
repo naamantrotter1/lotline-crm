@@ -19,7 +19,7 @@ import { resolveActual, resolveDifference, computeTotalActual, computeTotalEstim
 
 const DEAL_BASE = {
   arv: 250000,
-  sellingCostPct: 4.5,
+  sellingCostPct: 3.5,
   holdingMonths: 4,
   holdingPerMonth: 250,
 };

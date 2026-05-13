@@ -134,7 +134,7 @@ export function calcNetProfit(deal, totalActualOverride) {
   const fullHold = sd.holdPeriod ?? deal?.holdingMonths ?? 6;
   const effHold  = getEstimatedHoldMonths(deal.capitalDeployedDate, deal.estimatedSaleDate, fullHold);
 
-  const sellingCosts = arv * ((deal.sellingCostPct || 4.5) / 100) + 4000;
+  const sellingCosts = arv * ((deal.sellingCostPct || 3.5) / 100) + 3500;
   const holdingCosts = effHold * (sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
   const coc = hasFinancing ? computeCostOfCapital(deal) : 0;
 

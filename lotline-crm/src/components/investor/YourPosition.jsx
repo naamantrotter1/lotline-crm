@@ -64,7 +64,8 @@ export default function YourPosition({ deal, totalDistributed }) {
       ? Number(deal.total_actual)
       : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.setup ?? 0) +
         (deal.septic ?? 0) + (deal.electric ?? 0) + (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
-    const sellCost = (deal.arv ?? 0) * 0.045;
+    // Selling-costs formula matches calcNetProfit: 3.5% of ARV + $3,500 flat.
+    const sellCost = (deal.arv ?? 0) * 0.035 + 3500;
     const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
     projReturn = projProfit * (deal.investor_equity_pct / 100);
   }

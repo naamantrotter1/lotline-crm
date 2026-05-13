@@ -553,7 +553,8 @@ export function computePortfolioMetrics(deals, distributions) {
     const costs = d.total_actual != null
       ? Number(d.total_actual)
       : (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0);
-    const sellCost = arv * 0.045;
+    // Selling-costs formula matches calcNetProfit: 3.5% of ARV + $3,500 flat.
+    const sellCost = arv * 0.035 + 3500;
     return s + Math.max(0, arv - costs - sellCost);
   }, 0);
 
