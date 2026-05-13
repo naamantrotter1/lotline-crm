@@ -193,3 +193,56 @@ export async function updateCountyHeatMap(countyId, heatMapMetrics) {
   if (!error) clearCountiesCache();
   return { error };
 }
+
+// ── ZIP CRUD for a county (admin / drawer) ──────────────────────────────────
+
+/** Fetch every ZIP currently mapped to this county. */
+export async function fetchZipsForCounty(countyId) {
+  if (!supabase || !countyId) return [];
+  const { data, error } = await supabase
+    .from('county_zips')
+    .select('zip_code, state, is_primary')
+    .eq('county_id', countyId)
+    .order('zip_code', { ascending: true });
+  if (error) {
+    console.warn('[statesConfig] fetchZipsForCounty error:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/** Add a ZIP row for this county. State is inherited from the county. */
+export async function addZipToCounty(countyId, zipCode, state, { isPrimary = false } = {}) {
+  if (!supabase) return { error: 'no supabase' };
+  const clean = String(zipCode).trim().slice(0, 5);
+  if (!/^\d{5}$/.test(clean)) return { error: 'invalid zip' };
+  const { error } = await supabase
+    .from('county_zips')
+    .upsert(
+      { zip_code: clean, county_id: countyId, state, is_primary: isPrimary },
+      { onConflict: 'zip_code,county_id' }
+    );
+  return { error };
+}
+
+/** Remove a ZIP from this county (the zip row itself, not the county). */
+export async function removeZipFromCounty(countyId, zipCode) {
+  if (!supabase) return { error: 'no supabase' };
+  const { error } = await supabase
+    .from('county_zips')
+    .delete()
+    .eq('county_id', countyId)
+    .eq('zip_code', zipCode);
+  return { error };
+}
+
+/** Toggle is_primary on a ZIP/county row. */
+export async function setZipPrimary(countyId, zipCode, isPrimary) {
+  if (!supabase) return { error: 'no supabase' };
+  const { error } = await supabase
+    .from('county_zips')
+    .update({ is_primary: !!isPrimary })
+    .eq('county_id', countyId)
+    .eq('zip_code', zipCode);
+  return { error };
+}

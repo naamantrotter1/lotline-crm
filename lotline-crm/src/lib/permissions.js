@@ -75,6 +75,11 @@ export const CAPABILITIES = {
   'contact.export':    ['owner','admin'],
   'contact.merge':     ['owner','admin'],
 
+  // ── State-aware Deal Calculator (NC/SC/FL) ────────────────────────────────
+  'counties.view':          ['owner','admin','operator','viewer'],
+  'counties.edit':          ['owner','admin'],
+  'states_config.edit':     ['owner','admin'],
+
   // ── Workflows ──────────────────────────────────────────────────────────────
   'workflow.view':          ['owner','admin','operator','viewer'],
   'workflow.manage':        ['owner','admin','operator'],

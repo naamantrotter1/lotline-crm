@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ExternalLink, ChevronRight, Search } from 'lucide-react';
+import { ExternalLink, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import { NC_COUNTIES, SC_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
+import CalculatorSettingsDrawer from '../components/county/CalculatorSettingsDrawer';
 
 const DEPT_LABELS = [
   { key: 'zoning', label: 'Zoning / Planning Department' },
@@ -511,6 +512,7 @@ export default function CountyDatabase() {
     }
   });
   const [search, setSearch] = useState('');
+  const [calcDrawerOpen, setCalcDrawerOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('countyDatabase_data', JSON.stringify(countyData));
@@ -567,6 +569,18 @@ export default function CountyDatabase() {
             className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 w-44"
           />
         </div>
+
+        {/* State-aware calculator settings — only meaningful for NC/SC counties.
+            Drawer fetches the matching counties row from Supabase by name+state
+            and edits its zip list + cost overrides. */}
+        <button
+          onClick={() => setCalcDrawerOpen(true)}
+          disabled={!selectedCounty}
+          className="ml-auto px-3 py-1.5 text-xs font-semibold text-accent border border-accent/40 rounded-lg hover:bg-accent/5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+          title="Edit the state-aware calculator's ZIP list and cost overrides for this county"
+        >
+          <SlidersHorizontal size={13} /> Calculator settings
+        </button>
       </div>
 
       {/* Main content */}
@@ -617,6 +631,12 @@ export default function CountyDatabase() {
         </div>
       )}
 
+      <CalculatorSettingsDrawer
+        open={calcDrawerOpen}
+        countyName={selectedCounty}
+        stateCode={activeState}
+        onClose={() => setCalcDrawerOpen(false)}
+      />
 
     </div>
   );
