@@ -46,7 +46,8 @@ export default function DealMetrics({ deal }) {
       (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
       (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0) +
       (deal.footers ?? 0) + (deal.underpinning ?? 0) + (deal.decks ?? 0) +
-      (deal.driveway ?? 0) + (deal.landscaping ?? 0) + (deal.water_sewer ?? 0);
+      (deal.driveway ?? 0) + (deal.landscaping ?? 0);
+      // water_sewer dropped — duplicated Public Water + Public Sewer (migration 125)
   const sellCost   = (deal.arv ?? 0) * 0.045;
   const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
   const closeDate  = deal.projected_payout_date ?? deal.close_date;

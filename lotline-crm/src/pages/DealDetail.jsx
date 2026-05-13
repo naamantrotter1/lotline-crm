@@ -108,7 +108,9 @@ const COST_FIELDS = [
   { key: 'decks', label: 'Decks Installed' },
   { key: 'driveway', label: 'Driveway' },
   { key: 'landscaping', label: 'Landscaping / Final Grading' },
-  { key: 'waterSewer', label: 'Water / Sewer Hook Up' },
+  // Water / Sewer Hook Up retired — it duplicated Public Water + Public Sewer.
+  // Excluded from the cost breakdown UI and totals (see CostBreakdownTab
+  // HIDDEN_KEYS + migration 125).
   { key: 'mailbox', label: 'Mailbox' },
   { key: 'gutters', label: 'Gutters' },
   { key: 'photos', label: 'Professional Photos' },

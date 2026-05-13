@@ -543,7 +543,8 @@ export function computePortfolioMetrics(deals, distributions) {
       : (d.land ?? 0) + (d.mobile_home ?? 0) + (d.permits ?? 0) + (d.setup ?? 0) + (d.septic ?? 0) +
         (d.well ?? 0) + (d.electric ?? 0) + (d.hvac ?? 0) + (d.clear_land ?? 0) +
         (d.water_cost ?? 0) + (d.footers ?? 0) + (d.underpinning ?? 0) + (d.decks ?? 0) +
-        (d.driveway ?? 0) + (d.landscaping ?? 0) + (d.water_sewer ?? 0);
+        (d.driveway ?? 0) + (d.landscaping ?? 0);
+        // water_sewer dropped — duplicated Public Water + Public Sewer (migration 125)
     return s + total;
   }, 0);
   const returned    = distributions.reduce((s, d) => s + (d.amount ?? 0), 0);

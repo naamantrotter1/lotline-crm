@@ -119,7 +119,7 @@ export function calcNetProfit(deal, totalActualOverride) {
       (deal.decks || 0) +
       (deal.driveway || 0) +
       (deal.landscaping || 0) +
-      (deal.waterSewer || 0) +
+      // waterSewer dropped — duplicated Public Water + Public Sewer (migration 125)
       (deal.mailbox || 0) +
       (deal.gutters || 0) +
       (deal.photos || 0) +
