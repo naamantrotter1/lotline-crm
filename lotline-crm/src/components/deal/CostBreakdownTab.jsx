@@ -17,11 +17,15 @@ import { CheckCircle2 } from 'lucide-react';
 // so the three permit children render as flat siblings under Sitework —
 // matching how the Deal Calculator lists them. The children themselves are
 // intentionally NOT hidden any more.
+// IMPORTANT: this set must stay in sync with the NOT-IN list inside
+// `deal_cost_summary_view` (see migration 125_cost_summary_align_hidden_keys.sql)
+// so totals exclude exactly what the UI hides — nothing more, nothing less.
 const HIDDEN_KEYS = new Set([
   'environmental_permits',
   'gutters',
   'professional_photos',
   'staging',
+  'water_sewer',
 ]);
 import { useAuth } from '../../lib/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
