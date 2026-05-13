@@ -9,7 +9,10 @@
  */
 import { supabase } from './supabase';
 
-const STATES_KEY   = 'lotline_states_config_v1';
+// Bump this key whenever a migration changes the shape of states_config
+// (visible_fields / default_costs / tax_formulas) so users get a fresh
+// fetch on next reload instead of waiting for the background revalidation.
+const STATES_KEY   = 'lotline_states_config_v2';
 const COUNTIES_KEY = 'lotline_counties_v1';
 
 // ── Module cache ────────────────────────────────────────────────────────────

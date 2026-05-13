@@ -19,6 +19,7 @@ const LABELS = {
   percTest:           'Perc Test',
   septicPermit:       'Septic Permit',
   surveying:          'Land Survey',
+  wetlandSurvey:      'Wetland Survey',
   attorneyClosing:    'Attorney / Closing',
   ncExciseTax:        'NC Excise Tax (auto)',
   scDeedStamps:       'SC Deed Stamps (auto)',
