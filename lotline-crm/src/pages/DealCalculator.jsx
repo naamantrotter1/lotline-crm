@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Calculator, X, PlusCircle } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Calculator, X, PlusCircle, Save, CheckCircle2 } from 'lucide-react';
 import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
 import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
 import { useDeals } from '../lib/DealsContext';
@@ -8,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useLocationResolver } from '../hooks/useLocationResolver';
 import { fetchCounties } from '../lib/statesConfig';
 import { resolveAutoDefaults, computeAutoField } from '../lib/taxes';
+import { supabase } from '../lib/supabase';
 import StatePicker     from '../components/calculator/StatePicker';
 import CostInputs      from '../components/calculator/CostInputs';
 import MarketSnapshot  from '../components/calculator/MarketSnapshot';
@@ -351,8 +353,21 @@ export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
   const { canEdit } = usePermissions();
-  const { setDeals } = useDeals();
+  const { deals, setDeals } = useDeals();
   const { profile, activeOrgId } = useAuth();
+
+  // ── Per-deal mode ────────────────────────────────────────────────────────
+  // /calculator?dealId=<id> hydrates the calculator from deal.scenario_data.calculator
+  // and auto-saves edits back to that slot. Standalone mode (no query param)
+  // works exactly like before — no DB writes until "Import to Pipeline".
+  const [searchParams] = useSearchParams();
+  const dealId = searchParams.get('dealId');
+  const dealForCalc = useMemo(
+    () => (dealId ? deals.find(d => String(d.id) === String(dealId)) : null),
+    [dealId, deals]
+  );
+  const hydratedRef = useRef(false);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
 
   const set = (key, val) => setVals((prev) => ({ ...prev, [key]: typeof val === 'number' ? val : (parseFloat(val) || 0) }));
 
@@ -413,6 +428,63 @@ export default function DealCalculator() {
     return out;
   }, [stateVals, resolved.status, resolved.mergedDefaults, resolved.mergedRates]);
 
+  // ── Hydrate from deal.scenario_data.calculator (per-deal mode) ──────────
+  // Runs once when the deal first arrives in context. We deliberately do NOT
+  // re-hydrate on every deal change so the realtime echo of our own
+  // autosave can't clobber an in-flight user edit.
+  useEffect(() => {
+    if (!dealForCalc || hydratedRef.current) return;
+    const calc = dealForCalc.scenarioData?.calculator || dealForCalc.scenario_data?.calculator;
+    if (calc) {
+      if (calc.zip != null)             setZip(String(calc.zip));
+      if (calc.countyId)                setCountySelection({ countyId: calc.countyId });
+      if (calc.stateVals && typeof calc.stateVals === 'object') setStateVals(calc.stateVals);
+      if (calc.vals && typeof calc.vals === 'object')           setVals(prev => ({ ...prev, ...calc.vals }));
+    }
+    hydratedRef.current = true;
+  }, [dealForCalc]);
+
+  // ── Autosave per-deal calculator state (debounced) ──────────────────────
+  // Only fires when we're in per-deal mode AND we've already hydrated, so the
+  // hydration pass itself never triggers a write.
+  useEffect(() => {
+    if (!dealId || !dealForCalc || !hydratedRef.current || !supabase) return;
+    const handle = setTimeout(async () => {
+      setSaveStatus('saving');
+      const existing = (dealForCalc.scenarioData || dealForCalc.scenario_data || {});
+      const nextScenario = {
+        ...existing,
+        calculator: {
+          zip: zip || null,
+          countyId: countySelection?.countyId || resolved.county?.id || null,
+          state: resolved.state || null,
+          stateVals,
+          vals,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      const { error } = await supabase
+        .from('deals')
+        .update({ scenario_data: nextScenario, updated_at: new Date().toISOString() })
+        .eq('id', String(dealId));
+      if (error) {
+        console.error('[DealCalculator] save scenario_data.calculator failed:', error.message);
+        setSaveStatus('error');
+      } else {
+        // Mirror into context so subsequent renders see the new state
+        setDeals(prev => prev.map(d =>
+          String(d.id) === String(dealId) ? { ...d, scenarioData: nextScenario } : d
+        ));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
+    }, 800); // 800ms debounce
+    return () => clearTimeout(handle);
+  }, [
+    dealId, dealForCalc, zip, countySelection, stateVals, vals,
+    resolved.state, resolved.county?.id, setDeals,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleStateValChange = (key, val) => {
     setStateVals(prev => ({ ...prev, [key]: val }));
   };
@@ -469,10 +541,30 @@ export default function DealCalculator() {
         <div className="p-2 bg-accent rounded-lg">
           <Calculator size={20} className="text-white" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-sidebar">Deal Calculator</h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-sidebar">Deal Calculator</h1>
+            {dealForCalc && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                Editing: {dealForCalc.address || 'Untitled'}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">Real-time deal analysis and scenario comparison</p>
         </div>
+        {dealId && (
+          <div className="flex items-center gap-1.5 text-xs">
+            {saveStatus === 'saving' && (
+              <><Save size={12} className="text-gray-400 animate-pulse" /><span className="text-gray-500">Saving…</span></>
+            )}
+            {saveStatus === 'saved' && (
+              <><CheckCircle2 size={12} className="text-emerald-500" /><span className="text-emerald-600 font-medium">Saved</span></>
+            )}
+            {saveStatus === 'error' && (
+              <span className="text-red-500 font-medium">Save failed — retry on next edit</span>
+            )}
+          </div>
+        )}
       </div>
 
       <StatePicker
