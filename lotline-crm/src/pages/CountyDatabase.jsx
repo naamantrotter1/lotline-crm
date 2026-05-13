@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ExternalLink, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { NC_COUNTIES, SC_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
+import { NC_COUNTIES, SC_COUNTIES, FL_COUNTIES, SECTIONS, COUNTY_DATA } from '../data/counties';
 import CalculatorSettingsDrawer from '../components/county/CalculatorSettingsDrawer';
 
 const DEPT_LABELS = [
@@ -518,7 +518,11 @@ export default function CountyDatabase() {
     localStorage.setItem('countyDatabase_data', JSON.stringify(countyData));
   }, [countyData]);
 
-  const counties = activeState === 'NC' ? NC_COUNTIES : SC_COUNTIES;
+  const counties = activeState === 'NC'
+    ? NC_COUNTIES
+    : activeState === 'FL'
+      ? FL_COUNTIES
+      : SC_COUNTIES;
   const filteredCounties = counties.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
   const currentData = countyData[selectedCounty] || {};
 
@@ -541,11 +545,18 @@ export default function CountyDatabase() {
         {/* State dropdown */}
         <select
           value={activeState}
-          onChange={e => { setActiveState(e.target.value); setSelectedCounty((e.target.value === 'NC' ? NC_COUNTIES : SC_COUNTIES)[0]?.name || null); setSearch(''); }}
+          onChange={e => {
+            const next = e.target.value;
+            const list = next === 'NC' ? NC_COUNTIES : next === 'FL' ? FL_COUNTIES : SC_COUNTIES;
+            setActiveState(next);
+            setSelectedCounty(list[0]?.name || null);
+            setSearch('');
+          }}
           className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-700 bg-white font-semibold"
         >
           <option value="NC">North Carolina</option>
           <option value="SC">South Carolina</option>
+          <option value="FL">Florida</option>
         </select>
         {/* County dropdown */}
         <select

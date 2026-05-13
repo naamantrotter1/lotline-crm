@@ -152,6 +152,47 @@ export const SC_COUNTIES = [
   { name: 'York', completion: 91 },
 ];
 
+// All FL counties (67). Completion starts at 0 — SOP fields haven't been
+// filled in yet; the state-aware Deal Calculator only needs the name +
+// state for the dropdown and the matching counties row in Supabase
+// (migration 126).
+export const FL_COUNTIES = [
+  { name: 'Alachua', completion: 0 },      { name: 'Baker', completion: 0 },
+  { name: 'Bay', completion: 0 },          { name: 'Bradford', completion: 0 },
+  { name: 'Brevard', completion: 0 },      { name: 'Broward', completion: 0 },
+  { name: 'Calhoun', completion: 0 },      { name: 'Charlotte', completion: 0 },
+  { name: 'Citrus', completion: 0 },       { name: 'Clay', completion: 0 },
+  { name: 'Collier', completion: 0 },      { name: 'Columbia', completion: 0 },
+  { name: 'DeSoto', completion: 0 },       { name: 'Dixie', completion: 0 },
+  { name: 'Duval', completion: 0 },        { name: 'Escambia', completion: 0 },
+  { name: 'Flagler', completion: 0 },      { name: 'Franklin', completion: 0 },
+  { name: 'Gadsden', completion: 0 },      { name: 'Gilchrist', completion: 0 },
+  { name: 'Glades', completion: 0 },       { name: 'Gulf', completion: 0 },
+  { name: 'Hamilton', completion: 0 },     { name: 'Hardee', completion: 0 },
+  { name: 'Hendry', completion: 0 },       { name: 'Hernando', completion: 0 },
+  { name: 'Highlands', completion: 0 },    { name: 'Hillsborough', completion: 0 },
+  { name: 'Holmes', completion: 0 },       { name: 'Indian River', completion: 0 },
+  { name: 'Jackson', completion: 0 },      { name: 'Jefferson', completion: 0 },
+  { name: 'Lafayette', completion: 0 },    { name: 'Lake', completion: 0 },
+  { name: 'Lee', completion: 0 },          { name: 'Leon', completion: 0 },
+  { name: 'Levy', completion: 0 },         { name: 'Liberty', completion: 0 },
+  { name: 'Madison', completion: 0 },      { name: 'Manatee', completion: 0 },
+  { name: 'Marion', completion: 0 },       { name: 'Martin', completion: 0 },
+  { name: 'Miami-Dade', completion: 0 },   { name: 'Monroe', completion: 0 },
+  { name: 'Nassau', completion: 0 },       { name: 'Okaloosa', completion: 0 },
+  { name: 'Okeechobee', completion: 0 },   { name: 'Orange', completion: 0 },
+  { name: 'Osceola', completion: 0 },      { name: 'Palm Beach', completion: 0 },
+  { name: 'Pasco', completion: 0 },        { name: 'Pinellas', completion: 0 },
+  { name: 'Polk', completion: 0 },         { name: 'Putnam', completion: 0 },
+  { name: 'St. Johns', completion: 0 },    { name: 'St. Lucie', completion: 0 },
+  { name: 'Santa Rosa', completion: 0 },   { name: 'Sarasota', completion: 0 },
+  { name: 'Seminole', completion: 0 },     { name: 'Sumter', completion: 0 },
+  { name: 'Suwannee', completion: 0 },     { name: 'Taylor', completion: 0 },
+  { name: 'Union', completion: 0 },        { name: 'Volusia', completion: 0 },
+  { name: 'Wakulla', completion: 0 },      { name: 'Walton', completion: 0 },
+  { name: 'Washington', completion: 0 },
+];
+
 // Section definitions with icons and field structures
 export const SECTIONS = [
   { key: 'keyContacts', label: 'Key Contacts & Resources', icon: '📞' },
