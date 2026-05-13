@@ -12,12 +12,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
-// Keys hidden from the cost breakdown UI
+// Keys hidden from the cost breakdown UI.
+// We hide the `environmental_permits` PARENT (sum-of-children grouping row)
+// so the three permit children render as flat siblings under Sitework —
+// matching how the Deal Calculator lists them. The children themselves are
+// intentionally NOT hidden any more.
 const HIDDEN_KEYS = new Set([
   'environmental_permits',
-  'environmental_permits.construction_authorization',
-  'environmental_permits.improvement_permit',
-  'environmental_permits.well_permit',
   'gutters',
   'professional_photos',
   'staging',
