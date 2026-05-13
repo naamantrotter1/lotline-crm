@@ -3817,8 +3817,22 @@ function DealDetailContent({ deal }) {
                   // tick the user hits Enter — don't wait for the realtime
                   // postgres_changes echo, which can lag a second or more on
                   // a busy channel.
+                  //
+                  // We ALSO push the fresh totals into the DealsContext so
+                  // the deal-card view on DealOverview (which reads
+                  // `deal.totalActual` / `deal.totalEstimated`) updates on
+                  // the same tick. Without this, cards stayed stale until a
+                  // hard refresh.
                   const fresh = await fetchCostSummary(deal.id);
-                  if (fresh) setCostSummary(fresh);
+                  if (!fresh) return;
+                  setCostSummary(fresh);
+                  const totalActual    = Number(fresh.total_actual    ?? 0);
+                  const totalEstimated = Number(fresh.total_estimated ?? 0);
+                  setDeals(prev => prev.map(d =>
+                    String(d.id) === String(deal.id)
+                      ? { ...d, totalActual, totalEstimated }
+                      : d
+                  ));
                 }}
                 readOnly={fromInvestorPortal || !canEdit}
               />
