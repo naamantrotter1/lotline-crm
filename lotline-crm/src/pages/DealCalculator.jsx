@@ -274,7 +274,7 @@ const defaultValues = {
   mailbox: 170,
   mobileTax: 0,
   arv: 230000,
-  sellingCostPct: 4.5,
+  sellingCostPct: 3.5,
   holdingPerMonth: 250,
   holdingMonths: 4,
   desiredProfitPct: 23,

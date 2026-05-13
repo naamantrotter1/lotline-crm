@@ -452,7 +452,8 @@ function FinancingScenarioPanel({
   const locDraw = drawAmount || 0;
   const monthlyInterestLoc = locDraw * (interestRate / 100) / 12;
 
-  const sellingCosts = arvVal * ((deal.sellingCostPct || 4.5) / 100) + 4000;
+  // Selling-costs formula matches src/data/deals.js calcNetProfit: 3.5% of ARV + $3,500 flat.
+  const sellingCosts = arvVal * ((deal.sellingCostPct || 3.5) / 100) + 3500;
   // Estimated hold (deployed → sale) drives holding-cost accrual when set.
   const effHoldMonthsForProfit = getEstimatedHoldMonths(
     capitalDeployedDate, estimatedSaleDate, holdPeriod || 4
@@ -1407,7 +1408,7 @@ function OverviewTab({
               {!isAgent && (
                 <>
                   <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Selling Costs (4.5% + $4,000)</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Selling Costs (3.5% + $3,500)</p>
                     <span className="text-sm font-medium text-red-500">-${Math.round(sellingCosts).toLocaleString()}</span>
                   </div>
                   <div className="py-2">
@@ -2413,7 +2414,8 @@ function calcDealNetProfit({
     capitalDeployedDate, estimatedSaleDate, holdPeriod || deal?.holdingMonths || 4
   );
 
-  const sellingCosts = arvVal * ((deal?.sellingCostPct || 4.5) / 100) + 4000;
+  // Selling-costs formula matches src/data/deals.js calcNetProfit: 3.5% of ARV + $3,500 flat.
+  const sellingCosts = arvVal * ((deal?.sellingCostPct || 3.5) / 100) + 3500;
   const holdingCosts = effHoldMonths * (monthlyHoldCost || deal?.holdingPerMonth || 250);
 
   let totalCostOfCapital;

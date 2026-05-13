@@ -117,7 +117,8 @@ function DealCard({ deal, investor, myInterestIds }) {
     : (deal.land ?? 0) + (deal.mobile_home ?? 0) + (deal.permits ?? 0) +
       (deal.setup ?? 0) + (deal.septic ?? 0) + (deal.well ?? 0) + (deal.electric ?? 0) +
       (deal.hvac ?? 0) + (deal.clear_land ?? 0) + (deal.water_cost ?? 0);
-  const sellCosts  = (deal.arv ?? 0) * 0.045;
+  // Selling-costs formula matches calcNetProfit: 3.5% of ARV + $3,500 flat.
+  const sellCosts  = (deal.arv ?? 0) * 0.035 + 3500;
   const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCosts);
 
   const alloc      = deal.remaining_allocation;
