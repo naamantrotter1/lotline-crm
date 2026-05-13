@@ -104,6 +104,14 @@ export function DealsProvider({ children }) {
                 ddDeadline:   updated.ddDeadline   ?? existing.ddDeadline,
                 appraisalDate: updated.appraisalDate ?? existing.appraisalDate,
                 financingContingency: updated.financingContingency ?? existing.financingContingency,
+                // Financing fields race the same way close_date did — a realtime
+                // echo can carry a stale `null` value milliseconds after the
+                // user has picked a new scenario but before the write commits.
+                // ?? preserves the optimistic value the auto-save already set
+                // on context, so the dropdown can't revert to "Cash" on echo.
+                financingScenarioType: updated.financingScenarioType ?? existing.financingScenarioType,
+                financing:             updated.financing             ?? existing.financing,
+                scenarioData:          updated.scenarioData          ?? existing.scenarioData,
               };
               const next = [...prev]; next[idx] = merged; return next;
             }
