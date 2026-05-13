@@ -18,6 +18,10 @@
 --   professional_photos
 --   staging
 --   water_sewer
+--
+-- Preserves all existing view columns (CREATE OR REPLACE VIEW cannot drop
+-- columns): total_estimated, total_actual, total_difference, override_count,
+-- line_count, last_actual_change_at.
 
 CREATE OR REPLACE VIEW public.deal_cost_summary_view AS
 SELECT
@@ -67,9 +71,45 @@ SELECT
         'staging',
         'water_sewer'
       )
-  ), 0)                                                                   AS total_difference
+  ), 0)                                                                   AS total_difference,
+
+  COUNT(*) FILTER (
+    WHERE dcl.actual_overridden
+      AND COALESCE(cbc.aggregation, 'none') = 'none'
+      AND dcl.category_key NOT IN (
+        'environmental_permits',
+        'gutters',
+        'professional_photos',
+        'staging',
+        'water_sewer'
+      )
+  )                                                                       AS override_count,
+
+  COUNT(*) FILTER (
+    WHERE COALESCE(cbc.aggregation, 'none') = 'none'
+      AND dcl.category_key NOT IN (
+        'environmental_permits',
+        'gutters',
+        'professional_photos',
+        'staging',
+        'water_sewer'
+      )
+  )                                                                       AS line_count,
+
+  MAX(dcl.actual_overridden_at) FILTER (
+    WHERE dcl.actual_overridden
+      AND COALESCE(cbc.aggregation, 'none') = 'none'
+      AND dcl.category_key NOT IN (
+        'environmental_permits',
+        'gutters',
+        'professional_photos',
+        'staging',
+        'water_sewer'
+      )
+  )                                                                       AS last_actual_change_at
 
 FROM public.deal_cost_lines dcl
 LEFT JOIN public.cost_breakdown_categories cbc
   ON cbc.key = dcl.category_key
+  AND (cbc.org_id IS NULL OR cbc.org_id = dcl.org_id)
 GROUP BY dcl.deal_id, dcl.org_id;
