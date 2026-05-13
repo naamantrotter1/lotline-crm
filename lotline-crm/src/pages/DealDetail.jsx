@@ -3807,7 +3807,21 @@ function DealDetailContent({ deal }) {
         )}
         {activeTab === 'realized' && (
           costBreakdownV2
-            ? <CostBreakdownTab dealId={deal.id} arv={arv} onArvChange={v => { setArv(v); saveNow({ arv: v }); }} readOnly={fromInvestorPortal || !canEdit} />
+            ? <CostBreakdownTab
+                dealId={deal.id}
+                arv={arv}
+                onArvChange={v => { setArv(v); saveNow({ arv: v }); }}
+                onCostSave={async () => {
+                  // Immediately re-fetch the canonical summary so the header
+                  // "All-In" + Net Profit / ROI numbers update on the same
+                  // tick the user hits Enter — don't wait for the realtime
+                  // postgres_changes echo, which can lag a second or more on
+                  // a busy channel.
+                  const fresh = await fetchCostSummary(deal.id);
+                  if (fresh) setCostSummary(fresh);
+                }}
+                readOnly={fromInvestorPortal || !canEdit}
+              />
             : <RealizedTab realized={realized} setRealized={setRealized} readOnly={fromInvestorPortal || !canEdit} />
         )}
         {activeTab === 'financing' && financingTabEnabled && pooledLoanLinks.length > 0 && (
