@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Calculator, X, PlusCircle } from 'lucide-react';
 import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
 import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { useLocationResolver } from '../hooks/useLocationResolver';
+import { fetchCounties } from '../lib/statesConfig';
+import { resolveAutoDefaults, computeAutoField } from '../lib/taxes';
+import StatePicker     from '../components/calculator/StatePicker';
+import CostInputs      from '../components/calculator/CostInputs';
+import MarketSnapshot  from '../components/calculator/MarketSnapshot';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
@@ -350,6 +356,70 @@ export default function DealCalculator() {
 
   const set = (key, val) => setVals((prev) => ({ ...prev, [key]: typeof val === 'number' ? val : (parseFloat(val) || 0) }));
 
+  // ── State-aware mode (NC/SC/FL) ─────────────────────────────────────────────
+  // When the user enters a ZIP or picks a county, the resolver tells us which
+  // state's config to apply. The state-aware view replaces the hardcoded
+  // cost-inputs grid above; the rest of the page (Deal Parameters / Results
+  // / Scenarios) reads from the same `vals` bag plus state-aware overlays.
+  const [zip, setZip] = useState('');
+  const [countySelection, setCountySelection] = useState(null);
+  const [stateVals, setStateVals] = useState({});       // state-aware input values
+  const [countiesAll, setCountiesAll] = useState([]);
+  const resolved = useLocationResolver(zip, countySelection);
+
+  // Pre-load counties for the dropdown
+  useEffect(() => {
+    let cancelled = false;
+    fetchCounties().then(c => { if (!cancelled) setCountiesAll(c); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // When the state resolves for the first time, seed the state-aware inputs
+  // from mergedDefaults (with 'auto' fields placeholdered at 0). Subsequent
+  // user edits to those fields are preserved.
+  useEffect(() => {
+    if (resolved.status !== 'ok' || !resolved.mergedDefaults) return;
+    setStateVals(prev => {
+      // Only seed keys we haven't touched yet so a refresh / re-resolve
+      // doesn't blow away user edits.
+      const seeded = { ...prev };
+      const baseDefaults = resolveAutoDefaults(resolved.mergedDefaults, {
+        purchasePrice: prev.purchasePrice ?? 0,
+        loanAmount: prev.loanAmount ?? 0,
+        rates: resolved.mergedRates,
+      });
+      for (const [k, v] of Object.entries(baseDefaults)) {
+        if (seeded[k] === undefined) seeded[k] = v;
+      }
+      return seeded;
+    });
+  }, [resolved.status, resolved.state, resolved.county?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compute auto-tax fields whenever inputs that drive them change.
+  const autoValues = useMemo(() => {
+    if (resolved.status !== 'ok') return {};
+    const ctx = {
+      purchasePrice: Number(stateVals.purchasePrice) || 0,
+      loanAmount:    Number(stateVals.loanAmount)    || 0,
+      rates:         resolved.mergedRates,
+    };
+    const out = {};
+    for (const [k, v] of Object.entries(resolved.mergedDefaults || {})) {
+      if (v === 'auto') {
+        const computed = computeAutoField(k, ctx);
+        if (computed != null) out[k] = computed;
+      }
+    }
+    return out;
+  }, [stateVals, resolved.status, resolved.mergedDefaults, resolved.mergedRates]);
+
+  const handleStateValChange = (key, val) => {
+    setStateVals(prev => ({ ...prev, [key]: val }));
+  };
+
+  const stateAwareActive = resolved.status === 'ok';
+  const stateAwareUnsupported = resolved.status === 'unsupported';
+
   const buildCost = costFields.reduce((sum, f) => sum + (vals[f.key] || 0), 0);
   const sellingCosts = vals.arv * (vals.sellingCostPct / 100);
   const holdingCosts = vals.holdingMonths * vals.holdingPerMonth;
@@ -405,9 +475,40 @@ export default function DealCalculator() {
         </div>
       </div>
 
+      <StatePicker
+        zip={zip}
+        onZipChange={setZip}
+        countySelection={countySelection}
+        onCountySelectionChange={setCountySelection}
+        counties={countiesAll}
+        resolved={resolved}
+      />
+
+      {stateAwareUnsupported ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+          <p className="text-sm text-gray-500">
+            Enter a ZIP code or pick a county in NC, SC, or FL to load the
+            state-aware calculator.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Inputs */}
         <div className="space-y-4">
+          {stateAwareActive ? (
+            <>
+              <CostInputs
+                stateConfig={resolved.stateConfig}
+                values={stateVals}
+                onChange={handleStateValChange}
+                autoValues={autoValues}
+              />
+              <MarketSnapshot
+                county={resolved.county}
+                heatMap={resolved.heatMap}
+              />
+            </>
+          ) : (
           <div className="bg-card rounded-xl shadow-sm p-4">
             <h3 className="font-semibold text-sidebar mb-3">Cost Inputs</h3>
             <div className="space-y-2">
@@ -426,6 +527,7 @@ export default function DealCalculator() {
               ))}
             </div>
           </div>
+          )}
 
           <div className="bg-card rounded-xl shadow-sm p-4">
             <h3 className="font-semibold text-sidebar mb-3">Deal Parameters</h3>
@@ -524,6 +626,7 @@ export default function DealCalculator() {
 
         </div>
       </div>
+      )}
 
       {canEdit && (
         <button
