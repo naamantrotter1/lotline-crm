@@ -220,19 +220,29 @@ const BRAND = {
 };
 
 // Cache the logo dataURL so subsequent exports skip the fetch.
+// We downscale via canvas before re-encoding so the embedded image stays
+// ~10–30KB instead of inflating jsPDF to multi-megabyte PNG bitmaps.
 let _logoPromise = null;
 function loadLogoDataUrl() {
   if (_logoPromise) return _logoPromise;
   if (typeof window === 'undefined' || typeof fetch === 'undefined') return Promise.resolve(null);
-  _logoPromise = fetch('/lotline-logo.png')
-    .then(r => r.ok ? r.blob() : null)
-    .then(blob => blob && new Promise(res => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = () => res(null);
-      fr.readAsDataURL(blob);
-    }))
-    .catch(() => null);
+  _logoPromise = (async () => {
+    try {
+      const blob = await fetch('/lotline-logo.png').then(r => r.ok ? r.blob() : null);
+      if (!blob) return null;
+      const bitmap = await createImageBitmap(blob);
+      const targetH = 128;
+      const targetW = Math.round((bitmap.width / bitmap.height) * targetH);
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      return canvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  })();
   return _logoPromise;
 }
 
@@ -259,7 +269,7 @@ export async function exportToPdf(deal, costLines) {
       const props = doc.getImageProperties(logoDataUrl);
       const logoH = 32;
       const logoW = (props.width / props.height) * logoH;
-      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoW, (bannerH - logoH) / 2, logoW, logoH);
+      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoW, (bannerH - logoH) / 2, logoW, logoH, undefined, 'FAST');
     } catch (e) {
       // Image failed to decode — proceed without it.
     }
