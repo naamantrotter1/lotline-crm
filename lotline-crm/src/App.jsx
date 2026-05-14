@@ -137,6 +137,7 @@ import PropertyData from './pages/PropertyData';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
+import { LendingHubRoute, LendingSubmitterRoute } from './lib/lendingRouteGuards';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
  *  "/" always shows the marketing landing page for all users (authenticated or not).
@@ -386,9 +387,9 @@ export default function App() {
               <Route path="archived"    element={<AgentRoute path="archived"><ArchivedDeals /></AgentRoute>} />
               <Route path="flood-map"   element={<AgentRoute path="flood-map"><FloodMap /></AgentRoute>} />
               <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
-              <Route path="lending"     element={<AgentRoute path="lending"><Lending /></AgentRoute>} />
-              <Route path="lending/my-submissions" element={<AgentRoute path="lending"><LendingMySubmissions /></AgentRoute>} />
-              <Route path="lending/pooled-loans/:id" element={<AgentRoute path="lending"><PooledLoanDetail /></AgentRoute>} />
+              <Route path="lending"     element={<AgentRoute path="lending"><LendingHubRoute><Lending /></LendingHubRoute></AgentRoute>} />
+              <Route path="lending/my-submissions" element={<AgentRoute path="lending"><LendingSubmitterRoute><LendingMySubmissions /></LendingSubmitterRoute></AgentRoute>} />
+              <Route path="lending/pooled-loans/:id" element={<AgentRoute path="lending"><LendingHubRoute><PooledLoanDetail /></LendingHubRoute></AgentRoute>} />
               <Route path="builder-network" element={<AgentRoute path="builder-network"><BuilderNetwork /></AgentRoute>} />
               <Route path="contacts"             element={<AgentRoute path="contacts"><Contacts /></AgentRoute>} />
               <Route path="contacts/:id"        element={<AgentRoute path="contacts"><ContactDetail /></AgentRoute>} />

@@ -49,9 +49,9 @@ const BASE_NAV_SECTIONS = [
       { icon: Globe,      label: 'Map',                    to: '/flood-map'       },
       { icon: Map,        label: 'Market Research',        to: '/intelligence'    },
       { icon: Home,       label: 'Order Home',             to: '/homes'           },
-      { icon: Landmark,   label: 'Capital & Partnerships', to: '/lending'         },
-      { icon: DollarSign, label: 'My Submissions',         to: '/lending/my-submissions', nonHubOnly: true },
-      { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures', hubOnly: true },
+      { icon: Landmark,   label: 'Capital & Partnerships', to: '/lending',                    hubOnly: true    },
+      { icon: DollarSign, label: 'My Submissions',         to: '/lending/my-submissions',     nonHubOnly: true },
+      { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures',    jvHubOnly: true  },
       { icon: Calculator, label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,   label: 'Home Models',            to: '/home-models'     },
       { icon: HardHat,    label: 'Contractor Database',    to: '/contractors'     },
@@ -82,8 +82,9 @@ export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose
     : BASE_NAV_SECTIONS.map(section => ({
         ...section,
         items: section.items.filter(item =>
-          (!item.hubOnly    || isJvHub) &&
-          (!item.nonHubOnly || !orgIsLendingHub) &&
+          (!item.hubOnly    || orgIsLendingHub) &&   // lending-hub-only items
+          (!item.nonHubOnly || !orgIsLendingHub) &&  // non-hub-only items
+          (!item.jvHubOnly  || isJvHub) &&           // JV-hub-only items
           (!item.flag       || isEnabled(item.flag))
         ),
       }));
