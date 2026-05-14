@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import {
   Landmark, Handshake, Clock, CheckCircle, XCircle,
   AlertCircle, MessageSquare, Send, X, ChevronRight,
-  Layers, Plus,
+  Layers, Plus, Inbox, ThumbsUp, ThumbsDown, RotateCcw,
 } from 'lucide-react';
 import Button from '../components/UI/Button';
 import { fetchPooledLoans, createPooledLoan, monthlyInterest } from '../lib/pooledLoanData';
@@ -14,6 +14,14 @@ import {
   fetchLendingPartnerships,
   createLendingPartnership,
 } from '../lib/lendingData';
+import {
+  fetchIncomingSubmissions,
+  updateSubmissionStatus,
+  postMessage,
+  fetchMessages,
+  STATUS_LABELS,
+} from '../lib/lendingSubmissionsData';
+import { notifyLendingDecision } from '../lib/notify';
 
 // ── Empty forms ────────────────────────────────────────────────────────────
 const COST_FIELDS = [
@@ -136,13 +144,90 @@ const EMPTY_POOLED = {
   start_date: '', maturity_date: '', profit_participation_pct: '', notes: '',
 };
 
+// ── Hub status config ───────────────────────────────────────────────────────
+const HUB_STATUS_CONFIG = {
+  submitted:    { label: 'New',          bg: 'bg-blue-50',   border: 'border-blue-200',   dot: 'bg-blue-500' },
+  under_review: { label: 'Under Review', bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+  approved:     { label: 'Approved',     bg: 'bg-green-50',  border: 'border-green-200',  dot: 'bg-green-500' },
+  declined:     { label: 'Declined',     bg: 'bg-red-50',    border: 'border-red-200',    dot: 'bg-red-400' },
+  withdrawn:    { label: 'Withdrawn',    bg: 'bg-gray-50',   border: 'border-gray-200',   dot: 'bg-gray-400' },
+};
+const KANBAN_COLS = ['submitted', 'under_review', 'approved', 'declined'];
+
 // ══════════════════════════════════════════════════════════════════════════
 export default function Lending() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeOrgId } = useAuth();
-  const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership' | 'pooled'
+  const { activeOrgId, session, orgIsLendingHub } = useAuth();
+  const [drawer, setDrawer]       = useState(null); // 'financing' | 'partnership' | 'pooled' | 'hubDetail'
   const [activeTab, setActiveTab] = useState('loans');
+
+  // ── Hub-only state ───────────────────────────────────────────────────────
+  const [hubSubmissions, setHubSubmissions] = useState([]);
+  const [hubLoading, setHubLoading]         = useState(false);
+  const [selectedSub, setSelectedSub]       = useState(null);
+  const [subMessages, setSubMessages]       = useState([]);
+  const [msgBody, setMsgBody]               = useState('');
+  const [msgInternal, setMsgInternal]       = useState(false);
+  const [msgSending, setMsgSending]         = useState(false);
+  const [decisionNote, setDecisionNote]     = useState('');
+  const [deciding, setDeciding]             = useState(false);
+
+  const loadHubSubmissions = useCallback(async () => {
+    if (!activeOrgId || !orgIsLendingHub) return;
+    setHubLoading(true);
+    const data = await fetchIncomingSubmissions(activeOrgId);
+    setHubSubmissions(data);
+    setHubLoading(false);
+  }, [activeOrgId, orgIsLendingHub]);
+
+  useEffect(() => {
+    if (orgIsLendingHub) loadHubSubmissions();
+  }, [loadHubSubmissions, orgIsLendingHub]);
+
+  const openHubDetail = async (sub) => {
+    setSelectedSub(sub);
+    setDecisionNote(sub.decisionNote || '');
+    setDrawer('hubDetail');
+    const msgs = await fetchMessages(sub.id);
+    setSubMessages(msgs);
+  };
+
+  const handleDecision = async (status) => {
+    if (!selectedSub) return;
+    setDeciding(true);
+    const { data, error } = await updateSubmissionStatus(selectedSub.id, status, {
+      decisionNote,
+      decidedByUserId: session?.user?.id,
+    });
+    setDeciding(false);
+    if (error) { alert('Update failed: ' + (error.message || error)); return; }
+    setSelectedSub(data);
+    setHubSubmissions(prev => prev.map(s => s.id === data.id ? data : s));
+    // Notify the submitter's user
+    if (status === 'approved' || status === 'declined') {
+      notifyLendingDecision(data, status, {
+        orgId:  data.submitterOrgId,
+        userId: data.submittedByUserId,
+      });
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!msgBody.trim() || !selectedSub) return;
+    setMsgSending(true);
+    const { data, error } = await postMessage(
+      selectedSub.id,
+      session?.user?.id,
+      activeOrgId,
+      msgBody,
+      msgInternal,
+    );
+    setMsgSending(false);
+    if (error) { alert('Could not send message.'); return; }
+    setSubMessages(prev => [...prev, data]);
+    setMsgBody('');
+  };
 
   // Pooled loans state
   const [pooledLoans, setPooledLoans] = useState([]);
@@ -348,11 +433,12 @@ export default function Lending() {
       {/* Submission history */}
       <div className="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-gray-100">
+        <div className="flex border-b border-gray-100 overflow-x-auto">
           {[
             { key: 'loans',        label: 'My Loan Requests',         count: loanRequests.length },
             { key: 'partnerships', label: 'My Partnership Submissions', count: partnerships.length },
             { key: 'pooled',       label: 'Pooled Loans',             count: pooledLoans.length },
+            ...(orgIsLendingHub ? [{ key: 'hub', label: 'Incoming Submissions', count: hubSubmissions.length }] : []),
           ].map(t => (
             <button
               key={t.key}
@@ -429,6 +515,59 @@ export default function Lending() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )
+        )}
+
+        {/* Hub Incoming Submissions kanban */}
+        {activeTab === 'hub' && (
+          hubLoading ? (
+            <div className="py-14 text-center text-gray-400 text-sm">Loading submissions…</div>
+          ) : hubSubmissions.length === 0 ? (
+            <div className="py-14 text-center text-gray-400 text-sm">
+              <Inbox size={28} className="mx-auto mb-2 text-gray-300" />
+              No submissions yet. They'll appear here once orgs submit deals for funding.
+            </div>
+          ) : (
+            <div className="p-4 overflow-x-auto">
+              <div className="flex gap-4 min-w-max">
+                {KANBAN_COLS.map(col => {
+                  const colCfg = HUB_STATUS_CONFIG[col];
+                  const cards  = hubSubmissions.filter(s => s.status === col);
+                  return (
+                    <div key={col} className="w-72 flex-shrink-0">
+                      <div className={`flex items-center gap-2 mb-3 px-3 py-2 rounded-lg ${colCfg.bg} border ${colCfg.border}`}>
+                        <span className={`w-2 h-2 rounded-full ${colCfg.dot}`} />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">{colCfg.label}</span>
+                        <span className="ml-auto text-xs font-bold text-gray-500">{cards.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {cards.map(sub => (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => openHubDetail(sub)}
+                            className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-accent/40 transition-all"
+                          >
+                            <p className="text-xs font-bold text-accent mb-0.5">{sub.ref}</p>
+                            <p className="text-sm font-semibold text-sidebar truncate">{sub.address || 'No address'}</p>
+                            {sub.submitterOrgName && (
+                              <p className="text-xs text-gray-400 mt-0.5 truncate">{sub.submitterOrgName}</p>
+                            )}
+                            {sub.loanAmountRequested && (
+                              <p className="text-xs font-semibold text-gray-600 mt-2">${Number(sub.loanAmountRequested).toLocaleString()}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ''}</p>
+                          </button>
+                        ))}
+                        {cards.length === 0 && (
+                          <div className="py-6 text-center text-xs text-gray-300">Empty</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )
         )}
@@ -642,6 +781,152 @@ export default function Lending() {
               </Button>
             </div>
           </form>
+        )}
+      </Drawer>
+
+      {/* ── Hub Submission Detail Drawer ────────────────────────────────── */}
+      <Drawer
+        open={drawer === 'hubDetail' && !!selectedSub}
+        onClose={() => { setDrawer(null); setSelectedSub(null); setSubMessages([]); setDecisionNote(''); }}
+        title={selectedSub ? `${selectedSub.ref} — ${selectedSub.address || 'No address'}` : 'Submission'}
+      >
+        {selectedSub && (
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Status row */}
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const cfg = HUB_STATUS_CONFIG[selectedSub.status] || HUB_STATUS_CONFIG.submitted;
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.border} text-gray-700`}>
+                      <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                      {STATUS_LABELS[selectedSub.status] ?? selectedSub.status}
+                    </span>
+                  );
+                })()}
+                {selectedSub.submitterOrgName && (
+                  <span className="text-xs text-gray-500">from <strong>{selectedSub.submitterOrgName}</strong></span>
+                )}
+              </div>
+
+              {/* Deal details */}
+              <SectionHeading>Deal Details</SectionHeading>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {[
+                  ['Address',    selectedSub.address],
+                  ['County',     selectedSub.county],
+                  ['State',      selectedSub.state],
+                  ['Acreage',    selectedSub.acreage],
+                  ['ARV',        selectedSub.arv ? `$${Number(selectedSub.arv).toLocaleString()}` : null],
+                  ['Purchase Price', selectedSub.purchasePrice ? `$${Number(selectedSub.purchasePrice).toLocaleString()}` : null],
+                  ['Loan Requested', selectedSub.loanAmountRequested ? `$${Number(selectedSub.loanAmountRequested).toLocaleString()}` : null],
+                  ['Loan Type',  selectedSub.loanType],
+                  ['Exit Strategy', selectedSub.exitStrategy],
+                  ['Credit Score', selectedSub.creditScore],
+                ].filter(([, v]) => v).map(([label, val]) => (
+                  <div key={label}>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">{label}</p>
+                    <p className="text-sm font-medium text-sidebar mt-0.5">{val}</p>
+                  </div>
+                ))}
+              </div>
+              {selectedSub.notes && (
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-1">Notes</p>
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedSub.notes}</p>
+                </div>
+              )}
+
+              {/* Decision controls — only when not yet decided */}
+              {['submitted', 'under_review'].includes(selectedSub.status) && (
+                <>
+                  <SectionHeading>Decision</SectionHeading>
+                  <div className="space-y-3">
+                    {selectedSub.status === 'submitted' && (
+                      <button
+                        type="button"
+                        disabled={deciding}
+                        onClick={() => handleDecision('under_review')}
+                        className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors disabled:opacity-50"
+                      >
+                        <RotateCcw size={14} /> Mark Under Review
+                      </button>
+                    )}
+                    <textarea
+                      rows={3}
+                      value={decisionNote}
+                      onChange={e => setDecisionNote(e.target.value)}
+                      placeholder="Decision note (optional — shown to submitter)"
+                      className={inp + ' resize-none'}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={deciding}
+                        onClick={() => handleDecision('approved')}
+                        className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                      >
+                        <ThumbsUp size={14} /> Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deciding}
+                        onClick={() => handleDecision('declined')}
+                        className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        <ThumbsDown size={14} /> Decline
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+              {selectedSub.decisionNote && !['submitted','under_review'].includes(selectedSub.status) && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Decision Note</p>
+                  <p className="text-sm text-gray-700">{selectedSub.decisionNote}</p>
+                </div>
+              )}
+
+              {/* Message thread */}
+              <SectionHeading>Messages</SectionHeading>
+              {subMessages.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No messages yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {subMessages.map(msg => (
+                    <div key={msg.id} className={`rounded-lg px-3 py-2.5 text-sm ${msg.isInternal ? 'bg-yellow-50 border border-yellow-100' : 'bg-gray-50 border border-gray-100'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sidebar text-xs">{msg.authorName}</span>
+                        {msg.isInternal && <span className="text-xs bg-yellow-200 text-yellow-800 font-semibold px-1.5 py-0.5 rounded">Internal</span>}
+                        <span className="text-gray-400 text-xs ml-auto">{new Date(msg.createdAt).toLocaleString()}</span>
+                      </div>
+                      <p className="text-gray-700 text-xs leading-relaxed">{msg.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Message compose */}
+            <div className="px-6 py-4 border-t border-gray-100 space-y-3 flex-shrink-0">
+              <textarea
+                rows={2}
+                value={msgBody}
+                onChange={e => setMsgBody(e.target.value)}
+                placeholder="Write a message…"
+                className={inp + ' resize-none text-sm'}
+              />
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input type="checkbox" checked={msgInternal} onChange={e => setMsgInternal(e.target.checked)} className="w-3.5 h-3.5 accent-yellow-500" />
+                  Internal note
+                </label>
+                <Button onClick={handleSendMessage} disabled={msgSending || !msgBody.trim()} className="ml-auto">
+                  <Send size={13} className="mr-1" /> {msgSending ? 'Sending…' : 'Send'}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </Drawer>
 

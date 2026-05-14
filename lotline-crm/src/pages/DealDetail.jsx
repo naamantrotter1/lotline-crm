@@ -29,6 +29,7 @@ import DealRightColumn from '../components/deal/DealRightColumn';
 import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
+import SubmitForFundingButton from '../components/deal/SubmitForFundingButton';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
@@ -3463,6 +3464,9 @@ function DealDetailContent({ deal }) {
                 <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
                   View Only
                 </span>
+              )}
+              {canEdit && !isAgent && (
+                <SubmitForFundingButton deal={deal} />
               )}
               <button
                 onClick={async () => {

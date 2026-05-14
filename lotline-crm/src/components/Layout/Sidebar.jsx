@@ -7,6 +7,7 @@ import {
   FileSignature, ClipboardList, GitMerge, Sparkles, Database,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../lib/AuthContext';
 import { useJv } from '../../lib/JvContext';
 import { isEnabled } from '../../lib/featureFlags';
 
@@ -49,6 +50,7 @@ const BASE_NAV_SECTIONS = [
       { icon: Map,        label: 'Market Research',        to: '/intelligence'    },
       { icon: Home,       label: 'Order Home',             to: '/homes'           },
       { icon: Landmark,   label: 'Capital & Partnerships', to: '/lending'         },
+      { icon: DollarSign, label: 'My Submissions',         to: '/lending/my-submissions', nonHubOnly: true },
       { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures', hubOnly: true },
       { icon: Calculator, label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,   label: 'Home Models',            to: '/home-models'     },
@@ -65,6 +67,7 @@ const INVESTOR_ALLOWED = new Set(['/investors']);
 
 export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose }) {
   const { isAgent, isInvestor } = usePermissions();
+  const { orgIsLendingHub } = useAuth();
   const { isJvHub } = useJv();
 
   const filterItems = (allowed) =>
@@ -79,8 +82,9 @@ export default function Sidebar({ collapsed, mobileOpen, isMobile, onMobileClose
     : BASE_NAV_SECTIONS.map(section => ({
         ...section,
         items: section.items.filter(item =>
-          (!item.hubOnly || isJvHub) &&
-          (!item.flag   || isEnabled(item.flag))
+          (!item.hubOnly    || isJvHub) &&
+          (!item.nonHubOnly || !orgIsLendingHub) &&
+          (!item.flag       || isEnabled(item.flag))
         ),
       }));
 

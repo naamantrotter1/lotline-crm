@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
   const [orgPlan, setOrgPlan]             = useState(null);   // organizations.plan
   const [orgSeatLimit, setOrgSeatLimit]   = useState(null);   // organizations.seat_limit
   const [orgFeatureFlags, setOrgFeatureFlags] = useState({}); // organizations.feature_flags
+  const [orgIsLendingHub, setOrgIsLendingHub] = useState(false); // organizations.is_lending_hub
   const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
   const [loading, setLoading]             = useState(true);
   // Operator impersonation: { investor, logId }
@@ -48,7 +49,7 @@ export function AuthProvider({ children }) {
           const [orgResult, memResult] = await Promise.all([
             supabase
               .from('organizations')
-              .select('slug, plan, seat_limit, feature_flags')
+              .select('slug, plan, seat_limit, feature_flags, is_lending_hub')
               .eq('id', orgId)
               .single(),
             supabase
@@ -84,7 +85,7 @@ export function AuthProvider({ children }) {
               setProfile(prev => ({ ...prev, active_organization_id: fallbackOrgId }));
               const { data: fallbackOrg } = await supabase
                 .from('organizations')
-                .select('slug, plan, seat_limit, feature_flags')
+                .select('slug, plan, seat_limit, feature_flags, is_lending_hub')
                 .eq('id', fallbackOrgId)
                 .single();
               org   = fallbackOrg;
@@ -99,12 +100,14 @@ export function AuthProvider({ children }) {
           setOrgPlan(org?.plan ?? null);
           setOrgSeatLimit(org?.seat_limit ?? null);
           setOrgFeatureFlags(org?.feature_flags ?? {});
+          setOrgIsLendingHub(org?.is_lending_hub ?? false);
           setOrgRole(memRole);
         } else {
           setOrgSlug(null);
           setOrgRole(null);
           setOrgPlan(null);
           setOrgSeatLimit(null);
+          setOrgIsLendingHub(false);
         }
 
         // If investor role, resolve their linked investor record using the
@@ -150,6 +153,7 @@ export function AuthProvider({ children }) {
           setOrgRole(null);
           setOrgPlan(null);
           setOrgSeatLimit(null);
+          setOrgIsLendingHub(false);
           setInvestorRecord(null);
           setImpersonating(null);
           setLoading(false);
@@ -199,6 +203,7 @@ export function AuthProvider({ children }) {
         orgPlan,          // organizations.plan: 'starter'|'pro'|'scale'|null
         orgSeatLimit,     // organizations.seat_limit: number|null
         orgFeatureFlags,  // organizations.feature_flags JSONB: { 'cost_breakdown.three_column': bool }
+        orgIsLendingHub,  // organizations.is_lending_hub: true only for LotLine's hub org
         /** feature flag check: hasFlag('cost_breakdown.three_column') → boolean */
         hasFlag: (key) => !!(orgFeatureFlags?.[key]),
         /** capability check: can(cap) → boolean */

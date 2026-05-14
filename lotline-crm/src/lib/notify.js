@@ -71,6 +71,30 @@ export async function notifyTaskAssigned(task, assigneeId, assigneeName, dealAdd
   );
 }
 
+/**
+ * Call when a hub makes a decision (approved / declined) on a lending submission.
+ * Notifies the submitter's user who created the submission.
+ *
+ * @param {object} submission  — lending_submissions row (camelCase)
+ * @param {string} status      — 'approved' | 'declined'
+ * @param {object} opts        — { orgId: submitter org id, userId: submitter user id }
+ */
+export async function notifyLendingDecision(submission, status, { orgId, userId } = {}) {
+  if (!orgId || !userId) return;
+  const isApproved = status === 'approved';
+  const title = isApproved
+    ? `Funding submission approved`
+    : `Funding submission declined`;
+  const body = submission.address
+    ? `${submission.ref} — ${submission.address}`
+    : submission.ref;
+  await fire(
+    title,
+    body,
+    { orgId, userId, type: 'lending_decision', entityType: 'lending_submission', entityId: String(submission.id) },
+  );
+}
+
 /** Call when a deal moves stages within Deal Overview.
  *  Pass { orgId, userId } so the notification is stored in the DB.
  */
