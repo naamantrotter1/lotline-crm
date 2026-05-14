@@ -210,25 +210,81 @@ export function exportToCsv(deal, costLines) {
 
 // ── PDF exporter ──────────────────────────────────────────────────────────────
 
-export function exportToPdf(deal, costLines) {
+// LotLine brand palette (matches tailwind.config.js).
+const BRAND = {
+  navy:     [26, 35, 50],     // #1a2332 — sidebar / primary
+  accent:   [200, 97, 58],    // #c8613a — accent orange
+  cream:    [245, 243, 238],  // #f5f3ee — cream
+  cardGray: [235, 235, 235],  // #ebebeb — card surface
+  muted:    [130, 138, 150],  // muted gray for secondary text
+};
+
+// Cache the logo dataURL so subsequent exports skip the fetch.
+let _logoPromise = null;
+function loadLogoDataUrl() {
+  if (_logoPromise) return _logoPromise;
+  if (typeof window === 'undefined' || typeof fetch === 'undefined') return Promise.resolve(null);
+  _logoPromise = fetch('/lotline-logo.png')
+    .then(r => r.ok ? r.blob() : null)
+    .then(blob => blob && new Promise(res => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = () => res(null);
+      fr.readAsDataURL(blob);
+    }))
+    .catch(() => null);
+  return _logoPromise;
+}
+
+export async function exportToPdf(deal, costLines) {
   const data = buildExportData(deal, costLines);
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
 
   const pageWidth  = doc.internal.pageSize.getWidth();
   const margin     = 48;
+  const bannerH    = 64;
 
+  // ── Brand banner ──────────────────────────────────────────────────────────
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(0, 0, pageWidth, bannerH, 'F');
+
+  // Accent orange rule
+  doc.setFillColor(...BRAND.accent);
+  doc.rect(0, bannerH, pageWidth, 3, 'F');
+
+  // Logo (load + place on the right of the banner)
+  const logoDataUrl = await loadLogoDataUrl();
+  if (logoDataUrl) {
+    try {
+      const props = doc.getImageProperties(logoDataUrl);
+      const logoH = 32;
+      const logoW = (props.width / props.height) * logoH;
+      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoW, (bannerH - logoH) / 2, logoW, logoH);
+    } catch (e) {
+      // Image failed to decode — proceed without it.
+    }
+  }
+
+  // Title in cream
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  const title = `${deal.address || 'Deal'} — Cost Breakdown`;
-  doc.text(title, margin, margin + 4);
+  doc.setFontSize(15);
+  doc.setTextColor(...BRAND.cream);
+  doc.text('Cost Breakdown', margin, 28);
 
+  // Subtitle (address) — slightly muted cream
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(220, 215, 205);
+  doc.text(deal.address || 'Deal', margin, 46);
+
+  // ── Generated date ────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(`Generated ${todayIso()}`, margin, margin + 22);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`Generated ${todayIso()}`, margin, bannerH + 22);
   doc.setTextColor(0);
 
-  // Metadata block
+  // ── Metadata block ────────────────────────────────────────────────────────
   const metaRows = data.header.map(({ label, value }) => {
     let display = value;
     if (label === 'ARV' || label === 'All-In Cost') display = value === '' ? '' : formatCurrency(value);
@@ -236,19 +292,19 @@ export function exportToPdf(deal, costLines) {
   });
 
   autoTable(doc, {
-    startY: margin + 38,
+    startY: bannerH + 36,
     head: [],
     body: metaRows,
     theme: 'plain',
     styles: { fontSize: 10, cellPadding: { top: 3, bottom: 3, left: 0, right: 8 } },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 110 },
+      0: { fontStyle: 'bold', cellWidth: 110, textColor: BRAND.navy },
       1: { cellWidth: 'auto' },
     },
     margin: { left: margin, right: margin },
   });
 
-  // Expenses table
+  // ── Expenses table ────────────────────────────────────────────────────────
   const expensesStartY = doc.lastAutoTable.finalY + 18;
   autoTable(doc, {
     startY: expensesStartY,
@@ -259,20 +315,38 @@ export function exportToPdf(deal, costLines) {
       { content: formatCurrency(data.totals.totalEstimated), styles: { fontStyle: 'bold', halign: 'right' } },
     ]],
     theme: 'striped',
-    headStyles: { fillColor: [40, 40, 40], textColor: 255, fontStyle: 'bold' },
+    headStyles: {
+      fillColor:  BRAND.navy,
+      textColor:  BRAND.cream,
+      fontStyle:  'bold',
+      halign:     'left',
+    },
+    alternateRowStyles: { fillColor: BRAND.cardGray },
+    footStyles: {
+      fillColor: BRAND.accent,
+      textColor: BRAND.cream,
+      fontStyle: 'bold',
+    },
     columnStyles: {
       0: { cellWidth: 'auto' },
       1: { cellWidth: 130, halign: 'right' },
     },
-    styles: { fontSize: 10 },
+    styles: { fontSize: 10, textColor: [40, 40, 40] },
     margin: { left: margin, right: margin },
     didDrawPage: () => {
       const pageHeight = doc.internal.pageSize.getHeight();
+      // Footer accent rule
+      doc.setFillColor(...BRAND.accent);
+      doc.rect(margin, pageHeight - 36, pageWidth - margin * 2, 1, 'F');
       doc.setFontSize(8);
-      doc.setTextColor(140);
-      doc.text('Generated by LotLine CRM', margin, pageHeight - 24);
-      const pageStr = `Page ${doc.internal.getNumberOfPages()}`;
-      doc.text(pageStr, pageWidth - margin, pageHeight - 24, { align: 'right' });
+      doc.setTextColor(...BRAND.muted);
+      doc.text('Generated by LotLine CRM', margin, pageHeight - 22);
+      doc.text(
+        `Page ${doc.internal.getNumberOfPages()}`,
+        pageWidth - margin,
+        pageHeight - 22,
+        { align: 'right' },
+      );
       doc.setTextColor(0);
     },
   });

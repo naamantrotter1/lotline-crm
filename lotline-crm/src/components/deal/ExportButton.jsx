@@ -25,15 +25,14 @@ export default function ExportButton({ deal, costLines }) {
     return () => document.removeEventListener('mousedown', onClickAway);
   }, [open]);
 
-  const run = (fn) => {
+  const run = async (fn) => {
+    setOpen(false);
     try {
-      fn(deal || {}, costLines || []);
+      await fn(deal || {}, costLines || []);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[dealExport] failed', err);
       alert('Export failed — see console for details.');
-    } finally {
-      setOpen(false);
     }
   };
 
