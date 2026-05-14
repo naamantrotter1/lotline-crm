@@ -35,26 +35,42 @@ const FAKE_ZIP_MAP = {
   // ZIP is out of state or just not yet in our NC/SC/FL crosswalk.
 };
 
+// Mirrors the post-131 states_config schema: NC/SC share the construction-
+// cost legacy field set; FL adds wetlandSurvey + impactFee. Auto-tax fields
+// no longer appear in visible_fields (the tax rates still live in
+// tax_formulas for any callers that need them).
+const NC_SC_DEFAULTS = {
+  land: 0, percTest: 2000, survey: 1500, mobileHome: 78000,
+  septic: 7500, water: 10000,
+};
+const NC_SC_FIELDS = [
+  'land','percTest','survey','constructionAuth','improvementPermit',
+  'wellPermit','mobileHome','landClearing','roughGrade','septic','water',
+  'waterSewer','publicSewer','electric','footers','setup','trimOut','hvac',
+  'electrical','plumbingConnection','septicConnection','underpinning',
+  'driveway','landscaping','decks','hudEngineer','mailbox','mobileTax',
+];
+
 const FAKE_STATES = {
   NC: {
     state: 'NC',
     display_name: 'North Carolina',
-    default_costs: { percTest: 800, ncExciseTax: 'auto', recordingFees: 64 },
-    visible_fields: ['purchasePrice','closingCosts','percTest','ncExciseTax','recordingFees'],
+    default_costs: { ...NC_SC_DEFAULTS },
+    visible_fields: NC_SC_FIELDS,
     tax_formulas: { ncExciseRate: 0.002 },
   },
   SC: {
     state: 'SC',
     display_name: 'South Carolina',
-    default_costs: { percTest: 750, scDeedStamps: 'auto', platRecording: 25 },
-    visible_fields: ['purchasePrice','closingCosts','percTest','scDeedStamps','platRecording'],
+    default_costs: { ...NC_SC_DEFAULTS },
+    visible_fields: NC_SC_FIELDS,
     tax_formulas: { scDeedStampRate: 0.00370 },
   },
   FL: {
     state: 'FL',
     display_name: 'Florida',
-    default_costs: { docStampsDeed: 'auto', intangibleTax: 'auto', surveying: 1300 },
-    visible_fields: ['purchasePrice','closingCosts','surveying','docStampsDeed','intangibleTax'],
+    default_costs: { ...NC_SC_DEFAULTS, wetlandSurvey: 0, impactFee: 0 },
+    visible_fields: [...NC_SC_FIELDS, 'wetlandSurvey', 'impactFee'],
     tax_formulas: { docStampsDeedRate: 0.007, intangibleTaxRate: 0.002 },
   },
 };
@@ -73,33 +89,40 @@ const { useLocationResolver } = await import('../hooks/useLocationResolver');
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe('useLocationResolver — zip → state, mergedDefaults, mergedRates', () => {
-  it('zip 27514 resolves to Orange County NC with NC visible_fields', async () => {
+  it('zip 27514 resolves to Orange County NC with the legacy field list', async () => {
     const { result } = renderHook(() => useLocationResolver('27514', null));
     await waitFor(() => expect(result.current.status).toBe('ok'));
     expect(result.current.state).toBe('NC');
     expect(result.current.county.county_name).toBe('Orange');
+    // Legacy keys are present, FL-only extras are not.
     expect(result.current.stateConfig.visible_fields).toContain('percTest');
-    expect(result.current.stateConfig.visible_fields).not.toContain('docStampsDeed');
+    expect(result.current.stateConfig.visible_fields).toContain('mobileHome');
+    expect(result.current.stateConfig.visible_fields).not.toContain('wetlandSurvey');
+    expect(result.current.stateConfig.visible_fields).not.toContain('impactFee');
     expect(result.current.mergedRates.ncExciseRate).toBe(0.002);
   });
 
-  it('zip 29412 resolves to Charleston SC with scDeedStamps in visible_fields, no ncExciseTax', async () => {
+  it('zip 29412 resolves to Charleston SC with the same field list as NC and no FL extras', async () => {
     const { result } = renderHook(() => useLocationResolver('29412', null));
     await waitFor(() => expect(result.current.status).toBe('ok'));
     expect(result.current.state).toBe('SC');
     expect(result.current.county.county_name).toBe('Charleston');
-    expect(result.current.stateConfig.visible_fields).toContain('scDeedStamps');
-    expect(result.current.stateConfig.visible_fields).not.toContain('ncExciseTax');
+    expect(result.current.stateConfig.visible_fields).toContain('percTest');
+    expect(result.current.stateConfig.visible_fields).not.toContain('wetlandSurvey');
+    expect(result.current.stateConfig.visible_fields).not.toContain('impactFee');
   });
 
-  it('zip 33101 (Miami-Dade FL) overrides docStampsDeedRate to 0.006', async () => {
+  it('zip 33101 (Miami-Dade FL) includes wetlandSurvey + impactFee and applies county rate override', async () => {
     const { result } = renderHook(() => useLocationResolver('33101', null));
     await waitFor(() => expect(result.current.status).toBe('ok'));
     expect(result.current.state).toBe('FL');
     expect(result.current.county.county_name).toBe('Miami-Dade');
-    // County override should beat the state 0.007
+    // FL-only extras are present in the field list.
+    expect(result.current.stateConfig.visible_fields).toContain('wetlandSurvey');
+    expect(result.current.stateConfig.visible_fields).toContain('impactFee');
+    // County override on the rate still beats the state default 0.007.
     expect(result.current.mergedRates.docStampsDeedRate).toBe(0.006);
-    // Non-rate county defaults (impactFee) land in mergedDefaults, not rates
+    // Non-rate county defaults (impactFee) land in mergedDefaults, not rates.
     expect(result.current.mergedDefaults.impactFee).toBe(4200);
     expect(result.current.mergedDefaults.docStampsDeedRate).toBeUndefined();
   });

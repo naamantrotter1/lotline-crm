@@ -492,17 +492,28 @@ export default function DealCalculator() {
   const stateAwareActive = resolved.status === 'ok';
   const stateAwareUnsupported = resolved.status === 'unsupported';
 
-  const buildCost = costFields.reduce((sum, f) => sum + (vals[f.key] || 0), 0);
+  // When state-aware is active, cost inputs live in stateVals keyed by the
+  // resolved state's visible_fields. Otherwise we read the legacy costFields
+  // array against the local `vals` bag. Deal parameters (arv, holding etc.)
+  // always come from `vals` — they aren't state-specific.
+  const activeCostKeys = stateAwareActive
+    ? (resolved.stateConfig?.visible_fields || [])
+    : costFields.map(f => f.key);
+  const activeCostBag = stateAwareActive ? stateVals : vals;
+  const buildCost = activeCostKeys.reduce((sum, k) => sum + (Number(activeCostBag[k]) || 0), 0);
   const sellingCosts = vals.arv * (vals.sellingCostPct / 100);
   const holdingCosts = vals.holdingMonths * vals.holdingPerMonth;
   const totalAllIn = buildCost + sellingCosts + holdingCosts;
   const projectedProfit = vals.arv - totalAllIn;
   const projectedROI = totalAllIn > 0 ? ((projectedProfit / totalAllIn) * 100).toFixed(1) : '0';
-  const nonLandBuildCost = costFields.filter(f => f.key !== 'land').reduce((sum, f) => sum + (vals[f.key] || 0), 0);
+  const landValue = Number(activeCostBag.land) || 0;
+  const nonLandBuildCost = activeCostKeys
+    .filter(k => k !== 'land')
+    .reduce((sum, k) => sum + (Number(activeCostBag[k]) || 0), 0);
   const desiredProfit = vals.arv * (vals.desiredProfitPct / 100);
   const maxOffer = vals.arv - nonLandBuildCost - sellingCosts - holdingCosts - desiredProfit;
-  const landOverMax = vals.land > 0 && vals.land > maxOffer;
-  const landUnderMax = vals.land > 0 && vals.land <= maxOffer;
+  const landOverMax = landValue > 0 && landValue > maxOffer;
+  const landUnderMax = landValue > 0 && landValue <= maxOffer;
 
   // Scenarios
   const scenarios = [
