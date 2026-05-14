@@ -411,7 +411,7 @@ export default function Lending() {
             <p className="text-sm text-gray-500 leading-relaxed">Bring us a deal and let's work it together. Submit your deal details and we'll review it.</p>
           </div>
           <Button onClick={() => { setPartnerConfirm(null); setDrawer('partnership'); }} className="mt-auto self-start">
-            Submit a Deal for Review <ChevronRight size={14} className="ml-1" />
+            Submit a Deal to Partner <ChevronRight size={14} className="ml-1" />
           </Button>
         </div>
 
@@ -931,7 +931,7 @@ export default function Lending() {
       </Drawer>
 
       {/* ── Partnership Drawer ───────────────────────────────────────────── */}
-      <Drawer open={drawer === 'partnership'} onClose={closeDrawer} title="Submit a Deal for Review">
+      <Drawer open={drawer === 'partnership'} onClose={closeDrawer} title="Submit a Deal to Partner">
         {partnerConfirm ? (
           <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 text-center gap-4">
             <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">

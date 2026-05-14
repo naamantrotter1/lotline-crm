@@ -3,7 +3,7 @@
  *
  * Visible to non-hub subscriber orgs.  Combines:
  *   • Apply for Financing    — creates a lending_request
- *   • Submit a Deal for Review — creates a lending_partnership
+ *   • Submit a Deal to Partner — creates a lending_partnership
  *   • Hub Submissions        — deals sent via SubmitForFundingButton (lending_submissions)
  *
  * Accepts location.state.prefillLoan / prefillPartner to open the relevant
@@ -331,7 +331,7 @@ export default function LendingMySubmissions() {
             className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white text-xs font-semibold rounded-xl hover:bg-accent/90 transition-colors"
           >
             <Handshake size={13} className="flex-shrink-0" />
-            Submit a Deal for Review
+            Submit a Deal to Partner
           </button>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function LendingMySubmissions() {
                 onClick={() => { setPartnerForm(EMPTY_PARTNER); setPartnerConfirm(null); setDrawer('partnership'); }}
                 className="mt-3 text-sm text-accent font-semibold hover:underline"
               >
-                Submit a Deal for Review →
+                Submit a Deal to Partner →
               </button>
             </div>
           ) : (
@@ -599,7 +599,7 @@ export default function LendingMySubmissions() {
       </Drawer>
 
       {/* ── Partnership Drawer ───────────────────────────────────────────── */}
-      <Drawer open={drawer === 'partnership'} onClose={closeDrawer} title="Submit a Deal for Review">
+      <Drawer open={drawer === 'partnership'} onClose={closeDrawer} title="Submit a Deal to Partner">
         {partnerConfirm ? (
           <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 text-center gap-4">
             <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">

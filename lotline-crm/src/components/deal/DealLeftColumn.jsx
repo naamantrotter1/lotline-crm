@@ -798,7 +798,7 @@ export default function DealLeftColumn({
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white text-xs font-semibold rounded-xl hover:bg-accent/90 transition-colors"
               >
                 <Handshake size={13} className="flex-shrink-0" />
-                Submit a Deal for Review
+                Submit a Deal to Partner
               </button>
             )}
           </div>
