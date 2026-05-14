@@ -12,7 +12,7 @@ import { resolveAutoDefaults, computeAutoField } from '../lib/taxes';
 import { supabase } from '../lib/supabase';
 import StatePicker     from '../components/calculator/StatePicker';
 import CostInputs      from '../components/calculator/CostInputs';
-import MarketSnapshot  from '../components/calculator/MarketSnapshot';
+import FmtInput        from '../components/calculator/FmtInput';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
@@ -315,40 +315,6 @@ function fmt(n) {
   return `$${Number(n || 0).toLocaleString()}`;
 }
 
-/** Number input that displays with commas (e.g. 78,000) but accepts raw numbers while typing. */
-function FmtInput({ value, onChange, className }) {
-  const [focused, setFocused] = useState(false);
-  const [draft, setDraft] = useState('');
-  const ref = useRef(null);
-
-  const handleFocus = () => {
-    setDraft(value === 0 ? '' : String(value));
-    setFocused(true);
-  };
-
-  useEffect(() => { if (focused) ref.current?.select(); }, [focused]);
-
-  const handleBlur = () => {
-    setFocused(false);
-    onChange(parseFloat(draft) || 0);
-  };
-
-  return (
-    <input
-      ref={ref}
-      type={focused ? 'number' : 'text'}
-      inputMode="decimal"
-      value={focused ? draft : (value === 0 ? '' : Number(value).toLocaleString())}
-      placeholder="0"
-      onChange={e => setDraft(e.target.value)}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.blur(); } }}
-      className={className}
-    />
-  );
-}
-
 export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
@@ -492,17 +458,28 @@ export default function DealCalculator() {
   const stateAwareActive = resolved.status === 'ok';
   const stateAwareUnsupported = resolved.status === 'unsupported';
 
-  const buildCost = costFields.reduce((sum, f) => sum + (vals[f.key] || 0), 0);
+  // When state-aware is active, cost inputs live in stateVals keyed by the
+  // resolved state's visible_fields. Otherwise we read the legacy costFields
+  // array against the local `vals` bag. Deal parameters (arv, holding etc.)
+  // always come from `vals` — they aren't state-specific.
+  const activeCostKeys = stateAwareActive
+    ? (resolved.stateConfig?.visible_fields || [])
+    : costFields.map(f => f.key);
+  const activeCostBag = stateAwareActive ? stateVals : vals;
+  const buildCost = activeCostKeys.reduce((sum, k) => sum + (Number(activeCostBag[k]) || 0), 0);
   const sellingCosts = vals.arv * (vals.sellingCostPct / 100);
   const holdingCosts = vals.holdingMonths * vals.holdingPerMonth;
   const totalAllIn = buildCost + sellingCosts + holdingCosts;
   const projectedProfit = vals.arv - totalAllIn;
   const projectedROI = totalAllIn > 0 ? ((projectedProfit / totalAllIn) * 100).toFixed(1) : '0';
-  const nonLandBuildCost = costFields.filter(f => f.key !== 'land').reduce((sum, f) => sum + (vals[f.key] || 0), 0);
+  const landValue = Number(activeCostBag.land) || 0;
+  const nonLandBuildCost = activeCostKeys
+    .filter(k => k !== 'land')
+    .reduce((sum, k) => sum + (Number(activeCostBag[k]) || 0), 0);
   const desiredProfit = vals.arv * (vals.desiredProfitPct / 100);
   const maxOffer = vals.arv - nonLandBuildCost - sellingCosts - holdingCosts - desiredProfit;
-  const landOverMax = vals.land > 0 && vals.land > maxOffer;
-  const landUnderMax = vals.land > 0 && vals.land <= maxOffer;
+  const landOverMax = landValue > 0 && landValue > maxOffer;
+  const landUnderMax = landValue > 0 && landValue <= maxOffer;
 
   // Scenarios
   const scenarios = [
@@ -588,18 +565,12 @@ export default function DealCalculator() {
         {/* Left: Inputs */}
         <div className="space-y-4">
           {stateAwareActive ? (
-            <>
-              <CostInputs
-                stateConfig={resolved.stateConfig}
-                values={stateVals}
-                onChange={handleStateValChange}
-                autoValues={autoValues}
-              />
-              <MarketSnapshot
-                county={resolved.county}
-                heatMap={resolved.heatMap}
-              />
-            </>
+            <CostInputs
+              stateConfig={resolved.stateConfig}
+              values={stateVals}
+              onChange={handleStateValChange}
+              autoValues={autoValues}
+            />
           ) : (
           <div className="bg-card rounded-xl shadow-sm p-4">
             <h3 className="font-semibold text-sidebar mb-3">Cost Inputs</h3>

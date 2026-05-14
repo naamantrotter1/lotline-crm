@@ -8,7 +8,7 @@
  *
  * Returns:
  *   {
- *     status:        'idle' | 'resolving' | 'ok' | 'multi' | 'unsupported',
+ *     status:        'idle' | 'resolving' | 'ok' | 'multi' | 'missing' | 'unsupported',
  *     state:         'NC' | 'SC' | 'FL' | null,
  *     county:        county row | null,
  *     candidates:    array of {zip,state,isPrimary,county} when status==='multi',
@@ -23,7 +23,11 @@
  *
  * Calculator usage:
  *   const loc = useLocationResolver(zip, picked);
- *   if (loc.status === 'unsupported') show "supports NC/SC/FL only" banner;
+ *   if (loc.status === 'missing') prompt user to pick their county manually
+ *     (the ZIP isn't in our crosswalk — could be a NC/SC/FL ZIP we haven't
+ *     seeded yet, or an out-of-state ZIP);
+ *   if (loc.status === 'unsupported') show "supports NC/SC/FL only" banner
+ *     (the county resolved but its state isn't in states_config);
  *   if (loc.status === 'multi') prompt user to pick from loc.candidates;
  *   if (loc.status === 'ok') render loc.stateConfig.visible_fields,
  *     seed from resolveAutoDefaults(loc.mergedDefaults, { purchasePrice, loanAmount, rates: loc.mergedRates }).
@@ -114,6 +118,11 @@ export function useLocationResolver(zip, countySelection) {
     if (!countyRow) {
       if (zipResult.status === 'idle' || zipResult.status === 'resolving') {
         return { status: zipResult.status, state: null, county: null,
+                 stateConfig: null, mergedDefaults: null, mergedRates: null,
+                 heatMap: null, candidates: [], error: null };
+      }
+      if (zipResult.status === 'missing') {
+        return { status: 'missing', state: null, county: null,
                  stateConfig: null, mergedDefaults: null, mergedRates: null,
                  heatMap: null, candidates: [], error: null };
       }
