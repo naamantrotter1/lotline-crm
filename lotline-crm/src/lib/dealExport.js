@@ -131,9 +131,9 @@ export function exportToXlsx(deal, costLines) {
   const aoa = [];
   data.header.forEach(({ label, value }) => aoa.push([label, value]));
   aoa.push([]); // blank row
-  aoa.push(['Category', 'Line Item', 'Estimated Amount']);
-  data.rows.forEach(r => aoa.push([r.category, r.label, r.amount]));
-  aoa.push(['Total Estimated Expenses', '', data.totals.totalEstimated]);
+  aoa.push(['Line Item', 'Estimated Amount']);
+  data.rows.forEach(r => aoa.push([r.label, r.amount]));
+  aoa.push(['Total Estimated Expenses', data.totals.totalEstimated]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
@@ -146,14 +146,15 @@ export function exportToXlsx(deal, costLines) {
   // Acreage cell (row 6, col 1) — up to 4 decimals (xlsx stores it as string,
   // already formatted via formatAcres; leave as-is).
 
-  // Currency format on Estimated Amount column for the table body + total row.
+  // Currency format on Estimated Amount column (now column B / index 1) for
+  // the table body + total row.
   const tableStartRow = data.header.length + 2; // blank row + header row
   for (let i = 0; i < data.rows.length; i++) {
-    const addr = XLSX.utils.encode_cell({ r: tableStartRow + i, c: 2 });
+    const addr = XLSX.utils.encode_cell({ r: tableStartRow + i, c: 1 });
     if (ws[addr]) ws[addr].z = '"$"#,##0.00';
   }
   const totalRowIdx = tableStartRow + data.rows.length;
-  const totalAddr   = XLSX.utils.encode_cell({ r: totalRowIdx, c: 2 });
+  const totalAddr   = XLSX.utils.encode_cell({ r: totalRowIdx, c: 1 });
   if (ws[totalAddr]) ws[totalAddr].z = '"$"#,##0.00';
 
   // Bold styling — XLSX (the SheetJS community build) ignores cell styles
@@ -161,13 +162,13 @@ export function exportToXlsx(deal, costLines) {
   // tooling that does read them.
   const boldHeaderCells = [
     'A1','A2','A3','A4','A5','A6','A7','A8',       // metadata labels
-    `A${tableStartRow + 1}`, `B${tableStartRow + 1}`, `C${tableStartRow + 1}`, // table header
-    `A${totalRowIdx + 1}`, `C${totalRowIdx + 1}`,  // total row
+    `A${tableStartRow + 1}`, `B${tableStartRow + 1}`, // table header
+    `A${totalRowIdx + 1}`, `B${totalRowIdx + 1}`,  // total row
   ];
   boldHeaderCells.forEach(a => { if (ws[a]) ws[a].s = { font: { bold: true } }; });
 
   // Column widths
-  ws['!cols'] = [{ wch: 26 }, { wch: 40 }, { wch: 18 }];
+  ws['!cols'] = [{ wch: 40 }, { wch: 18 }];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Cost Breakdown');
 
@@ -195,11 +196,11 @@ export function exportToCsv(deal, costLines) {
     lines.push(`${csvEscape(label)},${csvEscape(v)}`);
   });
   lines.push('');
-  lines.push('Category,Line Item,Estimated Amount');
+  lines.push('Line Item,Estimated Amount');
   data.rows.forEach(r => {
-    lines.push(`${csvEscape(r.category)},${csvEscape(r.label)},${r.amount.toFixed(2)}`);
+    lines.push(`${csvEscape(r.label)},${r.amount.toFixed(2)}`);
   });
-  lines.push(`Total Estimated Expenses,,${data.totals.totalEstimated.toFixed(2)}`);
+  lines.push(`Total Estimated Expenses,${data.totals.totalEstimated.toFixed(2)}`);
 
   const csv = lines.join('\r\n');
   const filename = `${slugify(deal.address)}-cost-breakdown-${todayIso()}.csv`;
@@ -251,18 +252,17 @@ export function exportToPdf(deal, costLines) {
   const expensesStartY = doc.lastAutoTable.finalY + 18;
   autoTable(doc, {
     startY: expensesStartY,
-    head: [['Category', 'Line Item', 'Estimated Amount']],
-    body: data.rows.map(r => [r.category, r.label, formatCurrency(r.amount)]),
+    head: [['Line Item', 'Estimated Amount']],
+    body: data.rows.map(r => [r.label, formatCurrency(r.amount)]),
     foot: [[
-      { content: 'Total Estimated Expenses', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+      { content: 'Total Estimated Expenses', styles: { fontStyle: 'bold', halign: 'left' } },
       { content: formatCurrency(data.totals.totalEstimated), styles: { fontStyle: 'bold', halign: 'right' } },
     ]],
     theme: 'striped',
     headStyles: { fillColor: [40, 40, 40], textColor: 255, fontStyle: 'bold' },
     columnStyles: {
-      0: { cellWidth: 110 },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 110, halign: 'right' },
+      0: { cellWidth: 'auto' },
+      1: { cellWidth: 130, halign: 'right' },
     },
     styles: { fontSize: 10 },
     margin: { left: margin, right: margin },
