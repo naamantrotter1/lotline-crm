@@ -2547,7 +2547,7 @@ function DealDetailContent({ deal }) {
   const fromInvestorPortal = location.state?.from === 'investor-portal';
   const { canEdit, isAgent, canAdmin } = usePermissions();
   const { deals, setDeals, setArchivedDeals, archiveDeal } = useDeals();
-  const { profile, activeOrgId, orgSlug } = useAuth();
+  const { profile, activeOrgId, orgSlug, orgIsLendingHub } = useAuth();
   const [agentUsers, setAgentUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
@@ -3678,7 +3678,7 @@ function DealDetailContent({ deal }) {
             onLogCall={() => setShowLogCall(true)}
             onSendEmail={() => setShowSendEmail(true)}
             onScheduleMeeting={() => setShowScheduleMeeting(true)}
-            onApplyFinancing={!fromInvestorPortal && !isAgent ? () => navigate('/lending', { state: { prefillLoan: {
+            onApplyFinancing={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => navigate('/lending/my-submissions', { state: { prefillLoan: {
               address: deal.address || '',
               purchasePrice: String(costs.land || 0),
               loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
@@ -3688,7 +3688,7 @@ function DealDetailContent({ deal }) {
               exitStrategy: 'Sell',
               notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
             }}}) : null}
-            onSubmitDeal={!fromInvestorPortal && !isAgent ? () => navigate('/lending', { state: { prefillPartner: {
+            onSubmitDeal={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => navigate('/lending/my-submissions', { state: { prefillPartner: {
               address: deal.address || '',
               arv: String(arv || deal.arv || 0),
               projectedProfit: String(Math.max(0, Math.round(netProfit))),
