@@ -12,6 +12,7 @@
  *   autoValues:    kept for backwards-compat — no longer rendered, but the
  *                  caller still passes it.
  */
+import FmtInput from './FmtInput';
 
 // Human labels for every field referenced in any state's visible_fields.
 // Keys not listed fall back to a humanised version of the key.
@@ -53,13 +54,6 @@ function humanize(key) {
   return LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
 }
 
-const fmt$ = (n) => {
-  if (n === '' || n == null || n === 0) return '';
-  const num = Number(n);
-  if (Number.isNaN(num)) return String(n);
-  return num.toLocaleString();
-};
-
 export default function CostInputs({ stateConfig, values, onChange }) {
   if (!stateConfig) return null;
   const fields = stateConfig.visible_fields || [];
@@ -73,15 +67,9 @@ export default function CostInputs({ stateConfig, values, onChange }) {
             <label className="text-sm text-gray-600 flex-1">{humanize(key)}</label>
             <div className="relative w-32">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={fmt$(values?.[key])}
-                placeholder="0"
-                onChange={e => {
-                  const raw = e.target.value.replace(/[^\d.]/g, '');
-                  onChange(key, raw === '' ? 0 : Number(raw));
-                }}
+              <FmtInput
+                value={values?.[key]}
+                onChange={v => onChange(key, v)}
                 className="w-full pl-5 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
               />
             </div>

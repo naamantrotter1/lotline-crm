@@ -12,7 +12,7 @@ import { resolveAutoDefaults, computeAutoField } from '../lib/taxes';
 import { supabase } from '../lib/supabase';
 import StatePicker     from '../components/calculator/StatePicker';
 import CostInputs      from '../components/calculator/CostInputs';
-import MarketSnapshot  from '../components/calculator/MarketSnapshot';
+import FmtInput        from '../components/calculator/FmtInput';
 
 const STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract'];
 const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler', 'MLS', 'Referral', 'Cold Call', 'Online/Website', 'FB Market Place', 'Other'];
@@ -315,40 +315,6 @@ function fmt(n) {
   return `$${Number(n || 0).toLocaleString()}`;
 }
 
-/** Number input that displays with commas (e.g. 78,000) but accepts raw numbers while typing. */
-function FmtInput({ value, onChange, className }) {
-  const [focused, setFocused] = useState(false);
-  const [draft, setDraft] = useState('');
-  const ref = useRef(null);
-
-  const handleFocus = () => {
-    setDraft(value === 0 ? '' : String(value));
-    setFocused(true);
-  };
-
-  useEffect(() => { if (focused) ref.current?.select(); }, [focused]);
-
-  const handleBlur = () => {
-    setFocused(false);
-    onChange(parseFloat(draft) || 0);
-  };
-
-  return (
-    <input
-      ref={ref}
-      type={focused ? 'number' : 'text'}
-      inputMode="decimal"
-      value={focused ? draft : (value === 0 ? '' : Number(value).toLocaleString())}
-      placeholder="0"
-      onChange={e => setDraft(e.target.value)}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.blur(); } }}
-      className={className}
-    />
-  );
-}
-
 export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
@@ -599,18 +565,12 @@ export default function DealCalculator() {
         {/* Left: Inputs */}
         <div className="space-y-4">
           {stateAwareActive ? (
-            <>
-              <CostInputs
-                stateConfig={resolved.stateConfig}
-                values={stateVals}
-                onChange={handleStateValChange}
-                autoValues={autoValues}
-              />
-              <MarketSnapshot
-                county={resolved.county}
-                heatMap={resolved.heatMap}
-              />
-            </>
+            <CostInputs
+              stateConfig={resolved.stateConfig}
+              values={stateVals}
+              onChange={handleStateValChange}
+              autoValues={autoValues}
+            />
           ) : (
           <div className="bg-card rounded-xl shadow-sm p-4">
             <h3 className="font-semibold text-sidebar mb-3">Cost Inputs</h3>
