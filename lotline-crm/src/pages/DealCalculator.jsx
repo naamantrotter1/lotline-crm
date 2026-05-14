@@ -356,6 +356,7 @@ export default function DealCalculator() {
     setManualState(prev => prev === code ? null : code);
     setZip('');
     setCountySelection(null);
+    setStateVals({});
   };
 
   // Pre-load counties for the dropdown
@@ -365,25 +366,15 @@ export default function DealCalculator() {
     return () => { cancelled = true; };
   }, []);
 
-  // When the state resolves for the first time, seed the state-aware inputs
-  // from mergedDefaults (with 'auto' fields placeholdered at 0). Subsequent
-  // user edits to those fields are preserved.
+  // Whenever the resolved state or county changes, reset cost inputs to that
+  // state/county's defaults.
   useEffect(() => {
     if (resolved.status !== 'ok' || !resolved.mergedDefaults) return;
-    setStateVals(prev => {
-      // Only seed keys we haven't touched yet so a refresh / re-resolve
-      // doesn't blow away user edits.
-      const seeded = { ...prev };
-      const baseDefaults = resolveAutoDefaults(resolved.mergedDefaults, {
-        purchasePrice: prev.purchasePrice ?? 0,
-        loanAmount: prev.loanAmount ?? 0,
-        rates: resolved.mergedRates,
-      });
-      for (const [k, v] of Object.entries(baseDefaults)) {
-        if (seeded[k] === undefined) seeded[k] = v;
-      }
-      return seeded;
-    });
+    setStateVals(prev => resolveAutoDefaults(resolved.mergedDefaults, {
+      purchasePrice: prev.purchasePrice ?? 0,
+      loanAmount: prev.loanAmount ?? 0,
+      rates: resolved.mergedRates,
+    }));
   }, [resolved.status, resolved.state, resolved.county?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute auto-tax fields whenever inputs that drive them change.
