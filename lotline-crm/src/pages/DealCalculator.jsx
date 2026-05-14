@@ -356,6 +356,7 @@ export default function DealCalculator() {
     setManualState(prev => prev === code ? null : code);
     setZip('');
     setCountySelection(null);
+    setStateVals({});
   };
 
   // Pre-load counties for the dropdown
