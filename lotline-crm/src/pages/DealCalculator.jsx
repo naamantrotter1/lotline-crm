@@ -344,9 +344,19 @@ export default function DealCalculator() {
   // / Scenarios) reads from the same `vals` bag plus state-aware overlays.
   const [zip, setZip] = useState('');
   const [countySelection, setCountySelection] = useState(null);
+  const [manualState, setManualState] = useState(null); // 'NC' | 'SC' | 'FL' | null
   const [stateVals, setStateVals] = useState({});       // state-aware input values
   const [countiesAll, setCountiesAll] = useState([]);
-  const resolved = useLocationResolver(zip, countySelection);
+  const resolved = useLocationResolver(zip, countySelection, manualState);
+
+  // Clicking a state quick-pick clears any ZIP/county so the manualState
+  // override actually takes effect (an explicit ZIP/county wins inside
+  // useLocationResolver). Clicking the active state again clears it.
+  const handleStatePick = (code) => {
+    setManualState(prev => prev === code ? null : code);
+    setZip('');
+    setCountySelection(null);
+  };
 
   // Pre-load counties for the dropdown
   useEffect(() => {
@@ -542,6 +552,36 @@ export default function DealCalculator() {
             )}
           </div>
         )}
+      </div>
+
+      {/* State quick-pick — click NC/SC/FL to load that state's calculator
+          directly without typing a ZIP. The active button highlights; clicking
+          it again clears the override. */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            State calculator
+          </span>
+          <div className="flex gap-2">
+            {['NC', 'SC', 'FL'].map(code => {
+              const active = resolved.state === code;
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => handleStatePick(code)}
+                  className={`px-4 py-1.5 text-sm font-semibold rounded-lg border transition-colors ${
+                    active
+                      ? 'bg-accent text-white border-accent shadow-sm'
+                      : 'bg-white text-sidebar border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {code}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <StatePicker

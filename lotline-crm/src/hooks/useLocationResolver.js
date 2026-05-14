@@ -1,10 +1,17 @@
 /**
- * useLocationResolver — given a ZIP code and/or a county selection, resolve
- * the active state and the merged cost defaults for the calculator.
+ * useLocationResolver — given a ZIP code and/or a county selection (and
+ * optionally a manually-picked state), resolve the active state and the
+ * merged cost defaults for the calculator.
  *
  * Inputs:
  *   zip:    string|null      — 5-digit US ZIP
  *   countySelection: { countyId } | null
+ *   manualState:     'NC' | 'SC' | 'FL' | null
+ *     When set AND no ZIP/county has resolved, the resolver returns a
+ *     state-only 'ok' result using just that state's states_config row
+ *     (no county overrides, no heat map). This powers the state quick-pick
+ *     buttons at the top of the Deal Calculator. An explicit ZIP/county
+ *     selection always wins over the manualState override.
  *
  * Returns:
  *   {
@@ -52,7 +59,7 @@ function splitOverrides(countyDefaults) {
   return { costs, rates };
 }
 
-export function useLocationResolver(zip, countySelection) {
+export function useLocationResolver(zip, countySelection, manualState = null) {
   const [statesCfg, setStatesCfg] = useState(null);
   const [countiesAll, setCountiesAll] = useState(null);
   const [zipResult, setZipResult] = useState({ status: 'idle', candidates: [] });
@@ -116,6 +123,26 @@ export function useLocationResolver(zip, countySelection) {
 
     // 2) Otherwise use the ZIP resolution.
     if (!countyRow) {
+      // State quick-pick override: when no ZIP is being resolved and no
+      // county is selected, a manualState pick yields a state-only 'ok'.
+      // We only honour this when the ZIP slot is idle so an in-flight
+      // resolution can still override it once it lands.
+      if (manualState && (zipResult.status === 'idle' || zipResult.status === 'missing')) {
+        const stateConfig = statesCfg[manualState] || null;
+        if (stateConfig) {
+          return {
+            status: 'ok',
+            state: manualState,
+            county: null,
+            stateConfig,
+            mergedDefaults: stateConfig.default_costs || {},
+            mergedRates:    stateConfig.tax_formulas  || {},
+            heatMap: null,
+            candidates: [],
+            error: null,
+          };
+        }
+      }
       if (zipResult.status === 'idle' || zipResult.status === 'resolving') {
         return { status: zipResult.status, state: null, county: null,
                  stateConfig: null, mergedDefaults: null, mergedRates: null,
@@ -172,5 +199,5 @@ export function useLocationResolver(zip, countySelection) {
       candidates: [],
       error: null,
     };
-  }, [statesCfg, countiesAll, countySelection, zipResult, error]);
+  }, [statesCfg, countiesAll, countySelection, zipResult, error, manualState]);
 }

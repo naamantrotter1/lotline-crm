@@ -143,6 +143,26 @@ describe('useLocationResolver — zip → state, mergedDefaults, mergedRates', (
     expect(result.current.mergedRates.docStampsDeedRate).toBe(0.006);
   });
 
+  it('manualState quick-pick (no zip / no county) resolves to that state directly', async () => {
+    const { result } = renderHook(() => useLocationResolver('', null, 'SC'));
+    await waitFor(() => expect(result.current.status).toBe('ok'));
+    expect(result.current.state).toBe('SC');
+    expect(result.current.county).toBeNull();
+    expect(result.current.stateConfig.visible_fields).toContain('percTest');
+    // mergedDefaults comes from stateConfig only — no county overrides applied.
+    expect(result.current.mergedDefaults.mobileHome).toBe(78000);
+    expect(result.current.mergedRates.scDeedStampRate).toBe(0.00370);
+    expect(result.current.heatMap).toBeNull();
+  });
+
+  it('explicit ZIP/county selection wins over manualState', async () => {
+    // User clicks NC quick-pick AND types an FL ZIP — the FL ZIP wins.
+    const { result } = renderHook(() => useLocationResolver('33101', null, 'NC'));
+    await waitFor(() => expect(result.current.status).toBe('ok'));
+    expect(result.current.state).toBe('FL');
+    expect(result.current.county.county_name).toBe('Miami-Dade');
+  });
+
   it('empty inputs produce idle status', async () => {
     const { result } = renderHook(() => useLocationResolver('', null));
     // Hook may briefly resolve to load states before settling idle
