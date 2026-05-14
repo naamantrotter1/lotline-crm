@@ -11,6 +11,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import ExportButton from './ExportButton';
 
 // Keys hidden from the cost breakdown UI.
 // We hide the `environmental_permits` PARENT (sum-of-children grouping row)
@@ -135,7 +136,7 @@ function DiffCell({ line }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostSave, readOnly = false }) {
+export default function CostBreakdownTab({ dealId, deal, arv = 0, onArvChange, onCostSave, readOnly = false }) {
   const { profile } = useAuth();
   const { can }     = usePermissions();
 
@@ -224,6 +225,11 @@ export default function CostBreakdownTab({ dealId, arv = 0, onArvChange, onCostS
 
   return (
     <div className="h-full flex flex-col">
+
+      {/* ── Section toolbar (export + future controls) ───────────────────── */}
+      <div className="flex-shrink-0 flex items-center justify-end gap-2 px-2 pt-2 pb-1">
+        <ExportButton deal={deal} costLines={visibleLines} />
+      </div>
 
       {/* ── Desktop 3-column grid / Mobile stacked ───────────────────────── */}
       <div className="flex-1 overflow-y-auto">

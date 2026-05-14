@@ -3811,6 +3811,7 @@ function DealDetailContent({ deal }) {
           costBreakdownV2
             ? <CostBreakdownTab
                 dealId={deal.id}
+                deal={deal}
                 arv={arv}
                 onArvChange={v => { setArv(v); saveNow({ arv: v }); }}
                 onCostSave={async () => {
