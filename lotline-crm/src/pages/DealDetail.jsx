@@ -2673,7 +2673,10 @@ function DealDetailContent({ deal }) {
   const [costSummary, setCostSummary] = useState(null);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const { hasFlag } = useAuth();
-  const costBreakdownV2 = hasFlag('cost_breakdown.three_column');
+  // CostBreakdownTab is now the default for all orgs.
+  // The old per-org feature flag is kept for backward compat but no longer
+  // gates the new UI — every subscriber gets the same cost breakdown.
+  const costBreakdownV2 = true;
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
