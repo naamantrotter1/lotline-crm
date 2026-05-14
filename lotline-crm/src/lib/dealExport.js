@@ -220,8 +220,9 @@ const BRAND = {
 };
 
 // Cache the logo dataURL so subsequent exports skip the fetch.
-// We downscale via canvas before re-encoding so the embedded image stays
-// ~10–30KB instead of inflating jsPDF to multi-megabyte PNG bitmaps.
+// We downscale via canvas (keeps the embedded image ~10–30KB instead of
+// jsPDF inflating to multi-megabyte bitmaps) and tint every non-transparent
+// pixel to cream so the logo reads on the navy banner.
 let _logoPromise = null;
 function loadLogoDataUrl() {
   if (_logoPromise) return _logoPromise;
@@ -237,7 +238,13 @@ function loadLogoDataUrl() {
       canvas.width = targetW;
       canvas.height = targetH;
       const ctx = canvas.getContext('2d');
+      // Draw original, then use 'source-in' to recolor opaque pixels to cream
+      // while preserving the alpha mask.
       ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = `rgb(${BRAND.cream[0]}, ${BRAND.cream[1]}, ${BRAND.cream[2]})`;
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.globalCompositeOperation = 'source-over';
       return canvas.toDataURL('image/png');
     } catch {
       return null;
