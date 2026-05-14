@@ -30,8 +30,9 @@ const FAKE_ZIP_MAP = {
   '27514': { status: 'ok', candidates: [{ zip:'27514', state:'NC', isPrimary:true, countyId: ORANGE_NC.id, county: ORANGE_NC }] },
   '29412': { status: 'ok', candidates: [{ zip:'29412', state:'SC', isPrimary:true, countyId: CHARLESTON_SC.id, county: CHARLESTON_SC }] },
   '33101': { status: 'ok', candidates: [{ zip:'33101', state:'FL', isPrimary:true, countyId: MIAMI_DADE_FL.id, county: MIAMI_DADE_FL }] },
-  // 30303 (Atlanta GA) — we don't store it in the crosswalk for NC/SC/FL only,
-  // so the resolver should report 'unsupported'.
+  // 30303 (Atlanta GA) and any other ZIP not in this map — the resolver
+  // reports 'missing' because it can't tell from a ZIP alone whether the
+  // ZIP is out of state or just not yet in our NC/SC/FL crosswalk.
 };
 
 const FAKE_STATES = {
@@ -62,7 +63,7 @@ vi.mock('../lib/statesConfig', () => ({
   fetchStatesConfig: vi.fn(async () => FAKE_STATES),
   fetchCounties: vi.fn(async () => [ORANGE_NC, CHARLESTON_SC, MIAMI_DADE_FL]),
   resolveZipToCounty: vi.fn(async (zip) =>
-    FAKE_ZIP_MAP[zip] || { status: 'unsupported', candidates: [] }
+    FAKE_ZIP_MAP[zip] || { status: 'missing', candidates: [] }
   ),
 }));
 
@@ -103,9 +104,9 @@ describe('useLocationResolver — zip → state, mergedDefaults, mergedRates', (
     expect(result.current.mergedDefaults.docStampsDeedRate).toBeUndefined();
   });
 
-  it('zip 30303 (Atlanta GA) reports unsupported and supplies no state config', async () => {
+  it('zip not in the crosswalk reports missing (so caller can prompt for manual county pick)', async () => {
     const { result } = renderHook(() => useLocationResolver('30303', null));
-    await waitFor(() => expect(result.current.status).toBe('unsupported'));
+    await waitFor(() => expect(result.current.status).toBe('missing'));
     expect(result.current.state).toBeNull();
     expect(result.current.stateConfig).toBeNull();
     expect(result.current.mergedDefaults).toBeNull();

@@ -110,12 +110,15 @@ async function doFetchCounties() {
  * Look up the county/state for a 5-digit US ZIP code.
  *
  * Returns `{ status, candidates }` where:
- *   status === 'unsupported' → ZIP exists but lies outside NC/SC/FL
- *                              (we don't actually know — caller treats this as the default)
- *   status === 'multi'       → ZIP maps to multiple counties (possibly different states);
- *                              caller should let the user pick
- *   status === 'ok'          → primary county resolved; result in candidates[0]
- *   status === 'missing'     → ZIP isn't in the crosswalk (uncommon for valid NC/SC/FL ZIPs)
+ *   status === 'missing'     → ZIP isn't in the crosswalk. Could be a valid
+ *                              NC/SC/FL ZIP we haven't seeded yet, or a ZIP
+ *                              in another state — the resolver can't tell.
+ *                              Caller should prompt the user to pick a county
+ *                              manually rather than declaring the state
+ *                              unsupported.
+ *   status === 'multi'       → ZIP maps to multiple counties spanning
+ *                              different states; caller should let the user pick.
+ *   status === 'ok'          → primary county resolved; result in candidates[0].
  */
 export async function resolveZipToCounty(zipCode) {
   if (!supabase || !zipCode) return { status: 'missing', candidates: [] };
@@ -131,7 +134,7 @@ export async function resolveZipToCounty(zipCode) {
     return { status: 'missing', candidates: [] };
   }
   if (!data || data.length === 0) {
-    return { status: 'unsupported', candidates: [] };
+    return { status: 'missing', candidates: [] };
   }
   if (data.length === 1) {
     return { status: 'ok', candidates: [normaliseCandidate(data[0])] };

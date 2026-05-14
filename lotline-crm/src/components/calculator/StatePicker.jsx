@@ -36,6 +36,7 @@ export default function StatePicker({
 
   const stateCode = resolved?.state;
   const isMulti = resolved?.status === 'multi';
+  const isMissing = resolved?.status === 'missing';
   const isUnsupported = resolved?.status === 'unsupported';
 
   return (
@@ -110,6 +111,18 @@ export default function StatePicker({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {isMissing && (
+        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 items-start">
+          <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800">
+            We don't have ZIP <strong>{zip}</strong> mapped to a county yet.
+            If this is in <strong>NC, SC, or FL</strong>, pick your county
+            manually from the dropdown to continue. Otherwise, the deal
+            calculator only supports those three states.
+          </p>
         </div>
       )}
 
