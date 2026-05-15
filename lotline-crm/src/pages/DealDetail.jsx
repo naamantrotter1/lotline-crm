@@ -3683,24 +3683,38 @@ function DealDetailContent({ deal }) {
             onScheduleMeeting={() => setShowScheduleMeeting(true)}
             onApplyFinancing={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => {
               setLendingPrefill({
+                county:        county      || '',
+                state:         dealState   || '',
+                zip:           zip         || '',
+                parcelId:      parcelId    || '',
+                acreage:       String(deal.acreage || ''),
+                closeDate:     closeDate   || '',
                 purchasePrice: String(costs.land || 0),
-                loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
-                arv: String(arv || deal.arv || 0),
-                loanType: 'Land + Home Package',
-                propertyType: 'Manufactured Home',
-                exitStrategy: 'Sell',
-                notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
+                loanAmount:    String((costs.mobileHome || 0) + (costs.land || 0)),
+                arv:           String(arv || deal.arv || 0),
+                loanType:      'Land + Home Package',
+                propertyType:  'Manufactured Home',
+                exitStrategy:  'Sell',
+                costs:         { ...costs },
+                notes:         `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
               });
               setLendingModal('financing');
             } : null}
             onSubmitDeal={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => {
               setLendingPrefill({
-                arv: String(arv || deal.arv || 0),
+                county:          county      || '',
+                state:           dealState   || '',
+                zip:             zip         || '',
+                parcelId:        parcelId    || '',
+                acreage:         String(deal.acreage || ''),
+                closeDate:       closeDate   || '',
+                arv:             String(arv || deal.arv || 0),
                 projectedProfit: String(Math.max(0, Math.round(netProfit))),
-                dealType: 'Land + Home Package',
-                propertyType: 'Manufactured',
-                purchasePrice: String(costs.land || 0),
-                repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+                dealType:        'Land + Home Package',
+                propertyType:    'Manufactured',
+                purchasePrice:   String(costs.land || 0),
+                repairCosts:     String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+                costs:           { ...costs },
               });
               setLendingModal('partnership');
             } : null}

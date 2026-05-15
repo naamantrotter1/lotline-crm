@@ -5,9 +5,7 @@
  *   • 'financing'   → Apply for Financing  (createLendingRequest)
  *   • 'partnership' → Submit a Deal to Partner (createLendingPartnership)
  *
- * On success, records land in:
- *   – Hub's Capital & Partnerships (Lending.jsx reads lending_requests / lending_partnerships)
- *   – Subscriber's My Submissions (LendingMySubmissions.jsx shows both tables)
+ * All deal fields are pre-filled from the deal and remain editable.
  */
 import { useState } from 'react';
 import { CheckCircle, X, Send, ChevronRight, Handshake, Landmark } from 'lucide-react';
@@ -54,14 +52,55 @@ function Field({ label, hint, children }) {
 }
 
 function SectionHeading({ children }) {
-  return <p className="text-xs font-bold text-accent uppercase tracking-widest pt-1">{children}</p>;
+  return <p className="text-xs font-bold text-accent uppercase tracking-widest pt-2 pb-1 border-t border-gray-100 mt-2">{children}</p>;
+}
+
+// ── Shared cost breakdown accordion ──────────────────────────────────────
+function CostAccordion({ costs, totalCosts, onCostChange, open, onToggle, label = 'Cost Breakdown' }) {
+  return (
+    <div className="rounded-lg border border-gray-200 overflow-hidden">
+      <button type="button" onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          {label}
+          {totalCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalCosts.toLocaleString()}</span>}
+        </span>
+        <ChevronRight size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 py-3 space-y-2 bg-white">
+          {COST_FIELDS.map(f => (
+            <div key={f.key} className="flex items-center justify-between gap-3">
+              <label className="text-xs text-gray-500 flex-1">{f.label}</label>
+              <div className="relative w-32">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                <input type="number" min="0" value={costs?.[f.key] || ''}
+                  onChange={e => onCostChange(f.key, e.target.value)}
+                  className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-600">Total</span>
+            <span className="text-xs font-bold text-accent">${totalCosts.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Financing modal ───────────────────────────────────────────────────────
 function FinancingModal({ deal, prefill, onClose }) {
   const { activeOrgId } = useAuth();
   const [form, setForm] = useState({
-    address:       deal?.address || '',
+    address:       deal?.address       || '',
+    county:        prefill?.county     || '',
+    state:         prefill?.state      || '',
+    zip:           prefill?.zip        || '',
+    parcelId:      prefill?.parcelId   || '',
+    acreage:       prefill?.acreage    || '',
+    closeDate:     prefill?.closeDate  || '',
     purchasePrice: prefill?.purchasePrice || '',
     loanAmount:    prefill?.loanAmount    || '',
     loanType:      prefill?.loanType      || 'Land + Home Package',
@@ -70,10 +109,10 @@ function FinancingModal({ deal, prefill, onClose }) {
     creditScore:   '700+',
     exitStrategy:  prefill?.exitStrategy  || 'Sell',
     notes:         prefill?.notes         || '',
-    costs:         EMPTY_COSTS,
-    costsOpen:     false,
+    costs:         { ...EMPTY_COSTS, ...(prefill?.costs || {}) },
+    costsOpen:     true,
   });
-  const [confirm, setConfirm] = useState(null);
+  const [confirm, setConfirm]     = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form.costs?.[f.key]) || 0), 0);
@@ -110,15 +149,45 @@ function FinancingModal({ deal, prefill, onClose }) {
             </div>
             <p className="text-lg font-bold text-sidebar">Request Submitted!</p>
             <p className="text-sm text-gray-500">Reference: <span className="font-bold text-accent">{confirm}</span></p>
-            <p className="text-xs text-gray-400">You can track this in <strong>My Submissions → Loan Requests</strong>.</p>
+            <p className="text-xs text-gray-400">Track this in <strong>My Submissions → Loan Requests</strong>.</p>
             <button onClick={onClose} className="mt-2 px-5 py-2 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent/90">Done</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
-              <Field label="Deal / Property Address">
-                <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St, City, NC 28000" />
+
+              <SectionHeading>Property Details</SectionHeading>
+
+              <Field label="Address">
+                <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St" />
               </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="County">
+                  <input name="county" value={form.county} onChange={handleChange} className={inp} placeholder="e.g. Wake" />
+                </Field>
+                <Field label="State">
+                  <input name="state" value={form.state} onChange={handleChange} className={inp} placeholder="e.g. NC" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Zip Code">
+                  <input name="zip" value={form.zip} onChange={handleChange} className={inp} placeholder="28000" />
+                </Field>
+                <Field label="Acreage">
+                  <input name="acreage" type="number" min="0" step="0.01" value={form.acreage} onChange={handleChange} className={inp} placeholder="0.00" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Parcel ID">
+                  <input name="parcelId" value={form.parcelId} onChange={handleChange} className={inp} placeholder="e.g. 0123456789" />
+                </Field>
+                <Field label="Anticipated Close Date">
+                  <input name="closeDate" type="date" value={form.closeDate} onChange={handleChange} className={inp} />
+                </Field>
+              </div>
+
+              <SectionHeading>Loan Details</SectionHeading>
+
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Purchase Price ($)">
                   <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className={inp} placeholder="0" />
@@ -139,40 +208,6 @@ function FinancingModal({ deal, prefill, onClose }) {
                   </select>
                 </Field>
               </div>
-
-              {form.loanType === 'Land + Home Package' && (
-                <div className="rounded-lg border border-gray-200 overflow-hidden">
-                  <button type="button"
-                    onClick={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Property Costs
-                      {totalCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalCosts.toLocaleString()}</span>}
-                    </span>
-                    <ChevronRight size={14} className={`text-gray-400 transition-transform ${form.costsOpen ? 'rotate-90' : ''}`} />
-                  </button>
-                  {form.costsOpen && (
-                    <div className="px-4 py-3 space-y-2 bg-white">
-                      {COST_FIELDS.map(f => (
-                        <div key={f.key} className="flex items-center justify-between gap-3">
-                          <label className="text-xs text-gray-500 flex-1">{f.label}</label>
-                          <div className="relative w-32">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                            <input type="number" min="0" value={form.costs?.[f.key] || ''}
-                              onChange={e => handleCostChange(f.key, e.target.value)}
-                              className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <span className="text-xs font-bold text-gray-600">Total</span>
-                        <span className="text-xs font-bold text-sidebar">${totalCosts.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Estimated ARV ($)">
                   <input name="arv" type="number" min="0" value={form.arv} onChange={handleChange} className={inp} placeholder="0" />
@@ -188,6 +223,18 @@ function FinancingModal({ deal, prefill, onClose }) {
                   <option>Sell</option><option>Rent</option><option>Refinance</option>
                 </select>
               </Field>
+
+              <SectionHeading>Cost Breakdown</SectionHeading>
+
+              <CostAccordion
+                costs={form.costs}
+                totalCosts={totalCosts}
+                onCostChange={handleCostChange}
+                open={form.costsOpen}
+                onToggle={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
+                label="Itemized Costs"
+              />
+
               <Field label="Additional Notes" hint="optional">
                 <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} className={inp + ' resize-none'} placeholder="Any context that may help us process your request..." />
               </Field>
@@ -209,21 +256,27 @@ function FinancingModal({ deal, prefill, onClose }) {
 function PartnershipModal({ deal, prefill, onClose }) {
   const { activeOrgId } = useAuth();
   const [form, setForm] = useState({
-    address:         deal?.address || '',
-    propertyType:    prefill?.propertyType    || 'Manufactured',
-    dealType:        prefill?.dealType        || 'Land + Home Package',
-    purchasePrice:   prefill?.purchasePrice   || '',
-    repairCosts:     prefill?.repairCosts     || '',
-    arv:             prefill?.arv             || '',
+    address:         deal?.address           || '',
+    county:          prefill?.county         || '',
+    state:           prefill?.state          || '',
+    zip:             prefill?.zip            || '',
+    parcelId:        prefill?.parcelId       || '',
+    acreage:         prefill?.acreage        || '',
+    closeDate:       prefill?.closeDate      || '',
+    propertyType:    prefill?.propertyType   || 'Manufactured',
+    dealType:        prefill?.dealType       || 'Land + Home Package',
+    purchasePrice:   prefill?.purchasePrice  || '',
+    repairCosts:     prefill?.repairCosts    || '',
+    arv:             prefill?.arv            || '',
     projectedProfit: prefill?.projectedProfit || '',
     needs:           [],
     split:           '',
     yourRole:        'Deal Finder',
     summary:         '',
-    costs:           EMPTY_COSTS,
-    costsOpen:       false,
+    costs:           { ...EMPTY_COSTS, ...(prefill?.costs || {}) },
+    costsOpen:       true,
   });
-  const [confirm, setConfirm] = useState(null);
+  const [confirm, setConfirm]     = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form.costs?.[f.key]) || 0), 0);
@@ -269,10 +322,39 @@ function PartnershipModal({ deal, prefill, onClose }) {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
-              <SectionHeading>Deal Details</SectionHeading>
+
+              <SectionHeading>Property Details</SectionHeading>
+
               <Field label="Property Address">
-                <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St, City, NC 28000" />
+                <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St" />
               </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="County">
+                  <input name="county" value={form.county} onChange={handleChange} className={inp} placeholder="e.g. Wake" />
+                </Field>
+                <Field label="State">
+                  <input name="state" value={form.state} onChange={handleChange} className={inp} placeholder="e.g. NC" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Zip Code">
+                  <input name="zip" value={form.zip} onChange={handleChange} className={inp} placeholder="28000" />
+                </Field>
+                <Field label="Acreage">
+                  <input name="acreage" type="number" min="0" step="0.01" value={form.acreage} onChange={handleChange} className={inp} placeholder="0.00" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Parcel ID">
+                  <input name="parcelId" value={form.parcelId} onChange={handleChange} className={inp} placeholder="e.g. 0123456789" />
+                </Field>
+                <Field label="Anticipated Close Date">
+                  <input name="closeDate" type="date" value={form.closeDate} onChange={handleChange} className={inp} />
+                </Field>
+              </div>
+
+              <SectionHeading>Deal Info</SectionHeading>
+
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Property Type">
                   <select name="propertyType" value={form.propertyType} onChange={handleChange} className={inp}>
@@ -283,6 +365,14 @@ function PartnershipModal({ deal, prefill, onClose }) {
                   <select name="dealType" value={form.dealType} onChange={handleChange} className={inp}>
                     <option>Land + Home Package</option><option>Wholesale</option><option>Fix &amp; Flip</option><option>Buy &amp; Hold</option><option>New Construction</option><option>Land Deal</option>
                   </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="After Repair Value ($)">
+                  <input name="arv" type="number" min="0" value={form.arv} onChange={handleChange} className={inp} placeholder="0" />
+                </Field>
+                <Field label="Projected Profit ($)">
+                  <input name="projectedProfit" type="number" min="0" value={form.projectedProfit} onChange={handleChange} className={inp + ' font-semibold text-accent'} placeholder="0" />
                 </Field>
               </div>
 
@@ -297,49 +387,19 @@ function PartnershipModal({ deal, prefill, onClose }) {
                 </div>
               )}
 
-              {form.dealType === 'Land + Home Package' && (
-                <div className="rounded-lg border border-gray-200 overflow-hidden">
-                  <button type="button"
-                    onClick={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Build Costs
-                      {totalCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalCosts.toLocaleString()}</span>}
-                    </span>
-                    <ChevronRight size={14} className={`text-gray-400 transition-transform ${form.costsOpen ? 'rotate-90' : ''}`} />
-                  </button>
-                  {form.costsOpen && (
-                    <div className="px-4 py-3 space-y-2 bg-white">
-                      {COST_FIELDS.map(f => (
-                        <div key={f.key} className="flex items-center justify-between gap-3">
-                          <label className="text-xs text-gray-500 flex-1">{f.label}</label>
-                          <div className="relative w-32">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                            <input type="number" min="0" value={form.costs?.[f.key] || ''}
-                              onChange={e => handleCostChange(f.key, e.target.value)}
-                              className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <span className="text-xs font-bold text-gray-600">Total Build Cost</span>
-                        <span className="text-xs font-bold text-sidebar">${totalCosts.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              <SectionHeading>Cost Breakdown</SectionHeading>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="After Repair Value ($)">
-                  <input name="arv" type="number" min="0" value={form.arv} onChange={handleChange} className={inp} placeholder="0" />
-                </Field>
-                <Field label="Projected Profit ($)">
-                  <input name="projectedProfit" type="number" min="0" value={form.projectedProfit} onChange={handleChange} className={inp + ' font-semibold text-accent'} placeholder="0" />
-                </Field>
-              </div>
+              <CostAccordion
+                costs={form.costs}
+                totalCosts={totalCosts}
+                onCostChange={handleCostChange}
+                open={form.costsOpen}
+                onToggle={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
+                label="Build Costs"
+              />
 
               <SectionHeading>Partnership Ask</SectionHeading>
+
               <Field label="What do you need from LotLine?">
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   {['Capital', 'Expertise', 'Connections', 'Co-Ownership', 'Other'].map(v => (
