@@ -447,7 +447,7 @@ function FinancingScenarioPanel({
 
   const _landCost  = costs.land      || 0;
   const _homeCost  = costs.mobileHome || 0;
-  const _allInCost = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
+  const _allInCost = allIn || 0;
   const totalLent = (loanBasisFlags.land ? _landCost : 0)
                   + (loanBasisFlags.home ? _homeCost : 0)
                   + (loanBasisFlags.allIn ? _allInCost : 0);
