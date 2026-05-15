@@ -1,0 +1,34 @@
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 137 · Fix DD/Dev milestone real-time sync for team members
+-- ═══════════════════════════════════════════════════════════════════════════════
+--
+-- Root-cause analysis
+-- -------------------
+-- deal_milestones was already in the supabase_realtime publication, but its
+-- REPLICA IDENTITY was DEFAULT (primary key only).
+--
+-- The DueDiligence.jsx and Development.jsx pages subscribe to deal_milestones
+-- changes with a server-side filter:
+--
+--   filter: `organization_id=eq.${activeOrgId}`
+--
+-- For server-side column filtering on non-primary-key columns, Supabase Realtime
+-- requires REPLICA IDENTITY FULL on the table. Without it, the Postgres WAL
+-- replication stream does not include OLD row values, so the realtime worker
+-- cannot evaluate the organization_id filter on UPDATE events — those events
+-- are silently dropped before reaching any subscriber.
+--
+-- Symptom: a team member marks a DD task or dev subtask as complete. Their own
+-- view updates immediately (optimistic local state). The DB write succeeds. But
+-- no realtime UPDATE event reaches the owner's browser because the org filter
+-- is silently skipped, so the owner must refresh to see the change.
+--
+-- Fix: set REPLICA IDENTITY FULL so all column values are included in the WAL
+-- payload, allowing the org filter to evaluate correctly on every event type.
+
+ALTER TABLE public.deal_milestones REPLICA IDENTITY FULL;
+
+-- (deal_milestones is already a member of supabase_realtime publication;
+--  the ALTER PUBLICATION ADD TABLE is idempotent-guarded in the DB but
+--  documented here for completeness.)
+-- ALTER PUBLICATION supabase_realtime ADD TABLE public.deal_milestones;
