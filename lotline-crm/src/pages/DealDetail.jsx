@@ -30,6 +30,7 @@ import DealActivityFeed from '../components/deal/DealActivityFeed';
 import DealThreads from '../components/deal/DealThreads';
 import CostBreakdownTab from '../components/deal/CostBreakdownTab';
 import SubmitForFundingButton from '../components/deal/SubmitForFundingButton';
+import LendingDealModals from '../components/deal/LendingDealModals';
 import CreateTaskModal from '../components/Tasks/CreateTaskModal';
 import ComposeEmailModal from '../components/Email/ComposeEmailModal';
 import { fetchCostSummary } from '../lib/costBreakdownData';
@@ -2716,6 +2717,8 @@ function DealDetailContent({ deal }) {
   const [showLogCall, setShowLogCall]                 = useState(false);
   const [showSendEmail, setShowSendEmail]             = useState(false);
   const [showScheduleMeeting, setShowScheduleMeeting] = useState(false);
+  const [lendingModal, setLendingModal]               = useState(null); // null | 'financing' | 'partnership'
+  const [lendingPrefill, setLendingPrefill]           = useState({});
   const [financing, setFinancing] = useState(deal?.financing || '');
 
   // Deal Evaluation
@@ -3678,25 +3681,29 @@ function DealDetailContent({ deal }) {
             onLogCall={() => setShowLogCall(true)}
             onSendEmail={() => setShowSendEmail(true)}
             onScheduleMeeting={() => setShowScheduleMeeting(true)}
-            onApplyFinancing={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => navigate('/lending/my-submissions', { state: { prefillLoan: {
-              address: deal.address || '',
-              purchasePrice: String(costs.land || 0),
-              loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
-              arv: String(arv || deal.arv || 0),
-              loanType: 'Land + Home Package',
-              propertyType: 'Manufactured Home',
-              exitStrategy: 'Sell',
-              notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
-            }}}) : null}
-            onSubmitDeal={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => navigate('/lending/my-submissions', { state: { prefillPartner: {
-              address: deal.address || '',
-              arv: String(arv || deal.arv || 0),
-              projectedProfit: String(Math.max(0, Math.round(netProfit))),
-              dealType: 'Land + Home Package',
-              propertyType: 'Manufactured',
-              purchasePrice: String(costs.land || 0),
-              repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
-            }}}) : null}
+            onApplyFinancing={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => {
+              setLendingPrefill({
+                purchasePrice: String(costs.land || 0),
+                loanAmount: String((costs.mobileHome || 0) + (costs.land || 0)),
+                arv: String(arv || deal.arv || 0),
+                loanType: 'Land + Home Package',
+                propertyType: 'Manufactured Home',
+                exitStrategy: 'Sell',
+                notes: `Deal ID: ${deal.id}. Financing: ${deal.financing || ''}. Investor: ${investor || ''}.`.trim(),
+              });
+              setLendingModal('financing');
+            } : null}
+            onSubmitDeal={!fromInvestorPortal && !isAgent && !orgIsLendingHub ? () => {
+              setLendingPrefill({
+                arv: String(arv || deal.arv || 0),
+                projectedProfit: String(Math.max(0, Math.round(netProfit))),
+                dealType: 'Land + Home Package',
+                propertyType: 'Manufactured',
+                purchasePrice: String(costs.land || 0),
+                repairCosts: String(COST_FIELDS.filter(f => f.key !== 'land').reduce((s, f) => s + (costs[f.key] || 0), 0)),
+              });
+              setLendingModal('partnership');
+            } : null}
           />
         }
         middle={
@@ -4120,6 +4127,12 @@ function DealDetailContent({ deal }) {
         </div>
       </div>
     )}
+    <LendingDealModals
+      deal={deal}
+      modal={lendingModal}
+      prefill={lendingPrefill}
+      onClose={() => setLendingModal(null)}
+    />
     </>
   );
 }
