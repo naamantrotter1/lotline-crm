@@ -42,6 +42,7 @@ export const HMCB_DEFAULTS = {
   servicingFee: 0,
   drawFee: 115,
   interestBasis: 'full', // 'full' | 'funded'
+  loanBasisFlags: { land: false, home: false, allIn: true },
 };
 
 const DEFAULT_CHECKLIST = [
@@ -153,7 +154,7 @@ function formatHoldPeriod(months) {
   return `${whole} month${whole === 1 ? '' : 's'} ${rem} day${rem === 1 ? '' : 's'}`;
 }
 
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate, paymentDueDay, onPaymentDueDayChange, firstPaymentDate, onFirstPaymentDateChange }) {
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate, paymentDueDay, onPaymentDueDayChange, firstPaymentDate, onFirstPaymentDateChange, homeCost = 0 }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
@@ -161,8 +162,15 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
     onChange({ ...d, [field]: value });
   };
 
+  // ── Loan basis flags (what components are included in the loan) ────────────
+  const flags    = { ...HMCB_DEFAULTS.loanBasisFlags, ...(d.loanBasisFlags || {}) };
+  const landVal  = d.purchasePrice || 0;
+  const homeVal  = homeCost || 0;
+  const allInVal = landVal + homeVal;
+  const loanBase = (flags.land ? landVal : 0) + (flags.home ? homeVal : 0) + (flags.allIn ? allInVal : 0);
+
   // ── Derived calculations ───────────────────────────────────────────────────
-  const totalLoan       = d.purchasePrice + d.holdbackAmount;
+  const totalLoan       = loanBase + d.holdbackAmount;
   const fundedAtClosing = d.fundedAtClosing || d.purchasePrice;
   const basisAmount     = d.interestBasis === 'full' ? totalLoan : fundedAtClosing;
   const monthlyAuto     = basisAmount * (d.interestRate / 100) / 12;
@@ -437,6 +445,33 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
             />
           </div>
         </Row>
+        {/* Loan basis selector */}
+        <div>
+          {label('Include in Loan Amount')}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { key: 'land',  text: 'Cost of Land',  value: landVal  },
+              { key: 'home',  text: 'Cost of Home',  value: homeVal  },
+              { key: 'allIn', text: 'All-In Cost',   value: allInVal },
+            ].map(({ key, text, value }) => (
+              <button
+                key={key}
+                type="button"
+                disabled={readOnly}
+                onClick={() => set('loanBasisFlags', { ...flags, [key]: !flags[key] })}
+                className={`flex flex-col items-start px-3 py-1.5 rounded-lg border text-left transition-colors ${
+                  flags[key]
+                    ? 'bg-accent/10 border-accent text-accent'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-[11px] font-semibold">{text}</span>
+                <span className="text-[10px] opacity-70">{fmt$(value)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Row>
           <div>
             {label('Total Loan Amount (auto)')}
