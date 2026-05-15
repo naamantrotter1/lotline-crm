@@ -44,68 +44,41 @@ function SectionHeading({ children }) {
 function CostBreakdown({ dealId, amounts, onChange }) {
   const [lines,   setLines]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [open,    setOpen]    = useState({});
 
   useEffect(() => {
     if (!dealId) { setLoading(false); return; }
     fetchCostLines(dealId).then(data => {
-      const visible = data.filter(l => !HIDDEN_KEYS.has(l.category_key));
-      setLines(visible);
-      // Expand all groups by default
-      const groups = [...new Set(visible.map(l => l.group_name || 'Other'))];
-      setOpen(Object.fromEntries(groups.map(g => [g, true])));
+      setLines(data.filter(l => !HIDDEN_KEYS.has(l.category_key)));
       setLoading(false);
     });
   }, [dealId]);
 
-  const grouped = GROUP_ORDER
-    .map(g => ({ group: g, lines: lines.filter(l => (l.group_name || 'Other') === g) }))
-    .filter(g => g.lines.length > 0);
-
-  const total = lines.reduce((s, l) => s + (parseFloat(amounts[l.category_key]) ?? l.estimated_amount ?? 0), 0);
+  const val   = l => parseFloat(amounts[l.category_key] ?? l.estimated_amount) || 0;
+  const total = lines.reduce((s, l) => s + val(l), 0);
 
   if (loading) return <div className="py-4 text-center text-xs text-gray-400">Loading costs…</div>;
   if (!lines.length) return <div className="py-4 text-center text-xs text-gray-400">No cost lines found.</div>;
 
   return (
-    <div className="space-y-2">
-      {grouped.map(({ group, lines: gLines }) => (
-        <div key={group} className="rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setOpen(p => ({ ...p, [group]: !p[group] }))}
-            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-          >
-            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{group}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-accent">
-                {fmt(gLines.reduce((s, l) => s + (parseFloat(amounts[l.category_key]) ?? l.estimated_amount ?? 0), 0))}
-              </span>
-              <ChevronRight size={13} className={`text-gray-400 transition-transform ${open[group] ? 'rotate-90' : ''}`} />
+    <div className="rounded-lg border border-gray-200 overflow-hidden">
+      <div className="divide-y divide-gray-50">
+        {lines.map(l => (
+          <div key={l.line_id} className="flex items-center justify-between px-4 py-2 gap-3">
+            <span className="text-xs text-gray-600 flex-1">{l.line_label}</span>
+            <div className="relative w-32 flex-shrink-0">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+              <input
+                type="number"
+                min="0"
+                value={amounts[l.category_key] ?? l.estimated_amount ?? ''}
+                onChange={e => onChange(l.category_key, e.target.value)}
+                className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
+              />
             </div>
-          </button>
-          {open[group] && (
-            <div className="divide-y divide-gray-50">
-              {gLines.map(l => (
-                <div key={l.line_id} className="flex items-center justify-between px-4 py-2 gap-3">
-                  <span className="text-xs text-gray-600 flex-1">{l.line_label}</span>
-                  <div className="relative w-32 flex-shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={amounts[l.category_key] ?? l.estimated_amount ?? ''}
-                      onChange={e => onChange(l.category_key, e.target.value)}
-                      className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-200">
         <span className="text-xs font-bold text-gray-700">Total Estimated</span>
         <span className="text-sm font-bold text-accent">{fmt(total)}</span>
       </div>
