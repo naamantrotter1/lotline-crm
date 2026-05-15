@@ -142,7 +142,7 @@ export function DealsProvider({ children }) {
     let costChannel = null;
     if (supabase) {
       costChannel = supabase
-        .channel('deal-cost-lines-totals')
+        .channel(`deal-cost-lines-totals-${activeOrgId || 'anon'}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines' }, async (payload) => {
           const dealId = payload.new?.deal_id ?? payload.old?.deal_id;
           if (!dealId) return;

@@ -17,6 +17,12 @@ const DD_COLUMNS = [
   { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: false },
 ];
 
+// Maps DD milestone keys → ImportantDates eta keys (cross-write when date is saved)
+const DD_DATE_TO_IMPORTANT = { perc_test: 'perc_tests_scheduled' };
+
+// Contractor type per hasContractor column (used when auto-creating Key Contacts)
+const DD_CONTRACTOR_TYPE = { survey: 'Land Surveyor', perc_test: 'Soil Scientist' };
+
 const TOTAL_TASKS = DD_COLUMNS.length;
 
 // Map legacy ddTasksCompleted names → column keys for seeding
@@ -400,14 +406,73 @@ export default function DueDiligence() {
     }));
 
     if (!supabase || !activeOrgId) return;
+
+    // 1. Save the DD milestone row
     await supabase.from('deal_milestones').upsert({
       organization_id: activeOrgId,
       deal_id:         sid,
       milestone_key:   colKey,
       status:          data.status,
-      completed_at:  data.date || null,
-      note:           data.contractor || null,
+      completed_at:    data.date || null,
+      note:            data.contractor || null,
     }, { onConflict: 'deal_id,milestone_key' });
+
+    // 2. Mirror date to ImportantDates (writes eta on the ImportantDates key so
+    //    the deal sidebar updates in real-time without any extra subscription).
+    const impKey = DD_DATE_TO_IMPORTANT[colKey];
+    if (impKey) {
+      await supabase.from('deal_milestones').upsert({
+        organization_id: activeOrgId,
+        deal_id:         sid,
+        milestone_key:   impKey,
+        eta:             data.date || null,
+        status:          data.date ? 'in_progress' : 'not_started',
+      }, { onConflict: 'deal_id,milestone_key' });
+    }
+
+    // 3. Link contractor name to Key Contacts in the deal sidebar.
+    //    Uses a stable stage_key so changing the name updates the same slot.
+    const contType = DD_CONTRACTOR_TYPE[colKey];
+    if (contType) {
+      const name = data.contractor?.trim();
+      const stageKey = `dd_${colKey}_cont`;
+      if (name) {
+        // Try to find an existing contact by first_name or company
+        let { data: found } = await supabase.from('contacts').select('id')
+          .eq('organization_id', activeOrgId).ilike('first_name', name).limit(1);
+        if (!found?.length) {
+          ({ data: found } = await supabase.from('contacts').select('id')
+            .eq('organization_id', activeOrgId).ilike('company', name).limit(1));
+        }
+        let contactId = found?.[0]?.id;
+        if (!contactId) {
+          // Create a minimal contact from the entered name
+          const parts = name.split(/\s+/);
+          const { data: created } = await supabase.from('contacts')
+            .insert({
+              organization_id: activeOrgId,
+              first_name:      parts[0],
+              last_name:       parts.slice(1).join(' ') || null,
+              contractor_type: contType,
+            })
+            .select('id').single();
+          if (created?.id) {
+            await supabase.from('contact_types').insert({ contact_id: created.id, type: contType });
+            contactId = created.id;
+          }
+        }
+        if (contactId) {
+          await supabase.from('deal_stage_contacts').upsert(
+            { deal_id: sid, organization_id: activeOrgId, stage_key: stageKey, contact_id: contactId },
+            { onConflict: 'deal_id,stage_key' }
+          );
+        }
+      } else {
+        // Contractor cleared → remove from Key Contacts
+        await supabase.from('deal_stage_contacts').delete()
+          .eq('deal_id', sid).eq('stage_key', stageKey);
+      }
+    }
   }, [activeOrgId]);
 
   return (
