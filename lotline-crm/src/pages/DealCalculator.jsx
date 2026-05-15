@@ -246,7 +246,7 @@ function ImportModal({ vals, buildCost, projectedProfit, onClose, onDealSaved, c
 
 const defaultValues = {
   land: 0,
-  percTest: 2000,
+  percTest: 2500,
   survey: 1500,
   constructionAuth: 400,
   improvementPermit: 400,
@@ -269,7 +269,7 @@ const defaultValues = {
   underpinning: 4500,
   driveway: 1200,
   landscaping: 2500,
-  decks: 3500,
+  decks: 4200,
   hudEngineer: 500,
   mailbox: 170,
   mobileTax: 0,
