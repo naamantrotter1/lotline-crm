@@ -360,8 +360,8 @@ export default function Development() {
       deal_id:         sid,
       milestone_key:   milKey,
       status:          done ? 'complete' : 'not_started',
-      completed_date:  null,
-      notes:           null,
+      completed_at:    null,
+      note:            null,
     }, { onConflict: 'deal_id,milestone_key' });
   }, [activeOrgId]);
 

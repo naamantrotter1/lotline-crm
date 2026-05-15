@@ -265,15 +265,15 @@ export default function DueDiligence() {
       }, (payload) => {
         const row = payload.new || payload.old;
         if (!row || row.milestone_key?.startsWith('dev_')) return;
-        const { deal_id, milestone_key, status, completed_date, notes } = row;
+        const { deal_id, milestone_key, status, completed_at, note } = row;
         setMilestones(prev => ({
           ...prev,
           [deal_id]: {
             ...(prev[deal_id] || {}),
             [milestone_key]: {
               status:     status || 'not_started',
-              date:       completed_date || '',
-              contractor: notes || '',
+              date:       completed_at || '',
+              contractor: note || '',
             },
           },
         }));
@@ -290,7 +290,7 @@ export default function DueDiligence() {
 
     supabase
       .from('deal_milestones')
-      .select('deal_id, milestone_key, status, completed_date, notes')
+      .select('deal_id, milestone_key, status, completed_at, note')
       .in('deal_id', dealIds)
       .then(({ data }) => {
         const map = {};
@@ -298,8 +298,8 @@ export default function DueDiligence() {
           if (!map[row.deal_id]) map[row.deal_id] = {};
           map[row.deal_id][row.milestone_key] = {
             status:     row.status || 'not_started',
-            date:       row.completed_date || '',
-            contractor: row.notes || '',
+            date:       row.completed_at || '',
+            contractor: row.note || '',
           };
         }
 
@@ -319,8 +319,8 @@ export default function DueDiligence() {
                 deal_id: sid,
                 milestone_key: k,
                 status: 'complete',
-                completed_date: null,
-                notes: null,
+                completed_at: null,
+                note: null,
               });
             }
           }
@@ -343,8 +343,8 @@ export default function DueDiligence() {
                 deal_id: sid,
                 milestone_key: col.key,
                 status: lsStatus || 'not_started',
-                completed_date: lsDate  || null,
-                notes:          lsCont  || null,
+                completed_at: lsDate  || null,
+                note:          lsCont  || null,
               });
             }
           }
@@ -374,8 +374,8 @@ export default function DueDiligence() {
       deal_id:         sid,
       milestone_key:   colKey,
       status:          data.status,
-      completed_date:  data.date || null,
-      notes:           data.contractor || null,
+      completed_at:  data.date || null,
+      note:           data.contractor || null,
     }, { onConflict: 'deal_id,milestone_key' });
   }, [activeOrgId]);
 
