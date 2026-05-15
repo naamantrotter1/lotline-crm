@@ -13,7 +13,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, X, Send, ChevronRight, Handshake, Landmark } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { createLendingRequest, createLendingPartnership } from '../../lib/lendingData';
+import { submitDeal, fetchLendingHub } from '../../lib/lendingSubmissionsData';
 import { fetchCostLines } from '../../lib/costBreakdownData';
 
 // Must stay in sync with CostBreakdownTab
@@ -88,7 +88,9 @@ function CostBreakdown({ dealId, amounts, onChange }) {
 
 // ── Financing modal ───────────────────────────────────────────────────────
 function FinancingModal({ deal, prefill, onClose }) {
-  const { activeOrgId } = useAuth();
+  const { activeOrgId, session } = useAuth();
+  const [hubOrg, setHubOrg] = useState(null);
+  useEffect(() => { fetchLendingHub().then(setHubOrg); }, []);
   const [form, setForm] = useState({
     address:       deal?.address       || '',
     county:        prefill?.county     || '',
@@ -116,8 +118,23 @@ function FinancingModal({ deal, prefill, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!hubOrg) { alert('Could not find the lending hub. Please try again.'); return; }
     setSubmitting(true);
-    const { data, error } = await createLendingRequest(activeOrgId, { ...form, costs: costAmounts });
+    const { data, error } = await submitDeal(hubOrg.id, activeOrgId, session?.user?.id, {
+      dealId:               deal?.id,
+      address:              form.address,
+      county:               form.county,
+      state:                form.state,
+      acreage:              form.acreage,
+      arv:                  form.arv,
+      purchasePrice:        form.purchasePrice,
+      loanAmountRequested:  form.loanAmount,
+      loanType:             form.loanType,
+      exitStrategy:         form.exitStrategy,
+      creditScore:          form.creditScore,
+      notes:                form.notes,
+      costs:                costAmounts,
+    });
     setSubmitting(false);
     if (error) { alert('Submission failed: ' + (error.message || error)); return; }
     setConfirm(data?.ref ?? 'submitted');
@@ -238,7 +255,9 @@ function FinancingModal({ deal, prefill, onClose }) {
 
 // ── Partnership modal ─────────────────────────────────────────────────────
 function PartnershipModal({ deal, prefill, onClose }) {
-  const { activeOrgId } = useAuth();
+  const { activeOrgId, session } = useAuth();
+  const [hubOrg, setHubOrg] = useState(null);
+  useEffect(() => { fetchLendingHub().then(setHubOrg); }, []);
   const [form, setForm] = useState({
     address:         deal?.address           || '',
     county:          prefill?.county         || '',
@@ -270,8 +289,30 @@ function PartnershipModal({ deal, prefill, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!hubOrg) { alert('Could not find the lending hub. Please try again.'); return; }
     setSubmitting(true);
-    const { data, error } = await createLendingPartnership(activeOrgId, { ...form, costs: costAmounts });
+    // Pack partnership-specific fields into notes since lending_submissions schema is loan-centric
+    const notesLines = [
+      form.summary,
+      form.needs?.length ? `Needs: ${form.needs.join(', ')}` : '',
+      form.split  ? `Proposed split: ${form.split}%` : '',
+      form.yourRole ? `Your role: ${form.yourRole}` : '',
+    ].filter(Boolean).join('\n');
+    const { data, error } = await submitDeal(hubOrg.id, activeOrgId, session?.user?.id, {
+      dealId:               deal?.id,
+      address:              form.address,
+      county:               form.county,
+      state:                form.state,
+      acreage:              form.acreage,
+      arv:                  form.arv,
+      purchasePrice:        form.purchasePrice,
+      loanAmountRequested:  null,
+      loanType:             form.dealType,
+      exitStrategy:         null,
+      creditScore:          null,
+      notes:                notesLines,
+      costs:                costAmounts,
+    });
     setSubmitting(false);
     if (error) { alert('Submission failed: ' + (error.message || error)); return; }
     setConfirm(data?.ref ?? 'submitted');
