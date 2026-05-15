@@ -4,8 +4,8 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import LiveBadge from '../components/UI/LiveBadge';
-import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText, Search, Star } from 'lucide-react';
-import { calcNetProfit } from '../data/deals';
+import ContractorPicker from '../components/deal/ContractorPicker';
+import { CheckSquare, Square, Search, Star } from 'lucide-react';
 
 // ── Column definitions (matches Lovable CRM) ──────────────────────────────────
 const DEV_COLUMNS = [
@@ -85,13 +85,24 @@ const STAGE_COLORS = {
   'Development':     { color: '#2563eb', bg: '#dbeafe' },
 };
 
-// ── localStorage helpers (contractor info only) ───────────────────────────────
-const lsGet = (k)    => localStorage.getItem(k) || '';
-const lsSet = (k, v) => localStorage.setItem(k, v);
-
-function contractorKey(dealId, colKey) {
-  return `dev_${dealId}_${colKey}_cont`;
-}
+// Contractor type per dev column — drives ContractorPicker dropdown filtering
+const DEV_CONTRACTOR_TYPE = {
+  land_clearing:        'Land Clearing Contractor',
+  env_permits:          'Permit Agent',
+  mh_order:             'Home Dealer',
+  construction_permits: 'General Contractor',
+  setup_crew:           'Setup Crew',
+  septic:               'Septic Contractor',
+  well:                 'Well Driller',
+  electrical:           'Electrician',
+  plumbing:             'Plumber',
+  hvac:                 'HVAC Contractor',
+  skirting:             'Skirting Contractor',
+  steps:                'Steps Contractor',
+  final_grade:          'Grading Contractor',
+  inspection:           'Inspector',
+  list_home:            'Real Estate Agent',
+};
 
 // milestone_key format stored in deal_milestones: dev_{colKey}_{subtaskIdx}
 function devMilKey(colKey, idx) { return `dev_${colKey}_${idx}`; }
@@ -129,13 +140,6 @@ function DevTaskCard({ deal, column, dealMilestones, onToggle }) {
   // checks derived from Supabase-backed milestones passed from parent
   const checks = column.subtasks.map((_, i) => dealMilestones?.[devMilKey(column.key, i)] === true);
 
-  const ck = contractorKey(deal.id, column.key);
-  const [contExpanded, setContExpanded] = useState(false);
-  const [contractor, setContractor] = useState(() => lsGet(ck));
-  const [contPhone,   setContPhone]   = useState(() => lsGet(`${ck}_phone`));
-  const [contEmail,   setContEmail]   = useState(() => lsGet(`${ck}_email`));
-  const [contCompany, setContCompany] = useState(() => lsGet(`${ck}_company`));
-  const [contNotes,   setContNotes]   = useState(() => lsGet(`${ck}_notes`));
 
   const allDone = checks.every(Boolean);
   if (allDone) return null;
@@ -149,14 +153,6 @@ function DevTaskCard({ deal, column, dealMilestones, onToggle }) {
     onToggle(deal.id, column.key, idx, !checks[idx]);
   };
 
-  const saveCont = (field, val) => {
-    lsSet(`${ck}${field === 'cont' ? '' : `_${field}`}`, val);
-    if (field === 'cont')     setContractor(val);
-    if (field === 'phone')    setContPhone(val);
-    if (field === 'email')    setContEmail(val);
-    if (field === 'company')  setContCompany(val);
-    if (field === 'notes')    setContNotes(val);
-  };
 
   return (
     <div
@@ -202,49 +198,13 @@ function DevTaskCard({ deal, column, dealMilestones, onToggle }) {
         ))}
       </div>
 
-      {/* Contractor panel */}
+      {/* Contractor picker */}
       <div onClick={e => e.stopPropagation()}>
-        <button
-          onClick={e => { e.stopPropagation(); setContExpanded(v => !v); }}
-          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
-        >
-          <User size={9} className="flex-shrink-0" />
-          <span className="flex-1 text-left truncate">{contractor || 'Add Contractor'}</span>
-          {contExpanded ? <ChevronUp size={9} className="flex-shrink-0" /> : <ChevronDown size={9} className="flex-shrink-0" />}
-        </button>
-
-        {contExpanded && (
-          <div className="mt-1.5 space-y-1.5 border border-gray-100 rounded-lg p-2 bg-gray-50">
-            {[
-              { icon: User,     key: 'cont',    val: contractor, ph: 'Contractor name' },
-              { icon: Phone,    key: 'phone',   val: contPhone,  ph: 'Phone' },
-              { icon: Mail,     key: 'email',   val: contEmail,  ph: 'Email' },
-              { icon: Building, key: 'company', val: contCompany,ph: 'Company (optional)' },
-            ].map(({ icon: Icon, key: fk, val, ph }) => (
-              <div key={fk} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
-                <Icon size={11} className="text-gray-400 flex-shrink-0" />
-                <input
-                  value={val}
-                  onChange={e => saveCont(fk, e.target.value)}
-                  placeholder={ph}
-                  onClick={e => e.stopPropagation()}
-                  className="flex-1 text-[10px] outline-none bg-transparent placeholder-gray-400"
-                />
-              </div>
-            ))}
-            <div className="flex items-start gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
-              <FileText size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
-              <textarea
-                value={contNotes}
-                onChange={e => saveCont('notes', e.target.value)}
-                placeholder="Notes for this task..."
-                onClick={e => e.stopPropagation()}
-                rows={2}
-                className="flex-1 text-[10px] outline-none bg-transparent resize-none placeholder-gray-400"
-              />
-            </div>
-          </div>
-        )}
+        <ContractorPicker
+          dealId={deal.id}
+          stageKey={`dev_${column.key}_cont`}
+          contractorType={DEV_CONTRACTOR_TYPE[column.key]}
+        />
       </div>
     </div>
   );
