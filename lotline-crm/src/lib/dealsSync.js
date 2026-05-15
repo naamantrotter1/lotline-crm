@@ -599,12 +599,27 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   let currentChannel = null;
   let retryTimer = null;
   let destroyed = false;
+  let retryCount = 0;
 
-  function subscribe() {
+  // After this many quick retries we stop cycling the badge and retry silently
+  // in the background every 60 s. This prevents the perpetual "Syncing…" /
+  // "Reconnecting…" cycle when Realtime is unavailable (e.g. table not yet in
+  // publication on a fresh project, or a transient server-side error).
+  const MAX_QUICK_RETRIES = 4;
+
+  async function subscribe() {
     if (destroyed) return;
+
+    // Always refresh the session token before each attempt so the Realtime
+    // client never uses a stale JWT after a token refresh or page reload.
+    try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (freshSession?.access_token) supabase.realtime.setAuth(freshSession.access_token);
+    } catch { /* getSession failed — proceed with existing token */ }
+
     // Unique name per attempt — prevents stale-channel reuse on rapid re-runs.
     const channelName = `${channelBaseName}-${Math.random().toString(36).slice(2)}`;
-    onStatus?.('connecting');
+    if (retryCount === 0) onStatus?.('connecting');
 
     currentChannel = supabase
       .channel(channelName)
@@ -619,20 +634,27 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
+          retryCount = 0;
           onStatus?.('live');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[dealsSync] Realtime subscription error:', status, '| err:', JSON.stringify(err), '| channel:', channelName, '— retrying in 2s');
-          onStatus?.('error');
-          // Retry after 2 s. CHANNEL_ERROR is usually a JWT timing race on
-          // page load (INITIAL_SESSION fires after the subscription attempt).
-          // By the time the retry fires, supabase.js onAuthStateChange has set
-          // the correct access token on the Realtime client.
+          retryCount += 1;
+          // Exponential backoff: 1s, 2s, 4s, 8s …  capped at 30s
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 30000);
+          if (retryCount <= MAX_QUICK_RETRIES) {
+            console.warn('[dealsSync] Realtime error:', status, '| err:', JSON.stringify(err), '| attempt', retryCount, '— retrying in', delay / 1000, 's');
+            onStatus?.('error');
+          } else {
+            // Too many failures — hide the badge rather than cycling forever.
+            // Continue retrying silently in the background every 60 s.
+            console.warn('[dealsSync] Realtime giving up after', retryCount, 'attempts. Retrying silently every 60 s. err:', JSON.stringify(err));
+            onStatus?.('offline');
+          }
           retryTimer = setTimeout(() => {
             if (!destroyed) {
               supabase.removeChannel(currentChannel);
               subscribe();
             }
-          }, 2000);
+          }, retryCount > MAX_QUICK_RETRIES ? 60000 : delay);
         } else if (status === 'CLOSED') {
           onStatus?.('closed');
         }

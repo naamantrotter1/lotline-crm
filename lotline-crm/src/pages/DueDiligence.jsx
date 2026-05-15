@@ -17,6 +17,12 @@ const DD_COLUMNS = [
   { key: 'utilities',     label: 'Utilities & Access Confirmation',     color: '#ea580c', bg: '#ffedd5', hasDate: false, hasContractor: false },
 ];
 
+// Maps DD milestone keys → ImportantDates eta keys (cross-write when date is saved)
+const DD_DATE_TO_IMPORTANT = { perc_test: 'perc_tests_scheduled' };
+
+// Contractor type per hasContractor column (used when auto-creating Key Contacts)
+const DD_CONTRACTOR_TYPE = { survey: 'Land Surveyor', perc_test: 'Soil Scientist' };
+
 const TOTAL_TASKS = DD_COLUMNS.length;
 
 // Map legacy ddTasksCompleted names → column keys for seeding
@@ -80,13 +86,21 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
     onMilestoneChange(deal.id, column.key, { status: 'complete', date, contractor });
   };
 
+  const saveDate = (val) => {
+    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
+    if (newStatus !== status) setStatus(newStatus);
+    onMilestoneChange(deal.id, column.key, { status: newStatus, date: val, contractor });
+  };
+
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
     setDate(val);
-    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
-    if (newStatus !== status) setStatus(newStatus);
-    onMilestoneChange(deal.id, column.key, { status: newStatus, date: val, contractor });
+    // Only persist when the user has a complete date (non-empty).
+    // type="date" returns '' while the user is still filling in day/month/year
+    // segments — saving that empty value would clear the field mid-entry.
+    // Clearing is handled by onBlur instead.
+    if (val) saveDate(val);
   };
 
   const saveContractor = (val) => {
@@ -149,6 +163,7 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
               type="date"
               value={date}
               onChange={handleDate}
+              onBlur={e => { e.stopPropagation(); if (!e.target.value && date) saveDate(''); }}
               className="text-[10px] text-gray-600 bg-transparent outline-none flex-1 min-w-0"
             />
           </div>
@@ -273,8 +288,9 @@ export default function DueDiligence() {
         [deal_id]: {
           ...(prev[deal_id] || {}),
           [milestone_key]: {
-            status:     status || 'not_started',
-            date:       completed_at || '',
+            status:     status === 'pending' ? 'not_started' : (status || 'not_started'),
+            // completed_at is timestamptz — slice to YYYY-MM-DD for the date input
+            date:       completed_at ? completed_at.slice(0, 10) : '',
             contractor: note || '',
           },
         },
@@ -328,8 +344,9 @@ export default function DueDiligence() {
         for (const row of (data || [])) {
           if (!map[row.deal_id]) map[row.deal_id] = {};
           map[row.deal_id][row.milestone_key] = {
-            status:     row.status || 'not_started',
-            date:       row.completed_at || '',
+            status:     row.status === 'pending' ? 'not_started' : (row.status || 'not_started'),
+            // completed_at is timestamptz — slice to YYYY-MM-DD so <input type="date"> renders correctly
+            date:       row.completed_at ? row.completed_at.slice(0, 10) : '',
             contractor: row.note || '',
           };
         }
@@ -400,14 +417,76 @@ export default function DueDiligence() {
     }));
 
     if (!supabase || !activeOrgId) return;
-    await supabase.from('deal_milestones').upsert({
-      organization_id: activeOrgId,
-      deal_id:         sid,
-      milestone_key:   colKey,
-      status:          data.status,
-      completed_at:  data.date || null,
-      note:           data.contractor || null,
-    }, { onConflict: 'deal_id,milestone_key' });
+
+    // 1. Save the DD milestone row
+    {
+      const { error } = await supabase.from('deal_milestones').upsert({
+        organization_id: activeOrgId,
+        deal_id:         sid,
+        milestone_key:   colKey,
+        status:          data.status,
+        completed_at:    data.date || null,
+        note:            data.contractor || null,
+      }, { onConflict: 'deal_id,milestone_key' });
+      if (error) console.error('[DD] upsertMilestone step1 error:', error.code, error.message, error.details, error.hint);
+    }
+
+    // 2. Mirror date to ImportantDates eta so the deal sidebar shows it immediately.
+    //    Only write eta — omit status so we never hit the legacy status check constraint.
+    const impKey = DD_DATE_TO_IMPORTANT[colKey];
+    if (impKey) {
+      const { error } = await supabase.from('deal_milestones').upsert({
+        organization_id: activeOrgId,
+        deal_id:         sid,
+        milestone_key:   impKey,
+        eta:             data.date || null,
+      }, { onConflict: 'deal_id,milestone_key' });
+      if (error) console.error('[DD] upsertMilestone step2 (ImportantDates cross-write) error:', error.code, error.message, error.details, error.hint);
+    }
+
+    // 3. Link contractor name to Key Contacts in the deal sidebar.
+    //    Uses a stable stage_key so changing the name updates the same slot.
+    const contType = DD_CONTRACTOR_TYPE[colKey];
+    if (contType) {
+      const name = data.contractor?.trim();
+      const stageKey = `dd_${colKey}_cont`;
+      if (name) {
+        // Try to find an existing contact by first_name or company
+        let { data: found } = await supabase.from('contacts').select('id')
+          .eq('organization_id', activeOrgId).ilike('first_name', name).limit(1);
+        if (!found?.length) {
+          ({ data: found } = await supabase.from('contacts').select('id')
+            .eq('organization_id', activeOrgId).ilike('company', name).limit(1));
+        }
+        let contactId = found?.[0]?.id;
+        if (!contactId) {
+          // Create a minimal contact from the entered name
+          const parts = name.split(/\s+/);
+          const { data: created } = await supabase.from('contacts')
+            .insert({
+              organization_id: activeOrgId,
+              first_name:      parts[0],
+              last_name:       parts.slice(1).join(' ') || null,
+              contractor_type: contType,
+            })
+            .select('id').single();
+          if (created?.id) {
+            await supabase.from('contact_types').insert({ contact_id: created.id, type: contType });
+            contactId = created.id;
+          }
+        }
+        if (contactId) {
+          await supabase.from('deal_stage_contacts').upsert(
+            { deal_id: sid, organization_id: activeOrgId, stage_key: stageKey, contact_id: contactId },
+            { onConflict: 'deal_id,stage_key' }
+          );
+        }
+      } else {
+        // Contractor cleared → remove from Key Contacts
+        await supabase.from('deal_stage_contacts').delete()
+          .eq('deal_id', sid).eq('stage_key', stageKey);
+      }
+    }
   }, [activeOrgId]);
 
   return (
