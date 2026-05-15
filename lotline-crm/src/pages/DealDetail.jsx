@@ -650,14 +650,6 @@ function FinancingScenarioPanel({
                 </select>
                 <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
               </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Land</p>
-                <span className="text-sm font-medium text-gray-800">${(costs.land || 0).toLocaleString()}</span>
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Cost of Home</p>
-                <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
-              </div>
               <div className="py-2 col-span-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Include in Loan Amount</p>
                 <div className="flex gap-2 flex-wrap">
