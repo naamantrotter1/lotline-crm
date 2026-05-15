@@ -186,7 +186,7 @@ const LEAD_SOURCE_OPTIONS = ['Direct Mail', 'Driving for Dollars', 'Wholesaler',
 const OWNER_TYPE_OPTIONS = ['Owner', 'Wholesaler', 'Realtor'];
 const UTILITY_SCENARIO_OPTIONS = ['All Utilities Available', 'Well Needed', 'Septic Needed', 'Well & Septic Needed', 'Existing Well', 'Existing Septic', 'Existing Well & Septic'];
 const LAND_ACQ_STAGES = ['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract', 'Contract Signed'];
-const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
+const DEAL_OVERVIEW_STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold'];
 const FINANCING_OPTIONS = ['Hard Money (Land + Home)', 'Hard Money', 'Cash', 'Line of Credit', 'Conventional'];
 
 // ── Decimal input — keeps "13." in display while typing ───────────────────────
@@ -2681,7 +2681,7 @@ function DealDetailContent({ deal }) {
   const financingTabEnabled = hasFlag('deal_page.financing_tab');
   const [pooledLoanLinks, setPooledLoanLinks] = useState([]);
   const [showDeadDealModal, setShowDeadDealModal] = useState(false);
-  const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete']);
+  const DEAL_OVERVIEW_ONLY = new Set(['Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold']);
   const currentStageVal = deal?.stage || '';
   const fromDealOverview = location.state?.pipeline === 'deal-overview' || DEAL_OVERVIEW_ONLY.has(currentStageVal);
   const isLandAcq = !fromDealOverview;
@@ -2798,7 +2798,7 @@ function DealDetailContent({ deal }) {
       stage: val,
       // When crossing into Deal Overview stages, also flip pipeline so the
       // deal appears on the correct kanban board.
-      ...(['Contract Signed', 'Due Diligence', 'Development', 'Complete'].includes(val)
+      ...(['Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold'].includes(val)
         ? { pipeline: 'deal-overview' }
         : {}),
       ...(isMovingToContractSigned && !deal.contractDate
@@ -2807,7 +2807,7 @@ function DealDetailContent({ deal }) {
       ...(isMovingToContractSigned && !deal.contractSignedAt
         ? { contractSignedAt: new Date().toISOString() }
         : {}),
-      ...(val !== 'Contract Signed' && !['Due Diligence', 'Development', 'Complete'].includes(val)
+      ...(val !== 'Contract Signed' && !['Due Diligence', 'Development', 'Complete', 'On Hold'].includes(val)
         ? { contractSignedAt: null, pipeline: 'land-acquisition' }
         : {}),
     };
