@@ -3976,6 +3976,7 @@ function DealDetailContent({ deal }) {
             onPaymentDueDayChange={setPaymentDueDay}
             firstPaymentDate={firstPaymentDate}
             onFirstPaymentDateChange={setFirstPaymentDate}
+            homeCost={deal.mobileHome || 0}
           />
         )}
 
