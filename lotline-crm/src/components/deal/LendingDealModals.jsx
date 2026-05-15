@@ -5,40 +5,25 @@
  *   • 'financing'   → Apply for Financing  (createLendingRequest)
  *   • 'partnership' → Submit a Deal to Partner (createLendingPartnership)
  *
- * All deal fields are pre-filled from the deal and remain editable.
+ * The cost breakdown mirrors CostBreakdownTab exactly:
+ *   - lines fetched from deal_cost_resolved_view via fetchCostLines
+ *   - grouped by group_name (Land / Build / Sitework / Finishing / Other)
+ *   - estimated_amount pre-filled, editable before submit
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, X, Send, ChevronRight, Handshake, Landmark } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { createLendingRequest, createLendingPartnership } from '../../lib/lendingData';
+import { fetchCostLines } from '../../lib/costBreakdownData';
 
-const COST_FIELDS = [
-  { key: 'land',         label: 'Land' },
-  { key: 'mobileHome',   label: 'Manufactured Home' },
-  { key: 'hudEngineer',  label: 'HUD Engineer' },
-  { key: 'percTest',     label: 'Perc Test / Permit' },
-  { key: 'survey',       label: 'Land Survey' },
-  { key: 'footers',      label: 'Footers' },
-  { key: 'setup',        label: 'Setup' },
-  { key: 'clearLand',    label: 'Clear Land' },
-  { key: 'water',        label: 'Water' },
-  { key: 'septic',       label: 'Septic' },
-  { key: 'electric',     label: 'Electric / Power Pole' },
-  { key: 'hvac',         label: 'HVAC' },
-  { key: 'underpinning', label: 'Skirting' },
-  { key: 'decks',        label: 'Decks Installed' },
-  { key: 'driveway',     label: 'Driveway' },
-  { key: 'landscaping',  label: 'Landscaping / Final Grading' },
-  { key: 'waterSewer',   label: 'Water / Sewer Hook Up' },
-  { key: 'mailbox',      label: 'Mailbox' },
-  { key: 'gutters',      label: 'Gutters' },
-  { key: 'photos',       label: 'Professional Photos' },
-  { key: 'mobileTax',    label: 'Mobile Home Tax' },
-  { key: 'staging',      label: 'Staging' },
-];
-const EMPTY_COSTS = Object.fromEntries(COST_FIELDS.map(f => [f.key, '']));
+// Must stay in sync with CostBreakdownTab
+const GROUP_ORDER  = ['Land', 'Build', 'Sitework', 'Finishing', 'Other'];
+const HIDDEN_KEYS  = new Set([
+  'environmental_permits', 'gutters', 'professional_photos', 'staging', 'water_sewer',
+]);
 
 const inp = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition-colors';
+const fmt = n => `$${Math.abs(Math.round(n)).toLocaleString()}`;
 
 function Field({ label, hint, children }) {
   return (
@@ -55,37 +40,75 @@ function SectionHeading({ children }) {
   return <p className="text-xs font-bold text-accent uppercase tracking-widest pt-2 pb-1 border-t border-gray-100 mt-2">{children}</p>;
 }
 
-// ── Shared cost breakdown accordion ──────────────────────────────────────
-function CostAccordion({ costs, totalCosts, onCostChange, open, onToggle, label = 'Cost Breakdown' }) {
+// ── Cost breakdown from deal_cost_resolved_view ───────────────────────────
+function CostBreakdown({ dealId, amounts, onChange }) {
+  const [lines,   setLines]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [open,    setOpen]    = useState({});
+
+  useEffect(() => {
+    if (!dealId) { setLoading(false); return; }
+    fetchCostLines(dealId).then(data => {
+      const visible = data.filter(l => !HIDDEN_KEYS.has(l.category_key));
+      setLines(visible);
+      // Expand all groups by default
+      const groups = [...new Set(visible.map(l => l.group_name || 'Other'))];
+      setOpen(Object.fromEntries(groups.map(g => [g, true])));
+      setLoading(false);
+    });
+  }, [dealId]);
+
+  const grouped = GROUP_ORDER
+    .map(g => ({ group: g, lines: lines.filter(l => (l.group_name || 'Other') === g) }))
+    .filter(g => g.lines.length > 0);
+
+  const total = lines.reduce((s, l) => s + (parseFloat(amounts[l.category_key]) ?? l.estimated_amount ?? 0), 0);
+
+  if (loading) return <div className="py-4 text-center text-xs text-gray-400">Loading costs…</div>;
+  if (!lines.length) return <div className="py-4 text-center text-xs text-gray-400">No cost lines found.</div>;
+
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden">
-      <button type="button" onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-          {label}
-          {totalCosts > 0 && <span className="ml-2 font-bold text-accent normal-case">— ${totalCosts.toLocaleString()}</span>}
-        </span>
-        <ChevronRight size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
-      </button>
-      {open && (
-        <div className="px-4 py-3 space-y-2 bg-white">
-          {COST_FIELDS.map(f => (
-            <div key={f.key} className="flex items-center justify-between gap-3">
-              <label className="text-xs text-gray-500 flex-1">{f.label}</label>
-              <div className="relative w-32">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                <input type="number" min="0" value={costs?.[f.key] || ''}
-                  onChange={e => onCostChange(f.key, e.target.value)}
-                  className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right" />
-              </div>
+    <div className="space-y-2">
+      {grouped.map(({ group, lines: gLines }) => (
+        <div key={group} className="rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOpen(p => ({ ...p, [group]: !p[group] }))}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+          >
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{group}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-accent">
+                {fmt(gLines.reduce((s, l) => s + (parseFloat(amounts[l.category_key]) ?? l.estimated_amount ?? 0), 0))}
+              </span>
+              <ChevronRight size={13} className={`text-gray-400 transition-transform ${open[group] ? 'rotate-90' : ''}`} />
             </div>
-          ))}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <span className="text-xs font-bold text-gray-600">Total</span>
-            <span className="text-xs font-bold text-accent">${totalCosts.toLocaleString()}</span>
-          </div>
+          </button>
+          {open[group] && (
+            <div className="divide-y divide-gray-50">
+              {gLines.map(l => (
+                <div key={l.line_id} className="flex items-center justify-between px-4 py-2 gap-3">
+                  <span className="text-xs text-gray-600 flex-1">{l.line_label}</span>
+                  <div className="relative w-32 flex-shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={amounts[l.category_key] ?? l.estimated_amount ?? ''}
+                      onChange={e => onChange(l.category_key, e.target.value)}
+                      className="w-full pl-5 pr-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30 text-right"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      ))}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+        <span className="text-xs font-bold text-gray-700">Total Estimated</span>
+        <span className="text-sm font-bold text-accent">{fmt(total)}</span>
+      </div>
     </div>
   );
 }
@@ -109,21 +132,19 @@ function FinancingModal({ deal, prefill, onClose }) {
     creditScore:   '700+',
     exitStrategy:  prefill?.exitStrategy  || 'Sell',
     notes:         prefill?.notes         || '',
-    costs:         { ...EMPTY_COSTS, ...(prefill?.costs || {}) },
-    costsOpen:     true,
   });
-  const [confirm, setConfirm]     = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form.costs?.[f.key]) || 0), 0);
+  // Separate cost amounts map: { category_key: value }
+  const [costAmounts, setCostAmounts] = useState({});
+  const [confirm, setConfirm]         = useState(null);
+  const [submitting, setSubmitting]   = useState(false);
 
   const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleCostChange = (key, val) => setForm(p => ({ ...p, costs: { ...p.costs, [key]: val } }));
+  const handleCostChange = (key, val) => setCostAmounts(p => ({ ...p, [key]: val }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const { data, error } = await createLendingRequest(activeOrgId, form);
+    const { data, error } = await createLendingRequest(activeOrgId, { ...form, costs: costAmounts });
     setSubmitting(false);
     if (error) { alert('Submission failed: ' + (error.message || error)); return; }
     setConfirm(data?.ref ?? 'submitted');
@@ -157,7 +178,6 @@ function FinancingModal({ deal, prefill, onClose }) {
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
 
               <SectionHeading>Property Details</SectionHeading>
-
               <Field label="Address">
                 <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St" />
               </Field>
@@ -187,7 +207,6 @@ function FinancingModal({ deal, prefill, onClose }) {
               </div>
 
               <SectionHeading>Loan Details</SectionHeading>
-
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Purchase Price ($)">
                   <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className={inp} placeholder="0" />
@@ -224,16 +243,8 @@ function FinancingModal({ deal, prefill, onClose }) {
                 </select>
               </Field>
 
-              <SectionHeading>Cost Breakdown</SectionHeading>
-
-              <CostAccordion
-                costs={form.costs}
-                totalCosts={totalCosts}
-                onCostChange={handleCostChange}
-                open={form.costsOpen}
-                onToggle={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
-                label="Itemized Costs"
-              />
+              <SectionHeading>Estimated Cost Breakdown</SectionHeading>
+              <CostBreakdown dealId={deal?.id} amounts={costAmounts} onChange={handleCostChange} />
 
               <Field label="Additional Notes" hint="optional">
                 <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} className={inp + ' resize-none'} placeholder="Any context that may help us process your request..." />
@@ -273,16 +284,13 @@ function PartnershipModal({ deal, prefill, onClose }) {
     split:           '',
     yourRole:        'Deal Finder',
     summary:         '',
-    costs:           { ...EMPTY_COSTS, ...(prefill?.costs || {}) },
-    costsOpen:       true,
   });
-  const [confirm, setConfirm]     = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form.costs?.[f.key]) || 0), 0);
+  const [costAmounts, setCostAmounts] = useState({});
+  const [confirm, setConfirm]         = useState(null);
+  const [submitting, setSubmitting]   = useState(false);
 
   const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleCostChange = (key, val) => setForm(p => ({ ...p, costs: { ...p.costs, [key]: val } }));
+  const handleCostChange = (key, val) => setCostAmounts(p => ({ ...p, [key]: val }));
   const toggleNeed = v => setForm(p => ({
     ...p, needs: p.needs.includes(v) ? p.needs.filter(n => n !== v) : [...p.needs, v],
   }));
@@ -290,7 +298,7 @@ function PartnershipModal({ deal, prefill, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const { data, error } = await createLendingPartnership(activeOrgId, form);
+    const { data, error } = await createLendingPartnership(activeOrgId, { ...form, costs: costAmounts });
     setSubmitting(false);
     if (error) { alert('Submission failed: ' + (error.message || error)); return; }
     setConfirm(data?.ref ?? 'submitted');
@@ -324,7 +332,6 @@ function PartnershipModal({ deal, prefill, onClose }) {
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-4">
 
               <SectionHeading>Property Details</SectionHeading>
-
               <Field label="Property Address">
                 <input name="address" required value={form.address} onChange={handleChange} className={inp} placeholder="123 Main St" />
               </Field>
@@ -354,7 +361,6 @@ function PartnershipModal({ deal, prefill, onClose }) {
               </div>
 
               <SectionHeading>Deal Info</SectionHeading>
-
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Property Type">
                   <select name="propertyType" value={form.propertyType} onChange={handleChange} className={inp}>
@@ -375,7 +381,6 @@ function PartnershipModal({ deal, prefill, onClose }) {
                   <input name="projectedProfit" type="number" min="0" value={form.projectedProfit} onChange={handleChange} className={inp + ' font-semibold text-accent'} placeholder="0" />
                 </Field>
               </div>
-
               {form.dealType !== 'Land + Home Package' && (
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Purchase Price ($)">
@@ -387,19 +392,10 @@ function PartnershipModal({ deal, prefill, onClose }) {
                 </div>
               )}
 
-              <SectionHeading>Cost Breakdown</SectionHeading>
-
-              <CostAccordion
-                costs={form.costs}
-                totalCosts={totalCosts}
-                onCostChange={handleCostChange}
-                open={form.costsOpen}
-                onToggle={() => setForm(p => ({ ...p, costsOpen: !p.costsOpen }))}
-                label="Build Costs"
-              />
+              <SectionHeading>Estimated Cost Breakdown</SectionHeading>
+              <CostBreakdown dealId={deal?.id} amounts={costAmounts} onChange={handleCostChange} />
 
               <SectionHeading>Partnership Ask</SectionHeading>
-
               <Field label="What do you need from LotLine?">
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   {['Capital', 'Expertise', 'Connections', 'Co-Ownership', 'Other'].map(v => (
