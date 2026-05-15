@@ -164,7 +164,7 @@ export default function LendingMySubmissions() {
   const { activeOrgId, session } = useAuth();
 
   // ── Tab state ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('loans');
+  const [activeTab, setActiveTab] = useState('hub');
 
   // ── Drawer state ─────────────────────────────────────────────────────────
   // null | 'financing' | 'partnership' | 'hubDetail'
