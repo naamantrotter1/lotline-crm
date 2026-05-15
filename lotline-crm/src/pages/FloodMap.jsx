@@ -261,6 +261,21 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
   const mhForSaleLayerRef = useRef(null);
   const mhSoldLayerRef    = useRef(null);
 
+  // ── SC Smart Filters (Supabase-backed) ─────────────────────────────────────
+  // Toggling any of these queries /api/proxy/sc-parcels-bbox and renders
+  // matching parcels as colored dots at their centroids. Only active for SC
+  // counties with rich assessor data (Greenville, York, Sumter today).
+  const [scAbsentee,      setScAbsentee]      = useState(false);
+  const [scCorporate,     setScCorporate]     = useState(false);
+  const [scTaxDelinquent, setScTaxDelinquent] = useState(false);
+  const [scMobileHome,    setScMobileHome]    = useState(false);
+  const [scVacant,        setScVacant]        = useState(false);
+  const [scQfCount,       setScQfCount]       = useState(0);
+  const [scQfLoading,     setScQfLoading]     = useState(false);
+  const scQfLayerRef     = useRef(null);
+  const scQfAbortRef     = useRef(null);
+  const scQfEnabledRef   = useRef(false);
+
   // ── Parcel search bar ──────────────────────────────────────────────────────
   const [searchType, setSearchType]       = useState('address');
   const [searchQuery, setSearchQuery]     = useState('');
@@ -634,6 +649,11 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
       if (soilGeoJSONRef.current) { soilGeoJSONRef.current.remove(); soilGeoJSONRef.current = null; }
     } else {
       fetchSoil(map);
+    }
+    if (!scQfEnabledRef.current) {
+      if (scQfLayerRef.current) { scQfLayerRef.current.remove(); scQfLayerRef.current = null; }
+    } else {
+      fetchSCQuickFilter(map);
     }
   };
 
@@ -1081,6 +1101,103 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
     }
     if (mhForSale || mhSold) refreshMHComps(map);
   }, [mhForSale, mhSold]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── SC Smart Filters fetch + render ────────────────────────────────────────
+  const scQfActive = scAbsentee || scCorporate || scTaxDelinquent || scMobileHome || scVacant;
+  scQfEnabledRef.current = scQfActive;
+
+  const fetchSCQuickFilter = async (map) => {
+    if (!scQfEnabledRef.current) return;
+    // Don't fetch when zoomed too far out — bbox returns 4000+ rows and is too
+    // cluttered to be useful at small scale.
+    if (map.getZoom() < 10) {
+      if (scQfLayerRef.current) { scQfLayerRef.current.remove(); scQfLayerRef.current = null; }
+      setScQfCount(0);
+      return;
+    }
+    if (scQfAbortRef.current) scQfAbortRef.current.abort();
+    const ctrl = new AbortController();
+    scQfAbortRef.current = ctrl;
+    setScQfLoading(true);
+
+    const b = map.getBounds();
+    const params = new URLSearchParams({
+      bbox: `${b.getWest().toFixed(5)},${b.getSouth().toFixed(5)},${b.getEast().toFixed(5)},${b.getNorth().toFixed(5)}`,
+    });
+    if (scAbsentee)      params.set('absenteeOnly',      '1');
+    if (scCorporate)     params.set('corporateOnly',     '1');
+    if (scTaxDelinquent) params.set('taxDelinquentOnly', '1');
+    if (scMobileHome)    params.set('mobileHomeOnly',    '1');
+    if (scVacant)        params.set('vacantOnly',        '1');
+
+    try {
+      const r = await fetch(`${PROXY}/api/proxy/sc-parcels-bbox?${params}`, { signal: ctrl.signal });
+      const data = await r.json();
+      const m = leafletMap.current;
+      if (!m || !scQfEnabledRef.current) return;
+      const features = data.features || [];
+
+      // Color priority: tax-delinquent > absentee > corporate > mobile home > vacant
+      const colorFor = (p) => {
+        if (scTaxDelinquent && p.tax_delinquent) return '#ef4444'; // red
+        if (scAbsentee      && p.absentee_owner) return '#f59e0b'; // amber
+        if (scCorporate     && p.corporate_owner) return '#8b5cf6'; // violet
+        if (scMobileHome    && (p.is_mobile_home || p.mobile_home_zone)) return '#10b981'; // emerald
+        return '#3b82f6'; // sky
+      };
+
+      const lg = L.layerGroup(features.map(f => {
+        const p = f.properties || {};
+        const [lng, lat] = f.geometry?.coordinates || [];
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        const color = colorFor(p);
+        const marker = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fff', weight: 1, fillColor: color, fillOpacity: 0.85,
+        });
+        const owner = (p.owner_name || '').trim();
+        const addr  = (p.property_address || '').trim();
+        const acres = p.acreage != null ? `${parseFloat(p.acreage).toFixed(2)} ac` : '';
+        const val   = p.market_value || p.assessed_value;
+        const valStr = val ? `$${Number(val).toLocaleString()}` : '';
+        const badges = [
+          p.tax_delinquent && '<span style="background:#fee2e2;color:#b91c1c;font-size:10px;padding:2px 5px;border-radius:4px">Tax Delinquent</span>',
+          p.absentee_owner && '<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 5px;border-radius:4px">Absentee</span>',
+          p.corporate_owner && '<span style="background:#ede9fe;color:#6d28d9;font-size:10px;padding:2px 5px;border-radius:4px">Corporate</span>',
+          (p.is_mobile_home || p.mobile_home_zone) && '<span style="background:#d1fae5;color:#065f46;font-size:10px;padding:2px 5px;border-radius:4px">Mobile Home</span>',
+        ].filter(Boolean).join(' ');
+        marker.bindPopup(`
+          <div style="min-width:200px;font-family:system-ui,sans-serif">
+            <p style="font-weight:700;font-size:13px;margin:0 0 4px">${owner || 'Unknown owner'}</p>
+            ${addr ? `<p style="font-size:11px;color:#374151;margin:0 0 4px">${addr}</p>` : ''}
+            <p style="font-size:11px;color:#6b7280;margin:0 0 6px">${[p.county, acres, valStr].filter(Boolean).join(' · ')}</p>
+            ${badges ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${badges}</div>` : ''}
+            <p style="font-size:10px;color:#9ca3af;margin:0">APN: ${p.parcel_id || p.parno || '—'}</p>
+          </div>
+        `);
+        return marker;
+      }).filter(Boolean));
+
+      if (scQfLayerRef.current) { scQfLayerRef.current.remove(); scQfLayerRef.current = null; }
+      lg.addTo(m);
+      scQfLayerRef.current = lg;
+      setScQfCount(features.length);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('[sc-quick-filter] fetch error:', err);
+    } finally {
+      setScQfLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    if (!scQfActive) {
+      if (scQfLayerRef.current) { scQfLayerRef.current.remove(); scQfLayerRef.current = null; }
+      setScQfCount(0);
+      return;
+    }
+    fetchSCQuickFilter(map);
+  }, [scAbsentee, scCorporate, scTaxDelinquent, scMobileHome, scVacant]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleLayer = key => setLayers(p => ({ ...p, [key]: !p[key] }));
 
@@ -1987,10 +2104,64 @@ export default function FloodMap({ initialParcelId, initialState, initialCounty,
                   </div>
                 </div>
               </div>
+
+              {/* SC Smart Filters (Supabase-backed) */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                    SC Smart Filters
+                  </p>
+                  {scQfActive && (
+                    <span className="text-[10px] text-orange-500">
+                      {scQfLoading ? 'Loading…' : `${scQfCount.toLocaleString()} matches`}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-400 mb-2 leading-snug">
+                  Greenville, York &amp; Sumter — zoom in to see results
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      Tax Delinquent
+                    </span>
+                    <Toggle active={scTaxDelinquent} onChange={() => setScTaxDelinquent(p => !p)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      Absentee Owners
+                    </span>
+                    <Toggle active={scAbsentee} onChange={() => setScAbsentee(p => !p)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-violet-500" />
+                      Corporate Owners
+                    </span>
+                    <Toggle active={scCorporate} onChange={() => setScCorporate(p => !p)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Mobile Home
+                    </span>
+                    <Toggle active={scMobileHome} onChange={() => setScMobileHome(p => !p)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-500" />
+                      Vacant Land
+                    </span>
+                    <Toggle active={scVacant} onChange={() => setScVacant(p => !p)} />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="px-4 py-2 border-t border-gray-200 text-[10px] text-gray-400">
-              FEMA NFHL • USFWS NWI • USGS NHD • USGS 3DEP • USDA NRCS SSURGO
+              FEMA NFHL • USFWS NWI • USGS NHD • USGS 3DEP • USDA NRCS SSURGO • Supabase sc_parcels
             </div>
           </div>
         )}

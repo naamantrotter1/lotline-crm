@@ -91,6 +91,76 @@ export default async function handler(req, res) {
 
   // ── South Carolina ───────────────────────────────────────────────────────────
   if (isSC || (qParno && !isNC)) {
+    // Supabase enrichment — for the 3 counties with rich assessor data
+    // (Greenville, York, Sumter) plus any future additions, query our
+    // sc_parcels table first. Falls through to SCDOT below if not found.
+    const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+    const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (qParno && SUPABASE_URL && SERVICE_KEY) {
+      try {
+        const sbBody = { p_parcel_id: qParno, p_county: qCounty || null };
+        const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sc_parcel_by_id`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
+          body:    JSON.stringify(sbBody),
+        });
+        if (sbRes.ok) {
+          const rows = await sbRes.json();
+          const p = Array.isArray(rows) ? rows[0] : rows;
+          if (p && p.parcel_id) {
+            // Build site address from CSV fields; reverse-geocode fallback if missing
+            let siteAddr = [p.property_address, p.property_city, p.property_zip ? `SC ${p.property_zip}` : 'SC']
+              .filter(Boolean).join(', ') || null;
+            if (!siteAddr || !/^\d/.test(siteAddr)) {
+              const lat = p.centroid_lat, lng = p.centroid_lon;
+              if (lat && lng) {
+                const rg = await reverseGeocode(lat, lng);
+                if (rg) siteAddr = rg;
+              }
+            }
+            return res.json({
+              parcelId:    p.parcel_id,
+              owner:       p.owner_name?.trim() || null,
+              mailAddr:    [p.owner_mail_address, p.owner_mail_city, p.owner_mail_state, p.owner_mail_zip].filter(Boolean).join(', ') || null,
+              siteAddr,
+              acres:       p.acreage ?? null,
+              landVal:     null,
+              bldgVal:     null,
+              totVal:      p.market_value ?? p.assessed_value ?? null,
+              landUse:     p.land_use_code || null,
+              zoning:      p.zoning_code || null,
+              saleYear:    null,
+              county:      p.county || null,
+              subdivision: null,
+              state:       'SC',
+              geometry:    null,
+              // Enriched fields not in the legacy SCDOT response
+              enriched: {
+                absenteeOwner:   p.absentee_owner,
+                corporateOwner:  p.corporate_owner,
+                mobileHomeZone:  p.mobile_home_zone,
+                isMobileHome:    p.is_mobile_home,
+                taxDelinquent:   p.tax_delinquent,
+                backTaxesOwed:   p.back_taxes_owed,
+                marketValue:     p.market_value,
+                assessedValue:   p.assessed_value,
+                sqftLiving:      p.sqft_living,
+                bedrooms:        p.bedrooms,
+                bathrooms:       p.bathrooms,
+                yearBuilt:       p.year_built,
+                structureType:   p.structure_type,
+                numStructures:   p.num_structures,
+                hasWell:         p.has_well,
+                hasSeptic:       p.has_septic,
+                hasRoadFrontage: p.has_road_frontage,
+                source:          'supabase.sc_parcels',
+              },
+            });
+          }
+        }
+      } catch (e) { /* fall through to live SCDOT lookup */ }
+    }
+
     const SC_FIELDS = 'T_Map_Number,County,L_Value,M_Value,Ownership,Mailing_Add,Mailing_City,Mailing_Zip,Zoning,Land_Use,Acreage,Shape_Area,Mailing_St';
     let scParams;
     if (qParno) {

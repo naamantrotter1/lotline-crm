@@ -7,6 +7,10 @@
     {
       "path": "/api/sync-gmail-replies",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/sc-data-staleness",
+      "schedule": "0 13 * * *"
     }
   ],
   "routes": [
