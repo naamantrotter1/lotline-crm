@@ -255,37 +255,62 @@ export default function DueDiligence() {
   // Realtime: push deal_milestones changes from any user into local state
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
-    const channel = supabase
-      .channel(`dd_milestones_${activeOrgId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'deal_milestones',
-        // No server-side filter — causes CHANNEL_ERROR on postgres_changes subscriptions.
-        // Filter org client-side instead (same pattern as dealsSync.js).
-      }, (payload) => {
-        const row = payload.new || payload.old;
-        if (!row) return;
-        if (row.organization_id && row.organization_id !== activeOrgId) return;
-        if (row.milestone_key?.startsWith('dev_')) return;
-        const { deal_id, milestone_key, status, completed_at, note } = row;
-        setMilestones(prev => ({
-          ...prev,
-          [deal_id]: {
-            ...(prev[deal_id] || {}),
-            [milestone_key]: {
-              status:     status || 'not_started',
-              date:       completed_at || '',
-              contractor: note || '',
-            },
+
+    // Unique name prevents stale-channel reuse: React's cleanup (removeChannel)
+    // is async, so a fixed name could return the old errored channel on remount.
+    const channelName = `dd_milestones_${activeOrgId}_${Math.random().toString(36).slice(2)}`;
+    let retryTimer = null;
+    let currentChannel = null;
+
+    function handleRow(payload) {
+      const row = payload.new || payload.old;
+      if (!row) return;
+      if (row.organization_id && row.organization_id !== activeOrgId) return;
+      if (row.milestone_key?.startsWith('dev_')) return;
+      const { deal_id, milestone_key, status, completed_at, note } = row;
+      setMilestones(prev => ({
+        ...prev,
+        [deal_id]: {
+          ...(prev[deal_id] || {}),
+          [milestone_key]: {
+            status:     status || 'not_started',
+            date:       completed_at || '',
+            contractor: note || '',
           },
-        }));
-      })
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')
-          console.warn('[DueDiligence] dd_milestones realtime error:', status, err);
-      });
-    return () => supabase.removeChannel(channel);
+        },
+      }));
+    }
+
+    function subscribe() {
+      currentChannel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'deal_milestones',
+          // No server-side filter — causes CHANNEL_ERROR on postgres_changes subscriptions.
+          // Filter org client-side instead (same pattern as dealsSync.js).
+        }, handleRow)
+        .subscribe((status, err) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[DueDiligence] dd_milestones realtime error:', status, err, '— retrying in 2s');
+            // Retry after a short delay: CHANNEL_ERROR can happen when the JWT
+            // hasn't been applied to the WebSocket yet (INITIAL_SESSION race).
+            // By the time the retry fires, supabase.js onAuthStateChange has run
+            // and setAuth has been called with the user's access token.
+            retryTimer = setTimeout(() => {
+              supabase.removeChannel(currentChannel);
+              subscribe();
+            }, 2000);
+          }
+        });
+    }
+
+    subscribe();
+    return () => {
+      clearTimeout(retryTimer);
+      if (currentChannel) supabase.removeChannel(currentChannel);
+    };
   }, [activeOrgId]);
 
   // Load milestones from Supabase; migrate legacy localStorage data on first load
