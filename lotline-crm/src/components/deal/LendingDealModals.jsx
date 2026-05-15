@@ -64,7 +64,7 @@ function CostBreakdown({ dealId, amounts, onChange }) {
       <div className="divide-y divide-gray-50">
         {lines.map(l => (
           <div key={l.line_id} className="flex items-center justify-between px-4 py-2 gap-3">
-            <span className="text-xs text-gray-600 flex-1">{l.line_label}</span>
+            <span className="text-xs text-gray-600 flex-1">{l.label}</span>
             <div className="relative w-32 flex-shrink-0">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
               <input
