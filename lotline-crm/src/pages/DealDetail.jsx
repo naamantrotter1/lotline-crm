@@ -387,6 +387,7 @@ function FinancingScenarioPanel({
   // Payment Due Day — drives schedule/calendar dates for HM Loan, HM L+H, LoC
   paymentDueDay, setPaymentDueDay,
   firstPaymentDate, setFirstPaymentDate,
+  loanLocked = false, setLoanLocked,
   loanBasisFlags = { land: false, home: false, allIn: true }, setLoanBasisFlags,
   readOnly,
 }) {
@@ -688,20 +689,28 @@ function FinancingScenarioPanel({
                     }}
                     onFocus={e => e.target.select()}
                     className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 flex-1"
-                    readOnly={readOnly || loanAmountOverride != null}
+                    readOnly={readOnly || loanLocked}
                   />
                   {!readOnly && (
                     <button
                       type="button"
-                      onClick={() => setLoanAmountOverride(loanAmountOverride != null ? null : effectiveLoanAmount)}
+                      onClick={() => {
+                        if (loanLocked) {
+                          setLoanLocked(false);
+                          setLoanAmountOverride(null);
+                        } else {
+                          setLoanLocked(true);
+                          setLoanAmountOverride(effectiveLoanAmount);
+                        }
+                      }}
                       className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 ${
-                        loanAmountOverride != null
+                        loanLocked
                           ? 'bg-accent/10 border-accent text-accent'
                           : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
                       }`}
-                      title={loanAmountOverride != null ? 'Unlock (auto-calculate)' : 'Lock amount'}
+                      title={loanLocked ? 'Unlock (auto-calculate)' : 'Lock amount'}
                     >
-                      {loanAmountOverride != null ? <Lock size={13} /> : <LockOpen size={13} />}
+                      {loanLocked ? <Lock size={13} /> : <LockOpen size={13} />}
                     </button>
                   )}
                 </div>
@@ -3027,6 +3036,7 @@ function DealDetailContent({ deal }) {
   // Profit Split specific
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
   const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? null);
+  const [loanLocked, setLoanLocked] = useState(sd.loanLocked ?? false);
   const [loanBasisFlags, setLoanBasisFlags] = useState(sd.loanBasisFlags ?? { land: false, home: false, allIn: true });
   // Payment Due Day — drives schedule/calendar generator (HM Loan, HM L+H, HMCB, LoC).
   const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? 'same_as_closing');
@@ -3260,7 +3270,7 @@ function DealDetailContent({ deal }) {
         interestRate, originationFeeType, originationFeePct, originationFeeFlat,
         servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
         holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
-        loanAmountOverride, loanBasisFlags, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+        loanAmountOverride, loanLocked, loanBasisFlags, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
         // Committed Capital Partner
         ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
         ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
@@ -3986,6 +3996,7 @@ function DealDetailContent({ deal }) {
             estimatedSaleDate={estimatedSaleDate} setEstimatedSaleDate={setEstimatedSaleDate}
             paymentDueDay={paymentDueDay} setPaymentDueDay={setPaymentDueDay}
             firstPaymentDate={firstPaymentDate} setFirstPaymentDate={setFirstPaymentDate}
+            loanLocked={loanLocked} setLoanLocked={setLoanLocked}
             loanBasisFlags={loanBasisFlags} setLoanBasisFlags={setLoanBasisFlags}
             cashSource={cashSource} setCashSource={setCashSource}
             investor={investor} setInvestor={setInvestor}
