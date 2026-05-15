@@ -2455,6 +2455,9 @@ function calcDealNetProfit({
   originationFeeType, originationFeePct, originationFeeFlat,
   servicingFeeType,  servicingFeePct,  servicingFeeFlat,
   loanAmountOverride, profitSharePct,
+  // Live fee state (optional — falls back to deal.scenarioData when not provided)
+  drawFeeHm, underwritingFee, attorneyDocFee, appraisalFeeHm,
+  loanBasisFlags,
 }) {
   const arvVal = arv ?? deal?.arv ?? 0;
   const activeFinancing = selectedScenario
@@ -2496,8 +2499,13 @@ function calcDealNetProfit({
     originationFee        = effOrigFee;
     totalCostOfCapital    = (monthly * effHoldMonths) + hmcbFees;
   } else {
-    const totalLent = (costs?.mobileHome || 0) + (costs?.land || 0);
-    effectiveLoanAmount   = loanAmountOverride || totalLent;
+    const _land = costs?.land || 0;
+    const _home = costs?.mobileHome || 0;
+    const _allIn = allIn || 0;
+    const totalLent = loanBasisFlags
+      ? (loanBasisFlags.land ? _land : 0) + (loanBasisFlags.home ? _home : 0) + (loanBasisFlags.allIn ? _allIn : 0)
+      : _land + _home;
+    effectiveLoanAmount   = loanAmountOverride != null ? loanAmountOverride : totalLent;
     monthlyInterest       = effectiveLoanAmount * ((interestRate || 0) / 100) / 12;
     originationFee = originationFeeType === 'percentage'
       ? effectiveLoanAmount * ((originationFeePct || 0) / 100)
@@ -2505,9 +2513,10 @@ function calcDealNetProfit({
     servicingFee = servicingFeeType === 'percentage'
       ? effectiveLoanAmount * ((servicingFeePct || 0) / 100)
       : (servicingFeeFlat || 0);
-    const otherFees = Number(deal?.scenarioData?.drawFeeHm || 0)
-                    + Number(deal?.scenarioData?.underwritingFee || 0)
-                    + Number(deal?.scenarioData?.attorneyDocFee || 0);
+    const otherFees = (drawFeeHm      ?? Number(deal?.scenarioData?.drawFeeHm      || 0))
+                    + (underwritingFee ?? Number(deal?.scenarioData?.underwritingFee ?? 0))
+                    + (attorneyDocFee  ?? Number(deal?.scenarioData?.attorneyDocFee  || 0))
+                    + (appraisalFeeHm  ?? Number(deal?.scenarioData?.appraisalFeeHm  || 0));
     totalCostOfCapital = (monthlyInterest * effHoldMonths) + originationFee + servicingFee + otherFees;
   }
 
@@ -3409,6 +3418,8 @@ function DealDetailContent({ deal }) {
     originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType,  servicingFeePct,  servicingFeeFlat,
     loanAmountOverride, profitSharePct,
+    drawFeeHm, underwritingFee, attorneyDocFee, appraisalFeeHm,
+    loanBasisFlags,
   });
   const sellingCosts = _np.sellingCosts;
   const holdingCosts = _np.holdingCosts;
