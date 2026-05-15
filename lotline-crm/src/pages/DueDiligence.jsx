@@ -4,7 +4,8 @@ import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import LiveBadge from '../components/UI/LiveBadge';
-import { CheckCircle2, Calendar, User, ChevronDown, Search, Star, X } from 'lucide-react';
+import ContractorPicker from '../components/deal/ContractorPicker';
+import { CheckCircle2, Calendar, Search, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -64,7 +65,6 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
   const [status,     setStatus]     = useState(milestone?.status     || 'not_started');
   const [date,       setDate]       = useState(milestone?.date        || '');
   const [contractor, setContractor] = useState(milestone?.contractor  || '');
-  const [editingCont, setEditingCont] = useState(false);
 
   // Sync when parent data arrives (Supabase load / migration)
   useEffect(() => {
@@ -103,13 +103,6 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
     if (val) saveDate(val);
   };
 
-  const saveContractor = (val) => {
-    setContractor(val);
-    setEditingCont(false);
-    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
-    if (newStatus !== status) setStatus(newStatus);
-    onMilestoneChange(deal.id, column.key, { status: newStatus, date, contractor: val });
-  };
 
   return (
     <div
@@ -173,33 +166,11 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
       {/* Contractor */}
       {column.hasContractor && (
         <div className="mb-2" onClick={e => e.stopPropagation()}>
-          {contractor ? (
-            <button
-              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-              className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 rounded-lg px-2 py-1 w-full text-left"
-            >
-              <User size={9} className="flex-shrink-0" />
-              <span className="truncate">{contractor}</span>
-            </button>
-          ) : editingCont ? (
-            <input
-              autoFocus
-              type="text"
-              placeholder="Contractor name..."
-              className="text-[10px] border border-gray-300 rounded-lg px-2 py-1 w-full outline-none focus:border-blue-400"
-              onBlur={e => saveContractor(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveContractor(e.target.value); if (e.key === 'Escape') setEditingCont(false); }}
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <button
-              onClick={e => { e.stopPropagation(); setEditingCont(true); }}
-              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors"
-            >
-              <ChevronDown size={9} />
-              Add Contractor
-            </button>
-          )}
+          <ContractorPicker
+            dealId={deal.id}
+            stageKey={`dd_${column.key}_cont`}
+            contractorType={DD_CONTRACTOR_TYPE[column.key]}
+          />
         </div>
       )}
 
