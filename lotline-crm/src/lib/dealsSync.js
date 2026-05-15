@@ -591,39 +591,59 @@ export function subscribeToDeals(onUpdate, onDelete, opts = {}) {
   // Explicitly setting the token here eliminates that race.
   if (accessToken) supabase.realtime.setAuth(accessToken);
 
-  // Unique channel name per subscription instance — appending a random suffix
-  // prevents CHANNEL_ERROR caused by rapid effect re-runs (e.g. jvLoaded/activeOrgId
-  // changing on mount) creating a new subscription before the previous cleanup
-  // (supabase.removeChannel) completes and frees the channel name.
-  const channelName = `deals-realtime-${orgId || 'anon'}-${Math.random().toString(36).slice(2)}`;
-
   // No server-side filter — they cause CHANNEL_ERROR on postgres_changes subscriptions.
   // We filter by organization_id client-side instead (safe and reliable).
   const baseOpts = { schema: 'public', table: 'deals' };
+  const channelBaseName = `deals-realtime-${orgId || 'anon'}`;
 
-  onStatus?.('connecting');
+  let currentChannel = null;
+  let retryTimer = null;
+  let destroyed = false;
 
-  const channel = supabase
-    .channel(channelName)
-    .on('postgres_changes', { ...baseOpts, event: '*' }, payload => {
-      if (payload.eventType === 'DELETE') {
-        onDelete(String(payload.old.id));
-      } else {
-        // Client-side org filter — ignore events for other orgs
-        if (orgId && payload.new?.organization_id && payload.new.organization_id !== orgId) return;
-        onUpdate(rowToDeal(payload.new), payload.eventType);
-      }
-    })
-    .subscribe((status, err) => {
-      if (status === 'SUBSCRIBED') {
-        onStatus?.('live');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn('[dealsSync] Realtime subscription error:', status, '| err:', JSON.stringify(err), '| channel:', channelName);
-        onStatus?.('error');
-      } else if (status === 'CLOSED') {
-        onStatus?.('closed');
-      }
-    });
+  function subscribe() {
+    if (destroyed) return;
+    // Unique name per attempt — prevents stale-channel reuse on rapid re-runs.
+    const channelName = `${channelBaseName}-${Math.random().toString(36).slice(2)}`;
+    onStatus?.('connecting');
 
-  return () => { supabase.removeChannel(channel); };
+    currentChannel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { ...baseOpts, event: '*' }, payload => {
+        if (payload.eventType === 'DELETE') {
+          onDelete(String(payload.old.id));
+        } else {
+          // Client-side org filter — ignore events for other orgs
+          if (orgId && payload.new?.organization_id && payload.new.organization_id !== orgId) return;
+          onUpdate(rowToDeal(payload.new), payload.eventType);
+        }
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          onStatus?.('live');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[dealsSync] Realtime subscription error:', status, '| err:', JSON.stringify(err), '| channel:', channelName, '— retrying in 2s');
+          onStatus?.('error');
+          // Retry after 2 s. CHANNEL_ERROR is usually a JWT timing race on
+          // page load (INITIAL_SESSION fires after the subscription attempt).
+          // By the time the retry fires, supabase.js onAuthStateChange has set
+          // the correct access token on the Realtime client.
+          retryTimer = setTimeout(() => {
+            if (!destroyed) {
+              supabase.removeChannel(currentChannel);
+              subscribe();
+            }
+          }, 2000);
+        } else if (status === 'CLOSED') {
+          onStatus?.('closed');
+        }
+      });
+  }
+
+  subscribe();
+
+  return () => {
+    destroyed = true;
+    clearTimeout(retryTimer);
+    if (currentChannel) supabase.removeChannel(currentChannel);
+  };
 }
