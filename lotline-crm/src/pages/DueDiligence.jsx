@@ -156,7 +156,7 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
               type="date"
               value={date}
               onChange={handleDate}
-              onBlur={e => { e.stopPropagation(); if (!e.target.value && date) saveDate(''); }}
+              onBlur={e => { e.stopPropagation(); if (!e.target.value && milestone?.date) saveDate(''); }}
               className="text-[10px] text-gray-600 bg-transparent outline-none flex-1 min-w-0"
             />
           </div>
