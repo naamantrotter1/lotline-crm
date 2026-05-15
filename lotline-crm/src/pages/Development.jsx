@@ -323,27 +323,53 @@ export default function Development() {
   // Realtime: push milestone changes from other users into local state
   useEffect(() => {
     if (!supabase || !activeOrgId) return;
-    const channel = supabase
-      .channel(`dev_milestones_${activeOrgId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'deal_milestones',
-        filter: `organization_id=eq.${activeOrgId}`,
-      }, (payload) => {
-        const row = payload.new || payload.old;
-        if (!row?.milestone_key?.startsWith('dev_')) return;
-        const { deal_id, milestone_key, status } = row;
-        setMilestones(prev => ({
-          ...prev,
-          [deal_id]: {
-            ...(prev[deal_id] || {}),
-            [milestone_key]: status === 'complete',
-          },
-        }));
-      })
-      .subscribe();
-    return () => supabase.removeChannel(channel);
+
+    // Unique name prevents stale-channel reuse (see DueDiligence.jsx for detail).
+    const channelName = `dev_milestones_${activeOrgId}_${Math.random().toString(36).slice(2)}`;
+    let retryTimer = null;
+    let currentChannel = null;
+
+    function handleRow(payload) {
+      const row = payload.new || payload.old;
+      if (!row) return;
+      if (row.organization_id && row.organization_id !== activeOrgId) return;
+      if (!row.milestone_key?.startsWith('dev_')) return;
+      const { deal_id, milestone_key, status } = row;
+      setMilestones(prev => ({
+        ...prev,
+        [deal_id]: {
+          ...(prev[deal_id] || {}),
+          [milestone_key]: status === 'complete',
+        },
+      }));
+    }
+
+    function subscribe() {
+      currentChannel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'deal_milestones',
+          // No server-side filter — causes CHANNEL_ERROR on postgres_changes subscriptions.
+          // Filter org client-side instead (same pattern as dealsSync.js).
+        }, handleRow)
+        .subscribe((status, err) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[Development] dev_milestones realtime error:', status, err, '— retrying in 2s');
+            retryTimer = setTimeout(() => {
+              supabase.removeChannel(currentChannel);
+              subscribe();
+            }, 2000);
+          }
+        });
+    }
+
+    subscribe();
+    return () => {
+      clearTimeout(retryTimer);
+      if (currentChannel) supabase.removeChannel(currentChannel);
+    };
   }, [activeOrgId]);
 
   // Write a subtask toggle to Supabase + update local state optimistically
@@ -360,8 +386,8 @@ export default function Development() {
       deal_id:         sid,
       milestone_key:   milKey,
       status:          done ? 'complete' : 'not_started',
-      completed_date:  null,
-      notes:           null,
+      completed_at:    null,
+      note:            null,
     }, { onConflict: 'deal_id,milestone_key' });
   }, [activeOrgId]);
 
