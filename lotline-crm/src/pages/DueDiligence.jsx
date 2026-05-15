@@ -334,8 +334,9 @@ export default function DueDiligence() {
         for (const row of (data || [])) {
           if (!map[row.deal_id]) map[row.deal_id] = {};
           map[row.deal_id][row.milestone_key] = {
-            status:     row.status || 'not_started',
-            date:       row.completed_at || '',
+            status:     row.status === 'pending' ? 'not_started' : (row.status || 'not_started'),
+            // completed_at is timestamptz — slice to YYYY-MM-DD so <input type="date"> renders correctly
+            date:       row.completed_at ? row.completed_at.slice(0, 10) : '',
             contractor: row.note || '',
           };
         }
@@ -408,26 +409,29 @@ export default function DueDiligence() {
     if (!supabase || !activeOrgId) return;
 
     // 1. Save the DD milestone row
-    await supabase.from('deal_milestones').upsert({
-      organization_id: activeOrgId,
-      deal_id:         sid,
-      milestone_key:   colKey,
-      status:          data.status,
-      completed_at:    data.date || null,
-      note:            data.contractor || null,
-    }, { onConflict: 'deal_id,milestone_key' });
+    {
+      const { error } = await supabase.from('deal_milestones').upsert({
+        organization_id: activeOrgId,
+        deal_id:         sid,
+        milestone_key:   colKey,
+        status:          data.status,
+        completed_at:    data.date || null,
+        note:            data.contractor || null,
+      }, { onConflict: 'deal_id,milestone_key' });
+      if (error) console.error('[DD] upsertMilestone step1 error:', error.code, error.message, error.details, error.hint);
+    }
 
-    // 2. Mirror date to ImportantDates (writes eta on the ImportantDates key so
-    //    the deal sidebar updates in real-time without any extra subscription).
+    // 2. Mirror date to ImportantDates eta so the deal sidebar shows it immediately.
+    //    Only write eta — omit status so we never hit the legacy status check constraint.
     const impKey = DD_DATE_TO_IMPORTANT[colKey];
     if (impKey) {
-      await supabase.from('deal_milestones').upsert({
+      const { error } = await supabase.from('deal_milestones').upsert({
         organization_id: activeOrgId,
         deal_id:         sid,
         milestone_key:   impKey,
         eta:             data.date || null,
-        status:          data.date ? 'in_progress' : 'not_started',
       }, { onConflict: 'deal_id,milestone_key' });
+      if (error) console.error('[DD] upsertMilestone step2 (ImportantDates cross-write) error:', error.code, error.message, error.details, error.hint);
     }
 
     // 3. Link contractor name to Key Contacts in the deal sidebar.
