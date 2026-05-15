@@ -444,7 +444,12 @@ function FinancingScenarioPanel({
 
   const arvVal = arv ?? deal.arv ?? 0;
 
-  const totalLent = (costs.mobileHome || 0) + (costs.land || 0);
+  const _landCost  = costs.land      || 0;
+  const _homeCost  = costs.mobileHome || 0;
+  const _allInCost = _landCost + _homeCost;
+  const totalLent = (loanBasisFlags.land ? _landCost : 0)
+                  + (loanBasisFlags.home ? _homeCost : 0)
+                  + (loanBasisFlags.allIn ? _allInCost : 0);
   const effectiveLoanAmount = loanAmountOverride != null ? loanAmountOverride : totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
   const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
@@ -653,6 +658,31 @@ function FinancingScenarioPanel({
                 <span className="text-sm font-medium text-gray-800">${(costs.mobileHome || 0).toLocaleString()}</span>
               </div>
               <div className="py-2 col-span-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Include in Loan Amount</p>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { key: 'land',  text: 'Cost of Land',  value: _landCost  },
+                    { key: 'home',  text: 'Cost of Home',  value: _homeCost  },
+                    { key: 'allIn', text: 'All-In Cost',   value: _allInCost },
+                  ].map(({ key, text, value }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => setLoanBasisFlags(f => ({ ...f, [key]: !f[key] }))}
+                      className={`flex flex-col items-start px-3 py-1.5 rounded-lg border text-left transition-colors ${
+                        loanBasisFlags[key]
+                          ? 'bg-accent/10 border-accent text-accent'
+                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="text-[11px] font-semibold">{text}</span>
+                      <span className="text-[10px] opacity-70">${value.toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="py-2 col-span-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
                 <input
                   type="text"
@@ -666,9 +696,6 @@ function FinancingScenarioPanel({
                   className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
                   readOnly={readOnly}
                 />
-                {activeFinancing === 'Hard Money (Land + Home)' && (
-                  <p className="text-[10px] text-gray-400 mt-1">Land cost + home cost combined</p>
-                )}
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
@@ -2991,6 +3018,7 @@ function DealDetailContent({ deal }) {
   // Profit Split specific
   const [investorProfitSplitPct, setInvestorProfitSplitPct] = useState(sd.investorProfitSplitPct ?? 0);
   const [loanAmountOverride, setLoanAmountOverride] = useState(sd.loanAmountOverride ?? null);
+  const [loanBasisFlags, setLoanBasisFlags] = useState(sd.loanBasisFlags ?? { land: false, home: false, allIn: true });
   // Payment Due Day — drives schedule/calendar generator (HM Loan, HM L+H, HMCB, LoC).
   const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? 'same_as_closing');
   // Optional override: anchor the schedule on a user-picked first payment date.
@@ -3223,7 +3251,7 @@ function DealDetailContent({ deal }) {
         interestRate, originationFeeType, originationFeePct, originationFeeFlat,
         servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
         holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
-        loanAmountOverride, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
+        loanAmountOverride, loanBasisFlags, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
         // Committed Capital Partner
         ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
         ccpPrefReturnPct, ccpProfitSharePct, ccpPrefPaymentTiming,
