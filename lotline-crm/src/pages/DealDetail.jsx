@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
   CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon,
-  Landmark, Handshake, XCircle, Info,
+  Landmark, Handshake, XCircle, Info, Lock, LockOpen,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase, flushToSupabaseAsync } from '../lib/dealsSync';
@@ -447,7 +447,7 @@ function FinancingScenarioPanel({
 
   const _landCost  = costs.land      || 0;
   const _homeCost  = costs.mobileHome || 0;
-  const _allInCost = _landCost + _homeCost;
+  const _allInCost = COST_FIELDS.reduce((s, f) => s + (costs[f.key] || 0), 0);
   const totalLent = (loanBasisFlags.land ? _landCost : 0)
                   + (loanBasisFlags.home ? _homeCost : 0)
                   + (loanBasisFlags.allIn ? _allInCost : 0);
@@ -677,18 +677,34 @@ function FinancingScenarioPanel({
               </div>
               <div className="py-2 col-span-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Total Loan Amount</p>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={(() => { const v = loanAmountOverride != null ? loanAmountOverride : totalLent; return v ? `$${Number(v).toLocaleString()}` : ''; })()}
-                  onChange={e => {
-                    const raw = e.target.value.replace(/[^0-9]/g, '');
-                    setLoanAmountOverride(raw === '' ? null : Number(raw));
-                  }}
-                  onFocus={e => e.target.select()}
-                  className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 w-full"
-                  readOnly={readOnly}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={(() => { const v = loanAmountOverride != null ? loanAmountOverride : totalLent; return v ? `$${Number(v).toLocaleString()}` : ''; })()}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/[^0-9]/g, '');
+                      setLoanAmountOverride(raw === '' ? null : Number(raw));
+                    }}
+                    onFocus={e => e.target.select()}
+                    className="text-sm font-semibold text-accent bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30 flex-1"
+                    readOnly={readOnly || loanAmountOverride != null}
+                  />
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setLoanAmountOverride(loanAmountOverride != null ? null : effectiveLoanAmount)}
+                      className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 ${
+                        loanAmountOverride != null
+                          ? 'bg-accent/10 border-accent text-accent'
+                          : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
+                      }`}
+                      title={loanAmountOverride != null ? 'Unlock (auto-calculate)' : 'Lock amount'}
+                    >
+                      {loanAmountOverride != null ? <Lock size={13} /> : <LockOpen size={13} />}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
