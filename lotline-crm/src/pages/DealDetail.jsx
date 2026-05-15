@@ -348,6 +348,7 @@ function FinancingScenarioPanel({
   drawFeeHm, setDrawFeeHm,
   underwritingFee, setUnderwritingFee,
   attorneyDocFee, setAttorneyDocFee,
+  appraisalFeeHm, setAppraisalFeeHm,
   // Extension (HM)
   extensionAvailable, setExtensionAvailable,
   extensionFee, setExtensionFee,
@@ -454,7 +455,7 @@ function FinancingScenarioPanel({
                   + (loanBasisFlags.allIn ? _allInCost : 0);
   const effectiveLoanAmount = loanAmountOverride != null ? loanAmountOverride : totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
-  const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0);
+  const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0) + (appraisalFeeHm || 0);
   const monthlyInterestHm = effectiveLoanAmount * (interestRate / 100) / 12;
   const totalCostOfCapital = (monthlyInterestHm * holdPeriod) + totalClosingCosts;
 
@@ -784,6 +785,10 @@ function FinancingScenarioPanel({
                   <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Attorney Doc Prep Fee ($)</p>
                     <DecimalInput value={attorneyDocFee || 0} onChange={setAttorneyDocFee} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Appraisal Fee ($)</p>
+                    <DecimalInput value={appraisalFeeHm || 0} onChange={setAppraisalFeeHm} className={iCls} />
                   </div>
                 </>
               )}
@@ -3092,6 +3097,7 @@ function DealDetailContent({ deal }) {
   const [drawFeeHm, setDrawFeeHm] = useState(sd.drawFeeHm ?? 0);
   const [underwritingFee, setUnderwritingFee] = useState(sd.underwritingFee ?? 0);
   const [attorneyDocFee, setAttorneyDocFee] = useState(sd.attorneyDocFee ?? 0);
+  const [appraisalFeeHm, setAppraisalFeeHm] = useState(sd.appraisalFeeHm ?? 0);
   const [cashSource, setCashSource] = useState(sd.cashSource ?? '');
   const [investorReturnType, setInvestorReturnType] = useState(sd.investorReturnType ?? 'Interest Only');
   const [investorAssignmentStatus, setInvestorAssignmentStatus] = useState(sd.investorAssignmentStatus ?? 'Committed');
@@ -3279,7 +3285,7 @@ function DealDetailContent({ deal }) {
         hmcb: hmcbData,
         // Financing tab redesign fields
         lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
-        drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
+        drawFeeHm, underwritingFee, attorneyDocFee, appraisalFeeHm, cashSource,
         investorReturnType, investorAssignmentStatus,
         // Payment Due Day — drives schedule generator
         paymentDueDay,
@@ -3976,6 +3982,7 @@ function DealDetailContent({ deal }) {
             drawFeeHm={drawFeeHm} setDrawFeeHm={setDrawFeeHm}
             underwritingFee={underwritingFee} setUnderwritingFee={setUnderwritingFee}
             attorneyDocFee={attorneyDocFee} setAttorneyDocFee={setAttorneyDocFee}
+            appraisalFeeHm={appraisalFeeHm} setAppraisalFeeHm={setAppraisalFeeHm}
             extensionAvailable={extensionAvailable} setExtensionAvailable={setExtensionAvailable}
             extensionFee={extensionFee} setExtensionFee={setExtensionFee}
             extensionMonths={extensionMonths} setExtensionMonths={setExtensionMonths}
