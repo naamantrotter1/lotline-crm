@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Star, Search, ClipboardList, Hammer, CheckCircle2,
+  Star, Search, ClipboardList, Hammer, CheckCircle2, PauseCircle,
   Settings, List, Grid3x3, ChevronUp, ChevronDown, X,
   Download, Check, GripVertical, ArrowUpDown, Plus,
   User, Calendar, TreePine, SplitSquareHorizontal,
@@ -15,13 +15,14 @@ import { usePermissions } from '../hooks/usePermissions';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete'];
+const STAGES = ['Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold'];
 
 const STAGE_META = {
   'Contract Signed': { icon: ClipboardList, color: '#c2410c', bg: '#fff7ed', pill: 'bg-orange-100 text-orange-700' },
   'Due Diligence':   { icon: Search,        color: '#b45309', bg: '#fffbeb', pill: 'bg-yellow-100 text-yellow-700' },
   'Development':     { icon: Hammer,        color: '#15803d', bg: '#f0fdf4', pill: 'bg-green-100 text-green-700' },
   'Complete':        { icon: CheckCircle2,  color: '#6366f1', bg: '#eef2ff', pill: 'bg-indigo-100 text-indigo-700' },
+  'On Hold':         { icon: PauseCircle,   color: '#475569', bg: '#f8fafc', pill: 'bg-slate-100 text-slate-600' },
 };
 
 const DEAL_FIELDS = [
