@@ -86,13 +86,21 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
     onMilestoneChange(deal.id, column.key, { status: 'complete', date, contractor });
   };
 
+  const saveDate = (val) => {
+    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
+    if (newStatus !== status) setStatus(newStatus);
+    onMilestoneChange(deal.id, column.key, { status: newStatus, date: val, contractor });
+  };
+
   const handleDate = (e) => {
     e.stopPropagation();
     const val = e.target.value;
     setDate(val);
-    const newStatus = status === 'not_started' && val ? 'in_progress' : status;
-    if (newStatus !== status) setStatus(newStatus);
-    onMilestoneChange(deal.id, column.key, { status: newStatus, date: val, contractor });
+    // Only persist when the user has a complete date (non-empty).
+    // type="date" returns '' while the user is still filling in day/month/year
+    // segments — saving that empty value would clear the field mid-entry.
+    // Clearing is handled by onBlur instead.
+    if (val) saveDate(val);
   };
 
   const saveContractor = (val) => {
@@ -155,6 +163,7 @@ function DDTaskCard({ deal, column, milestone, dealMilestones, onMilestoneChange
               type="date"
               value={date}
               onChange={handleDate}
+              onBlur={e => { e.stopPropagation(); if (!e.target.value && date) saveDate(''); }}
               className="text-[10px] text-gray-600 bg-transparent outline-none flex-1 min-w-0"
             />
           </div>
@@ -279,8 +288,9 @@ export default function DueDiligence() {
         [deal_id]: {
           ...(prev[deal_id] || {}),
           [milestone_key]: {
-            status:     status || 'not_started',
-            date:       completed_at || '',
+            status:     status === 'pending' ? 'not_started' : (status || 'not_started'),
+            // completed_at is timestamptz — slice to YYYY-MM-DD for the date input
+            date:       completed_at ? completed_at.slice(0, 10) : '',
             contractor: note || '',
           },
         },
