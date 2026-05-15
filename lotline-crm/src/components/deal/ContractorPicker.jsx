@@ -8,7 +8,7 @@
  * Used inside DueDiligence.jsx and Development.jsx pipeline cards.
  */
 import { useState, useEffect, useRef } from 'react';
-import { User, ChevronDown, Plus, X } from 'lucide-react';
+import { User, Plus, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { fmtPhone } from '../../utils/format';
@@ -210,25 +210,17 @@ export default function ContractorPicker({ dealId, stageKey, contractorType, rea
       )}
 
       {selected ? (
-        <div className="border border-blue-200 rounded-lg px-2 py-1.5 bg-blue-50">
-          <div className="flex items-center justify-between gap-1">
-            <div className="flex items-center gap-1 flex-1 min-w-0">
-              <User size={9} className="text-blue-500 flex-shrink-0" />
-              <span className="text-[10px] font-semibold text-blue-700 truncate">
-                {displayName(selected)}
-              </span>
-            </div>
-            {!readOnly && (
-              <button onClick={clearContact}
-                className="text-blue-300 hover:text-red-500 transition-colors flex-shrink-0">
-                <X size={9} />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50">
+          <User size={9} className="text-gray-400 flex-shrink-0" />
+          <span
+            className="text-[10px] text-gray-700 truncate flex-1 cursor-pointer"
+            onClick={() => !readOnly && setOpen(v => !v)}
+          >
+            {displayName(selected)}
+          </span>
           {!readOnly && (
-            <button onClick={() => setOpen(v => !v)}
-              className="text-[9px] text-blue-500 hover:text-blue-700 mt-0.5 font-medium">
-              Change
+            <button onClick={clearContact} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
+              <X size={9} />
             </button>
           )}
         </div>
@@ -238,7 +230,7 @@ export default function ContractorPicker({ dealId, stageKey, contractorType, rea
           onClick={() => !readOnly && setOpen(v => !v)}
           className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg px-2 py-1 w-full transition-colors disabled:opacity-50"
         >
-          <ChevronDown size={9} />
+          <User size={9} />
           {contractorType ? `Add ${contractorType}` : 'Add Contractor'}
         </button>
       )}
