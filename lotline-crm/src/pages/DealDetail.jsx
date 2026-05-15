@@ -387,6 +387,7 @@ function FinancingScenarioPanel({
   // Payment Due Day — drives schedule/calendar dates for HM Loan, HM L+H, LoC
   paymentDueDay, setPaymentDueDay,
   firstPaymentDate, setFirstPaymentDate,
+  loanBasisFlags = { land: false, home: false, allIn: true }, setLoanBasisFlags,
   readOnly,
 }) {
   const [showScenarioInfo, setShowScenarioInfo] = useState(false);
@@ -3977,6 +3978,7 @@ function DealDetailContent({ deal }) {
             estimatedSaleDate={estimatedSaleDate} setEstimatedSaleDate={setEstimatedSaleDate}
             paymentDueDay={paymentDueDay} setPaymentDueDay={setPaymentDueDay}
             firstPaymentDate={firstPaymentDate} setFirstPaymentDate={setFirstPaymentDate}
+            loanBasisFlags={loanBasisFlags} setLoanBasisFlags={setLoanBasisFlags}
             cashSource={cashSource} setCashSource={setCashSource}
             investor={investor} setInvestor={setInvestor}
             investorList={supabaseInvestors.length ? supabaseInvestors : investorList}
