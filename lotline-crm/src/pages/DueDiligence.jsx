@@ -261,10 +261,13 @@ export default function DueDiligence() {
         event: '*',
         schema: 'public',
         table: 'deal_milestones',
-        filter: `organization_id=eq.${activeOrgId}`,
+        // No server-side filter — causes CHANNEL_ERROR on postgres_changes subscriptions.
+        // Filter org client-side instead (same pattern as dealsSync.js).
       }, (payload) => {
         const row = payload.new || payload.old;
-        if (!row || row.milestone_key?.startsWith('dev_')) return;
+        if (!row) return;
+        if (row.organization_id && row.organization_id !== activeOrgId) return;
+        if (row.milestone_key?.startsWith('dev_')) return;
         const { deal_id, milestone_key, status, completed_at, note } = row;
         setMilestones(prev => ({
           ...prev,
@@ -278,7 +281,10 @@ export default function DueDiligence() {
           },
         }));
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')
+          console.warn('[DueDiligence] dd_milestones realtime error:', status, err);
+      });
     return () => supabase.removeChannel(channel);
   }, [activeOrgId]);
 
