@@ -247,10 +247,46 @@ export default function DueDiligence() {
     })
   ), [ddDeals]);
 
+  // Stable key of sorted deal IDs — prevents re-fetching on unrelated deal field changes
+  const dealIdsKey = useMemo(() =>
+    ddDeals.map(d => String(d.id)).sort().join(','),
+  [ddDeals]);
+
+  // Realtime: push deal_milestones changes from any user into local state
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    const channel = supabase
+      .channel(`dd_milestones_${activeOrgId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'deal_milestones',
+        filter: `organization_id=eq.${activeOrgId}`,
+      }, (payload) => {
+        const row = payload.new || payload.old;
+        if (!row || row.milestone_key?.startsWith('dev_')) return;
+        const { deal_id, milestone_key, status, completed_date, notes } = row;
+        setMilestones(prev => ({
+          ...prev,
+          [deal_id]: {
+            ...(prev[deal_id] || {}),
+            [milestone_key]: {
+              status:     status || 'not_started',
+              date:       completed_date || '',
+              contractor: notes || '',
+            },
+          },
+        }));
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [activeOrgId]);
+
   // Load milestones from Supabase; migrate legacy localStorage data on first load
   useEffect(() => {
-    if (!ddDeals.length || !supabase || !activeOrgId) return;
-    const dealIds = ddDeals.map(d => String(d.id));
+    if (!dealIdsKey || !supabase || !activeOrgId) return;
+    const dealIds = dealIdsKey.split(',').filter(Boolean);
+    if (!dealIds.length) return;
 
     supabase
       .from('deal_milestones')
@@ -323,7 +359,7 @@ export default function DueDiligence() {
 
         setMilestones(map);
       });
-  }, [ddDeals, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dealIdsKey, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const upsertMilestone = useCallback(async (dealId, colKey, data) => {
     const sid = String(dealId);

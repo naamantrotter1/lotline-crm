@@ -1,6 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDeals } from '../lib/DealsContext';
+import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import LiveBadge from '../components/UI/LiveBadge';
 import { ChevronDown, ChevronUp, User, CheckSquare, Square, Phone, Mail, Building, FileText, Search, Star } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
@@ -83,28 +85,24 @@ const STAGE_COLORS = {
   'Development':     { color: '#2563eb', bg: '#dbeafe' },
 };
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
+// ── localStorage helpers (contractor info only) ───────────────────────────────
 const lsGet = (k)    => localStorage.getItem(k) || '';
 const lsSet = (k, v) => localStorage.setItem(k, v);
 
-function subtaskKey(dealId, colKey, subtaskIdx) {
-  return `dev_${dealId}_${colKey}_${subtaskIdx}`;
-}
 function contractorKey(dealId, colKey) {
   return `dev_${dealId}_${colKey}_cont`;
 }
-function isSubtaskDone(dealId, colKey, idx) {
-  return lsGet(subtaskKey(dealId, colKey, idx)) === '1';
+
+// milestone_key format stored in deal_milestones: dev_{colKey}_{subtaskIdx}
+function devMilKey(colKey, idx) { return `dev_${colKey}_${idx}`; }
+
+function isColCompleteFn(dealMilestones, col) {
+  return col.subtasks.every((_, i) => dealMilestones?.[devMilKey(col.key, i)] === true);
 }
-function setSubtaskDone(dealId, colKey, idx, done) {
-  lsSet(subtaskKey(dealId, colKey, idx), done ? '1' : '');
-}
-function isColComplete(dealId, col) {
-  return col.subtasks.every((_, i) => isSubtaskDone(dealId, col.key, i));
-}
-function getTotalDone(dealId) {
+
+function getTotalDoneFn(dealMilestones) {
   return COUNTED_COLUMNS.reduce((sum, col) =>
-    sum + col.subtasks.filter((_, i) => isSubtaskDone(dealId, col.key, i)).length, 0);
+    sum + col.subtasks.filter((_, i) => dealMilestones?.[devMilKey(col.key, i)] === true).length, 0);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,12 +123,12 @@ function formatClose(str) {
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
-function DevTaskCard({ deal, column, onUpdate }) {
+function DevTaskCard({ deal, column, dealMilestones, onToggle }) {
   const navigate = useNavigate();
 
-  const [checks, setChecks] = useState(() =>
-    column.subtasks.map((_, i) => isSubtaskDone(deal.id, column.key, i))
-  );
+  // checks derived from Supabase-backed milestones passed from parent
+  const checks = column.subtasks.map((_, i) => dealMilestones?.[devMilKey(column.key, i)] === true);
+
   const ck = contractorKey(deal.id, column.key);
   const [contExpanded, setContExpanded] = useState(false);
   const [contractor, setContractor] = useState(() => lsGet(ck));
@@ -142,18 +140,13 @@ function DevTaskCard({ deal, column, onUpdate }) {
   const allDone = checks.every(Boolean);
   if (allDone) return null;
 
-  const totalDone = getTotalDone(deal.id);
+  const totalDone = getTotalDoneFn(dealMilestones);
   const days = getDayCount(deal.contractDate);
   const inProgress = checks.some(Boolean);
 
   const toggle = (e, idx) => {
     e.stopPropagation();
-    const next = [...checks];
-    next[idx] = !next[idx];
-    setSubtaskDone(deal.id, column.key, idx, next[idx]);
-    setChecks(next);
-    if (next.every(Boolean)) onUpdate(); // disappear from column
-    else onUpdate();
+    onToggle(deal.id, column.key, idx, !checks[idx]);
   };
 
   const saveCont = (field, val) => {
@@ -260,10 +253,11 @@ function DevTaskCard({ deal, column, onUpdate }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Development() {
   const { deals, realtimeStatus } = useDeals();
-  const [tick, setTick] = useState(0);
+  const { activeOrgId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+  // milestones: { [dealId]: { 'dev_colKey_idx': boolean } }
+  const [milestones, setMilestones] = useState({});
 
   const filterSearch  = searchParams.get('q')       || '';
   const filterOwner   = searchParams.get('owner')   || '';
@@ -300,6 +294,76 @@ export default function Development() {
     if (!b.closeDate) return -1;
     return new Date(a.closeDate) - new Date(b.closeDate);
   }), [devDeals]);
+
+  // Stable key of sorted deal IDs — only changes when deals are added/removed
+  const dealIdsKey = useMemo(() =>
+    devDeals.map(d => String(d.id)).sort().join(','),
+  [devDeals]);
+
+  // Load milestones from Supabase whenever the set of deal IDs changes
+  useEffect(() => {
+    if (!dealIdsKey || !supabase || !activeOrgId) return;
+    const ids = dealIdsKey.split(',').filter(Boolean);
+    if (!ids.length) return;
+    supabase
+      .from('deal_milestones')
+      .select('deal_id, milestone_key, status')
+      .in('deal_id', ids)
+      .like('milestone_key', 'dev_%')
+      .then(({ data }) => {
+        const map = {};
+        for (const row of (data || [])) {
+          if (!map[row.deal_id]) map[row.deal_id] = {};
+          map[row.deal_id][row.milestone_key] = row.status === 'complete';
+        }
+        setMilestones(map);
+      });
+  }, [dealIdsKey, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Realtime: push milestone changes from other users into local state
+  useEffect(() => {
+    if (!supabase || !activeOrgId) return;
+    const channel = supabase
+      .channel(`dev_milestones_${activeOrgId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'deal_milestones',
+        filter: `organization_id=eq.${activeOrgId}`,
+      }, (payload) => {
+        const row = payload.new || payload.old;
+        if (!row?.milestone_key?.startsWith('dev_')) return;
+        const { deal_id, milestone_key, status } = row;
+        setMilestones(prev => ({
+          ...prev,
+          [deal_id]: {
+            ...(prev[deal_id] || {}),
+            [milestone_key]: status === 'complete',
+          },
+        }));
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [activeOrgId]);
+
+  // Write a subtask toggle to Supabase + update local state optimistically
+  const handleToggle = useCallback(async (dealId, colKey, idx, done) => {
+    const sid = String(dealId);
+    const milKey = devMilKey(colKey, idx);
+    setMilestones(prev => ({
+      ...prev,
+      [sid]: { ...(prev[sid] || {}), [milKey]: done },
+    }));
+    if (!supabase || !activeOrgId) return;
+    await supabase.from('deal_milestones').upsert({
+      organization_id: activeOrgId,
+      deal_id:         sid,
+      milestone_key:   milKey,
+      status:          done ? 'complete' : 'not_started',
+      completed_date:  null,
+      notes:           null,
+    }, { onConflict: 'deal_id,milestone_key' });
+  }, [activeOrgId]);
 
   return (
     <div className="space-y-0">
@@ -348,15 +412,16 @@ export default function Development() {
 
       {/* Kanban board */}
       <div
-        key={tick}
         className="flex gap-3 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 220px)' }}
       >
         {DEV_COLUMNS.map(col => {
           // Land Clearing: only show tagged deals; other columns: show all
           const colDeals = sortedDeals.filter(d => {
-            if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !isColComplete(d.id, col);
-            return !isColComplete(d.id, col);
+            const dm = milestones[String(d.id)] || {};
+            const done = isColCompleteFn(dm, col);
+            if (col.tagOnly) return (d.tags || []).includes('Land Clearing') && !done;
+            return !done;
           });
 
           return (
@@ -371,25 +436,21 @@ export default function Development() {
                 </span>
               </div>
 
-              {/* Cards grouped by stage */}
+              {/* Cards */}
               <div>
-                {(() => {
-                  if (colDeals.length === 0) {
-                    return (
-                      <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
-                        All tasks done ✓
-                      </div>
-                    );
-                  }
-                  return colDeals.map(deal => (
-                    <DevTaskCard
-                      key={`${deal.id}-${col.key}-${tick}`}
-                      deal={deal}
-                      column={col}
-                      onUpdate={forceUpdate}
-                    />
-                  ));
-                })()}
+                {colDeals.length === 0 ? (
+                  <div className="rounded-xl p-5 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 bg-white/50">
+                    All tasks done ✓
+                  </div>
+                ) : colDeals.map(deal => (
+                  <DevTaskCard
+                    key={`${deal.id}-${col.key}`}
+                    deal={deal}
+                    column={col}
+                    dealMilestones={milestones[String(deal.id)] || {}}
+                    onToggle={handleToggle}
+                  />
+                ))}
               </div>
             </div>
           );
