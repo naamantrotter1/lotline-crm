@@ -49,10 +49,20 @@ export default async function handler(req, res) {
     const profileById = Object.fromEntries(profiles.map(p => [p.id, p]));
     const orgById     = Object.fromEntries(orgs.map(o     => [o.id, o]));
 
+    // Fetch which posts the caller has already liked (single batch query)
+    const postIds = posts.map(p => p.id);
+    const likeRes = postIds.length
+      ? await fetch(
+          `${url}/rest/v1/university_forum_likes?user_id=eq.${user.id}&post_id=in.(${postIds.join(',')})&select=post_id`,
+          { headers: { apikey: anon, Authorization: userAuth } })
+      : { ok: true, json: async () => [] };
+    const likedIds = new Set((likeRes.ok ? await likeRes.json() : []).map(l => l.post_id));
+
     const enriched = posts.map(p => ({
       ...p,
       author_profile: profileById[p.author_user_id] || null,
       author_org:     orgById[p.author_org_id]     || null,
+      liked_by_me:    likedIds.has(p.id),
     }));
     return res.json({ posts: enriched });
   }
