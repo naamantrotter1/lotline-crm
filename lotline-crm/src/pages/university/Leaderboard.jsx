@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Trophy, HelpCircle, X } from 'lucide-react';
 import { fetchLeaderboard, refreshLeaderboard } from '../../lib/university';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 
 const WINDOWS = [
   { id: '7d',  label: 'Last 7 days' },
@@ -148,6 +150,7 @@ function LeaderRow({ r, pinned = false }) {
 }
 
 export default function Leaderboard() {
+  const { profile } = useAuth();
   const [win, setWin]           = useState('7d');
   const [rows, setRows]         = useState([]);
   const [me, setMe]             = useState(null);
@@ -155,23 +158,36 @@ export default function Leaderboard() {
   const [error, setError]       = useState(null);
   const [showModal, setShowModal] = useState(false);
 
+  const reload = async (window_) => {
+    try {
+      setLoading(true);
+      await refreshLeaderboard();
+      const { rows } = await fetchLeaderboard(window_, 100);
+      const top = rows.filter(r => r.rank <= 100);
+      const myRow = rows.find(r => r.is_me);
+      setRows(top);
+      setMe(myRow);
+    } catch (e) { setError(e.message); }
+    finally    { setLoading(false); }
+  };
+
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        await refreshLeaderboard();
-        const { rows } = await fetchLeaderboard(win, 100);
-        if (!alive) return;
-        const top = rows.filter(r => r.rank <= 100);
-        const myRow = rows.find(r => r.is_me);
-        setRows(top);
-        setMe(myRow);
-      } catch (e) { if (alive) setError(e.message); }
-      finally    { if (alive) setLoading(false); }
-    })();
+    reload(win).catch(() => {}).finally(() => { if (!alive) return; });
     return () => { alive = false; };
-  }, [win]);
+  }, [win]); // eslint-disable-line
+
+  // Realtime — re-fetch when any points event changes for this user
+  useEffect(() => {
+    if (!profile?.id) return;
+    const ch = supabase
+      .channel('leaderboard_my_points')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'university_points_events',
+          filter: `user_id=eq.${profile.id}` },
+          () => { reload(win); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [profile?.id, win]); // eslint-disable-line
 
   const showMyPin = me && !rows.find(r => r.is_me);
 

@@ -49,6 +49,18 @@ export default function Feed() {
     return () => { supabase.removeChannel(ch); };
   }, [activeCat]); // eslint-disable-line
 
+  // Realtime — update points widget whenever a points event is added/removed for this user
+  useEffect(() => {
+    if (!profile?.id) return;
+    const ch = supabase
+      .channel('university_my_points')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'university_points_events',
+          filter: `user_id=eq.${profile.id}` },
+          () => { loadRail(); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [profile?.id]); // eslint-disable-line
+
   const defaultCategoryId = useMemo(() => {
     if (activeCat !== 'all') return cats.find(c => c.slug === activeCat)?.id;
     return cats[0]?.id;
@@ -85,7 +97,7 @@ export default function Feed() {
           <ForumComposer
             categories={cats}
             defaultCategoryId={defaultCategoryId}
-            onPosted={() => { loadFeed(activeCat); refreshLeaderboard(); }}
+            onPosted={async () => { loadFeed(activeCat); await refreshLeaderboard(); loadRail(); }}
           />
           {loading && <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-gray-300" /></div>}
           {!loading && error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-xl">{error}</div>}
