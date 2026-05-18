@@ -10,7 +10,7 @@ export default function CourseCard({ course, locked }) {
   const cover = course.cover_image_url;
   return (
     <Link
-      to={`/university/${course.slug}`}
+      to={`/university/classroom/${course.slug}`}
       className={`group block rounded-2xl border border-gray-100 bg-white overflow-hidden transition-shadow ${locked ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}
     >
       <div className="aspect-[16/9] bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-5xl relative">

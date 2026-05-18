@@ -231,3 +231,199 @@ export async function deleteResource(id) {
   const { error } = await supabase.from('university_lesson_resources').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ═══ Phase 2 — Forum / Events / Leaderboard ════════════════════════════════
+
+// Forum
+export async function fetchFeed(category = 'all') {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/feed?category=${encodeURIComponent(category)}`, { headers: h });
+  if (!r.ok) throw new Error((await r.json()).error || 'feed fetch failed');
+  const { posts } = await r.json();
+  return posts;
+}
+
+export async function fetchCategories() {
+  const { data, error } = await supabase
+    .from('university_forum_categories')
+    .select('*')
+    .order('sort_order');
+  if (error) throw error;
+  return data;
+}
+
+export async function createPost({ category_id, title, body, image_urls }) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/feed`, {
+    method: 'POST',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category_id, title, body, image_urls }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'post failed');
+  const { post } = await r.json();
+  return post;
+}
+
+export async function fetchPostDetail(id) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/post?id=${encodeURIComponent(id)}`, { headers: h });
+  if (!r.ok) throw new Error((await r.json()).error || 'post fetch failed');
+  return r.json();
+}
+
+export async function patchPost(id, patch) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/post?id=${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'edit failed');
+  return (await r.json()).post;
+}
+
+export async function deletePost(id) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/post?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE', headers: h,
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'delete failed');
+}
+
+export async function postComment({ post_id, body, parent_comment_id }) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/comment`, {
+    method: 'POST',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post_id, body, parent_comment_id }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'comment failed');
+  return (await r.json()).comment;
+}
+
+export async function deleteComment(id) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/comment?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE', headers: h,
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'delete failed');
+}
+
+export async function toggleLike({ post_id, comment_id, liked }) {
+  const h = await authHeaders();
+  const method = liked ? 'DELETE' : 'POST';
+  const url = liked
+    ? `${PROXY}/api/university/like?${post_id ? 'post_id=' + post_id : 'comment_id=' + comment_id}`
+    : `${PROXY}/api/university/like`;
+  const r = await fetch(url, {
+    method,
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: liked ? undefined : JSON.stringify({ post_id: post_id || null, comment_id: comment_id || null }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'like failed');
+  return r.json();
+}
+
+// Events
+export async function fetchEvents(range = 'upcoming') {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/events?range=${range}`, { headers: h });
+  if (!r.ok) throw new Error((await r.json()).error || 'events fetch failed');
+  return (await r.json()).events;
+}
+
+export async function fetchEvent(id) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/event?id=${encodeURIComponent(id)}`, { headers: h });
+  if (!r.ok) throw new Error((await r.json()).error || 'event fetch failed');
+  return (await r.json()).event;
+}
+
+export async function rsvpEvent(event_id, state) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/event`, {
+    method: 'POST',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event_id, state }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'rsvp failed');
+}
+
+export async function createEvent(partial) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/events`, {
+    method: 'POST',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify(partial),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'create event failed');
+  return (await r.json()).event;
+}
+
+export async function patchEvent(id, patch) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/event?id=${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...h, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'patch event failed');
+  return (await r.json()).event;
+}
+
+export async function deleteEvent(id) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/event?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE', headers: h,
+  });
+  if (!r.ok) throw new Error((await r.json()).error || 'delete failed');
+}
+
+// Leaderboard
+export async function fetchLeaderboard(window_ = '7d', limit = 100) {
+  const h = await authHeaders();
+  const r = await fetch(`${PROXY}/api/university/leaderboard?window=${window_}&limit=${limit}`, { headers: h });
+  if (!r.ok) throw new Error((await r.json()).error || 'leaderboard fetch failed');
+  return r.json();
+}
+
+export async function refreshLeaderboard() {
+  await fetch(`${PROXY}/api/university/refresh-leaderboard`, { method: 'POST' });
+}
+
+// Admin: forum moderation
+export async function adminListPosts({ limit = 100 } = {}) {
+  const { data, error } = await supabase
+    .from('university_forum_posts')
+    .select('*, category:university_forum_categories(slug,name), author_profile:profiles!author_user_id(id,first_name,last_name,avatar_url)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+export async function adminPatchPost(id, patch) {
+  const { data, error } = await supabase
+    .from('university_forum_posts')
+    .update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Forum categories CRUD (admin)
+export async function addCategory({ slug, name, description, sort_order }) {
+  const { data, error } = await supabase
+    .from('university_forum_categories')
+    .insert({ slug, name, description: description || null, sort_order: sort_order ?? 0 })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function patchCategory(id, patch) {
+  const { data, error } = await supabase
+    .from('university_forum_categories')
+    .update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}

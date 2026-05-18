@@ -60,8 +60,8 @@ export default function CourseDetail() {
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
       <div className="max-w-6xl mx-auto p-6">
-        <Link to="/university" className="inline-flex items-center text-xs text-gray-500 hover:text-gray-700 mb-4">
-          <ChevronLeft size={13} /> Back to University
+        <Link to="/university/classroom" className="inline-flex items-center text-xs text-gray-500 hover:text-gray-700 mb-4">
+          <ChevronLeft size={13} /> Back to Classroom
         </Link>
 
         {/* Header */}
@@ -81,7 +81,7 @@ export default function CourseDetail() {
             )}
             <div className="flex items-center gap-4 mt-5">
               <button
-                onClick={() => resumeLesson && navigate(`/university/${course.slug}/${resumeLesson.slug}`)}
+                onClick={() => resumeLesson && navigate(`/university/classroom/${course.slug}/${resumeLesson.slug}`)}
                 disabled={!resumeLesson}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50"
               >
@@ -130,7 +130,7 @@ export default function CourseDetail() {
                         return (
                           <li key={l.id}>
                             <Link
-                              to={`/university/${course.slug}/${l.slug}`}
+                              to={`/university/classroom/${course.slug}/${l.slug}`}
                               className="flex items-center gap-3 px-5 py-3 hover:bg-orange-50/30"
                             >
                               {completed

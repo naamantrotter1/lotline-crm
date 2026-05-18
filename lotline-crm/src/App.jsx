@@ -144,6 +144,14 @@ import CourseDetail from './pages/university/CourseDetail';
 import LessonPlayer from './pages/university/LessonPlayer';
 import UniversityCourseList from './pages/university/admin/CourseList';
 import UniversityCourseEditor from './pages/university/admin/CourseEditor';
+import UniversityLayout from './layouts/UniversityLayout';
+import Feed from './pages/university/Feed';
+import PostDetail from './pages/university/PostDetail';
+import Events from './pages/university/Events';
+import EventDetail from './pages/university/EventDetail';
+import Leaderboard from './pages/university/Leaderboard';
+import EventsManager from './pages/university/admin/EventsManager';
+import ForumModeration from './pages/university/admin/ForumModeration';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
  *  "/" always shows the marketing landing page for all users (authenticated or not).
@@ -412,11 +420,23 @@ export default function App() {
               <Route path="ai"                  element={<AgentRoute path="ai"><AiAssistant /></AgentRoute>} />
               <Route path="property-data"       element={<AgentRoute path="property-data"><PropertyData /></AgentRoute>} />
               {/* ── University ──────────────────────────────────────────── */}
-              <Route path="university"                          element={<UniversityRoute><Classroom /></UniversityRoute>} />
+              {/* Top-nav layout: lands on Feed by default */}
+              <Route path="university" element={<UniversityRoute><UniversityLayout /></UniversityRoute>}>
+                <Route index               element={<Navigate to="/university/feed" replace />} />
+                <Route path="feed"         element={<Feed />} />
+                <Route path="feed/post/:id" element={<PostDetail />} />
+                <Route path="classroom"    element={<Classroom />} />
+                <Route path="events"       element={<Events />} />
+                <Route path="events/:id"   element={<EventDetail />} />
+                <Route path="leaderboard"  element={<Leaderboard />} />
+              </Route>
+              {/* Player + admin pages keep their own full-bleed layouts */}
               <Route path="university/admin"                    element={<UniversityRoute><UniversityAdminRoute><UniversityCourseList /></UniversityAdminRoute></UniversityRoute>} />
               <Route path="university/admin/courses/:id"        element={<UniversityRoute><UniversityAdminRoute><UniversityCourseEditor /></UniversityAdminRoute></UniversityRoute>} />
-              <Route path="university/:courseSlug"              element={<UniversityRoute><CourseDetail /></UniversityRoute>} />
-              <Route path="university/:courseSlug/:lessonSlug"  element={<UniversityRoute><LessonPlayer /></UniversityRoute>} />
+              <Route path="university/admin/events"             element={<UniversityRoute><UniversityAdminRoute><EventsManager /></UniversityAdminRoute></UniversityRoute>} />
+              <Route path="university/admin/forum"              element={<UniversityRoute><UniversityAdminRoute><ForumModeration /></UniversityAdminRoute></UniversityRoute>} />
+              <Route path="university/classroom/:courseSlug"              element={<UniversityRoute><CourseDetail /></UniversityRoute>} />
+              <Route path="university/classroom/:courseSlug/:lessonSlug"  element={<UniversityRoute><LessonPlayer /></UniversityRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}

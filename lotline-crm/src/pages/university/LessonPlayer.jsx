@@ -114,7 +114,7 @@ export default function LessonPlayer() {
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
       <div className="max-w-5xl mx-auto p-6">
-        <Link to={`/university/${courseSlug}`} className="inline-flex items-center text-xs text-gray-500 hover:text-gray-700 mb-3">
+        <Link to={`/university/classroom/${courseSlug}`} className="inline-flex items-center text-xs text-gray-500 hover:text-gray-700 mb-3">
           <ChevronLeft size={13} /> {course.title}
         </Link>
 
@@ -167,14 +167,14 @@ export default function LessonPlayer() {
         <div className="flex items-center justify-between">
           <button
             disabled={!prev}
-            onClick={() => prev && navigate(`/university/${courseSlug}/${prev.slug}`)}
+            onClick={() => prev && navigate(`/university/classroom/${courseSlug}/${prev.slug}`)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 disabled:opacity-40 hover:border-accent/40"
           >
             <ChevronLeft size={13} /> Previous
           </button>
           <button
             disabled={!next}
-            onClick={() => next && navigate(`/university/${courseSlug}/${next.slug}`)}
+            onClick={() => next && navigate(`/university/classroom/${courseSlug}/${next.slug}`)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 disabled:opacity-40 hover:border-accent/40"
           >
             Next <ChevronRight size={13} />
