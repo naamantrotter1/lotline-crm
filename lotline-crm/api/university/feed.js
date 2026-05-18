@@ -1,8 +1,10 @@
 // GET  /api/university/feed?category=<slug>
 // POST /api/university/feed   { category_id, title?, body, image_urls? }
 //
-// Read uses caller JWT so RLS filters posts. Write goes through PostgREST as
-// the caller so the "posts: author insert" RLS check runs.
+// PostgREST embed-via-FK doesn't reach profiles from university_forum_posts
+// (the FK on author_user_id points to auth.users, not profiles), so we fetch
+// the post rows first, then fan out one extra query each for profiles + orgs
+// and merge in code. Categories embed cleanly because their FK is direct.
 import { getCallerUser, unauthorized, getServiceUrl } from '../_lib/supabaseAuth.js';
 
 export default async function handler(req, res) {
@@ -15,14 +17,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const category = req.query?.category || '';
     let q = `${url}/rest/v1/university_forum_posts`
-          + `?select=*,category:university_forum_categories(slug,name),`
-          +         `author_profile:profiles!author_user_id(id,first_name,last_name,avatar_url),`
-          +         `author_org:organizations!author_org_id(name,is_university_publisher)`
+          + `?select=*,category:university_forum_categories(slug,name)`
           + `&deleted_at=is.null`
           + `&order=is_pinned.desc,last_activity_at.desc`
           + `&limit=50`;
     if (category && category !== 'all') {
-      // Resolve slug → id, then filter
       const catRes = await fetch(`${url}/rest/v1/university_forum_categories?select=id&slug=eq.${encodeURIComponent(category)}&limit=1`,
         { headers: { apikey: anon, Authorization: userAuth } });
       const cats = await catRes.json();
@@ -30,14 +29,38 @@ export default async function handler(req, res) {
     }
     const r = await fetch(q, { headers: { apikey: anon, Authorization: userAuth } });
     if (!r.ok) return res.status(502).json({ error: 'feed select failed', detail: (await r.text()).slice(0, 200) });
-    return res.json({ posts: await r.json() });
+    const posts = await r.json();
+
+    // Fan out profile + org lookups
+    const userIds = [...new Set(posts.map(p => p.author_user_id).filter(Boolean))];
+    const orgIds  = [...new Set(posts.map(p => p.author_org_id ).filter(Boolean))];
+    const [profilesRes, orgsRes] = await Promise.all([
+      userIds.length
+        ? fetch(`${url}/rest/v1/profiles?select=id,first_name,last_name,avatar_url&id=in.(${userIds.join(',')})`,
+            { headers: { apikey: anon, Authorization: userAuth } })
+        : Promise.resolve({ ok: true, json: () => [] }),
+      orgIds.length
+        ? fetch(`${url}/rest/v1/organizations?select=id,name,is_university_publisher&id=in.(${orgIds.join(',')})`,
+            { headers: { apikey: anon, Authorization: userAuth } })
+        : Promise.resolve({ ok: true, json: () => [] }),
+    ]);
+    const profiles = profilesRes.ok ? await profilesRes.json() : [];
+    const orgs     = orgsRes.ok     ? await orgsRes.json()     : [];
+    const profileById = Object.fromEntries(profiles.map(p => [p.id, p]));
+    const orgById     = Object.fromEntries(orgs.map(o     => [o.id, o]));
+
+    const enriched = posts.map(p => ({
+      ...p,
+      author_profile: profileById[p.author_user_id] || null,
+      author_org:     orgById[p.author_org_id]     || null,
+    }));
+    return res.json({ posts: enriched });
   }
 
   if (req.method === 'POST') {
     const b = req.body || {};
     if (!b.category_id || !b.body) return res.status(400).json({ error: 'category_id and body required' });
 
-    // Resolve author_org_id from caller's profile (server-side, never trust client)
     const profRes = await fetch(`${url}/rest/v1/profiles?select=active_organization_id&id=eq.${user.id}&limit=1`,
       { headers: { apikey: anon, Authorization: userAuth } });
     const prof = (await profRes.json())[0];
