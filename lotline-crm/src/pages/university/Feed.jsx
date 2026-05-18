@@ -26,6 +26,7 @@ export default function Feed() {
   };
   const loadRail = async () => {
     try {
+      await refreshLeaderboard();
       const { rows } = await fetchLeaderboard('7d', 100);
       const me = rows.find(r => r.is_me);
       setMyRank(me || null);
@@ -97,7 +98,7 @@ export default function Feed() {
           <ForumComposer
             categories={cats}
             defaultCategoryId={defaultCategoryId}
-            onPosted={async () => { loadFeed(activeCat); await refreshLeaderboard(); loadRail(); }}
+            onPosted={() => { loadFeed(activeCat); loadRail(); }}
           />
           {loading && <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-gray-300" /></div>}
           {!loading && error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-xl">{error}</div>}
