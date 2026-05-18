@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { fetchFeed, fetchCategories, fetchLeaderboard, fetchEvents } from '../../lib/university';
+import { fetchFeed, fetchCategories, fetchLeaderboard, fetchEvents, refreshLeaderboard } from '../../lib/university';
 import { supabase } from '../../lib/supabase';
 import PostCard from '../../components/university/PostCard';
 import ForumComposer from '../../components/university/ForumComposer';
@@ -85,7 +85,7 @@ export default function Feed() {
           <ForumComposer
             categories={cats}
             defaultCategoryId={defaultCategoryId}
-            onPosted={() => loadFeed(activeCat)}
+            onPosted={() => { loadFeed(activeCat); refreshLeaderboard(); }}
           />
           {loading && <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-gray-300" /></div>}
           {!loading && error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-xl">{error}</div>}

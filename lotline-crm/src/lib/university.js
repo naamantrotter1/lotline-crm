@@ -388,7 +388,9 @@ export async function fetchLeaderboard(window_ = '7d', limit = 100) {
 }
 
 export async function refreshLeaderboard() {
-  await fetch(`${PROXY}/api/university/refresh-leaderboard`, { method: 'POST' });
+  // Call the SECURITY DEFINER RPC directly — no service-role key needed.
+  // Silently swallow errors so the leaderboard still loads on failure.
+  try { await supabase.rpc('refresh_university_leaderboard'); } catch { /* noop */ }
 }
 
 // Admin: forum moderation
