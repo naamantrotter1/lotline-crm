@@ -4,7 +4,7 @@ import {
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, HardHat, Archive,
   Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare, Calendar,
-  FileSignature, ClipboardList, GitMerge, Sparkles, Database,
+  FileSignature, ClipboardList, GitMerge, Sparkles, Database, GraduationCap,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../lib/AuthContext';
@@ -52,10 +52,11 @@ const BASE_NAV_SECTIONS = [
       { icon: Landmark,   label: 'Capital & Partnerships', to: '/lending',                    hubOnly: true    },
       { icon: DollarSign, label: 'My Submissions',         to: '/lending/my-submissions',     nonHubOnly: true },
       { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures',    jvHubOnly: true  },
-      { icon: Calculator, label: 'Deal Calculator',        to: '/calculator'      },
-      { icon: Building,   label: 'Home Models',            to: '/home-models'     },
-      { icon: HardHat,    label: 'Contractor Database',    to: '/contractors'     },
-      { icon: Archive,    label: 'Archived Deals',         to: '/archived'        },
+      { icon: Calculator,    label: 'Deal Calculator',        to: '/calculator'      },
+      { icon: Building,      label: 'Home Models',            to: '/home-models'     },
+      { icon: HardHat,       label: 'Contractor Database',    to: '/contractors'     },
+      { icon: GraduationCap, label: 'University',             to: '/university'      },
+      { icon: Archive,       label: 'Archived Deals',         to: '/archived'        },
     ],
   },
 ];

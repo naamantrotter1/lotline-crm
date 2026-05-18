@@ -138,6 +138,12 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CreateAccount from './pages/CreateAccount';
 import { LendingHubRoute, LendingSubmitterRoute } from './lib/lendingRouteGuards';
+import { UniversityRoute, UniversityAdminRoute } from './lib/universityRouteGuards';
+import Classroom from './pages/university/Classroom';
+import CourseDetail from './pages/university/CourseDetail';
+import LessonPlayer from './pages/university/LessonPlayer';
+import UniversityCourseList from './pages/university/admin/CourseList';
+import UniversityCourseEditor from './pages/university/admin/CourseEditor';
 
 /** Redirects to /login if not authenticated; shows spinner while loading.
  *  "/" always shows the marketing landing page for all users (authenticated or not).
@@ -405,6 +411,12 @@ export default function App() {
               <Route path="dedupe"              element={<AgentRoute path="dedupe"><Dedupe /></AgentRoute>} />
               <Route path="ai"                  element={<AgentRoute path="ai"><AiAssistant /></AgentRoute>} />
               <Route path="property-data"       element={<AgentRoute path="property-data"><PropertyData /></AgentRoute>} />
+              {/* ── University ──────────────────────────────────────────── */}
+              <Route path="university"                          element={<UniversityRoute><Classroom /></UniversityRoute>} />
+              <Route path="university/admin"                    element={<UniversityRoute><UniversityAdminRoute><UniversityCourseList /></UniversityAdminRoute></UniversityRoute>} />
+              <Route path="university/admin/courses/:id"        element={<UniversityRoute><UniversityAdminRoute><UniversityCourseEditor /></UniversityAdminRoute></UniversityRoute>} />
+              <Route path="university/:courseSlug"              element={<UniversityRoute><CourseDetail /></UniversityRoute>} />
+              <Route path="university/:courseSlug/:lessonSlug"  element={<UniversityRoute><LessonPlayer /></UniversityRoute>} />
               <Route path="settings"             element={<AgentRoute path="settings"><Settings /></AgentRoute>} />
               <Route path="settings/joint-ventures" element={<AgentRoute path="settings/joint-ventures"><JointVentures /></AgentRoute>} />
               {/* Admin-only route */}

@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const [orgSeatLimit, setOrgSeatLimit]   = useState(null);   // organizations.seat_limit
   const [orgFeatureFlags, setOrgFeatureFlags] = useState({}); // organizations.feature_flags
   const [orgIsLendingHub, setOrgIsLendingHub] = useState(false); // organizations.is_lending_hub
+  const [orgIsUniversityPublisher, setOrgIsUniversityPublisher] = useState(false); // organizations.is_university_publisher
   const [investorRecord, setInvestorRecord] = useState(null); // { id, name, ... } for investor-role users
   const [loading, setLoading]             = useState(true);
   // Operator impersonation: { investor, logId }
@@ -49,7 +50,7 @@ export function AuthProvider({ children }) {
           const [orgResult, memResult] = await Promise.all([
             supabase
               .from('organizations')
-              .select('slug, plan, seat_limit, feature_flags, is_lending_hub')
+              .select('slug, plan, seat_limit, feature_flags, is_lending_hub, is_university_publisher')
               .eq('id', orgId)
               .single(),
             supabase
@@ -85,7 +86,7 @@ export function AuthProvider({ children }) {
               setProfile(prev => ({ ...prev, active_organization_id: fallbackOrgId }));
               const { data: fallbackOrg } = await supabase
                 .from('organizations')
-                .select('slug, plan, seat_limit, feature_flags, is_lending_hub')
+                .select('slug, plan, seat_limit, feature_flags, is_lending_hub, is_university_publisher')
                 .eq('id', fallbackOrgId)
                 .single();
               org   = fallbackOrg;
@@ -101,6 +102,7 @@ export function AuthProvider({ children }) {
           setOrgSeatLimit(org?.seat_limit ?? null);
           setOrgFeatureFlags(org?.feature_flags ?? {});
           setOrgIsLendingHub(org?.is_lending_hub ?? false);
+          setOrgIsUniversityPublisher(org?.is_university_publisher ?? false);
           setOrgRole(memRole);
         } else {
           setOrgSlug(null);
@@ -108,6 +110,7 @@ export function AuthProvider({ children }) {
           setOrgPlan(null);
           setOrgSeatLimit(null);
           setOrgIsLendingHub(false);
+          setOrgIsUniversityPublisher(false);
         }
 
         // If investor role, resolve their linked investor record using the
@@ -154,6 +157,7 @@ export function AuthProvider({ children }) {
           setOrgPlan(null);
           setOrgSeatLimit(null);
           setOrgIsLendingHub(false);
+          setOrgIsUniversityPublisher(false);
           setInvestorRecord(null);
           setImpersonating(null);
           setLoading(false);
@@ -204,6 +208,7 @@ export function AuthProvider({ children }) {
         orgSeatLimit,     // organizations.seat_limit: number|null
         orgFeatureFlags,  // organizations.feature_flags JSONB: { 'cost_breakdown.three_column': bool }
         orgIsLendingHub,  // organizations.is_lending_hub: true only for LotLine's hub org
+        orgIsUniversityPublisher, // organizations.is_university_publisher: can author courses
         /** feature flag check: hasFlag('cost_breakdown.three_column') → boolean */
         hasFlag: (key) => !!(orgFeatureFlags?.[key]),
         /** capability check: can(cap) → boolean */

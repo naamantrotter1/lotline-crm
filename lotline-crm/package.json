@@ -19,6 +19,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@xyflow/react": "^12.10.2",
     "autoprefixer": "^10.4.27",
+    "hls.js": "^1.6.16",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
