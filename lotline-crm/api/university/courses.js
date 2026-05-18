@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   const r = await fetch(
-    `${url}/rest/v1/university_courses?select=*&order=sort_order.asc,title.asc`,
+    `${url}/rest/v1/university_courses?select=*&status=eq.published&order=sort_order.asc,title.asc`,
     { headers: { apikey: anon, Authorization: userAuth } },
   );
   if (!r.ok) return res.status(502).json({ error: 'select failed' });

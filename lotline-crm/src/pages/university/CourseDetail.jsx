@@ -33,7 +33,7 @@ export default function CourseDetail() {
         setLoading(true);
         const c = await fetchCourseBySlug(courseSlug);
         if (!alive) return;
-        if (!c) { setError('Course not found'); return; }
+        if (!c) { navigate('/university/classroom', { replace: true }); return; }
         setCourse(c);
         const p = await fetchMyProgressForCourse(c.id);
         if (alive) setProgress(p);
