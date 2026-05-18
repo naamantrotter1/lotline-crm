@@ -266,7 +266,7 @@ const defaultValues = {
   electrical: 2500,
   plumbingConnection: 1750,
   septicConnection: 1750,
-  underpinning: 4500,
+  underpinning: 4000,
   driveway: 1200,
   landscaping: 2500,
   decks: 4200,
