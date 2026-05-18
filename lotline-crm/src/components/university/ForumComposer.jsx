@@ -1,19 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image as ImageIcon, X, Send, Loader2 } from 'lucide-react';
 import { createPost } from '../../lib/university';
 
 export default function ForumComposer({ categories, defaultCategoryId, onPosted }) {
   const [open, setOpen]                 = useState(false);
-  const [categoryId, setCategoryId]     = useState(defaultCategoryId || categories[0]?.id || '');
+  const [categoryId, setCategoryId]     = useState('');
   const [title, setTitle]               = useState('');
   const [body, setBody]                 = useState('');
   const [imageUrls, setImageUrls]       = useState([]);
   const [posting, setPosting]           = useState(false);
   const [error, setError]               = useState(null);
 
+  // Sync the picked category to whatever the parent passes once categories load.
+  useEffect(() => {
+    if (categoryId) return;
+    if (defaultCategoryId)       setCategoryId(defaultCategoryId);
+    else if (categories[0]?.id)  setCategoryId(categories[0].id);
+  }, [defaultCategoryId, categories, categoryId]);
+
+  const noCategories = !categories?.length;
+
   const onSubmit = async (e) => {
     e?.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() || !categoryId) {
+      setError(!categoryId ? 'Pick a category first.' : 'Body is required.');
+      return;
+    }
     setPosting(true); setError(null);
     try {
       const post = await createPost({ category_id: categoryId, title: title.trim() || null, body, image_urls: imageUrls });
