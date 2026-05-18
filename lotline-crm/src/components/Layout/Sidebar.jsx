@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users, Zap,
   Home, Leaf, Search, Wrench, DollarSign,
-  Calculator, Building, HardHat, Archive,
+  Calculator, Building, Archive,
   Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare, Calendar,
   FileSignature, ClipboardList, GitMerge, Sparkles, Database, GraduationCap,
 } from 'lucide-react';
@@ -54,7 +54,6 @@ const BASE_NAV_SECTIONS = [
       { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures',    jvHubOnly: true  },
       { icon: Calculator,    label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,      label: 'Home Models',            to: '/home-models'     },
-      { icon: HardHat,       label: 'Contractor Database',    to: '/contractors'     },
       { icon: GraduationCap, label: 'University',             to: '/university'      },
       { icon: Archive,       label: 'Archived Deals',         to: '/archived'        },
     ],

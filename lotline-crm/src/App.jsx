@@ -105,7 +105,6 @@ import DealCalculator from './pages/DealCalculator';
 import HomeModels from './pages/HomeModels';
 import CountyDatabase from './pages/CountyDatabase';
 import ArvDatabase from './pages/ArvDatabase';
-import ContractorDatabase from './pages/ContractorDatabase';
 import ArchivedDeals from './pages/ArchivedDeals';
 import FloodMap from './pages/FloodMap';
 import Homes from './pages/Homes';
@@ -397,7 +396,6 @@ export default function App() {
               <Route path="home-models" element={<AgentRoute path="home-models"><HomeModels /></AgentRoute>} />
               <Route path="counties"    element={<AgentRoute path="counties"><CountyDatabase /></AgentRoute>} />
               <Route path="arv"         element={<AgentRoute path="arv"><ArvDatabase /></AgentRoute>} />
-              <Route path="contractors" element={<AgentRoute path="contractors"><ContractorDatabase /></AgentRoute>} />
               <Route path="archived"    element={<AgentRoute path="archived"><ArchivedDeals /></AgentRoute>} />
               <Route path="flood-map"   element={<AgentRoute path="flood-map"><FloodMap /></AgentRoute>} />
               <Route path="homes"       element={<AgentRoute path="homes"><Homes /></AgentRoute>} />
