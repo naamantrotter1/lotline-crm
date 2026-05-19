@@ -166,32 +166,10 @@ export default function InvestorDealDetail() {
       <div className="w-full max-w-[1600px] mx-auto px-4 md:px-8 mt-6 pb-4">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-          {/* ── Left: primary content ── */}
+          {/* ── Left: primary content ──
+              Property Details first, then Milestone / Status / Activity /
+              Documents, with the Home Model showcase pinned to the bottom. */}
           <div className="flex-1 min-w-0 space-y-6">
-            {/* Milestone Timeline */}
-            <MilestoneTimeline deal={deal} milestones={milestones} />
-
-            {/* Pinned Status Note */}
-            {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
-
-            {/* Home Model — photos + specs from the Order Home catalog */}
-            {deal.home_model && <HomeModelShowcase dealHomeModel={deal.home_model} />}
-
-            {/* Activity Log */}
-            <ActivityLog dealId={deal.id} />
-
-            {/* Inline Documents */}
-            <InlineDocs dealId={deal.id} investorId={investor?.id} />
-          </div>
-
-          {/* ── Right: sticky sidebar ── */}
-          <div className="w-full lg:w-[22rem] xl:w-[26rem] 2xl:w-[30rem] flex-shrink-0 space-y-4 lg:sticky lg:top-4">
-            <YourPosition deal={deal} totalDistributed={totalDistributed} />
-            <DealMetrics  deal={deal} />
-
-            {/* Property Map */}
-            <PropertyMap address={deal.address} />
-
             {/* Property Details */}
             {[deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
               <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">
@@ -214,6 +192,30 @@ export default function InvestorDealDetail() {
                 </div>
               </div>
             )}
+
+            {/* Milestone Timeline */}
+            <MilestoneTimeline deal={deal} milestones={milestones} />
+
+            {/* Pinned Status Note */}
+            {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
+
+            {/* Activity Log */}
+            <ActivityLog dealId={deal.id} />
+
+            {/* Inline Documents */}
+            <InlineDocs dealId={deal.id} investorId={investor?.id} />
+
+            {/* Home Model — photos + specs from the Order Home catalog */}
+            {deal.home_model && <HomeModelShowcase dealHomeModel={deal.home_model} />}
+          </div>
+
+          {/* ── Right: sticky sidebar ── */}
+          <div className="w-full lg:w-[22rem] xl:w-[26rem] 2xl:w-[30rem] flex-shrink-0 space-y-4 lg:sticky lg:top-4">
+            <YourPosition deal={deal} totalDistributed={totalDistributed} />
+            <DealMetrics  deal={deal} />
+
+            {/* Property Map */}
+            <PropertyMap address={deal.address} />
           </div>
         </div>
       </div>
