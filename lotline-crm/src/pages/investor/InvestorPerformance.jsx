@@ -208,7 +208,7 @@ export default function InvestorPerformance() {
 
   if (loading) {
     return (
-      <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6 animate-pulse">
+      <div className="p-6 md:p-8 w-full max-w-[1600px] mx-auto space-y-6 animate-pulse">
         <div className="h-8 w-48 bg-gray-200 dark:bg-white/10 rounded" />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => <div key={i} className="h-28 bg-gray-200 dark:bg-white/10 rounded-xl" />)}
@@ -220,7 +220,7 @@ export default function InvestorPerformance() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8">
+    <div className="p-6 md:p-8 w-full max-w-[1600px] mx-auto space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Performance</h1>

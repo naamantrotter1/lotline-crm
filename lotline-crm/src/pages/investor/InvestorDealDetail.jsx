@@ -160,7 +160,9 @@ export default function InvestorDealDetail() {
       </div>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 pb-4">
+      {/* Wider on large screens so the layout actually fills the viewport
+          instead of leaving a giant empty band on the right. */}
+      <div className="w-full max-w-[1600px] mx-auto px-4 md:px-8 mt-6 pb-4">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
           {/* ── Left: primary content ── */}
@@ -179,7 +181,7 @@ export default function InvestorDealDetail() {
           </div>
 
           {/* ── Right: sticky sidebar ── */}
-          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-4 lg:sticky lg:top-4">
+          <div className="w-full lg:w-[22rem] xl:w-[26rem] 2xl:w-[30rem] flex-shrink-0 space-y-4 lg:sticky lg:top-4">
             <YourPosition deal={deal} totalDistributed={totalDistributed} />
             <DealMetrics  deal={deal} />
 

@@ -155,7 +155,7 @@ export default function InvestorHome() {
   ] : [];
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto">
+    <div className="p-6 md:p-8 space-y-8 w-full max-w-[1600px] mx-auto">
       {/* Greeting */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>

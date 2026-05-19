@@ -292,7 +292,7 @@ export default function InvestorOpportunities() {
   const myInterestIds = new Set(myInterest);
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Opportunities</h1>
