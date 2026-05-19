@@ -1321,66 +1321,6 @@ function OverviewTab({
           />
         </div>
 
-        {/* Property Information */}
-        <div>
-          <div className="flex items-center justify-between mb-3 pb-1.5 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-[#1a2332] uppercase tracking-wide">Property Information</h3>
-            <a
-              href={COUNTY_DATA[county]?.gisPortalUrl || `https://www.google.com/search?q=${encodeURIComponent((county || deal.county) + ' County GIS parcel map')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
-            >
-              <MapPin size={11} /> GIS Map
-            </a>
-          </div>
-          <fieldset disabled={readOnly} className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="grid grid-cols-2 gap-x-6 divide-y-0">
-            <InputRow label="Parcel ID" value={parcelId} onChange={v => { setParcelId(v); saveNow?.({ parcelId: v }); }} mono />
-            <InputRow label="Address" value={address} onChange={v => { setAddress(v); saveNow?.({ address: v }); }} />
-            <InputRow label="County" value={county} onChange={v => { setCounty(v); saveNow?.({ county: v }); }} />
-            <InputRow label="State" value={dealState} onChange={v => { setDealState(v); saveNow?.({ state: v }); }} />
-            <InputRow label="Zip Code" value={zip} onChange={v => { setZip(v); saveNow?.({ zip: v }); }} />
-            <InputRow label="Acreage" value={acreage} onChange={v => { setAcreage(v); saveNow?.({ acreage: v }); }} type="number" />
-            </div>
-            {/* Listing URL */}
-            <div className="py-2 border-b border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">Listing URL</p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="url"
-                  value={listingUrl || ''}
-                  onChange={e => { setListingUrl(e.target.value); saveNow?.({ listingUrl: e.target.value }); }}
-                  readOnly={readOnly}
-                  placeholder={readOnly ? '' : 'https://...'}
-                  className="flex-1 text-xs text-gray-800 bg-gray-50 border border-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-60"
-                />
-                {listingUrl && (
-                  <a href={listingUrl} target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-accent hover:underline flex-shrink-0">
-                    Open <ExternalLink size={10} />
-                  </a>
-                )}
-              </div>
-            </div>
-            <div className="py-2 flex items-center gap-4">
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
-                target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
-              >
-                <MapPin size={12} /> Open in Maps <ExternalLink size={10} />
-              </a>
-              <button
-                onClick={onOpenMapSearch}
-                className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
-              >
-                <MapPin size={12} /> Open in Map Search
-              </button>
-            </div>
-          </fieldset>
-        </div>
-
         {/* Seller Information */}
         {!isAgent && (
           <div>
