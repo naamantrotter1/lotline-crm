@@ -1025,15 +1025,27 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
       };
       const type = n.note_type || 'note';
       // For document_upload notes, surface the category in the title.
-      // Body format is `[<Category>](<url>)` — extract the label.
+      // Current body format is just `<Category>` (e.g. "Title Report").
+      // Legacy bodies were `[<Category>](<url>)` or `<Category>: <filename>` —
+      // we still match those for older notes.
       let resolvedTitle = titles[n.note_type] || authorName;
+      let resolvedBody = n.body;
       if (n.note_type === 'document_upload' && n.body) {
         const linkMatch = n.body.match(/\[([^\]]+)\]\(https?:\/\//);
-        if (linkMatch) resolvedTitle = `${linkMatch[1]} uploaded`;
-        else {
+        if (linkMatch) {
+          resolvedTitle = `${linkMatch[1]} uploaded`;
+        } else {
           const colonMatch = n.body.match(/^([^:]+):/);
-          if (colonMatch) resolvedTitle = `${colonMatch[1].trim()} uploaded`;
+          if (colonMatch) {
+            resolvedTitle = `${colonMatch[1].trim()} uploaded`;
+          } else {
+            // Plain category body (current format).
+            resolvedTitle = `${n.body.trim()} uploaded`;
+          }
         }
+        // Suppress the body for document uploads — the title already says
+        // it, and the previous link rendering leaked URL fragments.
+        resolvedBody = null;
       }
       return {
         id:          `db-note-${n.id}`,
@@ -1041,7 +1053,7 @@ export default function DealActivityFeed({ deal, readOnly, currentUser, refreshK
         authorId:    n.author_id,
         type,
         title:       resolvedTitle,
-        body:        n.body,
+        body:        resolvedBody,
         date:        n.created_at,
         isTask,
         pinned:      !!n.pinned,
