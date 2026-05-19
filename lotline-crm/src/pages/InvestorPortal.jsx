@@ -1653,12 +1653,10 @@ export default function InvestorPortal() {
   // Cached stats (capital, ROI, deal mappings) come from localStorage so we
   // don't lose pre-computed numbers that aren't stored on the DB row yet.
   useEffect(() => {
-    const includeOwn = jvScope.includeOwn !== false;
-    const partnerIds = scopeIds.filter(id => id !== activeOrgId);
-    const allOrgIds = [
-      ...(includeOwn && activeOrgId ? [activeOrgId] : []),
-      ...partnerIds,
-    ].filter(Boolean);
+    // Use jvScopeOrgIds (already resolved by JvContext) directly — avoids a bug
+    // where a stale jvScope.includeOwn=false from the DB would wipe own-org investors
+    // even for non-JV-hub orgs where own-org investors must always be shown.
+    const allOrgIds = scopeIds.filter(Boolean);
 
     if (allOrgIds.length === 0) {
       setInvestors([]);
@@ -1666,7 +1664,8 @@ export default function InvestorPortal() {
     }
 
     // Stats cache (computed locally from deal data) — merged onto DB rows by name.
-    const cached = includeOwn ? loadInvestors(activeOrgId, orgSlug) : [];
+    const includesOwn = allOrgIds.includes(activeOrgId);
+    const cached = includesOwn ? loadInvestors(activeOrgId, orgSlug) : [];
     const cachedByName = Object.fromEntries(cached.map(i => [i.name, i]));
 
     fetchInvestors(allOrgIds).then(rows => {
@@ -1720,7 +1719,7 @@ export default function InvestorPortal() {
       console.warn('Failed to fetch investors from Supabase, falling back to cache', err);
       setInvestors(cached);
     });
-  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug, jvScope.includeOwn]);
+  }, [JSON.stringify(scopeIds), activeOrgId, orgSlug]);
 
   // Directory tab actions — edit/delete update both Supabase and the local list
   // optimistically, and the delete path also clears any deal.investor refs.
