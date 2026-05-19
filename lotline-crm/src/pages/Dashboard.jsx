@@ -63,7 +63,7 @@ export default function Dashboard() {
   const [monthModal, setMonthModal] = useState(null); // { month: 'Apr', deals: [] }
 
   const LAND_ACQ_ONLY = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
-  const activeDeals   = (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage));
+  const activeDeals   = (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage) && d.stage !== 'On Hold');
   const closedDeals   = archivedDeals || [];
   const year          = new Date().getFullYear();
   const thisMonthKey  = getMonthKey(new Date().toISOString());
