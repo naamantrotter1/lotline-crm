@@ -100,10 +100,16 @@ export async function fetchMyAllocations(investorId) {
   if (!investorId) return { deals: [], error: null };
 
   // Step 1: fetch allocations (avoid PostgREST FK join hint — use two queries instead)
+  // Exclude 'returned' to match the operator-side convention in capitalStackData.js,
+  // and exclude amount=0 placeholders (e.g. 'committed' rows where the investor
+  // was earmarked but never actually funded) so they don't show up as the
+  // investor's deals.
   const { data: allocations, error: allocErr } = await supabase
     .from('deal_allocations')
     .select('id, deal_id, amount, percent_of_deal, position, preferred_return_pct, profit_share_pct, status, funding_status, allocated_at')
     .eq('investor_id', investorId)
+    .neq('status', 'returned')
+    .gt('amount', 0)
     .order('allocated_at', { ascending: false });
 
   if (allocErr) return { deals: [], error: allocErr };
