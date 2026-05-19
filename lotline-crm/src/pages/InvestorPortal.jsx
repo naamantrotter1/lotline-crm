@@ -10,6 +10,7 @@ import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
 import { upsertPrimaryAllocation, findInvestorByName } from '../lib/dealAllocationsClient';
+import { calcNetProfit } from '../data/deals';
 import { supabase } from '../lib/supabase';
 import { markPaymentPaid, formatPaymentType, STATUS_LABEL, STATUS_PILL, applyOverdue } from '../lib/paymentScheduleData';
 import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingData';
@@ -1805,10 +1806,35 @@ export default function InvestorPortal() {
           : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
       return sum + cap;
     }, 0);
+
+    // ── ROI computed live from each matched deal ─────────────────────────────
+    // roiDollars = sum of projected net profit (after financing) across deals
+    // roiPct     = roiDollars / capitalInvested * 100
+    // avgAnnualizedRoi = average per-deal annualized ROI weighted by capital
+    const roiDollars = matchedDeals.reduce((sum, d) => sum + (Number(calcNetProfit(d)) || 0), 0);
+    const roiPct = capitalInvested > 0 ? (roiDollars / capitalInvested) * 100 : 0;
+    const annualized = matchedDeals.reduce((acc, d) => {
+      const months = Number(d.holdPeriod ?? d.holdingMonths ?? d.scenarioData?.holdPeriod ?? 0);
+      if (months <= 0) return acc;
+      const cap = d.investorCapitalContributed != null
+        ? Number(d.investorCapitalContributed)
+        : d.totalActual != null ? Number(d.totalActual) : 0;
+      const profit = Number(calcNetProfit(d)) || 0;
+      const dealRoiPct = cap > 0 ? (profit / cap) * 100 : 0;
+      const dealAnnRoi = dealRoiPct * (12 / months);
+      return { sum: acc.sum + dealAnnRoi * cap, weight: acc.weight + cap };
+    }, { sum: 0, weight: 0 });
+    const avgAnnualizedRoi = annualized.weight > 0 ? annualized.sum / annualized.weight : 0;
+
     return {
       ...inv,
       activeDeals: matchedDeals.length,
       capitalInvested,
+      roiDollars,
+      roiPct,
+      avgAnnualizedRoi,
+      // totalReturns stays whatever the investor record stored — that's
+      // distributions paid, which is independent of these projections.
     };
   }), [investors, customDeals]);
 
