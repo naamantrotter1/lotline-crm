@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { loadAllDeals, loadArchivedDeals, saveDeal as syncSaveDeal, deleteDeal as syncDeleteDeal, archiveDeal as syncArchiveDeal, subscribeToDeals, lsKey, removeFromLS } from './dealsSync';
 import { fetchCostSummary } from './costBreakdownData';
+import { fetchAllocationsForDeals } from './dealAllocationsClient';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 import { useJv } from './JvContext';
@@ -14,6 +15,10 @@ export function DealsProvider({ children }) {
   const [deals, setDeals] = useState([]);
   const [archivedDeals, setArchivedDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(true);
+  // Per-deal active allocations (status != 'returned', amount > 0).
+  // Source of truth for "which investor(s) is on this deal" — replaces the
+  // legacy deals.investor text field. Keyed by deal_id.
+  const [allocationsByDealId, setAllocationsByDealId] = useState({});
   // 'connecting' | 'live' | 'error' | 'closed' | 'offline'
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
 
@@ -44,6 +49,7 @@ export function DealsProvider({ children }) {
     // that were optimistically removed from state (but still is_archived=false in DB).
     setDeals([]);
     setArchivedDeals([]);
+    setAllocationsByDealId({});
 
     if (!session?.user?.id || !activeOrgId || !jvLoaded) {
       setDealsLoading(false);
@@ -67,7 +73,16 @@ export function DealsProvider({ children }) {
 
     setDealsLoading(true);
     // Load active deals — pass all scoped org IDs so JV partner deals are included
-    loadAllDeals(scopeIds).then(d => { setDeals(d); setDealsLoading(false); });
+    loadAllDeals(scopeIds).then(d => {
+      setDeals(d);
+      setDealsLoading(false);
+      // Fetch active allocations for every loaded deal in one round-trip.
+      // The result is merged onto the deal objects below via useMemo.
+      const ids = d.map(x => x.id).filter(Boolean);
+      if (ids.length > 0) {
+        fetchAllocationsForDeals(ids).then(setAllocationsByDealId);
+      }
+    });
     // Load archived deals (own org only)
     loadArchivedDeals(activeOrgId).then(setArchivedDeals);
 
@@ -159,9 +174,26 @@ export function DealsProvider({ children }) {
         .subscribe();
     }
 
+    // Subscribe to deal_allocations changes so the operator UI's "primary
+    // investor" display refreshes the instant an allocation is added,
+    // returned, or amount-updated. Re-fetches the affected deal's allocations.
+    let allocChannel = null;
+    if (supabase) {
+      allocChannel = supabase
+        .channel(`deal-allocations-${activeOrgId || 'anon'}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_allocations' }, async (payload) => {
+          const dealId = payload.new?.deal_id ?? payload.old?.deal_id;
+          if (!dealId) return;
+          const map = await fetchAllocationsForDeals([dealId]);
+          setAllocationsByDealId(prev => ({ ...prev, [dealId]: map[dealId] ?? [] }));
+        })
+        .subscribe();
+    }
+
     return () => {
       unsub();
       if (costChannel) supabase.removeChannel(costChannel);
+      if (allocChannel) supabase.removeChannel(allocChannel);
     };
   }, [session?.user?.id, activeOrgId, jvLoaded, JSON.stringify(scopeIds)]);
 
@@ -190,8 +222,16 @@ export function DealsProvider({ children }) {
   const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
   const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
 
+  // Merge allocations onto each deal so consumers can read deal.allocations
+  // without doing their own fetch. This is the post-deals.investor source
+  // of truth for "which investor(s) is on this deal".
+  const dealsWithAllocations = useMemo(
+    () => deals.map(d => ({ ...d, allocations: allocationsByDealId[d.id] ?? [] })),
+    [deals, allocationsByDealId]
+  );
+
   return (
-    <DealsContext.Provider value={{ deals, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal }}>
+    <DealsContext.Provider value={{ deals: dealsWithAllocations, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal }}>
       {children}
     </DealsContext.Provider>
   );

@@ -91,14 +91,13 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
 
-  // Only use live context deals — static ALL_DEALS_TABLE is hardcoded and stale.
-  const invNameLower = investor.name.trim().toLowerCase();
+  // Source of truth: deal_allocations. A deal "belongs to" this investor when
+  // at least one of its active (non-returned, amount > 0) allocations points
+  // at investor.id. DealsContext merges allocations onto deal.allocations.
   const allInvestorDeals = contextDeals
     .filter(d => {
       if (d.isArchived) return false;
-      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      return !!hmcbLender && hmcbLender === invNameLower;
+      return (d.allocations || []).some(a => a.investorId === investor.id);
     })
     .map(d => ({
       address: d.address,
@@ -487,21 +486,17 @@ function AssignFunderModal({ deal, investors, onAssign, onClose }) {
 
 // ── Tab: Needs Funding ───────────────────────────────────────────────────────
 function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp }) {
-  const UNFUNDED = ['Cash', 'None', '', null, undefined];
   const { deals: contextDeals, saveDeal, setDeals } = useDeals();
 
-  // Source of truth: live context deals only. The previous implementation merged
-  // a hardcoded static table (ALL_DEALS_TABLE) which kept showing deals here long
-  // after a funder was assigned, because the static list never updated.
+  // A deal needs funding when it has zero active, amount>0 allocations to a
+  // real (non-Cash) investor. Cash-only allocations still count as needing
+  // funding since Cash means internal capital, not a third-party investor.
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
     .filter(d => {
       if (d.isArchived || LAND_ACQ_STAGES.has(d.stage)) return false;
-      if (!UNFUNDED.includes((d.investor || '').trim())) return false;
-      // A deal might be funded via HMCB even if deal.investor wasn't persisted yet
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim();
-      if (hmcbLender && !UNFUNDED.includes(hmcbLender)) return false;
-      return true;
+      const nonCashAllocs = (d.allocations || []).filter(a => a.investorName !== 'Cash');
+      return nonCashAllocs.length === 0;
     })
     .map(d => {
       const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
@@ -1742,16 +1737,13 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  // Derive all investor stats from live deal data — never use stale cached/static values.
-  // Matches deals by deal.investor (case-insensitive) OR scenarioData.hmcb.lenderName
-  // for HMCB deals where the lender may not have been synced back to deal.investor.
+  // Derive all investor stats from live deal_allocations data. A deal is
+  // matched to this investor when at least one active (non-returned,
+  // amount > 0) allocation points at inv.id.
   const enrichedInvestors = useMemo(() => investors.map(inv => {
-    const invNameLower = inv.name.trim().toLowerCase();
     const matchedDeals = customDeals.filter(d => {
       if (d.isArchived) return false;
-      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      return !!hmcbLender && hmcbLender === invNameLower;
+      return (d.allocations || []).some(a => a.investorId === inv.id);
     });
     const capitalInvested = matchedDeals.reduce((sum, d) => {
       const cap = d.investorCapitalContributed != null

@@ -7,6 +7,7 @@ import {
   User, Calendar, TreePine, SplitSquareHorizontal,
 } from 'lucide-react';
 import { calcNetProfit, computeCostOfCapital } from '../data/deals';
+import { summarizeInvestors } from '../lib/dealAllocationsClient';
 import { useDeals } from '../lib/DealsContext';
 import { saveDeal } from '../lib/dealsSync';
 import { useAuth } from '../lib/AuthContext';
@@ -93,7 +94,13 @@ function getFieldValue(deal, key) {
     case 'parcel_id':                  return deal.parcelId ?? null;
     case 'stage':                      return deal.stage ?? null;
     case 'deal_owner':                 return deal.dealOwner ?? null;
-    case 'investor':                   return deal.investor ?? null;
+    case 'investor': {
+      // Read primary investor from deal_allocations (DealsContext merges this in).
+      // Falls back to legacy deals.investor text for deals not yet backfilled.
+      const s = summarizeInvestors(deal.allocations);
+      if (!s.primary) return deal.investor ?? null;
+      return s.extraCount > 0 ? `${s.primary} +${s.extraCount} more` : s.primary;
+    }
     case 'lead_source':                return deal.leadSource ?? null;
     case 'financing_scenario_type':    return snakeToTitle(deal.financingScenarioType || deal.financing || null);
     case 'days_in_stage': {
