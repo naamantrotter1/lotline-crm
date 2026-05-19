@@ -507,14 +507,14 @@ export default function DealCalculator() {
     },
     {
       label:   'Hard Money',
-      capital: _capitalIn(totalAllIn),      // Q * 0.03
-      profit:  _profitFor(totalAllIn),
-      roi:     _fmtRoi(_profitFor(totalAllIn), _capitalIn(totalAllIn)),
-      tooltip: '12% annual interest + 3 points on a total all-in cost loan.',
+      capital: _capitalIn(buildCost),
+      profit:  _profitFor(buildCost),
+      roi:     _fmtRoi(_profitFor(buildCost), _capitalIn(buildCost)),
+      tooltip: '12% annual interest + 3 points on a total build cost loan.',
     },
     {
       label:   'HM (Land + Home)',
-      capital: _capitalIn(_landAndHome),    // (Q − landAndHome) + landAndHome*0.03
+      capital: _capitalIn(_landAndHome),
       profit:  _profitFor(_landAndHome),
       roi:     _fmtRoi(_profitFor(_landAndHome), _capitalIn(_landAndHome)),
       tooltip: '12% annual interest + 3 points on a land + home cost loan.',
@@ -522,9 +522,9 @@ export default function DealCalculator() {
     {
       // TODO(LOC): confirm interest rate + points then plug into the same helpers
       label:   'Line of Credit',
-      capital: 0,
+      capital: _capitalIn(buildCost),
       profit:  projectedProfit,
-      roi:     null,                        // capital=0 → render "—"
+      roi:     _fmtRoi(projectedProfit, _capitalIn(buildCost)),
       tooltip: 'Interest and points not yet modeled — confirm with your lender.',
     },
   ];
