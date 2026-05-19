@@ -7,11 +7,11 @@ const HM_POINTS_PCT  = 0.03;
 
 // Round to dollars so the table never shows cents.
 function hmInterest(loanAmount, holdingMonths) {
-  return Math.round(loanAmount * HM_ANNUAL_RATE * (holdingMonths / 12));
+  return loanAmount * HM_ANNUAL_RATE * (holdingMonths / 12);
 }
 
 function hmPoints(loanAmount) {
-  return Math.round(loanAmount * HM_POINTS_PCT);
+  return loanAmount * HM_POINTS_PCT;
 }
 
 // Operator's cash out-of-pocket: uncovered all-in cost + upfront points.

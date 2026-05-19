@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Calculator, X, PlusCircle, Save, CheckCircle2 } from 'lucide-react';
-import { buildScenarios } from '../lib/dealCalculator/scenarios';
 import InfoTooltip from '../components/investor/InfoTooltip';
 import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
 import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
@@ -484,15 +483,51 @@ export default function DealCalculator() {
   const landOverMax = landValue > 0 && landValue > maxOffer;
   const landUnderMax = landValue > 0 && landValue <= maxOffer;
 
-  // Scenarios
-  const scenarios = buildScenarios({
-    buildCost,
-    totalAllIn,
-    baseProfit:    projectedProfit,
-    holdingMonths: vals.holdingMonths,
-    landCost:      activeCostBag.land,
-    mobileHomeCost: activeCostBag.mobile_home,
-  });
+  // ── Financing Scenario Comparison ────────────────────────────────────────
+  // Z = buildCost, Q = totalAllIn, U = projectedProfit (arv - Q)
+  const HM_ANNUAL_RATE = 0.12;
+  const HM_POINTS_PCT  = 0.03;
+  const _hmInterest = (loan) => loan * HM_ANNUAL_RATE * (vals.holdingMonths / 12);
+  const _hmPoints   = (loan) => loan * HM_POINTS_PCT;
+  const _capitalIn  = (loan) => Math.max(0, totalAllIn - loan) + _hmPoints(loan);
+  const _profitFor  = (loan) => projectedProfit - _hmInterest(loan) - _hmPoints(loan);
+  const _fmtRoi     = (profit, capital) => capital > 0 ? (profit / capital * 100).toFixed(1) : null;
+
+  // HM (Land + Home): loan = land + manufactured-home cost only
+  // activeCostBag uses camelCase keys (vals.land, vals.mobileHome / stateVals.mobileHome)
+  const _landAndHome = (Number(activeCostBag.land) || 0) + (Number(activeCostBag.mobileHome) || 0);
+
+  const scenarios = [
+    {
+      label:   'Cash',
+      capital: buildCost,
+      profit:  projectedProfit,
+      roi:     buildCost > 0 ? (projectedProfit / buildCost * 100).toFixed(1) : null,
+      tooltip: null,
+    },
+    {
+      label:   'Hard Money',
+      capital: _capitalIn(totalAllIn),      // Q * 0.03
+      profit:  _profitFor(totalAllIn),
+      roi:     _fmtRoi(_profitFor(totalAllIn), _capitalIn(totalAllIn)),
+      tooltip: '12% annual interest + 3 points on a total all-in cost loan.',
+    },
+    {
+      label:   'HM (Land + Home)',
+      capital: _capitalIn(_landAndHome),    // (Q − landAndHome) + landAndHome*0.03
+      profit:  _profitFor(_landAndHome),
+      roi:     _fmtRoi(_profitFor(_landAndHome), _capitalIn(_landAndHome)),
+      tooltip: '12% annual interest + 3 points on a land + home cost loan.',
+    },
+    {
+      // TODO(LOC): confirm interest rate + points then plug into the same helpers
+      label:   'Line of Credit',
+      capital: 0,
+      profit:  projectedProfit,
+      roi:     null,                        // capital=0 → render "—"
+      tooltip: 'Interest and points not yet modeled — confirm with your lender.',
+    },
+  ];
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -698,7 +733,7 @@ export default function DealCalculator() {
                       {fmt(s.profit)}
                     </td>
                     <td className="py-2 text-right text-accent font-semibold">
-                      {s.roi === '—' ? '—' : `${s.roi}%`}
+                      {s.roi == null ? '—' : `${s.roi}%`}
                     </td>
                   </tr>
                 ))}

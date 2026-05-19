@@ -40,7 +40,7 @@ describe('Fixture A — standard deal', () => {
     // roi      = 80910 / 6030        ≈ 1342.0%
     it('capital = Q * 0.03 = 6030', () => expect(s.capital).toBe(6_030));
     it('profit  = 80910',           () => expect(s.profit).toBe(80_910));
-    it('roi     ≈ 1342.0%',         () => expect(parseFloat(s.roi)).toBeCloseTo(1342.0, 0));
+    it('roi     ≈ 1341.8%',         () => expect(parseFloat(s.roi)).toBeCloseTo(1341.8, 1));
     it('has a tooltip',             () => expect(s.tooltip).toMatch(/12%/));
   });
 
@@ -102,9 +102,9 @@ describe('Fixture C — holdingMonths=0, Q=100000, U=50000', () => {
   // capital  = 0 + 3000 = 3000
   // profit   = 50000 - 0 - 3000 = 47000
   it('Hard Money interest = 0, so capital = points only = 3000', () => {
-    expect(hm.capital).toBe(3_000);
+    expect(hm.capital).toBeCloseTo(3_000, 2);
   });
   it('Hard Money profit = U - points = 47000', () => {
-    expect(hm.profit).toBe(47_000);
+    expect(hm.profit).toBeCloseTo(47_000, 2);
   });
 });
