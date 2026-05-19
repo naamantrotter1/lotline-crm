@@ -1490,47 +1490,6 @@ function OverviewTab({
           </div>
         </div>
 
-        {/* Closing Details — hidden for agents */}
-        {!isAgent && (
-          <div>
-            <SectionHeader>Closing Details</SectionHeader>
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="grid grid-cols-2 gap-x-6">
-              {/* Investor dropdown */}
-              <div className="py-2 border-b border-gray-50">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-400 font-medium">Investor</span>
-                  {!readOnly && (
-                    <button onClick={onAddInvestor} className="text-[10px] text-accent hover:text-accent/80 font-medium flex items-center gap-0.5">
-                      <span>+ Add Investor</span>
-                    </button>
-                  )}
-                </div>
-                {readOnly ? (
-                  <p className="text-sm font-medium text-gray-800">{investor || '—'}</p>
-                ) : (
-                  <select
-                    value={investor}
-                    onChange={e => { setInvestor(e.target.value); saveNow?.({ investor: e.target.value }); }}
-                    className="w-full text-sm font-medium text-gray-800 bg-transparent border-0 outline-none p-0 cursor-pointer"
-                  >
-                    <option value="">— Select investor —</option>
-                    {(investorList || []).map(inv => (
-                      <option key={inv.id} value={inv.name}>{inv.name}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <InputRow label="Closing Attorney" value={closingAttorney} onChange={v => { setClosingAttorney(v); saveNow?.({ closingAttorney: v }); }} readOnly={readOnly} />
-              <InputRow label="Attorney Phone" value={closingAttorneyPhone} onChange={v => { setClosingAttorneyPhone(v); saveNow?.({ closingAttorneyPhone: v }); }} readOnly={readOnly} />
-              <InputRow label="Attorney Address" value={closingAttorneyAddress} onChange={v => { setClosingAttorneyAddress(v); saveNow?.({ closingAttorneyAddress: v }); }} readOnly={readOnly} />
-              <InputRow label="Closing Date" value={closeDate} onChange={v => { setCloseDate(v); saveNow?.({ closeDate: v }); }} type="date" readOnly={readOnly} />
-              <InputRow label="Contract Signed Date" value={contractDate} onChange={v => { setContractDate(v); saveNow?.({ contractDate: v }); }} type="date" readOnly={readOnly} />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Sales */}
         {!isAgent && (
           <div>
