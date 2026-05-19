@@ -406,8 +406,7 @@ export default function DealRightColumn({ deal, readOnly, onCreateTask }) {
               <div key={doc.id} className="flex items-center gap-2 py-1.5 group">
                 <FileText size={12} className="text-gray-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] text-gray-700 truncate leading-tight">{doc.name}</p>
-                  <span className="text-[10px] text-gray-400">{doc.category}</span>
+                  <p className="text-[12px] text-gray-700 truncate leading-tight" title={doc.name}>{doc.category || 'Other'}</p>
                 </div>
                 <a
                   href={doc.url}
