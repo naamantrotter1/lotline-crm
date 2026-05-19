@@ -189,14 +189,13 @@ export default function InvestorDealDetail() {
             <PropertyMap address={deal.address} />
 
             {/* Property Details */}
-            {[deal.financing, deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
+            {[deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
               <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">
                 <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-5 pt-4 pb-2">
                   Property Details
                 </p>
                 <div className="divide-y divide-gray-100 dark:divide-white/5">
                   {[
-                    { label: 'Financing',        value: deal.financing         },
                     { label: 'Utility Scenario', value: deal.utility_scenario  },
                     { label: 'Home Model',       value: deal.home_model        },
                     { label: 'Acreage',          value: deal.acreage ? `${deal.acreage} acres` : null },
