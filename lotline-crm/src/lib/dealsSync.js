@@ -40,7 +40,10 @@ function dealToRow(deal) {
     lead_source:             deal.leadSource || null,
     owner_type:              deal.ownerType || null,
     financing:               deal.financing || null,
-    investor:                deal.investor || null,
+    // deals.investor (legacy text field) is no longer written. The investor
+    // assignment lives exclusively in deal_allocations; DealDetail.saveNow
+    // upserts a deal_allocations row on every change. Column drop pending
+    // (migration 143).
     utility_scenario:        deal.utilityScenario || null,
     home_model:              deal.homeModel || null,
     water_company:           deal.waterCompany || null,

@@ -39,7 +39,7 @@ export default function InvestorDealDetail() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetchMyDeal(id, investor?.name),
+      fetchMyDeal(id),
       fetchDealDistributions(id),
       fetchDealPhotos(id),
       fetchDealMilestones(id),

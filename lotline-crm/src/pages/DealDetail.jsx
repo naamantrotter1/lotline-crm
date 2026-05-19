@@ -11,7 +11,7 @@ import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase, flushToSupabaseAsync } from '../lib/dealsSync';
 import { lookupInvestorByName, savePaymentSchedule } from '../lib/paymentScheduleData';
 import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
-import { upsertPrimaryAllocation, returnAllPrimaryAllocations, findInvestorByName } from '../lib/dealAllocationsClient';
+import { upsertPrimaryAllocation, returnAllPrimaryAllocations, findInvestorByName, primaryInvestorName } from '../lib/dealAllocationsClient';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -2682,13 +2682,20 @@ function DealDetailContent({ deal }) {
   const saveNow = useCallback((overrides = {}) => {
     if (!canEdit && !isAgent) return;
     const s = stateRef.current;
-    const prevInvestor = dealRef.current?.investor || '';
+    // Compare against the current primary allocation, not the legacy text
+    // field. Robust to the deals.investor column being dropped (migration 143).
+    const prevInvestor = primaryInvestorName(dealRef.current?.allocations)
+                       || dealRef.current?.investor
+                       || '';
     const d = {
       ...dealRef.current,
       stage: s.stage, address: s.address, county: s.county, state: s.dealState, zip: s.zip,
       acreage: s.acreage, ownerName: s.ownerName, sellerName: s.sellerName,
       phone: s.phone, email: s.email,
-      investor: s.investor, financing: s.financing, notes: s.notes,
+      // deals.investor (legacy text field) is no longer written here. The
+      // upsertPrimaryAllocation call below is the only write path; the
+      // operator UI reads primary investor from deal.allocations.
+      financing: s.financing, notes: s.notes,
       leadSource: s.leadSource, ownerType: s.ownerType, utilityScenario: s.utilityScenario,
       homeModel: s.homeModel, waterCompany: s.waterCompany, sewerCompany: s.sewerCompany,
       electricCompany: s.electricCompany, parcelId: s.parcelId,
@@ -2707,12 +2714,11 @@ function DealDetailContent({ deal }) {
       return [...prev, d];
     });
 
-    // ── Mirror investor change into deal_allocations ────────────────────────
-    // Phase 3 — when the operator picks (or clears) an investor on a deal,
-    // upsert/return the matching deal_allocations row so the investor portal
-    // and operator By-Investor view stay in sync without a separate manual
-    // Capital Stack edit. Best-effort; failures don't block the save above.
-    const newInvestor = (d.investor || '').trim();
+    // ── Upsert the primary allocation for the picked investor ───────────────
+    // deal_allocations is the source of truth — when the operator selects
+    // (or clears) an investor on a deal, upsert/return the matching row.
+    // Best-effort; failures don't block the save above.
+    const newInvestor = (s.investor || '').trim();
     const oldInvestor = (prevInvestor || '').trim();
     const SPECIAL = new Set(['', 'Cash', 'None']);
     if (newInvestor !== oldInvestor && d.id && supabase) {
@@ -2812,7 +2818,17 @@ function DealDetailContent({ deal }) {
   const [ownerName, setOwnerName] = useState(deal?.ownerName || '');
   const [phone, setPhone] = useState(deal?.phone || '');
   const [email, setEmail] = useState(deal?.email || '');
-  const [investor, setInvestor] = useState(deal?.investor || '');
+  // Primary investor is derived from deal.allocations (single source of truth).
+  // Falls back to the legacy deal.investor text only during transition; once
+  // every deal has an allocation that fallback never triggers.
+  const [investor, setInvestor] = useState(primaryInvestorName(deal?.allocations) || deal?.investor || '');
+
+  // Re-sync local investor state when DealsContext refreshes allocations
+  // (e.g. realtime update after another tab/operator changes assignment).
+  useEffect(() => {
+    const primary = primaryInvestorName(deal?.allocations) || deal?.investor || '';
+    setInvestor(prev => (prev === primary ? prev : primary));
+  }, [deal?.allocations, deal?.investor]);
   const [investorList, setInvestorList] = useState(() => loadInvestors(activeOrgId, orgSlug));
   const [showAddInvestor, setShowAddInvestor]         = useState(false);
   const [showCreateTask, setShowCreateTask]           = useState(false);
@@ -3120,26 +3136,38 @@ function DealDetailContent({ deal }) {
     ...(deal?.scenarioData?.hmcb || {}),
   }));
 
-  // ── HMCB lender → deal.investor sync (one-way) ──────────────────────────────
+  // ── HMCB lender → deal_allocations (direct write) ───────────────────────────
   // HMCBPanel's Lender/Investor dropdown writes to scenario_data.hmcb.lenderName.
-  // Mirror that into the deal-level `investor` field so the Investor Portal,
-  // capital tracking, and payment schedule (which all key off deal.investor)
-  // stay in sync.
-  //
-  // We also persist via saveNow so the saveNow callback can fire the Phase 3
-  // deal_allocations mirror — otherwise a state-only setInvestor here would
-  // leave the new HMCB lender invisible to the investor portal.
-  //
-  // We deliberately DO NOT copy in the reverse direction: legacy `investor`
-  // values from previous scenarios (e.g. "Cash" left over from a Cash scenario)
-  // would otherwise contaminate the HMCB lender dropdown when switching scenarios.
+  // When that changes for an HMCB-scenario deal, upsert the matching primary
+  // allocation directly. The operator UI's `investor` state then syncs via
+  // the deal.allocations effect (no text-field write needed).
   useEffect(() => {
     if (selectedScenario !== 'hmcb') return;
     const hmcbLender = (hmcbData?.lenderName || '').trim();
-    if (hmcbLender && hmcbLender !== investor) {
-      setInvestor(hmcbLender);
-      saveNow?.({ investor: hmcbLender });
-    }
+    if (!hmcbLender || hmcbLender === 'Cash' || hmcbLender === 'None') return;
+    if (hmcbLender === investor) return;
+    if (!deal?.id || !supabase) return;
+    (async () => {
+      try {
+        const inv = await findInvestorByName(hmcbLender, activeOrgId);
+        if (!inv?.id) {
+          console.warn('[DealDetail HMCB] investor row missing for "%s"', hmcbLender);
+          return;
+        }
+        await upsertPrimaryAllocation({
+          dealId:             deal.id,
+          organizationId:     activeOrgId,
+          investorId:         inv.id,
+          amount:             Number(deal.investorCapitalContributed) || 1,
+          preferredReturnPct: hmcbData?.interestRate ?? null,
+          sourceScenario:     'hmcb',
+          status:             'committed',
+          notes:              'HMCB lender pick on ' + new Date().toISOString().slice(0, 10),
+        });
+      } catch (err) {
+        console.warn('[DealDetail HMCB] allocation upsert failed:', err?.message || err);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedScenario, hmcbData?.lenderName]);
 

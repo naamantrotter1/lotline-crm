@@ -93,23 +93,13 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
 
-  // Source of truth: deal_allocations. A deal "belongs to" this investor when
-  // at least one of its active (non-returned, amount > 0) allocations points
-  // at investor.id. DealsContext merges allocations onto deal.allocations.
-  //
-  // Transition bridges (will be removed once Phase 4 drops deals.investor):
-  //   • deals.investor text field match — catches deals assigned via the
-  //     legacy dropdown that haven't been re-saved since Phase 3 deployed.
-  //   • scenarioData.hmcb.lenderName match — catches HMCB deals where the
-  //     lender picker wrote scenario data but no allocation row exists yet.
-  const invNameLower = investor.name.trim().toLowerCase();
+  // Source of truth: deal_allocations only. A deal belongs to this investor
+  // when at least one of its active (non-returned, amount > 0) allocations
+  // points at investor.id. DealsContext merges allocations onto deal.allocations.
   const allInvestorDeals = contextDeals
     .filter(d => {
       if (d.isArchived) return false;
-      if ((d.allocations || []).some(a => a.investorId === investor.id)) return true;
-      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      return !!hmcbLender && hmcbLender === invNameLower;
+      return (d.allocations || []).some(a => a.investorId === investor.id);
     })
     .map(d => ({
       address: d.address,
@@ -503,20 +493,12 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   // A deal needs funding when it has zero active, amount>0 allocations to a
   // real (non-Cash) investor. Cash-only allocations still count as needing
   // funding since Cash means internal capital, not a third-party investor.
-  // Transition bridges: deal.investor text or scenarioData.hmcb.lenderName
-  // set to a real investor also count as funded.
-  const SPECIAL = ['Cash', 'None', '', null, undefined];
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
     .filter(d => {
       if (d.isArchived || LAND_ACQ_STAGES.has(d.stage)) return false;
       const nonCashAllocs = (d.allocations || []).filter(a => a.investorName !== 'Cash');
-      if (nonCashAllocs.length > 0) return false;
-      const text = (d.investor || '').trim();
-      if (text && !SPECIAL.includes(text)) return false;
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim();
-      if (hmcbLender && !SPECIAL.includes(hmcbLender)) return false;
-      return true;
+      return nonCashAllocs.length === 0;
     })
     .map(d => {
       const totalCapital = d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
@@ -583,9 +565,11 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
         ccpPrefReturnPct:       terms.ccpPrefReturnPct,
         ccpProfitSharePct:      terms.ccpProfitSharePct,
       };
+      // deals.investor is no longer written; the upsertPrimaryAllocation call
+      // below is the only investor-assignment write path. Financing scenario
+      // and capital dates still live on the deal row.
       const updatedDeal = {
         ...matchedDeal,
-        investor:              funderName,
         financing:             scenarioMeta?.label || terms?.scenario || matchedDeal.financing,
         financingScenarioType: scenarioMeta?.dbType || null,
         capitalDeployedDate:   terms.capitalDeployedDate || matchedDeal.capitalDeployedDate || null,
@@ -1784,19 +1768,13 @@ export default function InvestorPortal() {
     if (id) navigate(`/deal/${id}`, { state: { from: 'investor-portal' } });
   };
 
-  // Derive all investor stats from live deal_allocations data. A deal is
-  // matched to this investor when at least one active (non-returned,
-  // amount > 0) allocation points at inv.id.
-  // Transition bridges: also match by deal.investor text or
-  // scenarioData.hmcb.lenderName until every assignment has been mirrored.
+  // Derive all investor stats from live deal_allocations. A deal is matched
+  // to this investor when at least one active (non-returned, amount > 0)
+  // allocation points at inv.id.
   const enrichedInvestors = useMemo(() => investors.map(inv => {
-    const invNameLower = inv.name.trim().toLowerCase();
     const matchedDeals = customDeals.filter(d => {
       if (d.isArchived) return false;
-      if ((d.allocations || []).some(a => a.investorId === inv.id)) return true;
-      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
-      const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
-      return !!hmcbLender && hmcbLender === invNameLower;
+      return (d.allocations || []).some(a => a.investorId === inv.id);
     });
     const capitalInvested = matchedDeals.reduce((sum, d) => {
       const cap = d.investorCapitalContributed != null

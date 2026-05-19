@@ -122,34 +122,34 @@ export async function updateInvestor(id, patch, orgId) {
 
 /**
  * Delete an investor entirely. Removes from localStorage cache and Supabase
- * (FKs cascade to allocations, distributions, capital_calls, payment_schedule).
- * Also clears deal.investor (text field) on any deal that referenced this
- * investor by name, so the directory remains consistent across the CRM.
+ * Returns any active allocations the investor holds before deleting, because
+ * deal_allocations.investor_id is ON DELETE RESTRICT and the delete would
+ * otherwise fail.
  */
 export async function deleteInvestor(investor, orgId) {
   const id = investor?.id;
-  const name = investor?.name;
   const all = loadInvestors(orgId);
   const next = all.filter(i => String(i.id) !== String(id));
   saveInvestors(next, orgId);
 
-  if (supabase && orgId) {
-    if (id) {
-      const { error } = await supabase
-        .from('investors')
-        .delete()
-        .eq('id', id)
-        .eq('organization_id', orgId);
-      if (error) console.error('[investorsStore] deleteInvestor failed:', error.message);
-    }
-    if (name) {
-      const { error: clearErr } = await supabase
-        .from('deals')
-        .update({ investor: null })
-        .eq('investor', name)
-        .eq('organization_id', orgId);
-      if (clearErr) console.warn('[investorsStore] could not clear deal.investor refs:', clearErr.message);
-    }
+  if (supabase && orgId && id) {
+    // Return any active allocations so the FK ON DELETE RESTRICT doesn't block.
+    await supabase
+      .from('deal_allocations')
+      .update({
+        status:     'returned',
+        notes:      'Auto-returned: investor deleted from directory',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('investor_id', id)
+      .neq('status', 'returned');
+
+    const { error } = await supabase
+      .from('investors')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', orgId);
+    if (error) console.error('[investorsStore] deleteInvestor failed:', error.message);
   }
   return next;
 }

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { logImpersonationEnd, fetchAllInvestors, fetchInvestorNamesFromDeals } from '../lib/investorPortalData';
+import { logImpersonationEnd, fetchAllInvestors } from '../lib/investorPortalData';
 import NotificationsBell from './investor/NotificationsBell';
 
 const NAV = [
@@ -53,15 +53,11 @@ export default function InvestorLayout() {
     }
   }, [profile?.has_set_password, profile?.role, profile?.account_type, impersonating]);
 
-  // Operators: fetch investor list for the picker — try investors table first, fall back to deal data
+  // Operators: fetch investor list for the picker from the canonical investors table.
   useEffect(() => {
     if (!isOperator || investorRecord) return;
     fetchAllInvestors(activeOrgId).then(({ investors: list }) => {
-      if (list.length > 0) {
-        setInvestors(list);
-      } else {
-        fetchInvestorNamesFromDeals().then(({ investors: fallback }) => setInvestors(fallback));
-      }
+      setInvestors(list ?? []);
     });
   }, [isOperator, investorRecord]);
 

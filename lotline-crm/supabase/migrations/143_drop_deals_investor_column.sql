@@ -1,0 +1,34 @@
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 143 · Drop the legacy deals.investor text column
+-- ═══════════════════════════════════════════════════════════════════════════════
+--
+-- Context
+-- -------
+-- This is the final step of the deals.investor → deal_allocations migration.
+--
+-- Prerequisites (all complete):
+--   • 139 — investors gained default_*_pct columns for per-investor financing
+--     defaults (replaces the hardcoded name lookups in src/data/deals.js).
+--   • 140 / 141 — every existing deals.investor assignment has been backfilled
+--     into deal_allocations (active, amount > 0).
+--   • 142 — deal_updates RLS no longer references deals.investor.
+--   • App code no longer writes deals.investor anywhere:
+--       - dealsSync.dealToRow dropped the field
+--       - DealDetail.saveNow dropped the field
+--       - NeedsFundingTab.handleAssign dropped the field
+--       - HMCB lender pick writes deal_allocations directly
+--       - investorsStore.deleteInvestor returns allocations instead of clearing text
+--   • App code no longer reads deals.investor anywhere:
+--       - DealDetail's investor dropdown derives from primaryInvestorName(allocations)
+--       - DealOverview's investor column derives from summarizeInvestors(allocations)
+--       - InvestorPortal filters use allocations only (no text/HMCB fallback)
+--       - investorPortalData.fetchMyDeal drops the investorName access filter
+--         (RLS via allocations scopes it correctly)
+--       - investorPortalData.fetchMyDealUpdates filters by deal_ids from allocations
+--       - fetchInvestorNamesFromDeals removed
+--
+-- After this migration, deal_allocations is the single source of truth for
+-- "which investor(s) is on a deal." Any future drift is impossible by
+-- construction — the column does not exist.
+
+ALTER TABLE public.deals DROP COLUMN IF EXISTS investor;

@@ -32,7 +32,7 @@ export default function InvestorUpdates() {
 
   useEffect(() => {
     if (!investor) return;
-    fetchMyDealUpdates(investor.name).then(({ updates: u }) => {
+    fetchMyDealUpdates(investor.id).then(({ updates: u }) => {
       setUpdates(u);
       setLoading(false);
     });

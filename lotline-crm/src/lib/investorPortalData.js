@@ -61,34 +61,8 @@ export async function fetchMyInvestor() {
 // Deals
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Fetch all deals belonging to my investor (matched by investor name field).
- * RLS + the investor name join keeps this scoped.
- */
-export async function fetchMyDeals(investorName) {
-  const { data, error } = await supabase
-    .from('deals')
-    .select('*')
-    .eq('investor', investorName)
-    .eq('is_archived', false)
-    .order('close_date', { ascending: true, nullsFirst: false });
-  if (error || !data?.length) return { deals: data ?? [], error };
-
-  // Enrich with canonical cost totals from deal_cost_summary_view so that
-  // DealMetrics, YourPosition, and computePortfolioMetrics use live cost data.
-  const dealIds = data.map(d => d.id);
-  const { data: summaries } = await supabase
-    .from('deal_cost_summary_view')
-    .select('deal_id, total_actual, total_estimated')
-    .in('deal_id', dealIds);
-  const byId = Object.fromEntries((summaries ?? []).map(s => [s.deal_id, s]));
-  const deals = data.map(d => ({
-    ...d,
-    total_actual:    byId[d.id]?.total_actual    ?? null,
-    total_estimated: byId[d.id]?.total_estimated ?? null,
-  }));
-  return { deals, error: null };
-}
+// fetchMyDeals (filter by deals.investor text name) removed: deal_allocations
+// is the source of truth. Use fetchMyAllocations(investorId) instead.
 
 /**
  * Fetch all deals the investor is allocated to, via deal_allocations.
@@ -149,10 +123,17 @@ export async function fetchMyAllocations(investorId) {
   return { deals, error: null };
 }
 
-export async function fetchMyDeal(dealId, investorName) {
-  let query = supabase.from('deals').select('*').eq('id', dealId);
-  if (investorName) query = query.eq('investor', investorName);
-  const { data, error } = await query.single();
+/**
+ * Fetch a single deal by id. RLS on the deals table (allocation-based, see
+ * migration 142) enforces that the investor can only read deals they're
+ * allocated to.
+ */
+export async function fetchMyDeal(dealId) {
+  const { data, error } = await supabase
+    .from('deals')
+    .select('*')
+    .eq('id', dealId)
+    .single();
   if (error || !data) return { deal: data ?? null, error };
 
   // Enrich with canonical cost total
@@ -169,21 +150,9 @@ export async function fetchMyDeal(dealId, investorName) {
   return { deal, error: null };
 }
 
-/**
- * Fetch distinct investor names from the deals table.
- * Used as a fallback when the investors table doesn't exist yet.
- */
-export async function fetchInvestorNamesFromDeals() {
-  const { data, error } = await supabase
-    .from('deals')
-    .select('investor')
-    .not('investor', 'is', null)
-    .neq('investor', '')
-    .eq('is_archived', false);
-  if (error) return { investors: [], error };
-  const names = [...new Set((data ?? []).map(d => d.investor).filter(Boolean))].sort();
-  return { investors: names.map(name => ({ id: name, name })), error: null };
-}
+// fetchInvestorNamesFromDeals removed — investors table is the canonical
+// source; fetchAllInvestors should be used instead. Removing the function
+// avoids any read of the soon-to-be-dropped deals.investor column.
 
 // ─────────────────────────────────────────────────────────────
 // Documents
@@ -272,12 +241,25 @@ export async function deleteDocument(docId) {
 // Deal Updates (construction feed)
 // ─────────────────────────────────────────────────────────────
 
-/** Investor: fetch updates for deals I'm invested in. */
-export async function fetchMyDealUpdates(investorName) {
+/**
+ * Investor: fetch updates for deals I'm allocated to.
+ * Scope by deal_allocations.investor_id (the source of truth).
+ */
+export async function fetchMyDealUpdates(investorId) {
+  if (!investorId) return { updates: [], error: null };
+  const { data: allocs, error: allocErr } = await supabase
+    .from('deal_allocations')
+    .select('deal_id')
+    .eq('investor_id', investorId)
+    .neq('status', 'returned')
+    .gt('amount', 0);
+  if (allocErr) return { updates: [], error: allocErr };
+  const dealIds = [...new Set((allocs ?? []).map(a => a.deal_id).filter(Boolean))];
+  if (dealIds.length === 0) return { updates: [], error: null };
   const { data, error } = await supabase
     .from('deal_updates')
-    .select('*, deals!inner(address, investor)')
-    .eq('deals.investor', investorName)
+    .select('*, deals!inner(address)')
+    .in('deal_id', dealIds)
     .eq('visibility', 'investor')
     .order('posted_at', { ascending: false });
   return { updates: data ?? [], error };

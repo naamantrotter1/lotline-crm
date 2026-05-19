@@ -96,9 +96,8 @@ function getFieldValue(deal, key) {
     case 'deal_owner':                 return deal.dealOwner ?? null;
     case 'investor': {
       // Read primary investor from deal_allocations (DealsContext merges this in).
-      // Falls back to legacy deals.investor text for deals not yet backfilled.
       const s = summarizeInvestors(deal.allocations);
-      if (!s.primary) return deal.investor ?? null;
+      if (!s.primary) return null;
       return s.extraCount > 0 ? `${s.primary} +${s.extraCount} more` : s.primary;
     }
     case 'lead_source':                return deal.leadSource ?? null;
