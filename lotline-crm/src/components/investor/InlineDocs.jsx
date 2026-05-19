@@ -78,13 +78,14 @@ export default function InlineDocs({ dealId, investorId }) {
                     <FileText size={14} className="text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{doc.title}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${TYPE_COLORS[doc.doc_type] ?? TYPE_COLORS.other}`}>
-                        {TYPE_LABELS[doc.doc_type] ?? doc.doc_type}
-                      </span>
-                      <span className="text-[9px] text-gray-400 dark:text-gray-500">{fmtDate(doc.created_at)}</span>
-                    </div>
+                    {/* Show the category as the primary label (e.g. "Zoning
+                        Verification") instead of the raw filename. Falls
+                        back to title for investor-tagged docs that have no
+                        category set. */}
+                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                      {doc.category || TYPE_LABELS[doc.doc_type] || doc.title}
+                    </p>
+                    <span className="text-[9px] text-gray-400 dark:text-gray-500">{fmtDate(doc.created_at)}</span>
                   </div>
                 </div>
                 <a

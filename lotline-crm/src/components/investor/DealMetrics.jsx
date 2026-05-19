@@ -1,12 +1,11 @@
-import { TrendingUp, Hammer, BarChart2, Calendar } from 'lucide-react';
+import { TrendingUp, Hammer, Calendar } from 'lucide-react';
 import InfoTooltip from './InfoTooltip';
 
 const TOOLTIPS = {
   arv:       'After-Repair Value — the estimated market price of the completed home.',
   buildCost: 'Total hard costs: land, home, permits, setup, utilities, and site work.',
   deployed:  'Total capital invested in this project to date.',
-  irr:       'Internal Rate of Return — the annualized profit rate if the project closes on schedule.',
-  close:     'The date we expect to close the sale and distribute proceeds.',
+  close:     'The date the land/lot purchase closes.',
 };
 
 function fmt(n)  { return `$${Math.round(n ?? 0).toLocaleString()}`; }
@@ -74,16 +73,8 @@ export default function DealMetrics({ deal }) {
           comingSoon
         />
         <Metric
-          icon={BarChart2}
-          label="Projected IRR"
-          value={deal.projected_irr ? `${deal.projected_irr}%` : null}
-          tooltip={TOOLTIPS.irr}
-          color="text-purple-400"
-          comingSoon
-        />
-        <Metric
           icon={Calendar}
-          label="Expected Close"
+          label="Land Close Date"
           value={fmtDate(closeDate)}
           tooltip={TOOLTIPS.close}
           color="text-blue-400"

@@ -206,6 +206,7 @@ export async function fetchMyDocuments(investorId) {
   const normalizedDealDocs = (dealDocs.data ?? []).map(d => ({
     id:              d.id,
     title:           d.name,
+    category:        d.category || 'Other',
     file_url:        d.url,
     file_size_bytes: d.size,
     doc_type:        d.category ? d.category.toLowerCase().replace(/\s+/g, '_') : 'other',
@@ -728,6 +729,7 @@ export async function fetchInlineDocuments(dealId, investorId) {
   const normalizedDealDocs = (dealDocs.data ?? []).map(d => ({
     id:              d.id,
     title:           d.name,
+    category:        d.category || 'Other',
     file_url:        d.url,
     file_size_bytes: d.size,
     doc_type:        d.category ? d.category.toLowerCase().replace(/\s+/g, '_') : 'other',
