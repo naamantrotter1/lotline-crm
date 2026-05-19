@@ -158,15 +158,68 @@ export async function fetchMyDeal(dealId) {
 // Documents
 // ─────────────────────────────────────────────────────────────
 
-/** Investor: fetch my visible documents. */
+/**
+ * Investor: fetch my visible documents.
+ *
+ * Pulls from two sources:
+ *   • documents table — explicit investor-tagged uploads (visible_to_investor=true).
+ *   • deal_documents table — files attached to deals the investor is
+ *     allocated to. RLS (migration 144) scopes those to active allocations.
+ *
+ * Returns a unified shape so InvestorDocuments doesn't need to differentiate.
+ */
 export async function fetchMyDocuments(investorId) {
-  const { data, error } = await supabase
-    .from('documents')
-    .select('*, deals(address)')
-    .eq('investor_id', investorId)
-    .eq('visible_to_investor', true)
-    .order('created_at', { ascending: false });
-  return { documents: data ?? [], error };
+  if (!investorId) return { documents: [], error: null };
+
+  const [tagged, dealDocs] = await Promise.all([
+    supabase
+      .from('documents')
+      .select('*, deals(address)')
+      .eq('investor_id', investorId)
+      .eq('visible_to_investor', true)
+      .order('created_at', { ascending: false }),
+    // Fetch deal_documents the investor has access to via their allocations
+    // (RLS enforces the allocation check; we still need the deal id to fetch
+    // the address). Two-step: allocations → deal ids → deal_documents.
+    (async () => {
+      const { data: allocs } = await supabase
+        .from('deal_allocations')
+        .select('deal_id')
+        .eq('investor_id', investorId)
+        .neq('status', 'returned')
+        .gt('amount', 0);
+      const dealIds = [...new Set((allocs ?? []).map(a => a.deal_id).filter(Boolean))];
+      if (dealIds.length === 0) return { data: [], error: null };
+      return supabase
+        .from('deal_documents')
+        .select('id, deal_id, name, category, url, size, created_at, deals!inner(address)')
+        .in('deal_id', dealIds)
+        .order('created_at', { ascending: false });
+    })(),
+  ]);
+
+  if (tagged.error)  return { documents: [], error: tagged.error };
+  if (dealDocs.error) return { documents: [], error: dealDocs.error };
+
+  // Normalize deal_documents rows to the documents shape so the UI doesn't
+  // need to branch on source.
+  const normalizedDealDocs = (dealDocs.data ?? []).map(d => ({
+    id:              d.id,
+    title:           d.name,
+    file_url:        d.url,
+    file_size_bytes: d.size,
+    doc_type:        d.category ? d.category.toLowerCase().replace(/\s+/g, '_') : 'other',
+    visible_to_investor: true,
+    created_at:      d.created_at,
+    deal_id:         d.deal_id,
+    deals:           d.deals, // { address }
+    source:          'deal_document',
+  }));
+
+  const merged = [...(tagged.data ?? []), ...normalizedDealDocs]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  return { documents: merged, error: null };
 }
 
 /** Operator: fetch all documents for a deal. */
