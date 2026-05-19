@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../lib/AuthContext';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
+import { upsertPrimaryAllocation, findInvestorByName } from '../lib/dealAllocationsClient';
 import { supabase } from '../lib/supabase';
 import { markPaymentPaid, formatPaymentType, STATUS_LABEL, STATUS_PILL, applyOverdue } from '../lib/paymentScheduleData';
 import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingData';
@@ -587,6 +588,33 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
       };
       saveDeal(updatedDeal);
       setDeals(prev => prev.map(d => d.id === updatedDeal.id ? updatedDeal : d));
+
+      // ── Phase 3: mirror this assignment into deal_allocations ────────────
+      // Best-effort. Failures here don't block the saveDeal above.
+      (async () => {
+        try {
+          const SPECIAL = new Set(['Cash', 'None', '']);
+          if (SPECIAL.has(funderName.trim())) return;
+          const inv = await findInvestorByName(funderName, matchedDeal.organization_id || orgId);
+          if (!inv?.id) {
+            console.warn('[NeedsFundingTab] no investor row for "%s"', funderName);
+            return;
+          }
+          await upsertPrimaryAllocation({
+            dealId:             matchedDeal.id,
+            organizationId:     matchedDeal.organization_id || orgId,
+            investorId:         inv.id,
+            amount:             Number(matchedDeal.investorCapitalContributed) || Number(matchedDeal.totalActual) || 1,
+            preferredReturnPct: terms.interestRate ?? null,
+            profitSharePct:     terms.investorProfitSplitPct ?? terms.profitSharePct ?? null,
+            sourceScenario:     scenarioMeta?.dbType ?? terms?.scenario ?? null,
+            status:             'committed',
+            notes:              'Assigned via Needs Funding modal on ' + new Date().toISOString().slice(0, 10),
+          });
+        } catch (err) {
+          console.warn('[NeedsFundingTab] allocation mirror failed:', err?.message || err);
+        }
+      })();
     }
 
     setModalDeal(null);

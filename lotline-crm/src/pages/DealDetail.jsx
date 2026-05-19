@@ -11,6 +11,7 @@ import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase, flushToSupabaseAsync } from '../lib/dealsSync';
 import { lookupInvestorByName, savePaymentSchedule } from '../lib/paymentScheduleData';
 import { fetchActiveCommitmentsForModal, addAllocation, updateAllocation } from '../lib/capitalStackData';
+import { upsertPrimaryAllocation, returnAllPrimaryAllocations, findInvestorByName } from '../lib/dealAllocationsClient';
 import { notifyPipelineChange, notifyStageChange } from '../lib/notify';
 import { useDeals } from '../lib/DealsContext';
 import { useAuth } from '../lib/AuthContext';
@@ -2681,6 +2682,7 @@ function DealDetailContent({ deal }) {
   const saveNow = useCallback((overrides = {}) => {
     if (!canEdit && !isAgent) return;
     const s = stateRef.current;
+    const prevInvestor = dealRef.current?.investor || '';
     const d = {
       ...dealRef.current,
       stage: s.stage, address: s.address, county: s.county, state: s.dealState, zip: s.zip,
@@ -2704,7 +2706,48 @@ function DealDetailContent({ deal }) {
       if (idx >= 0) { const next = [...prev]; next[idx] = d; return next; }
       return [...prev, d];
     });
-  }, [canEdit, isAgent, setDeals]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Mirror investor change into deal_allocations ────────────────────────
+    // Phase 3 — when the operator picks (or clears) an investor on a deal,
+    // upsert/return the matching deal_allocations row so the investor portal
+    // and operator By-Investor view stay in sync without a separate manual
+    // Capital Stack edit. Best-effort; failures don't block the save above.
+    const newInvestor = (d.investor || '').trim();
+    const oldInvestor = (prevInvestor || '').trim();
+    const SPECIAL = new Set(['', 'Cash', 'None']);
+    if (newInvestor !== oldInvestor && d.id && supabase) {
+      (async () => {
+        try {
+          if (!newInvestor || SPECIAL.has(newInvestor)) {
+            // Cleared or set to a non-investor marker — return any active primary allocation.
+            if (oldInvestor && !SPECIAL.has(oldInvestor)) {
+              await returnAllPrimaryAllocations(d.id);
+            }
+            return;
+          }
+          const inv = await findInvestorByName(newInvestor, activeOrgId);
+          if (!inv?.id) {
+            console.warn('[DealDetail] investor change: no Supabase investor row for "%s" in org %s', newInvestor, activeOrgId);
+            return;
+          }
+          const sd = d.scenarioData || {};
+          await upsertPrimaryAllocation({
+            dealId:             d.id,
+            organizationId:     activeOrgId,
+            investorId:         inv.id,
+            amount:             Number(d.investorCapitalContributed) || 1,
+            preferredReturnPct: sd.interestRate ?? null,
+            profitSharePct:     sd.investorProfitSplitPct ?? d.investorEquityPct ?? null,
+            sourceScenario:     d.financingScenarioType ?? d.financing ?? null,
+            status:             'committed',
+            notes:              'Created by operator UI on ' + new Date().toISOString().slice(0, 10),
+          });
+        } catch (err) {
+          console.warn('[DealDetail] allocation mirror failed:', err?.message || err);
+        }
+      })();
+    }
+  }, [canEdit, isAgent, setDeals, activeOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial costs from deal data
   const initCosts = {};
@@ -3083,6 +3126,10 @@ function DealDetailContent({ deal }) {
   // capital tracking, and payment schedule (which all key off deal.investor)
   // stay in sync.
   //
+  // We also persist via saveNow so the saveNow callback can fire the Phase 3
+  // deal_allocations mirror — otherwise a state-only setInvestor here would
+  // leave the new HMCB lender invisible to the investor portal.
+  //
   // We deliberately DO NOT copy in the reverse direction: legacy `investor`
   // values from previous scenarios (e.g. "Cash" left over from a Cash scenario)
   // would otherwise contaminate the HMCB lender dropdown when switching scenarios.
@@ -3091,6 +3138,7 @@ function DealDetailContent({ deal }) {
     const hmcbLender = (hmcbData?.lenderName || '').trim();
     if (hmcbLender && hmcbLender !== investor) {
       setInvestor(hmcbLender);
+      saveNow?.({ investor: hmcbLender });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedScenario, hmcbData?.lenderName]);

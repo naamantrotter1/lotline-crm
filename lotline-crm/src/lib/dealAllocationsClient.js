@@ -112,3 +112,203 @@ export function summarizeInvestors(allocations) {
 export function isFunded(allocations) {
   return Array.isArray(allocations) && allocations.length > 0;
 }
+
+// ── Investor lookup ─────────────────────────────────────────────────────────
+
+/**
+ * Find an investor row by name within an organization (case-insensitive).
+ * Returns null if not found.
+ */
+export async function findInvestorByName(name, organizationId) {
+  if (!supabase || !name) return null;
+  const trimmed = String(name).trim();
+  if (!trimmed) return null;
+  let q = supabase
+    .from('investors')
+    .select('id, name, organization_id')
+    .ilike('name', trimmed)
+    .eq('is_archived', false);
+  if (organizationId) q = q.eq('organization_id', organizationId);
+  const { data } = await q.limit(1).maybeSingle();
+  return data ?? null;
+}
+
+// ── Write path: upsert + clear primary investor allocations ─────────────────
+
+async function findOrCreateLegacyCommitment(investorId, organizationId) {
+  // Reuse the most recent active commitment if any; otherwise create a
+  // "Legacy" unlimited commitment matching migrations 005/140 convention.
+  const { data: existing } = await supabase
+    .from('capital_commitments')
+    .select('id')
+    .eq('investor_id', investorId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+
+  const { data, error } = await supabase
+    .from('capital_commitments')
+    .insert({
+      investor_id:      investorId,
+      organization_id:  organizationId,
+      name:             'Legacy Commitment — created ' + new Date().toISOString().slice(0, 10),
+      committed_amount: null,           // unlimited
+      priority_rank:    1,
+      status:           'active',
+      revolving:        true,
+      notes:            'Auto-created by dealAllocationsClient.upsertPrimaryAllocation',
+    })
+    .select('id')
+    .single();
+  if (error) {
+    console.error('[dealAllocationsClient] commitment create failed:', error.message);
+    return null;
+  }
+  return data?.id ?? null;
+}
+
+/**
+ * Upsert the active 1st Position allocation for an investor on a deal.
+ *
+ * Behavior:
+ *   • If an active (non-returned) allocation already exists for
+ *     (deal_id, investor_id), update it in place with new amount + terms.
+ *   • Else, find-or-create a commitment for the investor and INSERT.
+ *   • Optionally, mark any OTHER active 1st Position allocations on the deal
+ *     as 'returned' so the deal has a single primary investor (the typical
+ *     operator UX). Pass replacePrimary=false to disable this (e.g. for
+ *     multi-investor capital stacks added via the Capital Stack panel).
+ *
+ * Returns the created/updated allocation row or null on failure.
+ */
+export async function upsertPrimaryAllocation({
+  dealId,
+  organizationId,
+  investorId,
+  amount,
+  position = '1st Position',
+  preferredReturnPct = null,
+  profitSharePct = null,
+  sourceScenario = null,
+  status = 'committed',
+  fundingStatus = null,
+  notes = null,
+  replacePrimary = true,
+}) {
+  if (!supabase) return null;
+  if (!dealId || !investorId || !organizationId) {
+    console.warn('[dealAllocationsClient] upsertPrimaryAllocation missing required fields', { dealId, investorId, organizationId });
+    return null;
+  }
+  const safeAmount = Math.max(1, Number(amount) || 1);
+  const fundingStatusValue = fundingStatus ?? (safeAmount > 1 ? 'fully_funded' : 'not_started');
+
+  // 1) If a non-returned allocation already exists for (deal, investor), update it.
+  const { data: existing } = await supabase
+    .from('deal_allocations')
+    .select('id')
+    .eq('deal_id', dealId)
+    .eq('investor_id', investorId)
+    .neq('status', 'returned')
+    .order('allocated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from('deal_allocations')
+      .update({
+        amount:               safeAmount,
+        position,
+        status,
+        funding_status:       fundingStatusValue,
+        preferred_return_pct: preferredReturnPct,
+        profit_share_pct:     profitSharePct,
+        source_scenario:      sourceScenario,
+        ...(notes ? { notes } : {}),
+        updated_at:           new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) {
+      console.error('[dealAllocationsClient] allocation update failed:', error.message);
+      return null;
+    }
+    if (replacePrimary && position === '1st Position') {
+      await returnOtherPrimaryAllocations(dealId, investorId);
+    }
+    return data;
+  }
+
+  // 2) Otherwise insert a new allocation, creating a commitment if needed.
+  const commitmentId = await findOrCreateLegacyCommitment(investorId, organizationId);
+  if (!commitmentId) return null;
+
+  const { data, error } = await supabase
+    .from('deal_allocations')
+    .insert({
+      deal_id:              dealId,
+      commitment_id:        commitmentId,
+      investor_id:          investorId,
+      organization_id:      organizationId,
+      amount:               safeAmount,
+      position,
+      status,
+      funding_status:       fundingStatusValue,
+      preferred_return_pct: preferredReturnPct,
+      profit_share_pct:     profitSharePct,
+      source_scenario:      sourceScenario,
+      notes:                notes ?? 'Created by operator UI on ' + new Date().toISOString().slice(0, 10),
+    })
+    .select('*')
+    .single();
+  if (error) {
+    console.error('[dealAllocationsClient] allocation insert failed:', error.message);
+    return null;
+  }
+  if (replacePrimary && position === '1st Position') {
+    await returnOtherPrimaryAllocations(dealId, investorId);
+  }
+  return data;
+}
+
+/**
+ * Mark every active 1st Position allocation on a deal as 'returned' EXCEPT the
+ * given investor's. Used when assigning a primary investor that replaces a
+ * previous one.
+ */
+async function returnOtherPrimaryAllocations(dealId, keepInvestorId) {
+  if (!supabase) return;
+  await supabase
+    .from('deal_allocations')
+    .update({
+      status:     'returned',
+      notes:      'Auto-returned: primary investor replaced via operator UI',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('deal_id', dealId)
+    .eq('position', '1st Position')
+    .neq('status', 'returned')
+    .neq('investor_id', keepInvestorId);
+}
+
+/**
+ * Mark every active 1st Position allocation on a deal as 'returned'. Used
+ * when the operator clears the investor field on a deal.
+ */
+export async function returnAllPrimaryAllocations(dealId) {
+  if (!supabase || !dealId) return;
+  await supabase
+    .from('deal_allocations')
+    .update({
+      status:     'returned',
+      notes:      'Auto-returned: investor cleared via operator UI',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('deal_id', dealId)
+    .eq('position', '1st Position')
+    .neq('status', 'returned');
+}
