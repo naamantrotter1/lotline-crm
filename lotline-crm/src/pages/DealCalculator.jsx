@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Calculator, X, PlusCircle, Save, CheckCircle2 } from 'lucide-react';
+import { buildScenarios } from '../lib/dealCalculator/scenarios';
+import InfoTooltip from '../components/investor/InfoTooltip';
 import { saveToLS, flushToSupabaseAsync } from '../lib/dealsSync';
 import { updateCostLinesFromCalc } from '../lib/costBreakdownData';
 import { useDeals } from '../lib/DealsContext';
@@ -483,35 +485,14 @@ export default function DealCalculator() {
   const landUnderMax = landValue > 0 && landValue <= maxOffer;
 
   // Scenarios
-  const scenarios = [
-    {
-      label: 'Cash',
-      capital: buildCost,
-      profit: projectedProfit,
-      roi: totalAllIn > 0 ? ((projectedProfit / buildCost) * 100).toFixed(1) : '0',
-    },
-    {
-      label: 'Hard Money',
-      capital: buildCost * 0.2,
-      profit: projectedProfit - (buildCost * 0.8 * 0.12 * (vals.holdingMonths / 12)),
-      roi: null,
-    },
-    {
-      label: 'HM (Land + Home)',
-      capital: buildCost * 0.1,
-      profit: projectedProfit - (buildCost * 0.9 * 0.12 * (vals.holdingMonths / 12)),
-      roi: null,
-    },
-    {
-      label: 'Line of Credit',
-      capital: buildCost * 0.1,
-      profit: projectedProfit,
-      roi: null,
-    },
-  ].map((s) => ({
-    ...s,
-    roi: s.roi || (s.capital > 0 ? ((s.profit / s.capital) * 100).toFixed(1) : '0'),
-  }));
+  const scenarios = buildScenarios({
+    buildCost,
+    totalAllIn,
+    baseProfit:    projectedProfit,
+    holdingMonths: vals.holdingMonths,
+    landCost:      activeCostBag.land,
+    mobileHomeCost: activeCostBag.mobile_home,
+  });
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -706,12 +687,19 @@ export default function DealCalculator() {
               <tbody>
                 {scenarios.map((s) => (
                   <tr key={s.label} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2 font-medium text-gray-700">{s.label}</td>
+                    <td className="py-2 font-medium text-gray-700">
+                      <span className="inline-flex items-center gap-0.5">
+                        {s.label}
+                        {s.tooltip && <InfoTooltip text={s.tooltip} side="top" />}
+                      </span>
+                    </td>
                     <td className="py-2 text-right text-gray-600">{fmt(s.capital)}</td>
                     <td className={`py-2 text-right font-semibold ${s.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {fmt(s.profit)}
                     </td>
-                    <td className="py-2 text-right text-accent font-semibold">{s.roi}%</td>
+                    <td className="py-2 text-right text-accent font-semibold">
+                      {s.roi === '—' ? '—' : `${s.roi}%`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
