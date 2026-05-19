@@ -507,9 +507,9 @@ export default function DealCalculator() {
     },
     {
       label:   'Hard Money',
-      capital: _capitalIn(buildCost),
+      capital: _hmPoints(buildCost),          // lender funds 100%; operator pays 3 points only
       profit:  _profitFor(buildCost),
-      roi:     _fmtRoi(_profitFor(buildCost), _capitalIn(buildCost)),
+      roi:     _fmtRoi(_profitFor(buildCost), _hmPoints(buildCost)),
       tooltip: '12% annual interest + 3 points on a total build cost loan.',
     },
     {
