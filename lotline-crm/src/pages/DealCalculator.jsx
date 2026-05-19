@@ -319,6 +319,7 @@ function fmt(n) {
 export default function DealCalculator() {
   const [vals, setVals] = useState(defaultValues);
   const [showImport, setShowImport] = useState(false);
+  const [activeScenarioLabel, setActiveScenarioLabel] = useState('Hard Money');
   const { canEdit } = usePermissions();
   const { deals, setDeals } = useDeals();
   const { profile, activeOrgId } = useAuth();
@@ -680,32 +681,57 @@ export default function DealCalculator() {
         {/* Right: Results */}
         <div className="space-y-4">
           <div className="bg-sidebar rounded-xl shadow-sm p-5 text-white">
-            <h3 className="font-semibold mb-4 text-white/80 text-sm uppercase tracking-wide">Results</h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Total Build Cost', value: fmt(buildCost) },
-                { label: 'Selling Costs', value: fmt(sellingCosts) },
-                { label: 'Holding Costs', value: fmt(holdingCosts) },
-                { label: 'Total All-In Cost', value: fmt(totalAllIn), highlight: true },
-                { label: 'Max Offer for Land', value: fmt(maxOffer), highlight: true, maxOffer: true },
-                { label: 'Projected Profit', value: fmt(projectedProfit), profit: true },
-                { label: 'Projected ROI', value: `${projectedROI}%`, profit: true },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className={`flex justify-between items-center ${item.highlight ? 'pt-2 border-t border-white/20 font-semibold' : ''}`}
+            <h3 className="font-semibold mb-3 text-white/80 text-sm uppercase tracking-wide">Results</h3>
+
+            {/* Scenario selector */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {scenarios.map(s => (
+                <button
+                  key={s.label}
+                  onClick={() => setActiveScenarioLabel(s.label)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    activeScenarioLabel === s.label
+                      ? 'bg-accent text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
                 >
-                  <span className="text-white/70 text-sm">{item.label}</span>
-                  <span className={`text-base font-bold ${
-                    item.profit ? 'text-green-400' :
-                    item.maxOffer ? (landOverMax ? 'text-red-400' : landUnderMax ? 'text-green-400' : 'text-accent') :
-                    'text-white'
-                  }`}>
-                    {item.value}
-                  </span>
-                </div>
+                  {s.label}
+                </button>
               ))}
             </div>
+
+            {(() => {
+              const sel = scenarios.find(s => s.label === activeScenarioLabel) || scenarios[0];
+              const rows = [
+                { label: 'Total Build Cost',  value: fmt(buildCost) },
+                { label: 'Selling Costs',     value: fmt(sellingCosts) },
+                { label: 'Holding Costs',     value: fmt(holdingCosts) },
+                { label: 'Total All-In Cost', value: fmt(totalAllIn), highlight: true },
+                { label: 'Max Offer for Land', value: fmt(maxOffer), highlight: true, maxOffer: true },
+                { label: 'Capital In',        value: fmt(sel.capital), highlight: true },
+                { label: 'Net Profit',        value: fmt(sel.profit), profit: true },
+                { label: 'ROI',               value: sel.roi == null ? '—' : `${sel.roi}%`, profit: true },
+              ];
+              return (
+                <div className="space-y-3">
+                  {rows.map((item) => (
+                    <div
+                      key={item.label}
+                      className={`flex justify-between items-center ${item.highlight ? 'pt-2 border-t border-white/20 font-semibold' : ''}`}
+                    >
+                      <span className="text-white/70 text-sm">{item.label}</span>
+                      <span className={`text-base font-bold ${
+                        item.profit ? (sel.profit >= 0 ? 'text-green-400' : 'text-red-400') :
+                        item.maxOffer ? (landOverMax ? 'text-red-400' : landUnderMax ? 'text-green-400' : 'text-accent') :
+                        'text-white'
+                      }`}>
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Scenario Comparison */}
