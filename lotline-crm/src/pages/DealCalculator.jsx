@@ -733,7 +733,7 @@ export default function DealCalculator() {
                     <td className={`py-2 text-right font-semibold ${s.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {fmt(s.profit)}
                     </td>
-                    <td className="py-2 text-right text-accent font-semibold">
+                    <td className="py-2 text-right text-gray-900 font-semibold">
                       {s.roi == null ? '—' : `${s.roi}%`}
                     </td>
                   </tr>
