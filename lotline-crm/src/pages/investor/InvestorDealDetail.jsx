@@ -14,6 +14,7 @@ import InlineDocs        from '../../components/investor/InlineDocs';
 import AskQuestionModal  from '../../components/investor/AskQuestionModal';
 import PropertyMap       from '../../components/investor/PropertyMap';
 import ActivityLog       from '../../components/investor/ActivityLog';
+import HomeModelShowcase from '../../components/investor/HomeModelShowcase';
 
 const STAGE_COLORS = {
   'Contract Signed': 'bg-green-500/80',
@@ -172,6 +173,9 @@ export default function InvestorDealDetail() {
 
             {/* Pinned Status Note */}
             {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
+
+            {/* Home Model — photos + specs from the Order Home catalog */}
+            {deal.home_model && <HomeModelShowcase dealHomeModel={deal.home_model} />}
 
             {/* Activity Log */}
             <ActivityLog dealId={deal.id} />
