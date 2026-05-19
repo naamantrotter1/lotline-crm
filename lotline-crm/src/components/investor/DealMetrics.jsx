@@ -1,11 +1,10 @@
-import { TrendingUp, Hammer, BarChart2, DollarSign, Calendar } from 'lucide-react';
+import { TrendingUp, Hammer, BarChart2, Calendar } from 'lucide-react';
 import InfoTooltip from './InfoTooltip';
 
 const TOOLTIPS = {
   arv:       'After-Repair Value — the estimated market price of the completed home.',
   buildCost: 'Total hard costs: land, home, permits, setup, utilities, and site work.',
   deployed:  'Total capital invested in this project to date.',
-  profit:    'Estimated profit = ARV minus all build costs and ~3.5% selling costs.',
   irr:       'Internal Rate of Return — the annualized profit rate if the project closes on schedule.',
   close:     'The date we expect to close the sale and distribute proceeds.',
 };
@@ -48,9 +47,6 @@ export default function DealMetrics({ deal }) {
       (deal.footers ?? 0) + (deal.underpinning ?? 0) + (deal.decks ?? 0) +
       (deal.driveway ?? 0) + (deal.landscaping ?? 0);
       // water_sewer dropped — duplicated Public Water + Public Sewer (migration 125)
-  // Selling-costs formula matches src/data/deals.js calcNetProfit: 3.5% of ARV + $3,500 flat.
-  const sellCost   = (deal.arv ?? 0) * 0.035 + 3500;
-  const projProfit = Math.max(0, (deal.arv ?? 0) - totalCost - sellCost);
   const closeDate  = deal.projected_payout_date ?? deal.close_date;
 
   return (
@@ -75,14 +71,6 @@ export default function DealMetrics({ deal }) {
           label="Build Cost"
           value={totalCost > 0 ? fmt(totalCost) : null}
           tooltip={TOOLTIPS.buildCost}
-          comingSoon
-        />
-        <Metric
-          icon={DollarSign}
-          label="Projected Profit"
-          value={projProfit > 0 ? fmt(projProfit) : null}
-          tooltip={TOOLTIPS.profit}
-          color="text-accent"
           comingSoon
         />
         <Metric
