@@ -13,7 +13,6 @@ import PinnedStatusNote  from '../../components/investor/PinnedStatusNote';
 import InlineDocs        from '../../components/investor/InlineDocs';
 import AskQuestionModal  from '../../components/investor/AskQuestionModal';
 import PropertyMap       from '../../components/investor/PropertyMap';
-import ActivityLog       from '../../components/investor/ActivityLog';
 import HomeModelShowcase from '../../components/investor/HomeModelShowcase';
 
 const STAGE_COLORS = {
@@ -201,9 +200,6 @@ export default function InvestorDealDetail() {
 
             {/* Pinned Status Note */}
             {pinnedUpdate && <PinnedStatusNote update={pinnedUpdate} />}
-
-            {/* Activity Log */}
-            <ActivityLog dealId={deal.id} />
 
             {/* Inline Documents */}
             <InlineDocs dealId={deal.id} investorId={investor?.id} />
