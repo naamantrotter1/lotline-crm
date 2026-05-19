@@ -109,6 +109,9 @@ export function buildExportData(deal = {}, costLines = []) {
     { label: 'Zip',        value: blankIfEmpty(deal.zip) },
     { label: 'Parcel ID',  value: blankIfEmpty(deal.parcelId) },
     { label: 'Acreage',    value: deal.acreage != null && deal.acreage !== '' ? formatAcres(deal.acreage) : '' },
+    // Home model name only — never include its price (the line-item table
+    // already itemizes the mobile-home cost separately).
+    { label: 'Home Model', value: blankIfEmpty(deal.homeModel) },
     { label: 'ARV',        value: deal.arv != null && deal.arv !== '' ? Number(deal.arv) : '' },
     { label: 'All-In Cost', value: allInCost },
   ];
@@ -137,9 +140,11 @@ export function exportToXlsx(deal, costLines) {
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Currency formatting on ARV + All-In (header rows 7, 8 -> indices 6, 7)
-  const arvAddr   = XLSX.utils.encode_cell({ r: 6, c: 1 });
-  const allInAddr = XLSX.utils.encode_cell({ r: 7, c: 1 });
+  // Currency formatting on ARV + All-In. Header order is Address, County,
+  // State, Zip, Parcel ID, Acreage, Home Model, ARV, All-In Cost — so ARV
+  // sits at row index 7 and All-In at index 8.
+  const arvAddr   = XLSX.utils.encode_cell({ r: 7, c: 1 });
+  const allInAddr = XLSX.utils.encode_cell({ r: 8, c: 1 });
   if (ws[arvAddr]   && typeof ws[arvAddr].v   === 'number') ws[arvAddr].z   = '"$"#,##0.00';
   if (ws[allInAddr] && typeof ws[allInAddr].v === 'number') ws[allInAddr].z = '"$"#,##0.00';
 
@@ -161,7 +166,7 @@ export function exportToXlsx(deal, costLines) {
   // unless you ship `xlsx-style`; we set them anyway so they're present for
   // tooling that does read them.
   const boldHeaderCells = [
-    'A1','A2','A3','A4','A5','A6','A7','A8',       // metadata labels
+    'A1','A2','A3','A4','A5','A6','A7','A8','A9', // metadata labels (9 rows now)
     `A${tableStartRow + 1}`, `B${tableStartRow + 1}`, // table header
     `A${totalRowIdx + 1}`, `B${totalRowIdx + 1}`,  // total row
   ];
@@ -170,9 +175,9 @@ export function exportToXlsx(deal, costLines) {
   // Column widths
   ws['!cols'] = [{ wch: 40 }, { wch: 18 }];
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Cost Breakdown');
+  XLSX.utils.book_append_sheet(wb, ws, 'Deal Summary');
 
-  const filename = `${slugify(deal.address)}-cost-breakdown-${todayIso()}.xlsx`;
+  const filename = `${slugify(deal.address)}-deal-summary-${todayIso()}.xlsx`;
   XLSX.writeFile(wb, filename);
   return filename;
 }
@@ -286,7 +291,7 @@ export async function exportToPdf(deal, costLines) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(...BRAND.cream);
-  doc.text('Cost Breakdown', margin, bannerH / 2 + 6);
+  doc.text('Deal Summary', margin, bannerH / 2 + 6);
 
   // ── Metadata block ────────────────────────────────────────────────────────
   const metaRows = data.header.map(({ label, value }) => {
@@ -308,8 +313,12 @@ export async function exportToPdf(deal, costLines) {
     margin: { left: margin, right: margin },
   });
 
-  // ── Expenses table ────────────────────────────────────────────────────────
-  const expensesStartY = doc.lastAutoTable.finalY + 18;
+  // ── Expenses table (always starts on a fresh page) ───────────────────────
+  // Forcing a page break before the line items keeps them from splitting
+  // across the header page and the next; whole table renders on one sheet
+  // (or paginates internally if rows ever exceed a single page).
+  doc.addPage();
+  const expensesStartY = margin + 20;
   autoTable(doc, {
     startY: expensesStartY,
     head: [['Line Item', 'Estimated Amount']],
@@ -354,7 +363,7 @@ export async function exportToPdf(deal, costLines) {
     },
   });
 
-  const filename = `${slugify(deal.address)}-cost-breakdown-${todayIso()}.pdf`;
+  const filename = `${slugify(deal.address)}-deal-summary-${todayIso()}.pdf`;
   doc.save(filename);
   return filename;
 }
