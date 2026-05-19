@@ -85,9 +85,9 @@ BEGIN
 
     IF v_commitment_id IS NULL THEN
       INSERT INTO public.capital_commitments (
-        investor_id, name, committed_amount, priority_rank, status, revolving, notes
+        investor_id, organization_id, name, committed_amount, priority_rank, status, revolving, notes
       ) VALUES (
-        v_investor_id,
+        v_investor_id, r.organization_id,
         'Legacy Commitment — migrated ' || to_char(now(), 'YYYY-MM-DD'),
         NULL,                       -- unlimited; safer for backfill than guessing
         1, 'active', true,
@@ -118,9 +118,9 @@ BEGIN
 
     -- ── Append ledger entry for the audit log ──────────────────────────────
     INSERT INTO public.commitment_ledger_entries (
-      commitment_id, delta_amount, reason, deal_id, allocation_id
+      commitment_id, organization_id, delta_amount, reason, deal_id, allocation_id
     ) VALUES (
-      v_commitment_id, v_amount, 'migration', r.id, v_allocation_id
+      v_commitment_id, r.organization_id, v_amount, 'migration', r.id, v_allocation_id
     );
 
     v_created_count := v_created_count + 1;
