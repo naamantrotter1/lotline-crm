@@ -501,31 +501,31 @@ export default function DealCalculator() {
   const scenarios = [
     {
       label:   'Cash',
-      capital: buildCost,
-      profit:  projectedProfit,
+      capital: Math.round(buildCost),
+      profit:  Math.round(projectedProfit),
       roi:     buildCost > 0 ? (projectedProfit / buildCost * 100).toFixed(1) : null,
       tooltip: null,
     },
     {
       label:   'Hard Money',
-      capital: _hmPoints(buildCost),          // lender funds 100%; operator pays 3 points only
-      profit:  _profitFor(buildCost),
+      capital: Math.round(_hmPoints(buildCost)),          // lender funds 100%; operator pays 3 points only
+      profit:  Math.round(_profitFor(buildCost)),
       roi:     _fmtRoi(_profitFor(buildCost), _hmPoints(buildCost)),
       tooltip: '12% annual interest + 3 points on a total build cost loan.',
     },
     {
       label:   'HM (Land + Home)',
       // capital = (buildCost − landAndHome) + 3% of landAndHome
-      capital: Math.max(0, buildCost - _landAndHome) + _hmPoints(_landAndHome),
-      profit:  _profitFor(_landAndHome),
+      capital: Math.round(Math.max(0, buildCost - _landAndHome) + _hmPoints(_landAndHome)),
+      profit:  Math.round(_profitFor(_landAndHome)),
       roi:     _fmtRoi(_profitFor(_landAndHome), Math.max(0, buildCost - _landAndHome) + _hmPoints(_landAndHome)),
       tooltip: '12% annual interest + 3 points on a land + home cost loan.',
     },
     {
       // TODO(LOC): confirm interest rate + points then plug into the same helpers
       label:   'Line of Credit',
-      capital: _capitalIn(buildCost),
-      profit:  projectedProfit,
+      capital: Math.round(_capitalIn(buildCost)),
+      profit:  Math.round(projectedProfit),
       roi:     _fmtRoi(projectedProfit, _capitalIn(buildCost)),
       tooltip: 'Interest and points not yet modeled — confirm with your lender.',
     },
