@@ -514,9 +514,10 @@ export default function DealCalculator() {
     },
     {
       label:   'HM (Land + Home)',
-      capital: _capitalIn(_landAndHome),
+      // capital = (buildCost − landAndHome) + 3% of landAndHome
+      capital: Math.max(0, buildCost - _landAndHome) + _hmPoints(_landAndHome),
       profit:  _profitFor(_landAndHome),
-      roi:     _fmtRoi(_profitFor(_landAndHome), _capitalIn(_landAndHome)),
+      roi:     _fmtRoi(_profitFor(_landAndHome), Math.max(0, buildCost - _landAndHome) + _hmPoints(_landAndHome)),
       tooltip: '12% annual interest + 3 points on a land + home cost loan.',
     },
     {
