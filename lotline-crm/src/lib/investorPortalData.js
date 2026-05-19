@@ -692,15 +692,55 @@ export async function fetchPinnedUpdate(dealId) {
 // Inline Documents (deal-scoped)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Investor inline (deal-scoped) documents.
+ *
+ * Pulls from both sources:
+ *   • documents — investor-tagged uploads (visible_to_investor=true) for this deal.
+ *   • deal_documents — operator uploads on the deal page. RLS (migration 144)
+ *     enforces that only allocated investors can read these.
+ *
+ * Normalises the deal_documents shape to match `documents` so the UI doesn't
+ * have to branch on source.
+ */
 export async function fetchInlineDocuments(dealId, investorId) {
+  if (!dealId) return { documents: [], error: null };
+
   let q = supabase
     .from('documents')
     .select('*')
     .eq('deal_id', dealId)
     .eq('visible_to_investor', true);
   if (investorId) q = q.eq('investor_id', investorId);
-  const { data, error } = await q.order('created_at', { ascending: false });
-  return { documents: data ?? [], error };
+
+  const [tagged, dealDocs] = await Promise.all([
+    q.order('created_at', { ascending: false }),
+    supabase
+      .from('deal_documents')
+      .select('id, deal_id, name, category, url, size, created_at')
+      .eq('deal_id', dealId)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  if (tagged.error)  return { documents: [], error: tagged.error };
+  if (dealDocs.error) return { documents: [], error: dealDocs.error };
+
+  const normalizedDealDocs = (dealDocs.data ?? []).map(d => ({
+    id:              d.id,
+    title:           d.name,
+    file_url:        d.url,
+    file_size_bytes: d.size,
+    doc_type:        d.category ? d.category.toLowerCase().replace(/\s+/g, '_') : 'other',
+    visible_to_investor: true,
+    created_at:      d.created_at,
+    deal_id:         d.deal_id,
+    source:          'deal_document',
+  }));
+
+  const merged = [...(tagged.data ?? []), ...normalizedDealDocs]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  return { documents: merged, error: null };
 }
 
 // ─────────────────────────────────────────────────────────────
