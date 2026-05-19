@@ -500,9 +500,9 @@ export default function DealCalculator() {
   const scenarios = [
     {
       label:   'Cash',
-      capital: buildCost,
+      capital: totalAllIn,
       profit:  projectedProfit,
-      roi:     buildCost > 0 ? (projectedProfit / buildCost * 100).toFixed(1) : null,
+      roi:     totalAllIn > 0 ? (projectedProfit / totalAllIn * 100).toFixed(1) : null,
       tooltip: null,
     },
     {
