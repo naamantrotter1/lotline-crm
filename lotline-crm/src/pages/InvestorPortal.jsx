@@ -96,15 +96,17 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   // at least one of its active (non-returned, amount > 0) allocations points
   // at investor.id. DealsContext merges allocations onto deal.allocations.
   //
-  // Temporary bridge: HMCB-financed deals can have a lender chosen in the
-  // HMCB panel that is NOT yet reflected as a deal_allocations row. Until
-  // Phase 3 makes the HMCB picker write allocations, also match by
-  // scenarioData.hmcb.lenderName.
+  // Transition bridges (will be removed once Phase 4 drops deals.investor):
+  //   • deals.investor text field match — catches deals assigned via the
+  //     legacy dropdown that haven't been re-saved since Phase 3 deployed.
+  //   • scenarioData.hmcb.lenderName match — catches HMCB deals where the
+  //     lender picker wrote scenario data but no allocation row exists yet.
   const invNameLower = investor.name.trim().toLowerCase();
   const allInvestorDeals = contextDeals
     .filter(d => {
       if (d.isArchived) return false;
       if ((d.allocations || []).some(a => a.investorId === investor.id)) return true;
+      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
       return !!hmcbLender && hmcbLender === invNameLower;
     })
@@ -500,16 +502,19 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
   // A deal needs funding when it has zero active, amount>0 allocations to a
   // real (non-Cash) investor. Cash-only allocations still count as needing
   // funding since Cash means internal capital, not a third-party investor.
-  // Temporary bridge: also treat a deal as funded if its HMCB panel has a
-  // lenderName set (until Phase 3 makes HMCB write allocations).
+  // Transition bridges: deal.investor text or scenarioData.hmcb.lenderName
+  // set to a real investor also count as funded.
+  const SPECIAL = ['Cash', 'None', '', null, undefined];
   const LAND_ACQ_STAGES = new Set(['New Lead', 'Underwriting', 'Negotiating', 'Waiting on Contract']);
   const liveUnfunded = contextDeals
     .filter(d => {
       if (d.isArchived || LAND_ACQ_STAGES.has(d.stage)) return false;
       const nonCashAllocs = (d.allocations || []).filter(a => a.investorName !== 'Cash');
       if (nonCashAllocs.length > 0) return false;
+      const text = (d.investor || '').trim();
+      if (text && !SPECIAL.includes(text)) return false;
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim();
-      if (hmcbLender && hmcbLender !== 'Cash' && hmcbLender !== 'None') return false;
+      if (hmcbLender && !SPECIAL.includes(hmcbLender)) return false;
       return true;
     })
     .map(d => {
@@ -1781,13 +1786,14 @@ export default function InvestorPortal() {
   // Derive all investor stats from live deal_allocations data. A deal is
   // matched to this investor when at least one active (non-returned,
   // amount > 0) allocation points at inv.id.
-  // Temporary bridge: also match by HMCB scenarioData.hmcb.lenderName until
-  // Phase 3 makes the HMCB picker write allocations.
+  // Transition bridges: also match by deal.investor text or
+  // scenarioData.hmcb.lenderName until every assignment has been mirrored.
   const enrichedInvestors = useMemo(() => investors.map(inv => {
     const invNameLower = inv.name.trim().toLowerCase();
     const matchedDeals = customDeals.filter(d => {
       if (d.isArchived) return false;
       if ((d.allocations || []).some(a => a.investorId === inv.id)) return true;
+      if ((d.investor || '').trim().toLowerCase() === invNameLower) return true;
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
       return !!hmcbLender && hmcbLender === invNameLower;
     });
