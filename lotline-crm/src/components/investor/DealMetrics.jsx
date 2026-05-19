@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { TrendingUp, Hammer, Calendar, List, X } from 'lucide-react';
 import InfoTooltip from './InfoTooltip';
 import { fetchCostLines } from '../../lib/costBreakdownData';
+import { supabase } from '../../lib/supabase';
 
 const TOOLTIPS = {
   arv:       'After-Repair Value — the estimated market price of the completed home.',
@@ -40,15 +41,41 @@ function Metric({ icon: Icon, label, value, tooltip, color = 'text-gray-900 dark
 }
 
 // ── Build-cost line-item breakdown modal ────────────────────────────────────
-function BuildCostBreakdownModal({ dealId, total, onClose }) {
+function BuildCostBreakdownModal({ dealId, onClose }) {
   const [lines, setLines] = useState(null);
+
   useEffect(() => {
     let active = true;
-    fetchCostLines(dealId).then(rows => {
-      if (active) setLines(rows || []);
-    });
-    return () => { active = false; };
+    const load = () => fetchCostLines(dealId).then(rows => { if (active) setLines(rows || []); });
+    load();
+
+    // Live-refresh on operator edits to the deal's Cost Breakdown so the
+    // modal stays in sync without the investor needing to close + reopen.
+    let channel = null;
+    if (supabase) {
+      channel = supabase
+        .channel(`investor-cost-lines-${dealId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'deal_cost_lines', filter: `deal_id=eq.${dealId}` },
+          load,
+        )
+        .subscribe();
+    }
+    return () => {
+      active = false;
+      if (channel && supabase) supabase.removeChannel(channel);
+    };
   }, [dealId]);
+
+  // Total = sum of resolved actuals across this deal's cost lines. Recomputed
+  // here from the same row set the modal shows so the table-foot total is
+  // always in lock-step with the body (and with whatever the operator edited
+  // most recently in the deal's Cost Breakdown tab).
+  const total = (lines ?? []).reduce(
+    (sum, l) => sum + (Number(l.actual_amount_resolved) || 0),
+    0
+  );
 
   return createPortal(
     <div
@@ -83,9 +110,9 @@ function BuildCostBreakdownModal({ dealId, total, onClose }) {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {lines.map(l => (
-                  <tr key={l.id ?? `${l.deal_id}-${l.field_key}`} className="text-gray-700 dark:text-gray-200">
-                    <td className="px-5 py-2">{l.label ?? l.field_label ?? l.field_key}</td>
-                    <td className="px-5 py-2 text-right tabular-nums">{fmt(Number(l.actual ?? l.actual_amount ?? l.amount ?? 0))}</td>
+                  <tr key={l.line_id ?? `${l.deal_id}-${l.category_key}`} className="text-gray-700 dark:text-gray-200">
+                    <td className="px-5 py-2">{l.label ?? l.category_key}</td>
+                    <td className="px-5 py-2 text-right tabular-nums">{fmt(Number(l.actual_amount_resolved) || 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -167,7 +194,6 @@ export default function DealMetrics({ deal }) {
       {showBreakdown && (
         <BuildCostBreakdownModal
           dealId={deal.id}
-          total={totalCost}
           onClose={() => setShowBreakdown(false)}
         />
       )}
