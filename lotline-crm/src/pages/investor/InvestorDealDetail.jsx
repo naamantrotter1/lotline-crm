@@ -171,18 +171,21 @@ export default function InvestorDealDetail() {
               Documents, with the Home Model showcase pinned to the bottom. */}
           <div className="flex-1 min-w-0 space-y-6">
             {/* Property Details */}
-            {[deal.utility_scenario, deal.home_model, deal.acreage, deal.county].some(Boolean) && (
+            {[deal.address, deal.utility_scenario, deal.home_model, deal.acreage, deal.county, deal.parcel_id, deal.zip].some(Boolean) && (
               <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">
                 <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-5 pt-4 pb-2">
                   Property Details
                 </p>
                 <div className="divide-y divide-gray-100 dark:divide-white/5">
                   {[
-                    { label: 'Utility Scenario', value: deal.utility_scenario  },
-                    { label: 'Home Model',       value: deal.home_model        },
-                    { label: 'Acreage',          value: deal.acreage ? `${deal.acreage} acres` : null },
+                    { label: 'Address',          value: deal.address           },
                     { label: 'County',           value: deal.county            },
                     { label: 'State',            value: deal.state             },
+                    { label: 'Zip',              value: deal.zip               },
+                    { label: 'Parcel ID',        value: deal.parcel_id         },
+                    { label: 'Acreage',          value: deal.acreage ? `${deal.acreage} acres` : null },
+                    { label: 'Home Model',       value: deal.home_model        },
+                    { label: 'Utility Scenario', value: deal.utility_scenario  },
                   ].filter(r => r.value).map(({ label, value }) => (
                     <div key={label} className="flex justify-between px-5 py-2.5 text-xs">
                       <span className="text-gray-500 dark:text-gray-400">{label}</span>
