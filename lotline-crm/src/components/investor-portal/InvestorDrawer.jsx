@@ -5,8 +5,13 @@
 // Distributions / Documents / Activity tabs are stubbed (Phase 4).
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, ExternalLink, ChevronRight } from 'lucide-react';
+import { X, ExternalLink, ChevronRight, FileText, Download } from 'lucide-react';
 import Avatar from './Avatar.jsx';
+import {
+  fetchInvestorDistributions,
+  fetchMyDocuments,
+  fetchNotifications,
+} from '../../lib/investorPortalData';
 
 const TABS = [
   { key: 'overview',      label: 'Overview'      },
@@ -171,9 +176,9 @@ export default function InvestorDrawer({
           {activeTab === 'deals' && (
             <DealsTab deals={deals} onDealClick={onDealClick} />
           )}
-          {activeTab === 'distributions' && <ComingSoon label="Distributions" />}
-          {activeTab === 'documents' && <ComingSoon label="Documents" />}
-          {activeTab === 'activity' && <ComingSoon label="Activity log" />}
+          {activeTab === 'distributions' && <DistributionsTab investorId={investor.id} />}
+          {activeTab === 'documents' && <DocumentsTab investorId={investor.id} />}
+          {activeTab === 'activity' && <ActivityTab investorId={investor.id} />}
         </div>
       </aside>
     </>
@@ -304,11 +309,159 @@ function DealsTab({ deals, onDealClick }) {
   );
 }
 
-function ComingSoon({ label }) {
+function SkeletonRow() {
+  return (
+    <div className="animate-pulse flex items-center justify-between py-3 border-b border-gray-100 dark:border-white/5 last:border-b-0">
+      <div className="flex-1">
+        <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3 mb-2"></div>
+        <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-1/3"></div>
+      </div>
+      <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-20"></div>
+    </div>
+  );
+}
+
+function EmptyTab({ label, hint }) {
   return (
     <div className="rounded-lg border border-dashed border-gray-200 dark:border-white/10 p-6 text-center">
       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
-      <p className="text-xs text-gray-400 mt-1">Coming in a future release.</p>
+      {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
     </div>
+  );
+}
+
+function DistributionsTab({ investorId }) {
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState([]);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchInvestorDistributions(investorId)
+      .then(({ distributions, error }) => {
+        if (!alive) return;
+        if (error) setErr(error);
+        setRows(distributions || []);
+        setLoading(false);
+      });
+    return () => { alive = false; };
+  }, [investorId]);
+
+  if (loading) return <div>{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}</div>;
+  if (err) return <EmptyTab label="Couldn't load distributions" hint={err.message || 'Try again later.'} />;
+  if (rows.length === 0) return <EmptyTab label="No distributions yet" hint="Issued payouts will appear here." />;
+
+  return (
+    <div className="divide-y divide-gray-100 dark:divide-white/5 bg-gray-50 dark:bg-white/[0.03] rounded-lg">
+      {rows.map(d => (
+        <div key={d.id} className="px-3 py-2.5 flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+              {d.deals?.address || 'Distribution'}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {d.date || '—'}{d.type ? ` · ${d.type}` : ''}
+              {d.wire_reference ? ` · ref ${d.wire_reference}` : ''}
+            </p>
+          </div>
+          <div className="text-right ml-3 flex-shrink-0">
+            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{fmtUsd(d.amount)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function fmtBytes(n) {
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DocumentsTab({ investorId }) {
+  const [loading, setLoading] = useState(true);
+  const [docs, setDocs] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchMyDocuments(investorId).then(({ documents }) => {
+      if (!alive) return;
+      setDocs(documents || []);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [investorId]);
+
+  if (loading) return <div>{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>;
+  if (docs.length === 0) return <EmptyTab label="No documents shared yet" hint="Uploads scoped to this investor's deals will appear here." />;
+
+  return (
+    <div className="divide-y divide-gray-100 dark:divide-white/5 bg-gray-50 dark:bg-white/[0.03] rounded-lg">
+      {docs.map(doc => (
+        <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5">
+          <FileText size={16} className="text-accent flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+              {doc.category || doc.title || 'Document'}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5 truncate">
+              {doc.deals?.address || '—'}
+              {doc.file_size_bytes ? ` · ${fmtBytes(doc.file_size_bytes)}` : ''}
+            </p>
+          </div>
+          {doc.file_url && (
+            <a
+              href={doc.file_url}
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 rounded-md text-gray-500 hover:text-accent hover:bg-white dark:hover:bg-white/5"
+              aria-label="Download document"
+            >
+              <Download size={14} />
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityTab({ investorId }) {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchNotifications(investorId).then(({ notifications }) => {
+      if (!alive) return;
+      setItems(notifications || []);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [investorId]);
+
+  if (loading) return <div>{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}</div>;
+  if (items.length === 0) return <EmptyTab label="No activity yet" hint="Invites, status changes, and messages will show up here." />;
+
+  return (
+    <ol className="relative border-l border-gray-200 dark:border-white/10 ml-2 space-y-3">
+      {items.slice(0, 25).map(n => (
+        <li key={n.id} className="ml-4">
+          <div className="absolute -left-1.5 w-3 h-3 rounded-full bg-accent" />
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+            {n.title || n.type || 'Update'}
+          </p>
+          {n.body && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{n.body}</p>}
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
+          </p>
+        </li>
+      ))}
+    </ol>
   );
 }
