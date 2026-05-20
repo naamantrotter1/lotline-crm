@@ -55,10 +55,15 @@ function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e) => { if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false); };
+    const onDoc = (e) => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
@@ -84,6 +89,7 @@ function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
       </button>
       {open && createPortal(
         <div
+          ref={menuRef}
           style={{ position: 'absolute', top: pos.top, right: pos.right, zIndex: 9999 }}
           className="w-44 bg-white dark:bg-[#252b3d] rounded-md shadow-lg border border-gray-200 dark:border-white/10 py-1"
         >
