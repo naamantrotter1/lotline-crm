@@ -27,25 +27,58 @@ const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US',
 
 function LoanStatusCard({ deal }) {
   // Support both snake_case (raw DB) and camelCase (mapped) keys
-  const hmcb = deal?.scenarioData?.hmcb || deal?.scenario_data?.hmcb;
+  const sd    = deal?.scenarioData || deal?.scenario_data || {};
+  const hmcb  = sd.hmcb;
+  const fin   = deal?.financing || deal?.activeFinancing || '';
+
   const isHmcb = deal?.financingScenarioType === 'hmcb'
     || deal?.financing_scenario_type === 'hmcb'
     || (hmcb && hmcb.lenderName);
-  if (!isHmcb || !hmcb) return null;
+  const isHm = !isHmcb && (
+    fin === 'Hard Money Loan' || fin === 'Hard Money (Land + Home)'
+    || deal?.financingScenarioType === 'hm' || deal?.financing_scenario_type === 'hm'
+  );
 
-  const totalLoan = (hmcb.purchasePrice || 0) + (hmcb.holdbackAmount || 0);
-  const monthly   = hmcb.monthlyPaymentOverride || (totalLoan * (hmcb.interestRate || 13.5) / 100 / 12);
+  if (!isHmcb && !isHm) return null;
 
-  const rows = [
-    { label: 'Lender',           value: hmcb.lenderName || '—' },
-    { label: 'Total Loan',       value: fmt$(totalLoan) },
-    { label: 'Purchase Price',   value: fmt$(hmcb.purchasePrice) },
-    { label: 'Construction Holdback', value: fmt$(hmcb.holdbackAmount) },
-    { label: 'Interest Rate',    value: hmcb.interestRate ? `${hmcb.interestRate}% / yr` : '—' },
-    { label: 'Term',             value: hmcb.termMonths ? `${hmcb.termMonths} months` : '—' },
-    { label: 'Monthly Interest', value: fmt$(monthly) },
-    { label: 'First Payment',    value: fmtDate(deal.firstPaymentDate || deal.first_payment_date) },
-  ].filter(r => r.value && r.value !== '$0');
+  let rows;
+
+  if (isHmcb && hmcb) {
+    const totalLoan = (hmcb.purchasePrice || 0) + (hmcb.holdbackAmount || 0);
+    const monthly   = hmcb.monthlyPaymentOverride || (totalLoan * (hmcb.interestRate || 13.5) / 100 / 12);
+    rows = [
+      { label: 'Lender',                    value: hmcb.lenderName || '—' },
+      { label: 'Total Loan',                value: fmt$(totalLoan) },
+      { label: 'Purchase Price',            value: fmt$(hmcb.purchasePrice) },
+      { label: 'Construction Holdback',     value: fmt$(hmcb.holdbackAmount) },
+      { label: 'Interest Rate',             value: hmcb.interestRate ? `${hmcb.interestRate}% / yr` : '—' },
+      { label: 'Term',                      value: hmcb.termMonths ? `${hmcb.termMonths} months` : '—' },
+      { label: 'Monthly Interest',          value: fmt$(monthly) },
+      { label: 'First Payment',             value: fmtDate(deal.firstPaymentDate || deal.first_payment_date) },
+    ];
+  } else {
+    // Hard Money Loan
+    const loanAmt   = sd.loanAmountOverride || 0;
+    const rate      = sd.interestRate || 0;
+    const term      = sd.holdPeriod || 0;
+    const origRolled = sd.originationRolled || false;
+    const origPct   = sd.originationFeePct || 0;
+    const origFee   = loanAmt * (origPct / 100);
+    const basis     = loanAmt + (origRolled ? origFee : 0);
+    const monthly   = basis * (rate / 100) / 12;
+    const lender    = deal?.investor || deal?.investorName || '';
+    rows = [
+      { label: 'Lender / Investor',         value: lender || '—' },
+      { label: 'Loan Amount',               value: fmt$(loanAmt) },
+      { label: 'Interest Rate',             value: rate ? `${rate}% / yr` : '—' },
+      { label: 'Term',                      value: term ? `${term} months` : '—' },
+      { label: 'Monthly Interest',          value: fmt$(monthly) },
+      { label: 'Origination Fee',           value: origFee > 0 ? `${fmt$(origFee)}${origRolled ? ' (rolled)' : ''}` : null },
+      { label: 'First Payment',             value: fmtDate(deal.firstPaymentDate || deal.first_payment_date) },
+    ];
+  }
+
+  rows = rows.filter(r => r.value && r.value !== '$0');
 
   return (
     <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">

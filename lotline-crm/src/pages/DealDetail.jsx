@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, FileText, Upload, AlertCircle, Check,
   ChevronDown, ChevronUp, User, Calendar, Building, Phone, Mail, SplitSquareHorizontal, TreePine,
   CheckCircle2, Zap, Scale, LayoutGrid, Briefcase, Layers, Droplets, Paperclip, X as XIcon,
-  Landmark, Handshake, XCircle, Info, Lock, LockOpen,
+  Landmark, Handshake, XCircle, Info, Lock, LockOpen, Plus, Trash2,
 } from 'lucide-react';
 import { calcNetProfit } from '../data/deals';
 import { saveDeal, flushToSupabase, flushToSupabaseAsync } from '../lib/dealsSync';
@@ -38,7 +38,7 @@ import { fetchCostSummary } from '../lib/costBreakdownData';
 import { logTaskActivity } from '../lib/tasksData';
 import { notifyTaskAssigned } from '../lib/notify';
 import { fetchPooledLoansForDeal, monthlyInterest as pooledMonthlyInterest, totalAllocated } from '../lib/pooledLoanData';
-import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
+import HMCBPanel, { HMCB_DEFAULTS, LENDER_PROTECTION_DEFAULTS, DEFAULT_CHECKLIST as HMCB_DEFAULT_CHECKLIST } from '../components/financing/HMCBPanel';
 import PaymentDueDayPicker from '../components/financing/PaymentDueDayPicker';
 import PaymentScheduleSection from '../components/financing/PaymentScheduleSection';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
@@ -351,6 +351,9 @@ function FinancingScenarioPanel({
   underwritingFee, setUnderwritingFee,
   attorneyDocFee, setAttorneyDocFee,
   appraisalFeeHm, setAppraisalFeeHm,
+  ltvCapPctHm, setLtvCapPctHm,
+  originationRolled, setOriginationRolled,
+  legalFeeHm, setLegalFeeHm,
   // Extension (HM)
   extensionAvailable, setExtensionAvailable,
   extensionFee, setExtensionFee,
@@ -401,6 +404,82 @@ function FinancingScenarioPanel({
   // so we can show a "Standard terms applied" indicator + a clear/reset action.
   const [autoFilledInvestor, setAutoFilledInvestor] = useState(null);
   const [autoFilledFields, setAutoFilledFields] = useState([]);
+
+  // ── HM Lender Protections (shared deal_lender_protections table) ─────────
+  const [hmProtections, setHmProtections] = useState([]);
+  const [hmProtLoaded, setHmProtLoaded]   = useState(false);
+
+  const loadHmProtections = useCallback(async () => {
+    if (!supabase || !deal?.id) return;
+    const { data: rows } = await supabase
+      .from('deal_lender_protections').select('*').eq('deal_id', deal.id).order('sort_order');
+    if (!rows || rows.length === 0) {
+      const seeds = LENDER_PROTECTION_DEFAULTS.map(item => ({
+        deal_id: deal.id, item_key: item.item_key, label: item.label,
+        status: 'pending', sort_order: item.sort_order, auto_trigger: item.auto_trigger,
+      }));
+      await supabase.from('deal_lender_protections').insert(seeds);
+      const { data: seeded } = await supabase.from('deal_lender_protections').select('*').eq('deal_id', deal.id).order('sort_order');
+      setHmProtections(seeded || []);
+    } else {
+      setHmProtections(rows);
+    }
+    setHmProtLoaded(true);
+  }, [deal?.id]);
+
+  const updateHmProtection = async (id, status) => {
+    if (!supabase) return;
+    setHmProtections(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    await supabase.from('deal_lender_protections').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  };
+
+  // ── HM Required Before Closing (shared hmcb_checklist_items table) ────────
+  const [hmChecklist, setHmChecklist]       = useState([]);
+  const [hmCheckLoaded, setHmCheckLoaded]   = useState(false);
+  const [hmCheckOpen, setHmCheckOpen]       = useState(false);
+  const [hmNewCheckItem, setHmNewCheckItem] = useState('');
+
+  const loadHmChecklist = useCallback(async () => {
+    if (!supabase || !deal?.id) return;
+    const { data: rows } = await supabase
+      .from('hmcb_checklist_items').select('*').eq('deal_id', deal.id).order('sort_order');
+    if (!rows || rows.length === 0) {
+      const seeds = HMCB_DEFAULT_CHECKLIST.map(({ label }, i) => ({
+        deal_id: deal.id, label, checked: false, is_custom: false, sort_order: i,
+      }));
+      await supabase.from('hmcb_checklist_items').insert(seeds);
+      const { data: seeded } = await supabase.from('hmcb_checklist_items').select('*').eq('deal_id', deal.id).order('sort_order');
+      setHmChecklist(seeded || []);
+    } else {
+      setHmChecklist(rows);
+    }
+    setHmCheckLoaded(true);
+  }, [deal?.id]);
+
+  useEffect(() => { if (hmCheckOpen && !hmCheckLoaded) loadHmChecklist(); }, [hmCheckOpen, hmCheckLoaded, loadHmChecklist]);
+
+  const toggleHmCheckItem = async (item) => {
+    if (!supabase) return;
+    const newVal = !item.checked;
+    setHmChecklist(prev => prev.map(c => c.id === item.id ? { ...c, checked: newVal } : c));
+    await supabase.from('hmcb_checklist_items').update({ checked: newVal, updated_at: new Date().toISOString() }).eq('id', item.id);
+  };
+
+  const addHmCheckItem = async () => {
+    if (!supabase || !hmNewCheckItem.trim()) return;
+    const maxOrder = hmChecklist.reduce((m, c) => Math.max(m, c.sort_order), 0);
+    const { data: row } = await supabase.from('hmcb_checklist_items').insert({
+      deal_id: deal.id, label: hmNewCheckItem.trim(), checked: false, is_custom: true, sort_order: maxOrder + 1,
+    }).select().single();
+    if (row) setHmChecklist(prev => [...prev, row]);
+    setHmNewCheckItem('');
+  };
+
+  const deleteHmCheckItem = async (id) => {
+    if (!supabase) return;
+    setHmChecklist(prev => prev.filter(c => c.id !== id));
+    await supabase.from('hmcb_checklist_items').delete().eq('id', id);
+  };
 
   // Wraps the investor dropdown onChange — applies standard terms if available.
   function handleInvestorSelect(name) {
@@ -457,8 +536,11 @@ function FinancingScenarioPanel({
                   + (loanBasisFlags.allIn ? _allInCost : 0);
   const effectiveLoanAmount = loanAmountOverride != null ? loanAmountOverride : totalLent;
   const originationFee = effectiveLoanAmount * (originationFeePct / 100);
-  const totalClosingCosts = originationFee + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0) + (attorneyDocFee || 0) + (appraisalFeeHm || 0);
-  const monthlyInterestHm = effectiveLoanAmount * (interestRate / 100) / 12;
+  const hmLoanBasisForInterest = effectiveLoanAmount + (originationRolled ? originationFee : 0);
+  const totalClosingCosts = (originationRolled ? 0 : originationFee)
+    + (servicingFeeFlat || 0) + (drawFeeHm || 0) + (underwritingFee || 0)
+    + (attorneyDocFee || 0) + (appraisalFeeHm || 0) + (legalFeeHm || 0);
+  const monthlyInterestHm = hmLoanBasisForInterest * (interestRate / 100) / 12;
   const totalCostOfCapital = (monthlyInterestHm * holdPeriod) + totalClosingCosts;
 
   const locDraw = drawAmount || 0;
@@ -477,6 +559,9 @@ function FinancingScenarioPanel({
   const isCash = activeFinancing === 'Cash';
   const isHardMoney = activeFinancing === 'Hard Money Loan' || activeFinancing === 'Hard Money (Land + Home)';
   const isLoC = activeFinancing === 'Line of Credit';
+
+  // Load HM lender protections when HM scenario is active
+  useEffect(() => { if (deal?.id && isHardMoney && !hmProtLoaded) loadHmProtections(); }, [loadHmProtections, isHardMoney, hmProtLoaded, deal?.id]);
   const isProfitSplit = activeFinancing === 'Profit Split';
   const isCCP = activeFinancing === 'Committed Capital Partner';
 
@@ -718,6 +803,41 @@ function FinancingScenarioPanel({
                   )}
                 </div>
               </div>
+              {/* LTV Calculator */}
+              <div className="py-2 col-span-2 border-t border-gray-100 pt-3 mt-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2 font-medium">LTV Calculator</p>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number" step="1" min="1" max="100"
+                      className={`${iCls} w-16 text-center`}
+                      value={ltvCapPctHm ?? 60}
+                      onChange={e => setLtvCapPctHm(parseFloat(e.target.value) || 60)}
+                      disabled={readOnly}
+                    />
+                    <span className="text-xs text-gray-400">% of ARV</span>
+                  </div>
+                  {arvVal > 0 && (
+                    <div className="text-xs text-gray-500">
+                      Max loan: <span className="font-semibold text-sidebar">${Math.round(arvVal * (ltvCapPctHm ?? 60) / 100).toLocaleString()}</span>
+                      <span className="text-gray-400 ml-1">(ARV ${arvVal.toLocaleString()} × {ltvCapPctHm ?? 60}%)</span>
+                    </div>
+                  )}
+                </div>
+                {arvVal > 0 && effectiveLoanAmount > 0 && (() => {
+                  const maxL = arvVal * (ltvCapPctHm ?? 60) / 100;
+                  const ok = effectiveLoanAmount <= maxL;
+                  const pct = ((effectiveLoanAmount / arvVal) * 100).toFixed(1);
+                  return (
+                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-green-600' : 'text-red-500'}`}>
+                      {ok ? <Check size={12} /> : <AlertCircle size={12} />}
+                      {ok ? `Within LTV cap ($${Math.round(effectiveLoanAmount).toLocaleString()} = ${pct}% LTV)` : `Exceeds LTV cap ($${Math.round(effectiveLoanAmount).toLocaleString()} = ${pct}% LTV)`}
+                    </div>
+                  );
+                })()}
+                {arvVal === 0 && <p className="text-[11px] text-gray-400 mt-1">Set deal ARV to enable LTV check</p>}
+              </div>
+
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Annual Interest Rate (%)</p>
                 <DecimalInput value={interestRate} onChange={setInterestRate} className={iCls} />
@@ -735,6 +855,23 @@ function FinancingScenarioPanel({
                   onFirstPaymentDateChange={setFirstPaymentDate}
                   readOnly={readOnly}
                 />
+                {/* IO payment start hint: 1st of following month */}
+                {capitalDeployedDate && !firstPaymentDate && !paymentDueDay && (() => {
+                  const dep = new Date(capitalDeployedDate + 'T12:00:00');
+                  if (Number.isNaN(dep.getTime())) return null;
+                  const y = dep.getMonth() === 11 ? dep.getFullYear() + 1 : dep.getFullYear();
+                  const m = dep.getMonth() === 11 ? 1 : dep.getMonth() + 2;
+                  const autoDate = `${y}-${String(m).padStart(2,'0')}-01`;
+                  return (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Calendar size={11} className="text-accent flex-shrink-0" />
+                      <p className="text-[11px] text-accent">
+                        First IO payment due: <strong>{new Date(autoDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+                        <span className="text-gray-400 ml-1">(1st of following month)</span>
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Term (months)</p>
@@ -773,6 +910,15 @@ function FinancingScenarioPanel({
               <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Amount (calc)</p>
                 <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
+                {!readOnly && originationFee > 0 && (
+                  <div className="mt-1.5 inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                    <button type="button" onClick={() => setOriginationRolled(false)} className={`px-2 py-0.5 transition-colors ${!originationRolled ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>Cash at Closing</button>
+                    <button type="button" onClick={() => setOriginationRolled(true)} className={`px-2 py-0.5 transition-colors ${originationRolled ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>Rolled into Loan</button>
+                  </div>
+                )}
+                {originationRolled && originationFee > 0 && (
+                  <p className="text-[10px] text-blue-500 mt-0.5">Rolled into loan — adds to interest basis</p>
+                )}
               </div>
               {showHmAdvanced && (
                 <>
@@ -795,6 +941,14 @@ function FinancingScenarioPanel({
                   <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Appraisal Fee ($)</p>
                     <DecimalInput value={appraisalFeeHm || 0} onChange={setAppraisalFeeHm} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Legal Fee ($)</p>
+                      <span className="text-[9px] text-gray-400 font-medium uppercase">Upfront only</span>
+                    </div>
+                    <DecimalInput value={legalFeeHm || 0} onChange={setLegalFeeHm} className={iCls} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Paid upfront — not rolled into loan</p>
                   </div>
                   <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (%)</p>
@@ -840,6 +994,104 @@ function FinancingScenarioPanel({
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Extension Months</p>
                   <input type="text" inputMode="numeric" value={extensionMonths || ''} onChange={e => setExtensionMonths(Number(e.target.value) || 0)} className={iCls} readOnly={readOnly} />
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Lender Protections */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender Protections</p>
+            {!hmProtLoaded ? (
+              <p className="text-[10px] text-gray-400 py-1">Loading…</p>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {hmProtections.map(p => {
+                  const statusCls = p.status === 'complete'
+                    ? 'bg-green-100 text-green-700 border-green-200'
+                    : p.status === 'active'
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : 'bg-gray-100 text-gray-500 border-gray-200';
+                  return (
+                    <div key={p.id} className="flex items-center justify-between py-2 gap-3">
+                      <span className="text-xs text-gray-700 flex-1">{p.label}</span>
+                      <select
+                        value={p.status}
+                        onChange={e => !readOnly && updateHmProtection(p.id, e.target.value)}
+                        disabled={readOnly}
+                        className={`text-[10px] font-semibold border rounded px-1.5 py-0.5 focus:outline-none cursor-pointer ${statusCls}`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="active">Active</option>
+                        <option value="complete">Complete</option>
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Required Before Closing */}
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setHmCheckOpen(v => !v)}
+              className="w-full flex items-center justify-between"
+            >
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Required Before Closing</p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 font-medium">
+                  {hmChecklist.filter(c => c.checked).length}/{hmChecklist.length > 0 ? hmChecklist.length : HMCB_DEFAULT_CHECKLIST.length}
+                </span>
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${hmCheckOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            {hmCheckOpen && (
+              <div className="mt-3 space-y-1.5">
+                {hmChecklist.map(item => (
+                  <div key={item.id} className="flex items-center gap-2 group">
+                    <button
+                      type="button"
+                      onClick={() => !readOnly && toggleHmCheckItem(item)}
+                      className={`w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center transition-colors ${
+                        item.checked ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-accent'
+                      }`}
+                    >
+                      {item.checked && <Check size={9} className="text-white" />}
+                    </button>
+                    <span className={`text-xs flex-1 ${item.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      {item.label}
+                    </span>
+                    {item.is_custom && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => deleteHmCheckItem(item.id)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-red-500 transition-opacity"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {!readOnly && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                    <input
+                      type="text"
+                      value={hmNewCheckItem}
+                      onChange={e => setHmNewCheckItem(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addHmCheckItem()}
+                      placeholder="Add custom item…"
+                      className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={addHmCheckItem}
+                      className="p-1 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3092,6 +3344,9 @@ function DealDetailContent({ deal }) {
   const [underwritingFee, setUnderwritingFee] = useState(sd.underwritingFee ?? 0);
   const [attorneyDocFee, setAttorneyDocFee] = useState(sd.attorneyDocFee ?? 0);
   const [appraisalFeeHm, setAppraisalFeeHm] = useState(sd.appraisalFeeHm ?? 0);
+  const [ltvCapPctHm, setLtvCapPctHm] = useState(sd.ltvCapPctHm ?? 60);
+  const [originationRolled, setOriginationRolled] = useState(sd.originationRolled ?? false);
+  const [legalFeeHm, setLegalFeeHm] = useState(sd.legalFeeHm ?? 0);
   const [cashSource, setCashSource] = useState(sd.cashSource ?? '');
   const [investorReturnType, setInvestorReturnType] = useState(sd.investorReturnType ?? 'Interest Only');
   const [investorAssignmentStatus, setInvestorAssignmentStatus] = useState(sd.investorAssignmentStatus ?? 'Committed');
@@ -3279,7 +3534,8 @@ function DealDetailContent({ deal }) {
         hmcb: hmcbData,
         // Financing tab redesign fields
         lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
-        drawFeeHm, underwritingFee, attorneyDocFee, appraisalFeeHm, cashSource,
+        drawFeeHm, underwritingFee, attorneyDocFee, appraisalFeeHm,
+        ltvCapPctHm, originationRolled, legalFeeHm, cashSource,
         investorReturnType, investorAssignmentStatus,
         // Payment Due Day — drives schedule generator
         paymentDueDay,
@@ -3319,6 +3575,7 @@ function DealDetailContent({ deal }) {
     financingScenarioType, hmcbData,
     lenderName, drawAmount, extensionAvailable, extensionFee, extensionMonths,
     drawFeeHm, underwritingFee, attorneyDocFee, cashSource,
+    ltvCapPctHm, originationRolled, legalFeeHm,
     investorReturnType, investorAssignmentStatus,
     paymentDueDay, firstPaymentDate,
   ]);
@@ -3981,6 +4238,9 @@ function DealDetailContent({ deal }) {
             underwritingFee={underwritingFee} setUnderwritingFee={setUnderwritingFee}
             attorneyDocFee={attorneyDocFee} setAttorneyDocFee={setAttorneyDocFee}
             appraisalFeeHm={appraisalFeeHm} setAppraisalFeeHm={setAppraisalFeeHm}
+            ltvCapPctHm={ltvCapPctHm} setLtvCapPctHm={setLtvCapPctHm}
+            originationRolled={originationRolled} setOriginationRolled={setOriginationRolled}
+            legalFeeHm={legalFeeHm} setLegalFeeHm={setLegalFeeHm}
             extensionAvailable={extensionAvailable} setExtensionAvailable={setExtensionAvailable}
             extensionFee={extensionFee} setExtensionFee={setExtensionFee}
             extensionMonths={extensionMonths} setExtensionMonths={setExtensionMonths}
