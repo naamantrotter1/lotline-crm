@@ -46,7 +46,7 @@ async function sendInvestorInviteEmail({ to, name, inviteUrl, invitedByName }) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from:    'LotLine Homes <naaman@lotlinehomes.com>',
+      from:    'LotLine Homes <naaman@lotstack.ai>',
       to:      [to],
       subject: `You've been invited to your LotLine Investor Portal`,
       html,

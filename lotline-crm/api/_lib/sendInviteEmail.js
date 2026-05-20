@@ -51,7 +51,7 @@ export async function sendInviteEmail({ to, inviteUrl, orgName, role, inviterNam
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'LotLine Homes <naaman@lotlinehomes.com>',
+      from: 'LotLine Homes <naaman@lotstack.ai>',
       to:   [to],
       subject: `You're invited to join ${orgName} on LotLine Homes`,
       html,

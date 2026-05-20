@@ -5,7 +5,7 @@ import { requireJvHubAuth, isAdmin } from '../_lib/teamAuth.js';
 import crypto from 'crypto';
 
 const RESEND_API = 'https://api.resend.com/emails';
-const FROM       = 'LotLine Homes <naaman@lotlinehomes.com>';
+const FROM       = 'LotLine Homes <naaman@lotstack.ai>';
 
 function inviteEmailHtml({ hubOrgName, inviterName, inviteUrl, notes }) {
   const notesHtml = notes
