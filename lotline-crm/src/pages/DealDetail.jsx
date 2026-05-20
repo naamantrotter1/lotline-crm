@@ -740,125 +740,92 @@ function FinancingScenarioPanel({
                 </select>
                 <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
               </div>
-              <div className="py-2 col-span-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Include in Loan Amount</p>
-                <div className="flex gap-2 flex-wrap">
+              {/* Loan Basis + LTV/LTC — compact unified block */}
+              <div className="col-span-2 border border-gray-100 rounded-lg p-3 mt-1 space-y-2.5">
+                {/* Loan Basis chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide w-7">Basis</span>
                   {[
-                    { key: 'land',  text: 'Cost of Land',  value: _landCost  },
-                    { key: 'home',  text: 'Cost of Home',  value: _homeCost  },
-                    { key: 'allIn', text: 'All-In Cost',   value: _allInCost },
+                    { key: 'land',  text: 'Land',      value: _landCost  },
+                    { key: 'home',  text: 'Home',      value: _homeCost  },
+                    { key: 'allIn', text: 'All-In',    value: _allInCost },
                   ].map(({ key, text, value }) => (
                     <button
                       key={key}
                       type="button"
                       disabled={readOnly}
                       onClick={() => setLoanBasisFlags(f => ({ ...f, [key]: !f[key] }))}
-                      className={`flex flex-col items-start px-3 py-1.5 rounded-lg border text-left transition-colors ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold transition-colors ${
                         loanBasisFlags[key]
                           ? 'bg-accent/10 border-accent text-accent'
-                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                          : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
                       }`}
                     >
-                      <span className="text-[11px] font-semibold">{text}</span>
-                      <span className="text-[10px] opacity-70">${value.toLocaleString()}</span>
+                      {loanBasisFlags[key] && <Check size={8} />}
+                      {text} <span className="opacity-60">${value.toLocaleString()}</span>
                     </button>
                   ))}
                 </div>
-              </div>
-              {/* LTV Calculator */}
-              <div className="py-2 col-span-2 border-t border-gray-100 pt-3 mt-1">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2 font-medium">LTV Calculator</p>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number" step="1" min="1" max="100"
-                      className={`${iCls} w-16 text-center`}
-                      value={ltvCapPctHm ?? ''}
-                      onChange={e => setLtvCapPctHm(e.target.value === '' ? null : parseFloat(e.target.value))}
-                      disabled={readOnly}
-                    />
-                    <span className="text-xs text-gray-400">% of ARV</span>
-                  </div>
-                  {arvVal > 0 && (() => {
-                    const maxLtv = Math.round(arvVal * (ltvCapPctHm ?? 60) / 100);
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">
-                          Max: <span className="font-semibold text-sidebar">${maxLtv.toLocaleString()}</span>
-                        </span>
-                        {!readOnly && (
-                          <button
-                            type="button"
-                            onClick={() => { setLoanAmountOverride(maxLtv); setLoanLocked(true); }}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-                          >
-                            Use
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-                {arvVal > 0 && effectiveLoanAmount > 0 && (() => {
-                  const maxL = arvVal * (ltvCapPctHm ?? 60) / 100;
-                  const ok = effectiveLoanAmount <= maxL;
-                  const pct = ((effectiveLoanAmount / arvVal) * 100).toFixed(1);
-                  return (
-                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-green-600' : 'text-red-500'}`}>
-                      {ok ? <Check size={12} /> : <AlertCircle size={12} />}
-                      {ok ? `Within LTV cap (${pct}% LTV)` : `Exceeds LTV cap (${pct}% LTV)`}
-                    </div>
-                  );
-                })()}
-                {arvVal === 0 && <p className="text-[11px] text-gray-400 mt-1">Set deal ARV to enable LTV check</p>}
-              </div>
 
-              {/* LTC Calculator */}
-              <div className="py-2 col-span-2 border-t border-gray-100 pt-3">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2 font-medium">LTC Calculator</p>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number" step="1" min="1" max="100"
-                      className={`${iCls} w-16 text-center`}
-                      value={ltcCapPctHm ?? ''}
-                      onChange={e => setLtcCapPctHm(e.target.value === '' ? null : parseFloat(e.target.value))}
-                      disabled={readOnly}
-                    />
-                    <span className="text-xs text-gray-400">% of Cost</span>
-                  </div>
-                  {_allInCost > 0 && (() => {
-                    const maxLtc = Math.round(_allInCost * (ltcCapPctHm ?? 80) / 100);
+                {/* LTV / LTC rows */}
+                <div className="space-y-1.5">
+                  {[
+                    {
+                      label: 'LTV', pct: ltvCapPctHm ?? 60, setPct: setLtvCapPctHm,
+                      basis: arvVal, basisLabel: 'ARV',
+                      hint: arvVal === 0 ? 'Set ARV' : null,
+                    },
+                    {
+                      label: 'LTC', pct: ltcCapPctHm ?? 80, setPct: setLtcCapPctHm,
+                      basis: _allInCost, basisLabel: 'Cost',
+                      hint: _allInCost === 0 ? 'Add costs' : null,
+                    },
+                  ].map(({ label, pct, setPct, basis, basisLabel, hint }) => {
+                    const maxAmt = basis > 0 ? Math.round(basis * (pct / 100)) : null;
+                    const isLtv = label === 'LTV';
+                    const currentPct = basis > 0 && effectiveLoanAmount > 0
+                      ? (effectiveLoanAmount / basis) * 100 : null;
+                    const ok = maxAmt !== null && effectiveLoanAmount > 0
+                      ? (isLtv ? effectiveLoanAmount <= maxAmt : (effectiveLoanAmount / basis) * 100 <= pct)
+                      : null;
                     return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">
-                          Max: <span className="font-semibold text-sidebar">${maxLtc.toLocaleString()}</span>
-                        </span>
-                        {!readOnly && (
-                          <button
-                            type="button"
-                            onClick={() => { setLoanAmountOverride(maxLtc); setLoanLocked(true); }}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-                          >
-                            Use
-                          </button>
-                        )}
+                      <div key={label} className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-gray-400 w-7">{label}</span>
+                        <input
+                          type="number" step="1" min="1" max="100"
+                          value={pct ?? ''}
+                          onChange={e => setPct(e.target.value === '' ? null : parseFloat(e.target.value))}
+                          disabled={readOnly}
+                          className="w-12 text-center text-xs px-1.5 py-0.5 border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                        />
+                        <span className="text-[10px] text-gray-400">% of {basisLabel}</span>
+                        {hint ? (
+                          <span className="text-[10px] text-gray-300 italic">{hint}</span>
+                        ) : maxAmt !== null ? (
+                          <>
+                            <span className="text-[10px] text-gray-300 mx-0.5">→</span>
+                            <span className="text-xs font-semibold text-sidebar">${maxAmt.toLocaleString()}</span>
+                            {!readOnly && (
+                              <button
+                                type="button"
+                                onClick={() => { setLoanAmountOverride(maxAmt); setLoanLocked(true); }}
+                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                              >
+                                Use
+                              </button>
+                            )}
+                            {ok !== null && currentPct !== null && (
+                              <span className={`ml-auto text-[10px] font-medium flex items-center gap-0.5 ${ok ? 'text-green-600' : 'text-red-500'}`}>
+                                {ok ? <Check size={9} /> : <AlertCircle size={9} />}
+                                {currentPct.toFixed(1)}%
+                              </span>
+                            )}
+                          </>
+                        ) : null}
                       </div>
                     );
-                  })()}
+                  })}
                 </div>
-                {effectiveLoanAmount > 0 && _allInCost > 0 && (() => {
-                  const ltcPct = (effectiveLoanAmount / _allInCost) * 100;
-                  const capPct = ltcCapPctHm ?? 80;
-                  const ok = ltcPct <= capPct;
-                  return (
-                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-green-600' : 'text-red-500'}`}>
-                      {ok ? <Check size={12} /> : <AlertCircle size={12} />}
-                      {ok ? `Within LTC cap (${ltcPct.toFixed(1)}% LTC)` : `Exceeds LTC cap (${ltcPct.toFixed(1)}% LTC)`}
-                    </div>
-                  );
-                })()}
-                {_allInCost === 0 && <p className="text-[11px] text-gray-400 mt-1">Add cost breakdown to enable LTC check</p>}
               </div>
 
               {/* Total Loan Amount */}
