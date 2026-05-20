@@ -736,6 +736,10 @@ function FinancingScenarioPanel({
                 />
               </div>
               <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Term (months)</p>
+                <input type="text" inputMode="numeric" placeholder="e.g. 12" value={loanTermMonths ?? ''} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); setLoanTermMonths(v === '' ? null : Number(v)); }} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
+              </div>
+              <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
                 <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
               </div>
@@ -2988,6 +2992,7 @@ function DealDetailContent({ deal }) {
   const [servicingFeeFlat, setServicingFeeFlat] = useState(sd.servicingFeeFlat ?? (deal?.investor === 'Louis Isom' ? 750 : 0));
   const [servicingFeePct, setServicingFeePct] = useState(sd.servicingFeePct ?? 0);
   const [balloonTerm, setBalloonTerm] = useState(sd.balloonTerm ?? 12);
+  const [loanTermMonths, setLoanTermMonths] = useState(sd.loanTermMonths ?? null);
   const [holdPeriod, setHoldPeriod] = useState(sd.holdPeriod ?? deal?.holdingMonths ?? 6);
   const [monthlyHoldCost, setMonthlyHoldCost] = useState(sd.monthlyHoldCost ?? deal?.holdingPerMonth ?? 250);
   const [profitSharePct, setProfitSharePct] = useState(sd.profitSharePct ?? (deal?.investor === 'Atium Build Group LLC' ? 5 : 0));
@@ -3259,7 +3264,7 @@ function DealDetailContent({ deal }) {
       scenarioData: {
         interestRate, originationFeeType, originationFeePct, originationFeeFlat,
         servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
-        holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
+        loanTermMonths, holdPeriod, monthlyHoldCost, profitSharePct, investorProfitSplitPct,
         loanAmountOverride, loanLocked, loanBasisFlags, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
         // Committed Capital Partner
         ccpInvestorId, ccpCommitmentId, ccpAllocationAmount,
