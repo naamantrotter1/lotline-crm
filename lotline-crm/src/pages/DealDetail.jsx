@@ -4358,6 +4358,7 @@ function DealDetailContent({ deal }) {
             firstPaymentDate={firstPaymentDate}
             onFirstPaymentDateChange={setFirstPaymentDate}
             homeCost={deal.mobileHome || 0}
+            allInCost={allIn || 0}
             arv={deal.arv || 0}
           />
         )}
