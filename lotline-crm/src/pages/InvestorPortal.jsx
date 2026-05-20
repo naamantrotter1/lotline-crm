@@ -2111,23 +2111,22 @@ export default function InvestorPortal() {
       if (d.isArchived) return false;
       return (d.allocations || []).some(a => a.investorId === inv.id);
     });
-    // Capital Invested counts only allocations that have actually been wired
-    // (status === 'funded'). Committed-but-not-yet-funded positions still
-    // appear in the drawer's Position Breakdown, but they don't inflate the
-    // invested total or ROI math.
-    const fundedDeals = matchedDeals.filter(d => {
+    // Capital Invested counts all active allocations (committed + funded).
+    // A committed deal represents real capital commitment and should appear
+    // in the invested total and ROI projections.
+    const activeDeals = matchedDeals.filter(d => {
       const alloc = (d.allocations || []).find(a => a.investorId === inv.id);
-      return alloc?.status === 'funded';
+      return alloc?.status === 'funded' || alloc?.status === 'committed';
     });
-    const capitalInvested = fundedDeals.reduce((sum, d) => sum + computeDealInvestorCapital(d), 0);
+    const capitalInvested = activeDeals.reduce((sum, d) => sum + computeDealInvestorCapital(d), 0);
 
-    // ── ROI computed live from FUNDED deals only ─────────────────────────────
+    // ── ROI computed live from active deals (committed + funded) ─────────────
     // roiDollars = sum of projected net profit (after financing) on deployed capital
     // roiPct     = roiDollars / capitalInvested * 100
     // avgAnnualizedRoi = per-deal annualized ROI weighted by capital
-    const roiDollars = fundedDeals.reduce((sum, d) => sum + (Number(calcNetProfit(d)) || 0), 0);
+    const roiDollars = activeDeals.reduce((sum, d) => sum + (Number(calcNetProfit(d)) || 0), 0);
     const roiPct = capitalInvested > 0 ? (roiDollars / capitalInvested) * 100 : 0;
-    const annualized = fundedDeals.reduce((acc, d) => {
+    const annualized = activeDeals.reduce((acc, d) => {
       const months = Number(d.holdPeriod ?? d.holdingMonths ?? d.scenarioData?.holdPeriod ?? 0);
       if (months <= 0) return acc;
       const cap = computeDealInvestorCapital(d);
