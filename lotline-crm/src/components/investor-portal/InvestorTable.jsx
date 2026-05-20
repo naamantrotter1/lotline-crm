@@ -200,15 +200,6 @@ export default function InvestorTable({
                       <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{inv.name}</p>
                       <StatusPill status={deriveInvestorStatus(inv)} />
                     </div>
-                    {termsLabel ? (
-                      <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-0.5">
-                        {termsLabel}
-                      </span>
-                    ) : !isCash ? (
-                      <span className="inline-block text-[10px] font-medium text-gray-400 italic mt-0.5">No terms set</span>
-                    ) : (
-                      <span className="inline-block text-[10px] font-medium text-gray-400 mt-0.5">Cash deals</span>
-                    )}
                   </div>
                 </div>
 
@@ -246,11 +237,6 @@ export default function InvestorTable({
                       <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{inv.name}</p>
                       <StatusPill status={deriveInvestorStatus(inv)} />
                     </div>
-                    {termsLabel ? (
-                      <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-1">{termsLabel}</span>
-                    ) : !isCash ? (
-                      <span className="inline-block text-[10px] font-medium text-gray-400 italic mt-1">No terms set</span>
-                    ) : null}
                   </div>
                   <RowKebab inv={inv} isCash={isCash} onViewPortal={onViewPortal} onSendInvite={onSendInvite} onEditTerms={onEditTerms} />
                 </div>
