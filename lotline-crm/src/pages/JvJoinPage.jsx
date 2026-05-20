@@ -1,7 +1,8 @@
 /**
  * JvJoinPage — /join/:token
- * Public signup page for JV partner invitation links.
- * Creates a new account + org and auto-establishes the JV partnership.
+ * Two-step signup for JV partner invitation links.
+ * Step 1: personal info + password
+ * Step 2: company name + workspace URL
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -16,25 +17,37 @@ function slugify(str) {
     .replace(/^-|-$/g, '');
 }
 
+function formatPhone(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function JvJoinPage() {
   const { token } = useParams();
   const navigate  = useNavigate();
 
-  // Invitation metadata (loaded from the token)
-  const [invite,      setInvite]      = useState(null);   // { hubOrgName, inviteeEmail, notes }
+  // Invitation metadata
+  const [invite,      setInvite]      = useState(null);
   const [lookupErr,   setLookupErr]   = useState('');
   const [lookupDone,  setLookupDone]  = useState(false);
 
-  // Form state
+  // Step 1 — personal info
+  const [step,        setStep]        = useState(1);
   const [firstName,   setFirstName]   = useState('');
   const [lastName,    setLastName]    = useState('');
   const [phone,       setPhone]       = useState('');
-  const [orgName,     setOrgName]     = useState('');
-  const [slug,        setSlug]        = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
   const [password,    setPassword]    = useState('');
   const [confirmPwd,  setConfirmPwd]  = useState('');
   const [showPwd,     setShowPwd]     = useState(false);
+
+  // Step 2 — workspace
+  const [orgName,     setOrgName]     = useState('');
+  const [slug,        setSlug]        = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [newOrgId,    setNewOrgId]    = useState(null);
+
   const [submitting,  setSubmitting]  = useState(false);
   const [formErr,     setFormErr]     = useState('');
   const [success,     setSuccess]     = useState(false);
@@ -49,31 +62,25 @@ export default function JvJoinPage() {
     setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, ''));
   }
 
-  // ── Lookup the invitation token on mount ──────────────────────────────────
+  // ── Token lookup ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!token) { setLookupErr('No invitation token provided.'); setLookupDone(true); return; }
     fetch(`/api/jv/invite-lookup?token=${token}`)
       .then(r => r.json().then(j => ({ ok: r.ok, json: j })))
       .then(({ ok, json }) => {
-        if (ok) {
-          setInvite(json);
-          setFirstName('');
-        } else {
-          setLookupErr(json.error || 'Invalid invitation link.');
-        }
+        if (ok) setInvite(json);
+        else    setLookupErr(json.error || 'Invalid invitation link.');
       })
       .catch(() => setLookupErr('Could not load invitation. Please try again.'))
       .finally(() => setLookupDone(true));
   }, [token]);
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-  async function handleSubmit(e) {
+  // ── Step 1: create account ────────────────────────────────────────────────
+  async function handleStep1(e) {
     e.preventDefault();
     setFormErr('');
-    if (!firstName.trim()) return setFormErr('First name is required.');
-    if (!orgName.trim())   return setFormErr('Company / org name is required.');
-    if (!slug || slug.length < 3) return setFormErr('Workspace URL must be at least 3 characters.');
-    if (password.length < 8) return setFormErr('Password must be at least 8 characters.');
+    if (!firstName.trim())      return setFormErr('First name is required.');
+    if (password.length < 8)    return setFormErr('Password must be at least 8 characters.');
     if (password !== confirmPwd) return setFormErr('Passwords do not match.');
 
     setSubmitting(true);
@@ -81,28 +88,30 @@ export default function JvJoinPage() {
       const res = await fetch('/api/jv/invite-accept', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token, firstName, lastName, phone, orgName, slug, password }),
+        body:    JSON.stringify({ token, firstName, lastName, phone, password }),
       });
       const json = await res.json();
       if (!res.ok) {
-        // If slug is taken, move focus back to workspace URL field
-        if (res.status === 409) setSlugTouched(true);
         setFormErr(json.error || 'Something went wrong. Please try again.');
-      } else {
-        // Sign out any existing session, then sign in as the new partner account
-        // so the user always lands on their new org — not a previously-open hub session.
-        await supabase.auth.signOut();
-        const { error: signInErr } = await supabase.auth.signInWithPassword({
-          email: invite?.inviteeEmail,
-          password,
-        });
-        if (signInErr) {
-          // Sign-in failed — fall back to the success screen with manual login
-          setSuccess(true);
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+        return;
       }
+
+      // Sign in as the new account
+      await supabase.auth.signOut();
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: invite?.inviteeEmail,
+        password,
+      });
+      if (signInErr) {
+        setSuccess(true);
+        return;
+      }
+
+      // Advance to step 2 — pre-fill org name from first name
+      setNewOrgId(json.orgId);
+      setOrgName(`${firstName.trim()} Organization`);
+      setSlug(slugify(`${firstName.trim()} Organization`));
+      setStep(2);
     } catch {
       setFormErr('Network error. Please check your connection and try again.');
     } finally {
@@ -110,68 +119,86 @@ export default function JvJoinPage() {
     }
   }
 
-  // ── Shared input style ────────────────────────────────────────────────────
+  // ── Step 2: set up workspace ──────────────────────────────────────────────
+  async function handleStep2(e) {
+    e.preventDefault();
+    setFormErr('');
+    if (!orgName.trim())             return setFormErr('Company name is required.');
+    if (!slug || slug.length < 3)    return setFormErr('Workspace URL must be at least 3 characters.');
+
+    setSubmitting(true);
+    try {
+      // Update the org name + slug (user is now authenticated)
+      const { error: orgErr } = await supabase
+        .from('organizations')
+        .update({ name: orgName.trim(), slug })
+        .eq('id', newOrgId);
+
+      if (orgErr) {
+        const taken = orgErr.message?.includes('unique') || orgErr.message?.includes('slug') || orgErr.message?.includes('duplicate');
+        setFormErr(taken ? 'That workspace URL is already taken — please choose a different one.' : orgErr.message);
+        return;
+      }
+
+      // Set active_organization_id on the profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').update({ active_organization_id: newOrgId }).eq('id', user.id);
+      }
+
+      navigate('/dashboard', { replace: true });
+    } catch {
+      setFormErr('Network error. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── Shared styles ─────────────────────────────────────────────────────────
   const inp = 'w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors placeholder:text-gray-300';
   const lbl = 'block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide';
-
   const shell = 'min-h-screen w-full flex items-center justify-center px-4 py-12';
   const shellStyle = { background: '#f5f3ee' };
 
-  // ── Loading state ─────────────────────────────────────────────────────────
-  if (!lookupDone) {
-    return (
-      <div className={shell} style={shellStyle}>
-        <Loader2 size={28} className="animate-spin text-accent" />
-      </div>
-    );
-  }
+  if (!lookupDone) return (
+    <div className={shell} style={shellStyle}>
+      <Loader2 size={28} className="animate-spin text-accent" />
+    </div>
+  );
 
-  // ── Invalid / expired invitation ──────────────────────────────────────────
-  if (lookupErr) {
-    return (
-      <div className={shell} style={shellStyle}>
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
-          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-            <AlertCircle size={26} className="text-red-400" />
-          </div>
-          <h1 className="text-xl font-bold text-[#1a2332] mb-2">Invitation Unavailable</h1>
-          <p className="text-sm text-gray-500 mb-6">{lookupErr}</p>
-          <Link to="/login" className="text-sm font-semibold text-accent hover:underline">
-            Sign in to an existing account →
-          </Link>
+  if (lookupErr) return (
+    <div className={shell} style={shellStyle}>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={26} className="text-red-400" />
         </div>
+        <h1 className="text-xl font-bold text-[#1a2332] mb-2">Invitation Unavailable</h1>
+        <p className="text-sm text-gray-500 mb-6">{lookupErr}</p>
+        <Link to="/login" className="text-sm font-semibold text-accent hover:underline">
+          Sign in to an existing account →
+        </Link>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── Success ───────────────────────────────────────────────────────────────
-  if (success) {
-    return (
-      <div className={shell} style={shellStyle}>
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
-          <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={26} className="text-green-500" />
-          </div>
-          <h1 className="text-xl font-bold text-[#1a2332] mb-2">Account Created!</h1>
-          <p className="text-sm text-gray-500 mb-2">
-            Your CRM workspace is ready and your JV partnership with{' '}
-            <strong>{invite?.hubOrgName}</strong> is active.
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
-            Sign in with <strong>{invite?.inviteeEmail}</strong> and the password you just created.
-          </p>
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors"
-          >
-            Go to Login →
-          </button>
+  if (success) return (
+    <div className={shell} style={shellStyle}>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
+          <CheckCircle size={26} className="text-green-500" />
         </div>
+        <h1 className="text-xl font-bold text-[#1a2332] mb-2">Account Created!</h1>
+        <p className="text-sm text-gray-500 mb-6">
+          Sign in with <strong>{invite?.inviteeEmail}</strong> and the password you just created.
+        </p>
+        <button onClick={() => navigate('/login')}
+          className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors">
+          Go to Login →
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── Signup form ───────────────────────────────────────────────────────────
   return (
     <div className={shell} style={shellStyle}>
       <div className="w-full max-w-lg">
@@ -193,115 +220,132 @@ export default function JvJoinPage() {
           )}
         </div>
 
+        {/* Step indicators */}
+        <div className="flex items-center gap-2 justify-center mb-6">
+          <div className="flex gap-1.5">
+            <span className="w-6 h-1.5 rounded-full bg-accent" />
+            <span className={`w-6 h-1.5 rounded-full ${step === 2 ? 'bg-accent' : 'bg-gray-200'}`} />
+          </div>
+          <span className="text-xs text-gray-400">Step {step} of 2</span>
+        </div>
+
         {/* Form card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-8">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6">
-            Create your account
-          </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>First name *</label>
-                <input className={inp} value={firstName} onChange={e => setFirstName(e.target.value)}
-                  placeholder="Jane" autoFocus />
-              </div>
-              <div>
-                <label className={lbl}>Last name</label>
-                <input className={inp} value={lastName} onChange={e => setLastName(e.target.value)}
-                  placeholder="Smith" />
-              </div>
-            </div>
+          {/* ── Step 1: Personal info ── */}
+          {step === 1 && (
+            <>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6">
+                Create your account
+              </p>
+              <form onSubmit={handleStep1} className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>First name *</label>
+                    <input className={inp} value={firstName} onChange={e => setFirstName(e.target.value)}
+                      placeholder="Jane" autoFocus />
+                  </div>
+                  <div>
+                    <label className={lbl}>Last name</label>
+                    <input className={inp} value={lastName} onChange={e => setLastName(e.target.value)}
+                      placeholder="Smith" />
+                  </div>
+                </div>
 
-            {/* Phone */}
-            <div>
-              <label className={lbl}>Phone Number</label>
-              <input className={inp} type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="(555) 123-4567" />
-            </div>
+                <div>
+                  <label className={lbl}>Phone Number</label>
+                  <input className={inp} type="tel" value={phone}
+                    onChange={e => setPhone(formatPhone(e.target.value))}
+                    placeholder="(555) 123-4567" />
+                </div>
 
-            {/* Email (locked) */}
-            <div>
-              <label className={lbl}>Email</label>
-              <input className={inp + ' opacity-50 cursor-not-allowed bg-gray-50'} value={invite?.inviteeEmail || ''} readOnly />
-            </div>
+                <div>
+                  <label className={lbl}>Email</label>
+                  <input className={inp + ' opacity-50 cursor-not-allowed bg-gray-50'}
+                    value={invite?.inviteeEmail || ''} readOnly />
+                </div>
 
-            {/* Org name */}
-            <div>
-              <label className={lbl}>Company / organization name *</label>
-              <input className={inp} value={orgName} onChange={e => handleOrgNameChange(e.target.value)}
-                placeholder="Smith Land Partners LLC" />
-            </div>
+                <div>
+                  <label className={lbl}>Password *</label>
+                  <div className="relative">
+                    <input type={showPwd ? 'text' : 'password'} className={inp + ' pr-10'}
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      placeholder="Min. 8 characters" />
+                    <button type="button" onClick={() => setShowPwd(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
+                      {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
 
-            {/* Workspace URL */}
-            <div>
-              <label className={lbl}>Workspace URL *</label>
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent transition-colors">
-                <span className="pl-4 pr-1 text-sm text-gray-400 select-none whitespace-nowrap">
-                  lotline.app/
-                </span>
-                <input
-                  className="flex-1 py-3 pr-4 text-sm bg-transparent focus:outline-none text-gray-800"
-                  value={slug}
-                  onChange={e => handleSlugChange(e.target.value)}
-                  placeholder="smith-land-partners"
-                />
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">Lowercase letters, numbers, and hyphens only.</p>
-            </div>
+                <div>
+                  <label className={lbl}>Confirm password *</label>
+                  <input type={showPwd ? 'text' : 'password'} className={inp}
+                    value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)}
+                    placeholder="Re-enter password" />
+                </div>
 
-            {/* Password */}
-            <div>
-              <label className={lbl}>Password *</label>
-              <div className="relative">
-                <input
-                  type={showPwd ? 'text' : 'password'}
-                  className={inp + ' pr-10'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Min. 8 characters"
-                />
-                <button type="button" onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
-                  {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                {formErr && (
+                  <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+                    <AlertCircle size={14} className="flex-shrink-0" />{formErr}
+                  </div>
+                )}
+
+                <button type="submit" disabled={submitting}
+                  className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                  {submitting && <Loader2 size={15} className="animate-spin" />}
+                  {submitting ? 'Creating your account…' : 'Continue →'}
                 </button>
-              </div>
-            </div>
+              </form>
 
-            {/* Confirm password */}
-            <div>
-              <label className={lbl}>Confirm password *</label>
-              <input
-                type={showPwd ? 'text' : 'password'}
-                className={inp}
-                value={confirmPwd}
-                onChange={e => setConfirmPwd(e.target.value)}
-                placeholder="Re-enter password"
-              />
-            </div>
+              <p className="text-center text-xs text-gray-400 mt-5">
+                Already have an account?{' '}
+                <Link to="/login" className="text-accent font-semibold hover:underline">Sign in</Link>
+              </p>
+            </>
+          )}
 
-            {formErr && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
-                <AlertCircle size={14} className="flex-shrink-0" />
-                {formErr}
-              </div>
-            )}
+          {/* ── Step 2: Workspace setup ── */}
+          {step === 2 && (
+            <>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                Set up your workspace
+              </p>
+              <p className="text-sm text-gray-400 mb-6">This will be the name of your CRM workspace.</p>
+              <form onSubmit={handleStep2} className="space-y-5">
+                <div>
+                  <label className={lbl}>Company / organization name *</label>
+                  <input className={inp} value={orgName} onChange={e => handleOrgNameChange(e.target.value)}
+                    placeholder="Smith Land Partners LLC" autoFocus />
+                </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {submitting && <Loader2 size={15} className="animate-spin" />}
-              {submitting ? 'Creating your account…' : 'Create Account & Accept Partnership'}
-            </button>
-          </form>
+                <div>
+                  <label className={lbl}>Workspace URL *</label>
+                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent transition-colors">
+                    <span className="pl-4 pr-1 text-sm text-gray-400 select-none whitespace-nowrap">
+                      lotline.app/
+                    </span>
+                    <input className="flex-1 py-3 pr-4 text-sm bg-transparent focus:outline-none text-gray-800"
+                      value={slug} onChange={e => handleSlugChange(e.target.value)}
+                      placeholder="smith-land-partners" />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">Lowercase letters, numbers, and hyphens only.</p>
+                </div>
 
-          <p className="text-center text-xs text-gray-400 mt-5">
-            Already have an account?{' '}
-            <Link to="/login" className="text-accent font-semibold hover:underline">Sign in</Link>
-          </p>
+                {formErr && (
+                  <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+                    <AlertCircle size={14} className="flex-shrink-0" />{formErr}
+                  </div>
+                )}
+
+                <button type="submit" disabled={submitting}
+                  className="w-full py-3 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                  {submitting && <Loader2 size={15} className="animate-spin" />}
+                  {submitting ? 'Setting up workspace…' : 'Create Workspace & Go to Dashboard →'}
+                </button>
+              </form>
+            </>
+          )}
         </div>
 
         <p className="text-center text-[11px] text-gray-400 mt-5 leading-relaxed">

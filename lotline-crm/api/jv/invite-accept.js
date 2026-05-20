@@ -1,6 +1,7 @@
 // POST /api/jv/invite-accept
 // Public — no auth required. Creates a user account, org, and JV partnership.
-// Body: { token, firstName, lastName?, orgName, password }
+// Body: { token, firstName, lastName?, phone?, password }
+// Returns: { success: true, orgId }
 import { makeAdminClient } from '../_lib/teamAuth.js';
 
 const DEFAULT_JV_PERMISSIONS = {
@@ -18,9 +19,9 @@ const DEFAULT_JV_PERMISSIONS = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { token, firstName, lastName, phone, orgName, slug: bodySlug, password } = req.body || {};
-  if (!token || !firstName || !orgName || !password) {
-    return res.status(400).json({ error: 'token, firstName, orgName, and password are required.' });
+  const { token, firstName, lastName, phone, password } = req.body || {};
+  if (!token || !firstName || !password) {
+    return res.status(400).json({ error: 'token, firstName, and password are required.' });
   }
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters.' });
@@ -45,10 +46,12 @@ export default async function handler(req, res) {
   }
 
   // 2. Create Supabase auth user (pre-confirmed so they can log in immediately)
+  const fullName = [firstName.trim(), (lastName || '').trim()].filter(Boolean).join(' ');
   const { data: { user }, error: userErr } = await adminClient.auth.admin.createUser({
-    email:           inv.invitee_email,
+    email:          inv.invitee_email,
     password,
-    email_confirm:   true,
+    email_confirm:  true,
+    user_metadata:  { full_name: fullName },
   });
   if (userErr) {
     const msg = userErr.message.includes('already registered')
@@ -57,16 +60,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: msg });
   }
 
-  // 3. Create the new organization
-  // Prefer user-provided slug; fall back to auto-generated unique slug.
-  const baseSlug  = (bodySlug?.trim() || orgName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'org';
-  const finalSlug = bodySlug?.trim() ? baseSlug : `${baseSlug}-${Date.now().toString(36)}`;
-
+  // 3. Create a temporary org — user will set the real name in step 2 of the form
+  const tempSlug = `partner-${Date.now().toString(36)}`;
   const { data: org, error: orgErr } = await adminClient
     .from('organizations')
     .insert({
-      name:          orgName.trim(),
-      slug:          finalSlug,
+      name:          `${firstName.trim()}'s Organization`,
+      slug:          tempSlug,
       plan:          'starter',
       owner_user_id: user.id,
       status:        'active',
@@ -76,14 +76,8 @@ export default async function handler(req, res) {
     .single();
 
   if (orgErr) {
-    // Roll back the user if org creation fails
     await adminClient.auth.admin.deleteUser(user.id);
-    const slugTaken = orgErr.message?.includes('slug') || orgErr.message?.includes('unique') || orgErr.message?.includes('duplicate');
-    return res.status(slugTaken ? 409 : 500).json({
-      error: slugTaken
-        ? 'That workspace URL is already taken — please choose a different one.'
-        : orgErr.message,
-    });
+    return res.status(500).json({ error: orgErr.message });
   }
 
   // 4. Create owner membership
@@ -116,20 +110,16 @@ export default async function handler(req, res) {
     new_user_id: user.id,
   }).eq('id', inv.id);
 
-  // 7. Set the user's profile — wait briefly for Supabase's auth trigger to
-  //    create the profiles row first, then force-update it so our values win.
-  //    This ensures active_organization_id is never null when the user logs in.
-  const fullName = [firstName.trim(), (lastName || '').trim()].filter(Boolean).join(' ');
-  await new Promise(r => setTimeout(r, 700));
+  // 7. Wait for Supabase auth trigger to create the profile row, then update
+  //    only the safe writable columns (name, first_name, last_name, phone).
+  //    active_organization_id is set later when the user completes step 2.
+  await new Promise(r => setTimeout(r, 800));
   await adminClient.from('profiles').update({
-    name:                   fullName,
-    first_name:             firstName.trim(),
-    last_name:              (lastName || '').trim() || null,
-    email:                  inv.invitee_email,
-    role:                   'operator',
-    active_organization_id: org.id,
+    name:       fullName,
+    first_name: firstName.trim(),
+    last_name:  (lastName || '').trim() || null,
     ...(phone?.trim() ? { phone: phone.trim() } : {}),
   }).eq('id', user.id);
 
-  return res.status(201).json({ success: true });
+  return res.status(201).json({ success: true, orgId: org.id });
 }
