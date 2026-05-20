@@ -32,12 +32,15 @@ export const HMCB_DEFAULTS = {
   purchasePrice: 0,
   holdbackAmount: 0,
   fundedAtClosing: 0,
+  ltvCapPct: 60,
   originationFee: 0,
   originationFeeMode: 'flat', // 'flat' | 'pct'
+  originationRolled: false,   // true = rolled into loan; false = cash at closing
   brokerFee: 0,
   brokerFeeMode: 'flat', // 'flat' | 'pct'
   underwritingFee: 0,
   appraisalFee: 0,
+  legalFee: 0,               // always upfront; displayed separately
   attDocPrepFee: 0,
   servicingFee: 0,
   drawFee: 115,
@@ -46,11 +49,24 @@ export const HMCB_DEFAULTS = {
 };
 
 const DEFAULT_CHECKLIST = [
-  'Fully executed purchase agreement',
-  'Detailed construction / rehab budget',
-  'Property inspection by lender or rep',
-  'Insurance with lender listed as mortgagee',
-  'Clear title',
+  { label: 'Fully executed purchase agreement',              auto_trigger: null },
+  { label: 'Detailed construction / rehab budget',           auto_trigger: null },
+  { label: 'Property inspection by lender or authorized rep', auto_trigger: null },
+  { label: 'Hazard / Builder\'s risk insurance (lender named as mortgagee)', auto_trigger: null },
+  { label: 'Clear title commitment / title search',          auto_trigger: null },
+  { label: 'Deed of trust / mortgage recorded at closing',   auto_trigger: null },
+  { label: 'Personal guarantee signed by all borrowers',     auto_trigger: null },
+  { label: 'Assignment of leases and rents (if applicable)', auto_trigger: null },
+  { label: 'Draw fee schedule confirmed and first draw fee collected', auto_trigger: null },
+];
+
+const LENDER_PROTECTION_DEFAULTS = [
+  { item_key: 'personal_guarantee',  label: 'Personal Guarantee',                sort_order: 0, auto_trigger: null },
+  { item_key: 'title_insurance',     label: 'Title Insurance (Lender\'s Policy)', sort_order: 1, auto_trigger: null },
+  { item_key: 'builders_risk_ins',   label: 'Hazard / Builder\'s Risk Insurance', sort_order: 2, auto_trigger: null },
+  { item_key: 'deed_of_trust',       label: 'Deed of Trust / Mortgage Recorded',  sort_order: 3, auto_trigger: null },
+  { item_key: 'assignment_rents',    label: 'Assignment of Leases & Rents',        sort_order: 4, auto_trigger: null },
+  { item_key: 'mso_assignment',      label: 'MSO Assignment',                      sort_order: 5, auto_trigger: 'draw2_paid' },
 ];
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
@@ -154,7 +170,7 @@ function formatHoldPeriod(months) {
   return `${whole} month${whole === 1 ? '' : 's'} ${rem} day${rem === 1 ? '' : 's'}`;
 }
 
-export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate, paymentDueDay, onPaymentDueDayChange, firstPaymentDate, onFirstPaymentDateChange, homeCost = 0 }) {
+export default function HMCBPanel({ dealId, data, onChange, readOnly = false, investorList = [], onAddInvestor, capitalDeployedDate, estimatedSaleDate, paymentDueDay, onPaymentDueDayChange, firstPaymentDate, onFirstPaymentDateChange, homeCost = 0, arv = 0 }) {
   const d = { ...HMCB_DEFAULTS, ...data };
 
   const set = (field, value) => {
@@ -173,8 +189,19 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
   const totalLoan       = loanBase + d.holdbackAmount;
   const fundedAtClosing = d.fundedAtClosing || d.purchasePrice;
   const basisAmount     = d.interestBasis === 'full' ? totalLoan : fundedAtClosing;
-  const monthlyAuto     = basisAmount * (d.interestRate / 100) / 12;
-  const monthly         = d.monthlyPaymentOverride || monthlyAuto;
+
+  // Fees (computed before monthly so rolled origination can adjust interest basis)
+  const effectiveOriginationFee = d.originationFeeMode === 'pct'
+    ? (d.originationFee / 100) * totalLoan
+    : (d.originationFee || 0);
+  const effectiveBrokerFee = d.brokerFeeMode === 'pct'
+    ? (d.brokerFee / 100) * totalLoan
+    : (d.brokerFee || 0);
+  // When origination is rolled into loan, add to loan basis for interest calc
+  const rolledOriginationAdj    = d.originationRolled ? effectiveOriginationFee : 0;
+  const effectiveLoanForInterest = basisAmount + rolledOriginationAdj;
+  const monthlyAutoBase   = effectiveLoanForInterest * (d.interestRate / 100) / 12;
+  const monthly           = d.monthlyPaymentOverride || monthlyAutoBase;
   const totalInterestFullTerm = monthly * d.termMonths;
   const totalInterestExtended = d.extensionAvailable
     ? monthly * (d.termMonths + (d.extensionMonths * d.numExtensions))
@@ -185,16 +212,27 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
   const totalInterestEstimated = monthly * estHold;
   // Use a small epsilon when comparing fractional months to the integer term
   const showEst = !!(capitalDeployedDate && estimatedSaleDate) && Math.abs(estHold - d.termMonths) > 0.01;
-
-  const effectiveOriginationFee = d.originationFeeMode === 'pct'
-    ? (d.originationFee / 100) * totalLoan
-    : (d.originationFee || 0);
-  const effectiveBrokerFee = d.brokerFeeMode === 'pct'
-    ? (d.brokerFee / 100) * totalLoan
-    : (d.brokerFee || 0);
-  const totalFees = effectiveOriginationFee + effectiveBrokerFee + (d.underwritingFee || 0)
-    + (d.appraisalFee || 0) + (d.attDocPrepFee || 0) + (d.servicingFee || 0);
+  const totalFees = (d.originationRolled ? 0 : effectiveOriginationFee)
+    + effectiveBrokerFee + (d.underwritingFee || 0)
+    + (d.appraisalFee || 0) + (d.attDocPrepFee || 0) + (d.servicingFee || 0)
+    + (d.legalFee || 0);
   const cashToClose = fundedAtClosing - (d.purchasePrice) + totalFees;  // typically just fees since purchase is funded
+
+  // LTV
+  const ltvCapPct = d.ltvCapPct ?? 60;
+  const maxLoanByLtv = arv > 0 ? arv * (ltvCapPct / 100) : 0;
+  const currentLtvPct = arv > 0 ? (totalLoan / arv) * 100 : null;
+  const withinLtv = maxLoanByLtv > 0 && totalLoan <= maxLoanByLtv;
+
+  // Auto first payment date: 1st of month following capital deployed date
+  const autoFirstPaymentDate = (() => {
+    if (!capitalDeployedDate) return null;
+    const dep = new Date(capitalDeployedDate + 'T12:00:00');
+    if (Number.isNaN(dep.getTime())) return null;
+    const y = dep.getMonth() === 11 ? dep.getFullYear() + 1 : dep.getFullYear();
+    const m = dep.getMonth() === 11 ? 1 : dep.getMonth() + 2;
+    return `${y}-${String(m).padStart(2, '0')}-01`;
+  })();
 
   // ── Draws state ───────────────────────────────────────────────────────────
   const [draws, setDraws] = useState([]);
@@ -267,7 +305,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
 
     if (!rows || rows.length === 0) {
       // Seed defaults on first load
-      const seeds = DEFAULT_CHECKLIST.map((label, i) => ({
+      const seeds = DEFAULT_CHECKLIST.map(({ label }, i) => ({
         deal_id: dealId, label, checked: false, is_custom: false, sort_order: i,
       }));
       await supabase.from('hmcb_checklist_items').insert(seeds);
@@ -308,6 +346,54 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
 
   const checkedCount  = checklist.filter(c => c.checked).length;
   const totalCount    = checklist.length;
+
+  // ── Lender Protections state ──────────────────────────────────────────────
+  const [protections, setProtections] = useState([]);
+  const [protectionsLoaded, setProtectionsLoaded] = useState(false);
+
+  const loadProtections = useCallback(async () => {
+    if (!supabase || !dealId) return;
+    const { data: rows } = await supabase
+      .from('deal_lender_protections')
+      .select('*')
+      .eq('deal_id', dealId)
+      .order('sort_order');
+
+    if (!rows || rows.length === 0) {
+      // Seed defaults
+      const seeds = LENDER_PROTECTION_DEFAULTS.map(item => ({
+        deal_id: dealId,
+        item_key: item.item_key,
+        label: item.label,
+        status: 'pending',
+        sort_order: item.sort_order,
+        auto_trigger: item.auto_trigger,
+      }));
+      await supabase.from('deal_lender_protections').insert(seeds);
+      const { data: seeded } = await supabase.from('deal_lender_protections').select('*').eq('deal_id', dealId).order('sort_order');
+      setProtections(seeded || []);
+    } else {
+      setProtections(rows);
+    }
+    setProtectionsLoaded(true);
+  }, [dealId]);
+
+  useEffect(() => { if (dealId) loadProtections(); }, [loadProtections]);
+
+  const updateProtection = async (id, status) => {
+    if (!supabase) return;
+    setProtections(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    await supabase.from('deal_lender_protections').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  };
+
+  // Auto-trigger: mark MSO as 'active' when Draw #2 is paid
+  useEffect(() => {
+    if (!protectionsLoaded) return;
+    const draw2Paid = draws.some(dr => dr.draw_number === 2 && dr.status === 'paid');
+    if (!draw2Paid) return;
+    const mso = protections.find(p => p.item_key === 'mso_assignment' && p.status === 'pending');
+    if (mso) updateProtection(mso.id, 'active');
+  }, [draws, protectionsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Guarantors helpers ─────────────────────────────────────────────────────
   const setGuarantor = (i, val) => {
@@ -374,6 +460,16 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           onFirstPaymentDateChange={onFirstPaymentDateChange}
           readOnly={readOnly}
         />
+        {/* IO payment start hint: 1st of following month */}
+        {autoFirstPaymentDate && !firstPaymentDate && !paymentDueDay && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <Calendar size={11} className="text-accent flex-shrink-0" />
+            <p className="text-[11px] text-accent">
+              First IO payment due: <strong>{new Date(autoFirstPaymentDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+              <span className="text-gray-400 ml-1">(1st of following month)</span>
+            </p>
+          </div>
+        )}
         {/* Extension */}
         <div className="flex items-center gap-3">
           <button
@@ -498,6 +594,40 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
           <span className={`text-sm font-bold ${holdbackRemaining >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt$(holdbackRemaining)}</span>
           <span className="text-xs text-gray-400">(based on paid draws)</span>
         </div>
+
+        {/* LTV Calculator */}
+        <div className="pt-2 mt-1 border-t border-gray-100">
+          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">LTV Calculator</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number" step="1" min="1" max="100"
+                className="w-16 px-2 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-accent/30 text-center"
+                value={ltvCapPct}
+                onChange={e => set('ltvCapPct', parseFloat(e.target.value) || 60)}
+                disabled={readOnly}
+              />
+              <span className="text-xs text-gray-400">% of ARV</span>
+            </div>
+            {arv > 0 && (
+              <div className="text-xs text-gray-500">
+                Max loan: <span className="font-semibold text-sidebar">{fmt$(maxLoanByLtv)}</span>
+                <span className="text-gray-400 ml-1">(ARV {fmt$(arv)} × {ltvCapPct}%)</span>
+              </div>
+            )}
+          </div>
+          {arv > 0 && totalLoan > 0 && (
+            <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${withinLtv ? 'text-green-600' : 'text-red-500'}`}>
+              {withinLtv ? <Check size={12} /> : <AlertCircle size={12} />}
+              {withinLtv
+                ? `Within LTV cap (${fmt$(totalLoan)} = ${currentLtvPct.toFixed(1)}% LTV)`
+                : `Exceeds LTV cap (${fmt$(totalLoan)} = ${currentLtvPct.toFixed(1)}% LTV)`}
+            </div>
+          )}
+          {arv === 0 && (
+            <p className="text-[11px] text-gray-400 mt-1">Set deal ARV to enable LTV check</p>
+          )}
+        </div>
       </SectionCard>
 
       {/* ── Primary: Key Fees ── */}
@@ -519,6 +649,16 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
               d.originationFeeMode === 'pct'
                 ? <p className="text-[10px] text-gray-400 mt-0.5">= {fmt$(effectiveOriginationFee)}</p>
                 : <p className="text-[10px] text-gray-400 mt-0.5">{totalLoan > 0 ? ((effectiveOriginationFee / totalLoan) * 100).toFixed(3) : '0.000'}% of total loan</p>
+            )}
+            {/* Origination payment method toggle */}
+            {!readOnly && effectiveOriginationFee > 0 && (
+              <div className="mt-1.5 inline-flex rounded border border-gray-200 overflow-hidden text-[10px] font-semibold">
+                <button type="button" onClick={() => set('originationRolled', false)} className={`px-2 py-0.5 transition-colors ${!d.originationRolled ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>Cash at Closing</button>
+                <button type="button" onClick={() => set('originationRolled', true)} className={`px-2 py-0.5 transition-colors ${d.originationRolled ? 'bg-accent text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>Rolled into Loan</button>
+              </div>
+            )}
+            {d.originationRolled && effectiveOriginationFee > 0 && (
+              <p className="text-[10px] text-blue-500 mt-0.5">Rolled into loan — adds to interest basis</p>
             )}
           </div>
           <div>
@@ -576,13 +716,24 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
               </Row>
               <Row>
                 <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Legal Fee ($)</p>
+                    <span className="text-[9px] text-gray-400 font-medium uppercase">Upfront only</span>
+                  </div>
+                  <input type="number" step="0.01" className={inp} value={d.legalFee || ''} onChange={e => set('legalFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Paid upfront — not rolled into loan</p>
+                </div>
+                <div>
                   {label('Servicing Fee ($)')}
                   <input type="number" step="0.01" className={inp} value={d.servicingFee || ''} onChange={e => set('servicingFee', parseFloat(e.target.value) || 0)} disabled={readOnly} />
                 </div>
+              </Row>
+              <Row>
                 <div>
                   {label('Monthly Payment (override)')}
-                  <input type="number" step="0.01" className={inp} value={d.monthlyPaymentOverride ?? ''} onChange={e => set('monthlyPaymentOverride', e.target.value ? parseFloat(e.target.value) : null)} placeholder={`Auto: ${fmt$(monthlyAuto)}`} disabled={readOnly} />
+                  <input type="number" step="0.01" className={inp} value={d.monthlyPaymentOverride ?? ''} onChange={e => set('monthlyPaymentOverride', e.target.value ? parseFloat(e.target.value) : null)} placeholder={`Auto: ${fmt$(monthlyAutoBase)}`} disabled={readOnly} />
                 </div>
+                <div />
               </Row>
 
               {/* Advanced identification fields */}
@@ -701,6 +852,52 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
         </div>
       </SectionCard>
 
+      {/* ── Lender Protections ── */}
+      <SectionCard title="Lender Protections" defaultOpen={false}>
+        {!protectionsLoaded ? (
+          <div className="py-3 text-center"><div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" /></div>
+        ) : (
+          <div className="space-y-1.5">
+            {protections.map(item => {
+              const statusCfg = {
+                pending:  { dot: 'bg-gray-300',        label: 'Pending',  btn: 'text-gray-400 hover:text-accent' },
+                active:   { dot: 'bg-amber-400',       label: 'Active',   btn: 'text-amber-500 hover:text-amber-600' },
+                complete: { dot: 'bg-emerald-500',     label: 'Complete', btn: 'text-emerald-600 hover:text-emerald-700' },
+              }[item.status] || { dot: 'bg-gray-300', label: item.status, btn: '' };
+              return (
+                <div key={item.id} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 group">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusCfg.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 leading-tight">{item.label}</p>
+                    {item.auto_trigger === 'draw2_paid' && (
+                      <p className="text-[10px] text-gray-400">Auto-activates when Draw #2 is paid</p>
+                    )}
+                  </div>
+                  {!readOnly && (
+                    <select
+                      value={item.status}
+                      onChange={e => updateProtection(item.id, e.target.value)}
+                      className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-accent/30"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="active">Active</option>
+                      <option value="complete">Complete</option>
+                    </select>
+                  )}
+                  {readOnly && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      item.status === 'complete' ? 'bg-emerald-100 text-emerald-600' :
+                      item.status === 'active' ? 'bg-amber-100 text-amber-600' :
+                      'bg-gray-100 text-gray-400'
+                    }`}>{statusCfg.label}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
       {/* ── Draw Schedule ── */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -710,13 +907,27 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
               {draws.length} draws · {fmt$(totalRequested)} requested · {fmt$(totalPaid)} paid · {fmt$(holdbackRemaining)} remaining
             </p>
           </div>
-          {!readOnly && (
-            <button
-              onClick={() => setAddingDraw(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
-            >
-              <Plus size={12} /> Add Draw
-            </button>
+          {!readOnly && !addingDraw && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => { setNewDraw({ date_requested: '', amount_requested: String(d.purchasePrice || ''), notes: 'Draw #1 – Initial Funding' }); setAddingDraw(true); }}
+                className="px-2.5 py-1.5 rounded-lg border border-accent text-accent text-[11px] font-semibold hover:bg-accent/5 transition-colors"
+              >
+                Draw #1
+              </button>
+              <button
+                onClick={() => { setNewDraw({ date_requested: '', amount_requested: String(d.holdbackAmount || ''), notes: 'Draw #2 – Construction Release' }); setAddingDraw(true); }}
+                className="px-2.5 py-1.5 rounded-lg border border-accent text-accent text-[11px] font-semibold hover:bg-accent/5 transition-colors"
+              >
+                Draw #2
+              </button>
+              <button
+                onClick={() => { setNewDraw({ date_requested: '', amount_requested: '', notes: '' }); setAddingDraw(true); }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-accent text-white text-[11px] font-semibold hover:bg-accent/90 transition-colors"
+              >
+                <Plus size={11} /> Custom
+              </button>
+            </div>
           )}
         </div>
 

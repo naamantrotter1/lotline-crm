@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, MessageCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, Share2, MessageCircle, MapPin, Building2 } from 'lucide-react';
 import {
   fetchMyDeal, fetchDealDistributions, fetchDealPhotos,
   fetchDealMilestones, fetchPinnedUpdate,
@@ -21,6 +21,53 @@ const STAGE_COLORS = {
   'Development':     'bg-blue-500/80',
   'Complete':        'bg-purple-500/80',
 };
+
+const fmt$ = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+
+function LoanStatusCard({ deal }) {
+  // Support both snake_case (raw DB) and camelCase (mapped) keys
+  const hmcb = deal?.scenarioData?.hmcb || deal?.scenario_data?.hmcb;
+  const isHmcb = deal?.financingScenarioType === 'hmcb'
+    || deal?.financing_scenario_type === 'hmcb'
+    || (hmcb && hmcb.lenderName);
+  if (!isHmcb || !hmcb) return null;
+
+  const totalLoan = (hmcb.purchasePrice || 0) + (hmcb.holdbackAmount || 0);
+  const monthly   = hmcb.monthlyPaymentOverride || (totalLoan * (hmcb.interestRate || 13.5) / 100 / 12);
+
+  const rows = [
+    { label: 'Lender',           value: hmcb.lenderName || '—' },
+    { label: 'Total Loan',       value: fmt$(totalLoan) },
+    { label: 'Purchase Price',   value: fmt$(hmcb.purchasePrice) },
+    { label: 'Construction Holdback', value: fmt$(hmcb.holdbackAmount) },
+    { label: 'Interest Rate',    value: hmcb.interestRate ? `${hmcb.interestRate}% / yr` : '—' },
+    { label: 'Term',             value: hmcb.termMonths ? `${hmcb.termMonths} months` : '—' },
+    { label: 'Monthly Interest', value: fmt$(monthly) },
+    { label: 'First Payment',    value: fmtDate(deal.firstPaymentDate || deal.first_payment_date) },
+  ].filter(r => r.value && r.value !== '$0');
+
+  return (
+    <div className="bg-white dark:bg-[#1c2130] rounded-2xl border border-gray-200 dark:border-white/8 overflow-hidden">
+      <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/5">
+        <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+          <Building2 size={12} className="text-blue-600 dark:text-blue-400" />
+        </div>
+        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+          Loan Status
+        </p>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-white/5">
+        {rows.map(({ label, value }) => (
+          <div key={label} className="flex justify-between px-5 py-2.5 text-xs">
+            <span className="text-gray-500 dark:text-gray-400">{label}</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function InvestorDealDetail() {
   const { id }       = useParams();
@@ -212,6 +259,9 @@ export default function InvestorDealDetail() {
           <div className="w-full lg:w-[22rem] xl:w-[26rem] 2xl:w-[30rem] flex-shrink-0 space-y-4 lg:sticky lg:top-4">
             <YourPosition deal={deal} totalDistributed={totalDistributed} />
             <DealMetrics  deal={deal} />
+
+            {/* Loan Status — shown only for HMCB deals */}
+            <LoanStatusCard deal={deal} />
 
             {/* Property Map */}
             <PropertyMap address={deal.address} />
