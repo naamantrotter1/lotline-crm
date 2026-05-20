@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Building2, CheckCircle, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function JvJoinPage() {
   const { token } = useParams();
@@ -64,7 +65,19 @@ export default function JvJoinPage() {
       if (!res.ok) {
         setFormErr(json.error || 'Something went wrong. Please try again.');
       } else {
-        setSuccess(true);
+        // Sign out any existing session, then sign in as the new partner account
+        // so the user always lands on their new org — not a previously-open hub session.
+        await supabase.auth.signOut();
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: invite?.inviteeEmail,
+          password,
+        });
+        if (signInErr) {
+          // Sign-in failed — fall back to the success screen with manual login
+          setSuccess(true);
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch {
       setFormErr('Network error. Please check your connection and try again.');
