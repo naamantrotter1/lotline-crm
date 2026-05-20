@@ -86,6 +86,23 @@ function AllDealsTab({ onDealClick }) {
   );
 }
 
+// Compute the capital an investor has deployed in a deal.
+// Priority: HMCB total loan > loanAmountOverride > investorCapitalContributed (>0) > totalActual > cost sum
+function dealInvestorCapital(d) {
+  const scenType = d.financingScenarioType;
+  if (scenType === 'hmcb') {
+    const hmcb = d.scenarioData?.hmcb || {};
+    const totalLoan = (Number(hmcb.purchasePrice) || 0) + (Number(hmcb.holdbackAmount) || 0);
+    if (totalLoan > 0) return totalLoan;
+  }
+  const sd = d.scenarioData || {};
+  if (sd.loanAmountOverride != null && Number(sd.loanAmountOverride) > 0) return Number(sd.loanAmountOverride);
+  const contributed = d.investorCapitalContributed;
+  if (contributed != null && Number(contributed) > 0) return Number(contributed);
+  if (d.totalActual != null && Number(d.totalActual) > 0) return Number(d.totalActual);
+  return (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
+}
+
 // ── Investor Card (By Investor tab) ─────────────────────────────────────────
 function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +121,7 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
       address: d.address,
       stage: d.stage,
       lender: investor.name,
-      totalCapital: d.investorCapitalContributed != null ? Number(d.investorCapitalContributed) : d.totalActual != null ? Number(d.totalActual) : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
+      totalCapital: dealInvestorCapital(d),
       landCost: d.land || 0,
       construction: d.totalActual != null ? Math.max(0, Number(d.totalActual) - (d.land || 0)) : (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0),
       arv: d.arv || 0,
@@ -1753,14 +1770,7 @@ export default function InvestorPortal() {
       const hmcbLender = (d.scenarioData?.hmcb?.lenderName || '').trim().toLowerCase();
       return !!hmcbLender && hmcbLender === invNameLower;
     });
-    const capitalInvested = matchedDeals.reduce((sum, d) => {
-      const cap = d.investorCapitalContributed != null
-        ? Number(d.investorCapitalContributed)
-        : d.totalActual != null
-          ? Number(d.totalActual)
-          : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
-      return sum + cap;
-    }, 0);
+    const capitalInvested = matchedDeals.reduce((sum, d) => sum + dealInvestorCapital(d), 0);
     return {
       ...inv,
       activeDeals: matchedDeals.length,
