@@ -14,6 +14,14 @@ import {
 } from '../../lib/investorPortalData';
 import { computeDealInvestorCapital } from '../../lib/dealCapital';
 
+function formatPhone(raw) {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits[0] === '1') return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
+  return raw;
+}
+
 const TABS = [
   { key: 'overview',      label: 'Overview'      },
   { key: 'deals',         label: 'Deals'         },
@@ -122,7 +130,7 @@ export default function InvestorDrawer({
                   </a>
                 )}
                 {investor.phone && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{investor.phone}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{formatPhone(investor.phone)}</span>
                 )}
               </div>
             </div>
