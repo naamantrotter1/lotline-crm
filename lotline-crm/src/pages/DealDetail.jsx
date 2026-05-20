@@ -530,7 +530,7 @@ function FinancingScenarioPanel({
   const arvVal = arv ?? deal.arv ?? 0;
 
   const _landCost  = costs.land      || 0;
-  const _homeCost  = costs.mobileHome || 0;
+  const _homeCost  = mobileHomeActual ?? costs.mobileHome ?? 0;
   const _allInCost = allIn || 0;
   const totalLent = (loanBasisFlags.land ? _landCost : 0)
                   + (loanBasisFlags.home ? _homeCost : 0)
@@ -3004,6 +3004,7 @@ function DealDetailContent({ deal }) {
   const [devTasks, setDevTasks] = useState(initDev);
   const [realized, setRealized] = useState({});
   const [costSummary, setCostSummary] = useState(null);
+  const [mobileHomeActual, setMobileHomeActual] = useState(null);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const { hasFlag } = useAuth();
   // CostBreakdownTab is now the default for all orgs.
@@ -3685,18 +3686,33 @@ function DealDetailContent({ deal }) {
     fetchPooledLoansForDeal(deal.id, activeOrgId).then(links => setPooledLoanLinks(links));
   }, [deal?.id, activeOrgId]);
 
+  // Helper: fetch cost summary + mobile home actual in one shot
+  const refreshCostSummary = useCallback(async (dealId) => {
+    const [summary, mhLine] = await Promise.all([
+      fetchCostSummary(dealId),
+      supabase?.from('deal_cost_resolved_view')
+        .select('actual_amount_resolved')
+        .eq('deal_id', dealId)
+        .eq('category_key', 'mobile_home')
+        .maybeSingle()
+        .then(({ data }) => data),
+    ]);
+    if (summary) setCostSummary(summary);
+    if (mhLine) setMobileHomeActual(Number(mhLine.actual_amount_resolved ?? 0));
+  }, []);
+
   // ── Load cost summary when feature flag is on ─────────────────────────────
   useEffect(() => {
     if (!costBreakdownV2 || !deal?.id) return;
-    fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
-  }, [costBreakdownV2, deal?.id]);
+    refreshCostSummary(deal.id);
+  }, [costBreakdownV2, deal?.id, refreshCostSummary]);
 
   // Refresh summary whenever user switches to the cost breakdown tab
   useEffect(() => {
     if (activeTab === 'realized' && costBreakdownV2 && deal?.id) {
-      fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); });
+      refreshCostSummary(deal.id);
     }
-  }, [activeTab, costBreakdownV2, deal?.id]);
+  }, [activeTab, costBreakdownV2, deal?.id, refreshCostSummary]);
 
   // Realtime: re-fetch cost summary whenever any cost line for this deal changes
   useEffect(() => {
@@ -3705,10 +3721,10 @@ function DealDetailContent({ deal }) {
       .channel(`deal-detail-cost-${deal.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deal_cost_lines',
           filter: `deal_id=eq.${deal.id}` },
-        () => { fetchCostSummary(deal.id).then(s => { if (s) setCostSummary(s); }); })
+        () => { refreshCostSummary(deal.id); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [costBreakdownV2, deal?.id]);
+  }, [costBreakdownV2, deal?.id, refreshCostSummary]);
 
   // allIn: when flag on, use total_actual from summary (mirrors estimated when no overrides)
   const allIn = costBreakdownV2 && costSummary
@@ -4357,7 +4373,7 @@ function DealDetailContent({ deal }) {
             onPaymentDueDayChange={setPaymentDueDay}
             firstPaymentDate={firstPaymentDate}
             onFirstPaymentDateChange={setFirstPaymentDate}
-            homeCost={deal.mobileHome || 0}
+            homeCost={mobileHomeActual ?? deal.mobileHome ?? 0}
             allInCost={allIn || 0}
             arv={deal.arv || 0}
           />
