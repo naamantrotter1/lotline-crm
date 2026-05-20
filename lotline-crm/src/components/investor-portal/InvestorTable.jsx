@@ -2,8 +2,8 @@
 // Click a row → opens the InvestorDrawer (URL-driven by ?investor=<id>).
 // Per-row "Portal" button impersonates that investor.
 
-import { useMemo } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ExternalLink, MoreVertical, Send, Pencil } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -23,35 +23,157 @@ const SORTERS = {
   name_asc:     (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
 };
 
+// Status derivation from existing data: Active if any deals, Pending Invite if
+// has email but no deals, Inactive if neither.
+export function deriveInvestorStatus(inv) {
+  if (!inv || inv.name === 'Cash') return null;
+  if ((inv.activeDeals || 0) > 0) return 'active';
+  if (inv.email) return 'pending_invite';
+  return 'inactive';
+}
+
+const STATUS_PILL_CLASSES = {
+  active:         'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+  pending_invite: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+  inactive:       'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300',
+};
+const STATUS_PILL_LABEL = {
+  active: 'Active', pending_invite: 'Pending', inactive: 'Inactive',
+};
+
+function StatusPill({ status }) {
+  if (!status) return null;
+  return (
+    <span className={`inline-block text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${STATUS_PILL_CLASSES[status]}`}>
+      {STATUS_PILL_LABEL[status]}
+    </span>
+  );
+}
+
+function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-white/5"
+        aria-label="Row actions"
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-white dark:bg-[#252b3d] rounded-md shadow-lg border border-gray-200 dark:border-white/10 py-1">
+          {!isCash && onViewPortal && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onViewPortal(inv); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
+            >
+              <ExternalLink size={12} /> View Portal
+            </button>
+          )}
+          {!isCash && onSendInvite && inv.email && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onSendInvite(inv); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
+            >
+              <Send size={12} /> Send Invite
+            </button>
+          )}
+          {!isCash && onEditTerms && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onEditTerms(inv); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
+            >
+              <Pencil size={12} /> Edit Terms
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── main component ─────────────────────────────────────────────────────────
+function dealsBucketMatches(activeDeals, bucket) {
+  const n = activeDeals || 0;
+  switch (bucket) {
+    case '0':   return n === 0;
+    case '1-3': return n >= 1 && n <= 3;
+    case '4+':  return n >= 4;
+    default:    return true;
+  }
+}
+
 export default function InvestorTable({
   investors,
   searchValue,
   sortValue,
+  statusFilter,
+  dealsFilter,
+  termsFilter,
+  onClearFilters,
   onRowClick,
   onViewPortal,
+  onSendInvite,
+  onEditTerms,
   hasStandardTerms,
   termsBadgeText,
 }) {
   const visibleInvestors = useMemo(() => {
     const q = (searchValue || '').trim().toLowerCase();
-    const filtered = q
-      ? investors.filter(inv => {
-          const name = String(inv.name || '').toLowerCase();
-          const terms = String(termsBadgeText?.(inv) || '').toLowerCase();
-          return name.includes(q) || terms.includes(q);
-        })
-      : investors;
+    const statusSet = new Set(statusFilter || []);
+    const termsSet  = new Set(termsFilter || []);
+
+    const filtered = investors.filter(inv => {
+      if (q) {
+        const name = String(inv.name || '').toLowerCase();
+        const terms = String(termsBadgeText?.(inv) || '').toLowerCase();
+        if (!(name.includes(q) || terms.includes(q))) return false;
+      }
+      if (statusSet.size > 0) {
+        const status = deriveInvestorStatus(inv);
+        if (!status || !statusSet.has(status)) return false;
+      }
+      if (dealsFilter && dealsFilter !== 'any') {
+        if (!dealsBucketMatches(inv.activeDeals, dealsFilter)) return false;
+      }
+      if (termsSet.size > 0) {
+        const t = termsBadgeText?.(inv);
+        if (!t || !termsSet.has(t)) return false;
+      }
+      return true;
+    });
     const sorter = SORTERS[sortValue] || SORTERS.capital_desc;
     return [...filtered].sort(sorter);
-  }, [investors, searchValue, sortValue, termsBadgeText]);
+  }, [investors, searchValue, sortValue, statusFilter, dealsFilter, termsFilter, termsBadgeText]);
+
+  const hasFilters =
+    (statusFilter && statusFilter.length > 0) ||
+    (dealsFilter && dealsFilter !== 'any') ||
+    (termsFilter && termsFilter.length > 0);
 
   if (visibleInvestors.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-10 text-center text-sm text-gray-400">
-        {searchValue
-          ? <>No investors match &quot;{searchValue}&quot;.</>
-          : <>No investors yet.</>}
+      <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-10 text-center text-sm text-gray-500 dark:text-gray-400">
+        {searchValue || hasFilters ? (
+          <>
+            <p className="mb-2">No investors match these filters.</p>
+            {onClearFilters && (
+              <button onClick={onClearFilters} className="text-accent text-xs font-medium hover:underline">
+                Clear filters
+              </button>
+            )}
+          </>
+        ) : (
+          <p>No investors yet.</p>
+        )}
       </div>
     );
   }
@@ -92,9 +214,12 @@ export default function InvestorTable({
               <div className="flex items-center gap-3 min-w-0">
                 <Avatar name={inv.name} size={32} />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                    {inv.name}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {inv.name}
+                    </p>
+                    <StatusPill status={deriveInvestorStatus(inv)} />
+                  </div>
                   {termsLabel ? (
                     <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-0.5">
                       {termsLabel}
@@ -139,7 +264,7 @@ export default function InvestorTable({
               </div>
 
               {/* Actions */}
-              <div className="text-right">
+              <div className="flex items-center justify-end gap-1">
                 {!isCash && onViewPortal && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onViewPortal(inv); }}
@@ -150,6 +275,13 @@ export default function InvestorTable({
                     Portal
                   </button>
                 )}
+                <RowKebab
+                  inv={inv}
+                  isCash={isCash}
+                  onViewPortal={onViewPortal}
+                  onSendInvite={onSendInvite}
+                  onEditTerms={onEditTerms}
+                />
               </div>
             </div>
           );

@@ -18,6 +18,7 @@ import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingDa
 import InvestorActionBar from '../components/investor-portal/InvestorActionBar.jsx';
 import InvestorTable from '../components/investor-portal/InvestorTable.jsx';
 import InvestorDrawer from '../components/investor-portal/InvestorDrawer.jsx';
+import InvestorFilterChips from '../components/investor-portal/InvestorFilterChips.jsx';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -762,7 +763,7 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 }
 
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
-function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals }) {
+function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, onUpdateInvestor }) {
   const navigate = useNavigate();
   const { setImpersonating } = useImpersonation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -770,13 +771,45 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
   const [sortValue, setSortValue] = useState(() => {
     try { return localStorage.getItem('byInvestorSort') || 'capital_desc'; } catch { return 'capital_desc'; }
   });
+  const [editingTermsInvestor, setEditingTermsInvestor] = useState(null);
 
   // Persist sort preference so it survives a reload.
   useEffect(() => {
     try { localStorage.setItem('byInvestorSort', sortValue); } catch { /* ignore */ }
   }, [sortValue]);
 
-  // Drawer state — driven by ?investor=<id> for deep-linking + reload survival.
+  // ── URL-driven filter state ─────────────────────────────────────────────
+  // ?status=active,pending_invite  ?deals=4+  ?terms=<csv>
+  const statusFilter = (searchParams.get('status') || '').split(',').filter(Boolean);
+  const dealsFilter  = searchParams.get('deals') || 'any';
+  const termsFilter  = (searchParams.get('terms') || '').split(',').filter(Boolean);
+
+  const updateParam = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value == null || value === '' || (Array.isArray(value) && value.length === 0) || value === 'any') {
+      next.delete(key);
+    } else {
+      next.set(key, Array.isArray(value) ? value.join(',') : String(value));
+    }
+    setSearchParams(next, { replace: false });
+  };
+  const toggleStatus = (v) => {
+    const set = new Set(statusFilter);
+    set.has(v) ? set.delete(v) : set.add(v);
+    updateParam('status', [...set]);
+  };
+  const toggleTerms = (v) => {
+    const set = new Set(termsFilter);
+    set.has(v) ? set.delete(v) : set.add(v);
+    updateParam('terms', [...set]);
+  };
+  const clearAllFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('status'); next.delete('deals'); next.delete('terms');
+    setSearchParams(next, { replace: false });
+  };
+
+  // ── Drawer state — driven by ?investor=<id> ────────────────────────────
   const drawerInvestorId = searchParams.get('investor') || null;
   const drawerInvestor = drawerInvestorId
     ? investors.find(i => String(i.id) === String(drawerInvestorId)) || null
@@ -793,6 +826,16 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
     next.delete('investor');
     setSearchParams(next, { replace: false });
   };
+
+  // Build list of distinct terms strings for chip options.
+  const termsOptions = useMemo(() => {
+    const set = new Set();
+    (investors || []).forEach(inv => {
+      const t = hasStandardTerms(inv) ? termsBadgeText(inv) : null;
+      if (t) set.add(t);
+    });
+    return [...set].sort();
+  }, [investors]);
 
   const displayInvestors = linkedInvestor
     ? investors.filter(inv => inv.name === linkedInvestor)
@@ -828,6 +871,20 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
     navigate('/investor/home');
   };
 
+  const handleSendInvite = (inv) => {
+    if (!inv?.email) return;
+    const subject = encodeURIComponent("You're invited to the LotLine Investor Portal");
+    const body = encodeURIComponent(
+      `Hi ${inv.contact || inv.name},\n\n` +
+      `You've been invited to access the LotLine Investor Portal, where you can view your active deals, track capital deployed, and monitor project progress in real time.\n\n` +
+      `Click the link below to create your login and get started:\n` +
+      `${PORTAL_URL}?email=${encodeURIComponent(inv.email)}\n\n` +
+      `If you have any questions, feel free to reply to this email.\n\n` +
+      `Best,\nThe LotLine Team`
+    );
+    window.location.href = `mailto:${inv.email}?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div>
       <InvestorActionBar
@@ -838,14 +895,28 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
         totalCount={displayInvestors.length}
         filteredCount={filteredCount}
       />
+      <InvestorFilterChips
+        statusFilter={statusFilter}
+        onToggleStatus={toggleStatus}
+        dealsFilter={dealsFilter}
+        onChangeDeals={(v) => updateParam('deals', v)}
+        termsOptions={termsOptions}
+        termsFilter={termsFilter}
+        onToggleTerms={toggleTerms}
+        onClearAll={clearAllFilters}
+      />
       <InvestorTable
         investors={displayInvestors}
-        contextDeals={contextDeals}
         searchValue={searchValue}
         sortValue={sortValue}
+        statusFilter={statusFilter}
+        dealsFilter={dealsFilter}
+        termsFilter={termsFilter}
+        onClearFilters={clearAllFilters}
         onRowClick={openDrawer}
-        onDealClick={onDealClick}
         onViewPortal={handleViewPortal}
+        onSendInvite={handleSendInvite}
+        onEditTerms={(inv) => setEditingTermsInvestor(inv)}
         hasStandardTerms={hasStandardTerms}
         termsBadgeText={termsBadgeText}
       />
@@ -859,6 +930,16 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
         hasStandardTerms={hasStandardTerms}
         termsBadgeText={termsBadgeText}
       />
+      {editingTermsInvestor && (
+        <StandardTermsSlideover
+          investor={editingTermsInvestor}
+          onClose={() => setEditingTermsInvestor(null)}
+          onSave={async (patch) => {
+            await onUpdateInvestor?.(editingTermsInvestor.id, patch);
+            setEditingTermsInvestor(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -2095,28 +2176,48 @@ export default function InvestorPortal() {
           {/* Summary stats — operator only */}
           {!isInvestor && activeTab !== 'available-investments' && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
-              {[
-                { label: 'Active Investors',       value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,      color: 'text-accent'      },
-                { label: 'Capital Deployed',        value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign,  color: 'text-green-400'  },
-                { label: 'Deals Funded',            value: totalDeals,                                              icon: Briefcase,   color: 'text-blue-400'   },
-                { label: 'Projected ROI',           value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,   color: 'text-purple-400' },
-                { label: 'Avg ROI %',               value: `${weightedRoiPct.toFixed(2)}%`,                         icon: TrendingUp,  color: 'text-rose-400'   },
-              ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-4 md:p-5">
-                  <div className={`flex items-center gap-1.5 mb-1.5 md:mb-2 ${color}`}>
-                    <Icon size={14} />
-                    <span className="text-[11px] md:text-xs font-medium text-gray-500 dark:text-gray-400 leading-tight">{label}</span>
-                  </div>
-                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">{value}</p>
-                </div>
-              ))}
+              {(() => {
+                const activeStatuses = (searchParams.get('status') || '').split(',').filter(Boolean);
+                const isActiveFilterOn = activeStatuses.includes('active');
+                const toggleStatusActive = () => {
+                  const next = new URLSearchParams(searchParams);
+                  const set = new Set(activeStatuses);
+                  set.has('active') ? set.delete('active') : set.add('active');
+                  set.size ? next.set('status', [...set].join(',')) : next.delete('status');
+                  setSearchParams(next, { replace: false });
+                };
+                const isByInvestor = activeTab === 'by-investor';
+                return [
+                  { label: 'Active Investors',  value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,      color: 'text-accent',      onClick: isByInvestor ? toggleStatusActive : null, active: isActiveFilterOn },
+                  { label: 'Capital Deployed',  value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign,  color: 'text-green-400'  },
+                  { label: 'Deals Funded',       value: totalDeals,                                              icon: Briefcase,   color: 'text-blue-400'   },
+                  { label: 'Projected ROI',      value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,   color: 'text-purple-400' },
+                  { label: 'Avg ROI %',          value: `${weightedRoiPct.toFixed(2)}%`,                         icon: TrendingUp,  color: 'text-rose-400'   },
+                ].map(({ label, value, icon: Icon, color, onClick, active }) => {
+                  const baseClass = `bg-white dark:bg-[#1c2130] rounded-xl border p-4 md:p-5 text-left transition-colors ${
+                    active ? 'border-accent ring-2 ring-accent/30' : 'border-gray-200 dark:border-white/8'
+                  } ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.03]' : ''}`;
+                  const inner = (
+                    <>
+                      <div className={`flex items-center gap-1.5 mb-1.5 md:mb-2 ${color}`}>
+                        <Icon size={14} />
+                        <span className="text-[11px] md:text-xs font-medium text-gray-500 dark:text-gray-400 leading-tight">{label}</span>
+                      </div>
+                      <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+                    </>
+                  );
+                  return onClick
+                    ? <button key={label} onClick={onClick} className={baseClass}>{inner}</button>
+                    : <div   key={label} className={baseClass}>{inner}</div>;
+                });
+              })()}
             </div>
           )}
 
           {/* Tab content */}
           {activeTab === 'all-deals'             && <AllDealsTab onDealClick={handleDealClick} />}
           {activeTab === 'needs-funding'         && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={enrichedInvestors} />}
-          {activeTab === 'by-investor'           && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} />}
+          {activeTab === 'by-investor'           && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} onUpdateInvestor={handleUpdateInvestor} />}
           {activeTab === 'payments'              && <PaymentsAdminTab orgId={activeOrgId} />}
           {activeTab === 'commitments'           && <CommitmentsTab />}
           {activeTab === 'directory'             && <DirectoryTab investors={enrichedInvestors} onUpdate={handleUpdateInvestor} onDelete={handleDeleteInvestor} />}
