@@ -908,19 +908,11 @@ function FinancingScenarioPanel({
                 <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Deployed Date</p>
-                <input type="date" value={capitalDeployedDate} onChange={e => setCapitalDeployedDate(e.target.value)} className={iCls} readOnly={readOnly} />
-              </div>
-              <div className="py-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Loan Maturity Date</p>
                 {capitalDeployedDate && holdPeriod ? (() => {
                   const d = new Date(capitalDeployedDate); d.setMonth(d.getMonth() + holdPeriod);
                   return <span className="text-sm font-medium text-gray-800">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>;
                 })() : <span className="text-sm text-gray-400">—</span>}
-              </div>
-              <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Returned Date</p>
-                <input type="date" value={capitalReturnedDate} onChange={e => setCapitalReturnedDate(e.target.value)} className={iCls} readOnly={readOnly} />
               </div>
             </div>
           </div>
