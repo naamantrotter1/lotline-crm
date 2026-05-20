@@ -1,7 +1,7 @@
 // Action bar above the InvestorTable: search (debounced) + sort dropdown.
 // Add Investor button / filter chips are deferred to later phases.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 
 export const SORT_OPTIONS = [
@@ -22,6 +22,7 @@ export default function InvestorActionBar({
 }) {
   // Local mirror so we can debounce the upward search emit.
   const [localSearch, setLocalSearch] = useState(searchValue || '');
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setLocalSearch(searchValue || '');
@@ -35,6 +36,19 @@ export default function InvestorActionBar({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSearch]);
 
+  // Cmd/Ctrl+K — focus search input (skipped while typing in a field).
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const showingFiltered = filteredCount != null && filteredCount !== totalCount;
 
   return (
@@ -43,10 +57,11 @@ export default function InvestorActionBar({
       <div className="relative flex-1 sm:max-w-sm">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
+          ref={inputRef}
           type="search"
           value={localSearch}
           onChange={e => setLocalSearch(e.target.value)}
-          placeholder="Search investors by name or terms…"
+          placeholder="Search investors by name or terms… (⌘K)"
           className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#1c2130] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>

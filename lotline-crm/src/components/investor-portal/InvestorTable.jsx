@@ -196,92 +196,115 @@ export default function InvestorTable({
           const isCash = inv.name === 'Cash';
           const termsLabel = hasStandardTerms?.(inv) ? termsBadgeText?.(inv) : null;
 
+          const onRowKeyDown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onRowClick?.(inv);
+            }
+          };
+
           return (
             <div
               key={inv.id}
               tabIndex={0}
               role="button"
+              aria-label={`Open details for ${inv.name}`}
               onClick={() => onRowClick?.(inv)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onRowClick?.(inv);
-                }
-              }}
-              className="grid grid-cols-1 md:grid-cols-[1fr_140px_140px_100px_100px_80px_140px] gap-2 md:gap-4 items-center px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.03] focus:bg-gray-50 dark:focus:bg-white/[0.03] focus:outline-none cursor-pointer transition-colors"
+              onKeyDown={onRowKeyDown}
+              className="hover:bg-gray-50 dark:hover:bg-white/[0.03] focus:bg-gray-50 dark:focus:bg-white/[0.03] focus:outline-none cursor-pointer transition-colors"
             >
-              {/* Investor */}
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar name={inv.name} size={32} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {inv.name}
-                    </p>
-                    <StatusPill status={deriveInvestorStatus(inv)} />
+              {/* ── Desktop grid row (md+) ───────────────────────────── */}
+              <div className="hidden md:grid md:grid-cols-[1fr_140px_140px_100px_100px_80px_140px] md:gap-4 md:items-center px-5 py-3">
+                {/* Investor */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar name={inv.name} size={32} />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{inv.name}</p>
+                      <StatusPill status={deriveInvestorStatus(inv)} />
+                    </div>
+                    {termsLabel ? (
+                      <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-0.5">
+                        {termsLabel}
+                      </span>
+                    ) : !isCash ? (
+                      <span className="inline-block text-[10px] font-medium text-gray-400 italic mt-0.5">No terms set</span>
+                    ) : (
+                      <span className="inline-block text-[10px] font-medium text-gray-400 mt-0.5">Cash deals</span>
+                    )}
                   </div>
-                  {termsLabel ? (
-                    <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-0.5">
-                      {termsLabel}
-                    </span>
-                  ) : !isCash ? (
-                    <span className="inline-block text-[10px] font-medium text-gray-400 italic mt-0.5">
-                      No terms set
-                    </span>
-                  ) : (
-                    <span className="inline-block text-[10px] font-medium text-gray-400 mt-0.5">
-                      Cash deals
-                    </span>
+                </div>
+
+                <div className="text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{fmtUsd(inv.capitalInvested)}</div>
+                <div className="text-right text-sm font-medium text-gray-700 dark:text-gray-300">{fmtUsd(inv.totalReturns)}</div>
+                <div className={`text-right text-sm font-semibold ${signedColor(inv.roiPct)}`}>{fmtPct(inv.roiPct)}</div>
+                <div className={`text-right text-sm font-semibold ${signedColor(inv.avgAnnualizedRoi)}`}>{fmtPct(inv.avgAnnualizedRoi)}</div>
+                <div className="text-center">
+                  <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 text-xs font-bold rounded-full bg-accent/10 text-accent">
+                    {inv.activeDeals || 0}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-1">
+                  {!isCash && onViewPortal && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onViewPortal(inv); }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded-md hover:bg-accent/5 transition-colors"
+                      title="View portal as this investor"
+                    >
+                      <ExternalLink size={12} />
+                      Portal
+                    </button>
                   )}
+                  <RowKebab inv={inv} isCash={isCash} onViewPortal={onViewPortal} onSendInvite={onSendInvite} onEditTerms={onEditTerms} />
                 </div>
               </div>
 
-              {/* Capital Invested */}
-              <div className="text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {fmtUsd(inv.capitalInvested)}
-              </div>
+              {/* ── Mobile card (< md) ───────────────────────────────── */}
+              <div className="md:hidden px-4 py-3 space-y-2.5">
+                <div className="flex items-start gap-3">
+                  <Avatar name={inv.name} size={36} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{inv.name}</p>
+                      <StatusPill status={deriveInvestorStatus(inv)} />
+                    </div>
+                    {termsLabel ? (
+                      <span className="inline-block text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded mt-1">{termsLabel}</span>
+                    ) : !isCash ? (
+                      <span className="inline-block text-[10px] font-medium text-gray-400 italic mt-1">No terms set</span>
+                    ) : null}
+                  </div>
+                  <RowKebab inv={inv} isCash={isCash} onViewPortal={onViewPortal} onSendInvite={onSendInvite} onEditTerms={onEditTerms} />
+                </div>
 
-              {/* Total Returns */}
-              <div className="text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                {fmtUsd(inv.totalReturns)}
-              </div>
+                <div className="grid grid-cols-4 gap-2 text-center bg-gray-50 dark:bg-white/[0.03] rounded-md p-2">
+                  <div>
+                    <p className="text-[9px] uppercase text-gray-400 tracking-wider">Capital</p>
+                    <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{fmtUsd(inv.capitalInvested)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase text-gray-400 tracking-wider">ROI %</p>
+                    <p className={`text-xs font-bold ${signedColor(inv.roiPct)}`}>{fmtPct(inv.roiPct)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase text-gray-400 tracking-wider">Ann.</p>
+                    <p className={`text-xs font-bold ${signedColor(inv.avgAnnualizedRoi)}`}>{fmtPct(inv.avgAnnualizedRoi)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase text-gray-400 tracking-wider">Deals</p>
+                    <p className="text-xs font-bold text-accent">{inv.activeDeals || 0}</p>
+                  </div>
+                </div>
 
-              {/* ROI % */}
-              <div className={`text-right text-sm font-semibold ${signedColor(inv.roiPct)}`}>
-                {fmtPct(inv.roiPct)}
-              </div>
-
-              {/* Ann. ROI */}
-              <div className={`text-right text-sm font-semibold ${signedColor(inv.avgAnnualizedRoi)}`}>
-                {fmtPct(inv.avgAnnualizedRoi)}
-              </div>
-
-              {/* Deals badge */}
-              <div className="text-center">
-                <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 text-xs font-bold rounded-full bg-accent/10 text-accent">
-                  {inv.activeDeals || 0}
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-1">
                 {!isCash && onViewPortal && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onViewPortal(inv); }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded-md hover:bg-accent/5 transition-colors"
-                    title="View portal as this investor"
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-accent border border-accent/30 rounded-md hover:bg-accent/5"
                   >
-                    <ExternalLink size={12} />
-                    Portal
+                    <ExternalLink size={12} /> View Portal
                   </button>
                 )}
-                <RowKebab
-                  inv={inv}
-                  isCash={isCash}
-                  onViewPortal={onViewPortal}
-                  onSendInvite={onSendInvite}
-                  onEditTerms={onEditTerms}
-                />
               </div>
             </div>
           );
