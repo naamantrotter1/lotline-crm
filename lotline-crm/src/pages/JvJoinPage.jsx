@@ -8,6 +8,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Building2, CheckCircle, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+function slugify(str) {
+  return str.toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export default function JvJoinPage() {
   const { token } = useParams();
   const navigate  = useNavigate();
@@ -22,12 +30,24 @@ export default function JvJoinPage() {
   const [lastName,    setLastName]    = useState('');
   const [phone,       setPhone]       = useState('');
   const [orgName,     setOrgName]     = useState('');
+  const [slug,        setSlug]        = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
   const [password,    setPassword]    = useState('');
   const [confirmPwd,  setConfirmPwd]  = useState('');
   const [showPwd,     setShowPwd]     = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
   const [formErr,     setFormErr]     = useState('');
   const [success,     setSuccess]     = useState(false);
+
+  function handleOrgNameChange(val) {
+    setOrgName(val);
+    if (!slugTouched) setSlug(slugify(val));
+  }
+
+  function handleSlugChange(val) {
+    setSlugTouched(true);
+    setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+  }
 
   // ── Lookup the invitation token on mount ──────────────────────────────────
   useEffect(() => {
@@ -52,6 +72,7 @@ export default function JvJoinPage() {
     setFormErr('');
     if (!firstName.trim()) return setFormErr('First name is required.');
     if (!orgName.trim())   return setFormErr('Company / org name is required.');
+    if (!slug || slug.length < 3) return setFormErr('Workspace URL must be at least 3 characters.');
     if (password.length < 8) return setFormErr('Password must be at least 8 characters.');
     if (password !== confirmPwd) return setFormErr('Passwords do not match.');
 
@@ -60,10 +81,12 @@ export default function JvJoinPage() {
       const res = await fetch('/api/jv/invite-accept', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token, firstName, lastName, phone, orgName, password }),
+        body:    JSON.stringify({ token, firstName, lastName, phone, orgName, slug, password }),
       });
       const json = await res.json();
       if (!res.ok) {
+        // If slug is taken, move focus back to workspace URL field
+        if (res.status === 409) setSlugTouched(true);
         setFormErr(json.error || 'Something went wrong. Please try again.');
       } else {
         // Sign out any existing session, then sign in as the new partner account
@@ -207,9 +230,25 @@ export default function JvJoinPage() {
             {/* Org name */}
             <div>
               <label className={lbl}>Company / organization name *</label>
-              <input className={inp} value={orgName} onChange={e => setOrgName(e.target.value)}
+              <input className={inp} value={orgName} onChange={e => handleOrgNameChange(e.target.value)}
                 placeholder="Smith Land Partners LLC" />
-              <p className="text-[11px] text-gray-400 mt-1.5">This will be the name of your CRM workspace.</p>
+            </div>
+
+            {/* Workspace URL */}
+            <div>
+              <label className={lbl}>Workspace URL *</label>
+              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent transition-colors">
+                <span className="pl-4 pr-1 text-sm text-gray-400 select-none whitespace-nowrap">
+                  lotline.app/
+                </span>
+                <input
+                  className="flex-1 py-3 pr-4 text-sm bg-transparent focus:outline-none text-gray-800"
+                  value={slug}
+                  onChange={e => handleSlugChange(e.target.value)}
+                  placeholder="smith-land-partners"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5">Lowercase letters, numbers, and hyphens only.</p>
             </div>
 
             {/* Password */}

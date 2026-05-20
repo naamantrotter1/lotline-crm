@@ -18,7 +18,7 @@ const DEFAULT_JV_PERMISSIONS = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { token, firstName, lastName, phone, orgName, password } = req.body || {};
+  const { token, firstName, lastName, phone, orgName, slug: bodySlug, password } = req.body || {};
   if (!token || !firstName || !orgName || !password) {
     return res.status(400).json({ error: 'token, firstName, orgName, and password are required.' });
   }
@@ -58,14 +58,15 @@ export default async function handler(req, res) {
   }
 
   // 3. Create the new organization
-  const baseSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'org';
-  const slug     = `${baseSlug}-${Date.now().toString(36)}`;
+  // Prefer user-provided slug; fall back to auto-generated unique slug.
+  const baseSlug  = (bodySlug?.trim() || orgName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'org';
+  const finalSlug = bodySlug?.trim() ? baseSlug : `${baseSlug}-${Date.now().toString(36)}`;
 
   const { data: org, error: orgErr } = await adminClient
     .from('organizations')
     .insert({
       name:          orgName.trim(),
-      slug,
+      slug:          finalSlug,
       plan:          'starter',
       owner_user_id: user.id,
       status:        'active',
@@ -77,29 +78,15 @@ export default async function handler(req, res) {
   if (orgErr) {
     // Roll back the user if org creation fails
     await adminClient.auth.admin.deleteUser(user.id);
-    return res.status(500).json({ error: orgErr.message });
+    const slugTaken = orgErr.message?.includes('slug') || orgErr.message?.includes('unique') || orgErr.message?.includes('duplicate');
+    return res.status(slugTaken ? 409 : 500).json({
+      error: slugTaken
+        ? 'That workspace URL is already taken — please choose a different one.'
+        : orgErr.message,
+    });
   }
 
-  // 4. Create the user's profile
-  const fullName = [firstName.trim(), (lastName || '').trim()].filter(Boolean).join(' ');
-  const profileData = {
-    name:                   fullName,
-    email:                  inv.invitee_email,
-    role:                   'operator',
-    active_organization_id: org.id,
-    ...(phone?.trim() ? { phone: phone.trim() } : {}),
-  };
-  const { error: upsertErr } = await adminClient.from('profiles').upsert({
-    id: user.id,
-    ...profileData,
-  });
-  // Belt-and-suspenders: if upsert failed (e.g. trigger already created the row),
-  // fall back to an explicit update so active_organization_id is always set.
-  if (upsertErr) {
-    await adminClient.from('profiles').update(profileData).eq('id', user.id);
-  }
-
-  // 5. Create owner membership
+  // 4. Create owner membership
   await adminClient.from('memberships').insert({
     user_id:         user.id,
     organization_id: org.id,
@@ -108,7 +95,7 @@ export default async function handler(req, res) {
     invited_by:      inv.invited_by_user_id,
   });
 
-  // 6. Auto-create the JV partnership (hub → new org, active immediately)
+  // 5. Auto-create the JV partnership (hub → new org, active immediately)
   await adminClient.from('joint_ventures').insert({
     host_organization_id:    inv.hub_org_id,
     partner_organization_id: org.id,
@@ -121,13 +108,28 @@ export default async function handler(req, res) {
     notes:                   'Created via partner invitation link',
   });
 
-  // 7. Mark invitation accepted
+  // 6. Mark invitation accepted
   await adminClient.from('jv_partner_invitations').update({
     status:      'accepted',
     accepted_at: new Date().toISOString(),
     new_org_id:  org.id,
     new_user_id: user.id,
   }).eq('id', inv.id);
+
+  // 7. Set the user's profile — wait briefly for Supabase's auth trigger to
+  //    create the profiles row first, then force-update it so our values win.
+  //    This ensures active_organization_id is never null when the user logs in.
+  const fullName = [firstName.trim(), (lastName || '').trim()].filter(Boolean).join(' ');
+  await new Promise(r => setTimeout(r, 700));
+  await adminClient.from('profiles').update({
+    name:                   fullName,
+    first_name:             firstName.trim(),
+    last_name:              (lastName || '').trim() || null,
+    email:                  inv.invitee_email,
+    role:                   'operator',
+    active_organization_id: org.id,
+    ...(phone?.trim() ? { phone: phone.trim() } : {}),
+  }).eq('id', user.id);
 
   return res.status(201).json({ success: true });
 }
