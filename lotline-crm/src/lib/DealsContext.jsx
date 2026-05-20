@@ -19,6 +19,11 @@ export function DealsProvider({ children }) {
   // Source of truth for "which investor(s) is on this deal" — replaces the
   // legacy deals.investor text field. Keyed by deal_id.
   const [allocationsByDealId, setAllocationsByDealId] = useState({});
+  // Tracks whether the initial allocations fetch has completed. Used by
+  // downstream consumers (e.g. Investor Portal) to suppress UI that would
+  // otherwise flash zeros for the brief window between deals arriving and
+  // allocations being merged onto them.
+  const [allocationsLoading, setAllocationsLoading] = useState(true);
   // 'connecting' | 'live' | 'error' | 'closed' | 'offline'
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
 
@@ -50,6 +55,7 @@ export function DealsProvider({ children }) {
     setDeals([]);
     setArchivedDeals([]);
     setAllocationsByDealId({});
+    setAllocationsLoading(true);
 
     if (!session?.user?.id || !activeOrgId || !jvLoaded) {
       setDealsLoading(false);
@@ -80,7 +86,12 @@ export function DealsProvider({ children }) {
       // The result is merged onto the deal objects below via useMemo.
       const ids = d.map(x => x.id).filter(Boolean);
       if (ids.length > 0) {
-        fetchAllocationsForDeals(ids).then(setAllocationsByDealId);
+        fetchAllocationsForDeals(ids).then(map => {
+          setAllocationsByDealId(map);
+          setAllocationsLoading(false);
+        });
+      } else {
+        setAllocationsLoading(false);
       }
     });
     // Load archived deals (own org only)
@@ -227,6 +238,7 @@ export function DealsProvider({ children }) {
     if (!session?.user?.id || !activeOrgId || !jvLoaded) return;
     const ids = (scopeIds || []);
     if (ids.length === 0) return;
+    setAllocationsLoading(true);
     const fresh = await loadAllDeals(ids);
     setDeals(fresh);
     const dealIds = fresh.map(x => x.id).filter(Boolean);
@@ -234,6 +246,7 @@ export function DealsProvider({ children }) {
       const allocs = await fetchAllocationsForDeals(dealIds);
       setAllocationsByDealId(allocs);
     }
+    setAllocationsLoading(false);
   }, [session?.user?.id, activeOrgId, jvLoaded, scopeIds]);
   const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
   const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
@@ -247,7 +260,7 @@ export function DealsProvider({ children }) {
   );
 
   return (
-    <DealsContext.Provider value={{ deals: dealsWithAllocations, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal, refresh }}>
+    <DealsContext.Provider value={{ deals: dealsWithAllocations, setDeals, archivedDeals, setArchivedDeals, dealsLoading, allocationsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal, refresh }}>
       {children}
     </DealsContext.Provider>
   );

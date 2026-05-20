@@ -94,6 +94,42 @@ function TableScroll({ children }) {
   return <div className="overflow-x-auto -webkit-overflow-scrolling-touch">{children}</div>;
 }
 
+// Skeleton table for the By Investor tab — rendered while deals or
+// allocations are still loading so the operator never sees a flash of
+// stale zeros from cached deals that haven't been merged with allocations yet.
+function InvestorTableSkeleton() {
+  return (
+    <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 overflow-hidden">
+      <div className="hidden md:grid grid-cols-[1fr_140px_140px_100px_100px_80px_140px] gap-4 px-5 py-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
+        <div>Investor</div>
+        <div className="text-right">Capital Invested</div>
+        <div className="text-right">Total Returns</div>
+        <div className="text-right">ROI %</div>
+        <div className="text-right">Ann. ROI</div>
+        <div className="text-center">Deals</div>
+        <div className="text-right">Actions</div>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-white/5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="px-5 py-3 flex items-center gap-4 animate-pulse">
+            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-1/4" />
+              <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-16" />
+            </div>
+            <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-20" />
+            <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-16" />
+            <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-12" />
+            <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-12" />
+            <div className="h-5 w-7 rounded-full bg-gray-200 dark:bg-white/10" />
+            <div className="h-7 w-16 rounded bg-gray-100 dark:bg-white/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
 function AllDealsTab({ onDealClick, deals = [], investors = [] }) {
   // Lookup map for investor name by id (used to derive the "Lender" column
@@ -818,7 +854,8 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, onUpdateInvestor }) {
   const navigate = useNavigate();
   const { setImpersonating } = useImpersonation();
-  const { refresh: refreshDeals } = useDeals();
+  const { refresh: refreshDeals, dealsLoading, allocationsLoading } = useDeals();
+  const initialLoad = dealsLoading || allocationsLoading;
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState('');
   const [sortValue, setSortValue] = useState(() => {
@@ -947,19 +984,23 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
         onToggleStatus={toggleStatus}
         onClearAll={clearAllFilters}
       />
-      <InvestorTable
-        investors={displayInvestors}
-        searchValue={searchValue}
-        sortValue={sortValue}
-        statusFilter={statusFilter}
-        onClearFilters={clearAllFilters}
-        onRowClick={openDrawer}
-        onViewPortal={handleViewPortal}
-        onSendInvite={handleSendInvite}
-        onEditTerms={(inv) => setEditingTermsInvestor(inv)}
-        hasStandardTerms={hasStandardTerms}
-        termsBadgeText={termsBadgeText}
-      />
+      {initialLoad ? (
+        <InvestorTableSkeleton />
+      ) : (
+        <InvestorTable
+          investors={displayInvestors}
+          searchValue={searchValue}
+          sortValue={sortValue}
+          statusFilter={statusFilter}
+          onClearFilters={clearAllFilters}
+          onRowClick={openDrawer}
+          onViewPortal={handleViewPortal}
+          onSendInvite={handleSendInvite}
+          onEditTerms={(inv) => setEditingTermsInvestor(inv)}
+          hasStandardTerms={hasStandardTerms}
+          termsBadgeText={termsBadgeText}
+        />
+      )}
       <InvestorDrawer
         investor={drawerInvestor}
         contextDeals={contextDeals}
@@ -1944,7 +1985,8 @@ function CommitmentsTab() {
 
 // ── Main Investor Portal ──────────────────────────────────────────────────────
 export default function InvestorPortal() {
-  const { deals: customDeals } = useDeals();
+  const { deals: customDeals, dealsLoading, allocationsLoading } = useDeals();
+  const portalLoading = dealsLoading || allocationsLoading;
   const navigate = useNavigate();
   const { isInvestor } = usePermissions();
   const { profile, activeOrgId, orgSlug } = useAuth();
@@ -2226,12 +2268,16 @@ export default function InvestorPortal() {
                   setSearchParams(next, { replace: false });
                 };
                 const isByInvestor = activeTab === 'by-investor';
+                // Suppress the numeric values until allocations have loaded.
+                // Otherwise the strip flashes zeros for the first few seconds
+                // because cached deals exist but their allocations don't yet.
+                const v = (n) => portalLoading ? '—' : n;
                 return [
-                  { label: 'Active Investors',  value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,      color: 'text-accent',      onClick: isByInvestor ? toggleStatusActive : null, active: isActiveFilterOn },
-                  { label: 'Capital Deployed',  value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign,  color: 'text-green-400'  },
-                  { label: 'Deals Funded',       value: totalDeals,                                              icon: Briefcase,   color: 'text-blue-400'   },
-                  { label: 'Projected ROI',      value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,   color: 'text-purple-400' },
-                  { label: 'Avg ROI %',          value: `${weightedRoiPct.toFixed(2)}%`,                         icon: TrendingUp,  color: 'text-rose-400'   },
+                  { label: 'Active Investors',  value: v(enrichedInvestors.filter(i => i.name !== 'Cash').length), icon: Users,      color: 'text-accent',      onClick: isByInvestor ? toggleStatusActive : null, active: isActiveFilterOn },
+                  { label: 'Capital Deployed',  value: v(`$${totalCapital.toLocaleString()}`),                    icon: DollarSign,  color: 'text-green-400'  },
+                  { label: 'Deals Funded',       value: v(totalDeals),                                              icon: Briefcase,   color: 'text-blue-400'   },
+                  { label: 'Projected ROI',      value: v(`$${totalROI.toLocaleString()}`),                         icon: BarChart2,   color: 'text-purple-400' },
+                  { label: 'Avg ROI %',          value: v(`${weightedRoiPct.toFixed(2)}%`),                         icon: TrendingUp,  color: 'text-rose-400'   },
                 ].map(({ label, value, icon: Icon, color, onClick, active }) => {
                   const baseClass = `bg-white dark:bg-[#1c2130] rounded-xl border p-4 md:p-5 text-left transition-colors ${
                     active ? 'border-accent ring-2 ring-accent/30' : 'border-gray-200 dark:border-white/8'
