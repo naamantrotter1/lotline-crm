@@ -101,23 +101,11 @@ function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
 }
 
 // ── main component ─────────────────────────────────────────────────────────
-function dealsBucketMatches(activeDeals, bucket) {
-  const n = activeDeals || 0;
-  switch (bucket) {
-    case '0':   return n === 0;
-    case '1-3': return n >= 1 && n <= 3;
-    case '4+':  return n >= 4;
-    default:    return true;
-  }
-}
-
 export default function InvestorTable({
   investors,
   searchValue,
   sortValue,
   statusFilter,
-  dealsFilter,
-  termsFilter,
   onClearFilters,
   onRowClick,
   onViewPortal,
@@ -129,7 +117,6 @@ export default function InvestorTable({
   const visibleInvestors = useMemo(() => {
     const q = (searchValue || '').trim().toLowerCase();
     const statusSet = new Set(statusFilter || []);
-    const termsSet  = new Set(termsFilter || []);
 
     const filtered = investors.filter(inv => {
       if (q) {
@@ -141,23 +128,13 @@ export default function InvestorTable({
         const status = deriveInvestorStatus(inv);
         if (!status || !statusSet.has(status)) return false;
       }
-      if (dealsFilter && dealsFilter !== 'any') {
-        if (!dealsBucketMatches(inv.activeDeals, dealsFilter)) return false;
-      }
-      if (termsSet.size > 0) {
-        const t = termsBadgeText?.(inv);
-        if (!t || !termsSet.has(t)) return false;
-      }
       return true;
     });
     const sorter = SORTERS[sortValue] || SORTERS.capital_desc;
     return [...filtered].sort(sorter);
-  }, [investors, searchValue, sortValue, statusFilter, dealsFilter, termsFilter, termsBadgeText]);
+  }, [investors, searchValue, sortValue, statusFilter, termsBadgeText]);
 
-  const hasFilters =
-    (statusFilter && statusFilter.length > 0) ||
-    (dealsFilter && dealsFilter !== 'any') ||
-    (termsFilter && termsFilter.length > 0);
+  const hasFilters = statusFilter && statusFilter.length > 0;
 
   if (visibleInvestors.length === 0) {
     return (

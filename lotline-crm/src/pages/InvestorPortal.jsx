@@ -779,33 +779,19 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
   }, [sortValue]);
 
   // ── URL-driven filter state ─────────────────────────────────────────────
-  // ?status=active,pending_invite  ?deals=4+  ?terms=<csv>
+  // ?status=active,pending_invite
   const statusFilter = (searchParams.get('status') || '').split(',').filter(Boolean);
-  const dealsFilter  = searchParams.get('deals') || 'any';
-  const termsFilter  = (searchParams.get('terms') || '').split(',').filter(Boolean);
 
-  const updateParam = (key, value) => {
-    const next = new URLSearchParams(searchParams);
-    if (value == null || value === '' || (Array.isArray(value) && value.length === 0) || value === 'any') {
-      next.delete(key);
-    } else {
-      next.set(key, Array.isArray(value) ? value.join(',') : String(value));
-    }
-    setSearchParams(next, { replace: false });
-  };
   const toggleStatus = (v) => {
     const set = new Set(statusFilter);
     set.has(v) ? set.delete(v) : set.add(v);
-    updateParam('status', [...set]);
-  };
-  const toggleTerms = (v) => {
-    const set = new Set(termsFilter);
-    set.has(v) ? set.delete(v) : set.add(v);
-    updateParam('terms', [...set]);
+    const next = new URLSearchParams(searchParams);
+    set.size ? next.set('status', [...set].join(',')) : next.delete('status');
+    setSearchParams(next, { replace: false });
   };
   const clearAllFilters = () => {
     const next = new URLSearchParams(searchParams);
-    next.delete('status'); next.delete('deals'); next.delete('terms');
+    next.delete('status');
     setSearchParams(next, { replace: false });
   };
 
@@ -827,15 +813,6 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
     setSearchParams(next, { replace: false });
   };
 
-  // Build list of distinct terms strings for chip options.
-  const termsOptions = useMemo(() => {
-    const set = new Set();
-    (investors || []).forEach(inv => {
-      const t = hasStandardTerms(inv) ? termsBadgeText(inv) : null;
-      if (t) set.add(t);
-    });
-    return [...set].sort();
-  }, [investors]);
 
   const displayInvestors = linkedInvestor
     ? investors.filter(inv => inv.name === linkedInvestor)
@@ -898,11 +875,6 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
       <InvestorFilterChips
         statusFilter={statusFilter}
         onToggleStatus={toggleStatus}
-        dealsFilter={dealsFilter}
-        onChangeDeals={(v) => updateParam('deals', v)}
-        termsOptions={termsOptions}
-        termsFilter={termsFilter}
-        onToggleTerms={toggleTerms}
         onClearAll={clearAllFilters}
       />
       <InvestorTable
@@ -910,8 +882,6 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
         searchValue={searchValue}
         sortValue={sortValue}
         statusFilter={statusFilter}
-        dealsFilter={dealsFilter}
-        termsFilter={termsFilter}
         onClearFilters={clearAllFilters}
         onRowClick={openDrawer}
         onViewPortal={handleViewPortal}
