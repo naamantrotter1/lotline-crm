@@ -6,7 +6,8 @@ import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth, useImpersonation } from '../lib/AuthContext';
+import { logImpersonationStart } from '../lib/investorPortalData';
 import { useJv } from '../lib/JvContext';
 import { fetchCommitmentSummaries, fetchInvestors } from '../lib/capitalStackData';
 import { upsertPrimaryAllocation, findInvestorByName } from '../lib/dealAllocationsClient';
@@ -139,6 +140,19 @@ function AllDealsTab({ onDealClick }) {
 function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
   const [expanded, setExpanded] = useState(false);
   const isCash = investor.name === 'Cash';
+  const navigate = useNavigate();
+  const { setImpersonating } = useImpersonation();
+
+  const handleViewPortal = async () => {
+    if (isCash) return;
+    try {
+      const { logId } = await logImpersonationStart(investor.id);
+      setImpersonating({ investor, logId });
+    } catch {
+      setImpersonating({ investor });
+    }
+    navigate('/investor/home');
+  };
 
   // Source of truth: deal_allocations only. A deal belongs to this investor
   // when at least one of its active (non-returned, amount > 0) allocations
@@ -219,14 +233,25 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
           </div>
         </div>
 
-        {/* Expand button */}
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50"
-        >
-          <span>View Deals</span>
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
+        {/* Action buttons */}
+        <div className={`grid gap-2 ${isCash ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="flex items-center justify-between px-3 py-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <span>View Deals</span>
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {!isCash && (
+            <button
+              onClick={handleViewPortal}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-accent border border-accent/30 rounded-lg transition-colors hover:bg-accent/5"
+            >
+              <ExternalLink size={14} />
+              <span>View Portal</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Expanded deals */}
