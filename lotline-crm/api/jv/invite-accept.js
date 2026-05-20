@@ -18,7 +18,7 @@ const DEFAULT_JV_PERMISSIONS = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { token, firstName, lastName, orgName, password } = req.body || {};
+  const { token, firstName, lastName, phone, orgName, password } = req.body || {};
   if (!token || !firstName || !orgName || !password) {
     return res.status(400).json({ error: 'token, firstName, orgName, and password are required.' });
   }
@@ -82,13 +82,22 @@ export default async function handler(req, res) {
 
   // 4. Create the user's profile
   const fullName = [firstName.trim(), (lastName || '').trim()].filter(Boolean).join(' ');
-  await adminClient.from('profiles').upsert({
-    id:                      user.id,
-    name:                    fullName,
-    email:                   inv.invitee_email,
-    role:                    'operator',
-    active_organization_id:  org.id,
+  const profileData = {
+    name:                   fullName,
+    email:                  inv.invitee_email,
+    role:                   'operator',
+    active_organization_id: org.id,
+    ...(phone?.trim() ? { phone: phone.trim() } : {}),
+  };
+  const { error: upsertErr } = await adminClient.from('profiles').upsert({
+    id: user.id,
+    ...profileData,
   });
+  // Belt-and-suspenders: if upsert failed (e.g. trigger already created the row),
+  // fall back to an explicit update so active_organization_id is always set.
+  if (upsertErr) {
+    await adminClient.from('profiles').update(profileData).eq('id', user.id);
+  }
 
   // 5. Create owner membership
   await adminClient.from('memberships').insert({

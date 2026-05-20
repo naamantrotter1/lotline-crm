@@ -185,13 +185,17 @@ function ProtectedRoute({ children }) {
  * Investors are excluded — they don't own an org.
  */
 function OnboardingGuard({ children }) {
-  const { profile, accountType, loading } = useAuth();
+  const { profile, accountType, loading, orgRole } = useAuth();
   if (loading) return null;
+  // Skip onboarding if the user already has an active org membership —
+  // AuthContext's fallback populates orgRole even when active_organization_id
+  // is transiently null (e.g. right after a JV invite-accept).
   const needsOnboarding =
     profile &&
     accountType !== 'investor' &&
     profile?.role !== 'investor' &&
-    !profile.active_organization_id;
+    !profile.active_organization_id &&
+    !orgRole;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
   return children;
 }

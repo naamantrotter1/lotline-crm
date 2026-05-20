@@ -50,6 +50,9 @@ export default function CreateAccount() {
   const firstParam = searchParams.get('firstName') || '';
   const lastParam  = searchParams.get('lastName') || '';
 
+  const [firstName,    setFirstName]    = useState(firstParam);
+  const [lastName,     setLastName]     = useState(lastParam);
+  const [phone,        setPhone]        = useState('');
   const [orgName,      setOrgName]      = useState('');
   const [slug,         setSlug]         = useState('');
   const [slugTouched,  setSlugTouched]  = useState(false);
@@ -99,9 +102,14 @@ export default function CreateAccount() {
       return;
     }
 
+    if (!firstName.trim()) {
+      setError('First name is required.');
+      return;
+    }
+
     setLoading(true);
 
-    const fullName = `${firstParam} ${lastParam}`.trim();
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
     // 1. Create the auth user
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -125,12 +133,13 @@ export default function CreateAccount() {
     // 2. Wait for DB profile trigger
     await new Promise(r => setTimeout(r, 800));
 
-    // 3. Save name to profile
+    // 3. Save name + phone to profile
     if (userId) {
       await supabase.from('profiles').update({
-        first_name:    firstParam.trim(),
-        last_name:     lastParam.trim(),
+        first_name:    firstName.trim(),
+        last_name:     lastName.trim(),
         name:          fullName,
+        phone:         phone.trim() || null,
         agreed_to_tos: true,
       }).eq('id', userId);
     }
@@ -222,6 +231,50 @@ export default function CreateAccount() {
             <p className="text-sm text-gray-400 mb-6">14 days free · No credit card required</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    placeholder="Jane"
+                    required
+                    autoFocus
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    placeholder="Smith"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className={inputClass}
+                />
+              </div>
+
               {/* Email — read only */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -246,7 +299,6 @@ export default function CreateAccount() {
                   onChange={e => handleOrgNameChange(e.target.value)}
                   placeholder="Acme Land Holdings"
                   required
-                  autoFocus
                   className={inputClass}
                 />
               </div>
@@ -384,11 +436,11 @@ export default function CreateAccount() {
 
               <button
                 type="submit"
-                disabled={loading || !orgName || !slug || !password || !confirm || !agreedToTos}
+                disabled={loading || !firstName || !orgName || !slug || !password || !confirm || !agreedToTos}
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor:
-                    loading || !orgName || !slug || !password || !confirm || !agreedToTos
+                    loading || !firstName || !orgName || !slug || !password || !confirm || !agreedToTos
                       ? '#94a3b8'
                       : '#c9703a',
                 }}

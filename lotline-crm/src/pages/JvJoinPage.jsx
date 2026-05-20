@@ -20,6 +20,7 @@ export default function JvJoinPage() {
   // Form state
   const [firstName,   setFirstName]   = useState('');
   const [lastName,    setLastName]    = useState('');
+  const [phone,       setPhone]       = useState('');
   const [orgName,     setOrgName]     = useState('');
   const [password,    setPassword]    = useState('');
   const [confirmPwd,  setConfirmPwd]  = useState('');
@@ -59,7 +60,7 @@ export default function JvJoinPage() {
       const res = await fetch('/api/jv/invite-accept', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token, firstName, lastName, orgName, password }),
+        body:    JSON.stringify({ token, firstName, lastName, phone, orgName, password }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -188,6 +189,13 @@ export default function JvJoinPage() {
                 <input className={inp} value={lastName} onChange={e => setLastName(e.target.value)}
                   placeholder="Smith" />
               </div>
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className={lbl}>Phone Number</label>
+              <input className={inp} type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                placeholder="(555) 123-4567" />
             </div>
 
             {/* Email (locked) */}
