@@ -2069,17 +2069,23 @@ export default function InvestorPortal() {
       if (d.isArchived) return false;
       return (d.allocations || []).some(a => a.investorId === inv.id);
     });
-    // Pull each deal's capital from the live financing scenario, not from
-    // the allocation row (which is stale the moment any cost changes).
-    const capitalInvested = matchedDeals.reduce((sum, d) => sum + computeDealInvestorCapital(d), 0);
+    // Capital Invested counts only allocations that have actually been wired
+    // (status === 'funded'). Committed-but-not-yet-funded positions still
+    // appear in the drawer's Position Breakdown, but they don't inflate the
+    // invested total or ROI math.
+    const fundedDeals = matchedDeals.filter(d => {
+      const alloc = (d.allocations || []).find(a => a.investorId === inv.id);
+      return alloc?.status === 'funded';
+    });
+    const capitalInvested = fundedDeals.reduce((sum, d) => sum + computeDealInvestorCapital(d), 0);
 
-    // ── ROI computed live from each matched deal ─────────────────────────────
-    // roiDollars = sum of projected net profit (after financing) across deals
+    // ── ROI computed live from FUNDED deals only ─────────────────────────────
+    // roiDollars = sum of projected net profit (after financing) on deployed capital
     // roiPct     = roiDollars / capitalInvested * 100
-    // avgAnnualizedRoi = average per-deal annualized ROI weighted by capital
-    const roiDollars = matchedDeals.reduce((sum, d) => sum + (Number(calcNetProfit(d)) || 0), 0);
+    // avgAnnualizedRoi = per-deal annualized ROI weighted by capital
+    const roiDollars = fundedDeals.reduce((sum, d) => sum + (Number(calcNetProfit(d)) || 0), 0);
     const roiPct = capitalInvested > 0 ? (roiDollars / capitalInvested) * 100 : 0;
-    const annualized = matchedDeals.reduce((acc, d) => {
+    const annualized = fundedDeals.reduce((acc, d) => {
       const months = Number(d.holdPeriod ?? d.holdingMonths ?? d.scenarioData?.holdPeriod ?? 0);
       if (months <= 0) return acc;
       const cap = computeDealInvestorCapital(d);
