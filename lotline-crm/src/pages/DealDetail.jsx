@@ -336,7 +336,7 @@ function applyInvestorStandardTerms(inv, ctx) {
 }
 
 function FinancingScenarioPanel({
-  deal, costs, arv, allIn, netProfit: netProfitFromParent,
+  deal, costs, arv, allIn, mobileHomeActual, netProfit: netProfitFromParent,
   selectedScenario, applyScenario,
   // General loan terms
   lenderName, setLenderName,
@@ -4306,7 +4306,7 @@ function DealDetailContent({ deal }) {
 
         {activeTab === 'financing' && financingTabEnabled && (
           <FinancingScenarioPanel
-            deal={deal} costs={costs} arv={arv} allIn={allIn} netProfit={netProfit}
+            deal={deal} costs={costs} arv={arv} allIn={allIn} mobileHomeActual={mobileHomeActual} netProfit={netProfit}
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
