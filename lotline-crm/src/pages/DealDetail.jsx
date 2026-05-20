@@ -360,7 +360,7 @@ function FinancingScenarioPanel({
   drawAmount, setDrawAmount,
   annualFeePct, setAnnualFeePct,
   // Profit Split
-  profitSharePct,
+  profitSharePct, setProfitSharePct,
   investorProfitSplitPct, setInvestorProfitSplitPct,
   // CCP
   ccpInvestorId, setCcpInvestorId,
@@ -3995,6 +3995,7 @@ function DealDetailContent({ deal }) {
             creditLimit={creditLimit} setCreditLimit={setCreditLimit}
             drawAmount={drawAmount} setDrawAmount={setDrawAmount}
             annualFeePct={annualFeePct} setAnnualFeePct={setAnnualFeePct}
+            profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
             investorProfitSplitPct={investorProfitSplitPct} setInvestorProfitSplitPct={setInvestorProfitSplitPct}
             ccpInvestorId={ccpInvestorId} setCcpInvestorId={setCcpInvestorId}
             ccpCommitmentId={ccpCommitmentId} setCcpCommitmentId={setCcpCommitmentId}
