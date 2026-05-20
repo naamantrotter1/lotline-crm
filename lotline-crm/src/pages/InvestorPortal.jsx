@@ -15,6 +15,8 @@ import { calcNetProfit } from '../data/deals';
 import { supabase } from '../lib/supabase';
 import { markPaymentPaid, formatPaymentType, STATUS_LABEL, STATUS_PILL, applyOverdue } from '../lib/paymentScheduleData';
 import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingData';
+import InvestorActionBar from '../components/investor-portal/InvestorActionBar.jsx';
+import InvestorTable from '../components/investor-portal/InvestorTable.jsx';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -760,23 +762,72 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 
 // ── Tab: By Investor ─────────────────────────────────────────────────────────
 function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals }) {
+  const navigate = useNavigate();
+  const { setImpersonating } = useImpersonation();
+  const [searchValue, setSearchValue] = useState('');
+  const [sortValue, setSortValue] = useState(() => {
+    try { return localStorage.getItem('byInvestorSort') || 'capital_desc'; } catch { return 'capital_desc'; }
+  });
+
+  // Persist sort preference so it survives a reload.
+  useEffect(() => {
+    try { localStorage.setItem('byInvestorSort', sortValue); } catch { /* ignore */ }
+  }, [sortValue]);
+
   const displayInvestors = linkedInvestor
     ? investors.filter(inv => inv.name === linkedInvestor)
     : investors;
 
   if (linkedInvestor && displayInvestors.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">
+      <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-100 dark:border-white/8 p-10 text-center text-sm text-gray-400">
         No investor account found for &quot;{linkedInvestor}&quot;. Contact an admin to update your link.
       </div>
     );
   }
 
+  // Filter for action-bar counter (search applied inside the table too,
+  // but we need the count up front for the "X of Y" label).
+  const q = searchValue.trim().toLowerCase();
+  const filteredCount = q
+    ? displayInvestors.filter(inv => {
+        const name = String(inv.name || '').toLowerCase();
+        const terms = String(termsBadgeText(inv) || '').toLowerCase();
+        return name.includes(q) || terms.includes(q);
+      }).length
+    : displayInvestors.length;
+
+  const handleViewPortal = async (investor) => {
+    if (!investor || investor.name === 'Cash') return;
+    try {
+      const { logId } = await logImpersonationStart(investor.id);
+      setImpersonating({ investor, logId });
+    } catch {
+      setImpersonating({ investor });
+    }
+    navigate('/investor/home');
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {displayInvestors.map(inv => (
-        <InvestorCard key={inv.id} investor={inv} onDealClick={onDealClick} contextDeals={contextDeals} />
-      ))}
+    <div>
+      <InvestorActionBar
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        sortValue={sortValue}
+        onSortChange={setSortValue}
+        totalCount={displayInvestors.length}
+        filteredCount={filteredCount}
+      />
+      <InvestorTable
+        investors={displayInvestors}
+        contextDeals={contextDeals}
+        searchValue={searchValue}
+        sortValue={sortValue}
+        onDealClick={onDealClick}
+        onViewPortal={handleViewPortal}
+        hasStandardTerms={hasStandardTerms}
+        termsBadgeText={termsBadgeText}
+      />
     </div>
   );
 }
@@ -1909,6 +1960,10 @@ export default function InvestorPortal() {
   const totalCapital = enrichedInvestors.reduce((s, i) => s + i.capitalInvested, 0);
   const totalDeals = enrichedInvestors.reduce((s, i) => s + i.activeDeals, 0);
   const totalROI = enrichedInvestors.reduce((s, i) => s + i.roiDollars, 0);
+  // Capital-weighted average ROI %.
+  const weightedRoiPct = totalCapital > 0
+    ? enrichedInvestors.reduce((s, i) => s + (Number(i.roiPct) || 0) * (Number(i.capitalInvested) || 0), 0) / totalCapital
+    : 0;
 
   const TABS = isInvestor
     ? [{ key: 'by-investor', label: 'My Deals', icon: Briefcase }]
@@ -2008,12 +2063,13 @@ export default function InvestorPortal() {
 
           {/* Summary stats — operator only */}
           {!isInvestor && activeTab !== 'available-investments' && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
               {[
                 { label: 'Active Investors',       value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,      color: 'text-accent'      },
                 { label: 'Capital Deployed',        value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign,  color: 'text-green-400'  },
                 { label: 'Deals Funded',            value: totalDeals,                                              icon: Briefcase,   color: 'text-blue-400'   },
                 { label: 'Projected ROI',           value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,   color: 'text-purple-400' },
+                { label: 'Avg ROI %',               value: `${weightedRoiPct.toFixed(2)}%`,                         icon: TrendingUp,  color: 'text-rose-400'   },
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-4 md:p-5">
                   <div className={`flex items-center gap-1.5 mb-1.5 md:mb-2 ${color}`}>
