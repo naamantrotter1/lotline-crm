@@ -771,16 +771,17 @@ function FinancingScenarioPanel({
                 <div className="space-y-1.5">
                   {[
                     {
-                      label: 'LTV', pct: ltvCapPctHm ?? 60, setPct: setLtvCapPctHm,
+                      label: 'LTV', rawPct: ltvCapPctHm, defaultPct: 60, setPct: setLtvCapPctHm,
                       basis: arvVal, basisLabel: 'ARV',
                       hint: arvVal === 0 ? 'Set ARV' : null,
                     },
                     {
-                      label: 'LTC', pct: ltcCapPctHm ?? 80, setPct: setLtcCapPctHm,
+                      label: 'LTC', rawPct: ltcCapPctHm, defaultPct: 80, setPct: setLtcCapPctHm,
                       basis: _allInCost, basisLabel: 'Cost',
                       hint: _allInCost === 0 ? 'Add costs' : null,
                     },
-                  ].map(({ label, pct, setPct, basis, basisLabel, hint }) => {
+                  ].map(({ label, rawPct, defaultPct, setPct, basis, basisLabel, hint }) => {
+                    const pct = rawPct ?? defaultPct;
                     const maxAmt = basis > 0 ? Math.round(basis * (pct / 100)) : null;
                     const isLtv = label === 'LTV';
                     const currentPct = basis > 0 && effectiveLoanAmount > 0
@@ -793,7 +794,7 @@ function FinancingScenarioPanel({
                         <span className="text-[10px] font-bold text-gray-400 w-7">{label}</span>
                         <input
                           type="number" step="1" min="1" max="100"
-                          value={pct ?? ''}
+                          value={rawPct ?? ''}
                           onChange={e => setPct(e.target.value === '' ? null : parseFloat(e.target.value))}
                           disabled={readOnly}
                           className="w-12 text-center text-xs px-1.5 py-0.5 border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-accent/30"
