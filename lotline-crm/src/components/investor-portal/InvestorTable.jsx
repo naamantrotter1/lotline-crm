@@ -3,6 +3,7 @@
 // Per-row "Portal" button impersonates that investor.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, MoreVertical, Send, Pencil } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 
@@ -52,24 +53,40 @@ function StatusPill({ status }) {
 
 function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onDoc = (e) => { if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
+
+  const handleOpen = (e) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + window.scrollY + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen(o => !o);
+  };
+
   return (
-    <div ref={ref} className="relative inline-block">
+    <div className="relative inline-block">
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        ref={btnRef}
+        onClick={handleOpen}
         className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-white/5"
         aria-label="Row actions"
       >
         <MoreVertical size={14} />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-white dark:bg-[#252b3d] rounded-md shadow-lg border border-gray-200 dark:border-white/10 py-1">
+      {open && createPortal(
+        <div
+          style={{ position: 'absolute', top: pos.top, right: pos.right, zIndex: 9999 }}
+          className="w-44 bg-white dark:bg-[#252b3d] rounded-md shadow-lg border border-gray-200 dark:border-white/10 py-1"
+        >
           {!isCash && onViewPortal && (
             <button
               onClick={(e) => { e.stopPropagation(); setOpen(false); onViewPortal(inv); }}
@@ -94,7 +111,8 @@ function RowKebab({ inv, isCash, onViewPortal, onSendInvite, onEditTerms }) {
               <Pencil size={12} /> Edit Terms
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
