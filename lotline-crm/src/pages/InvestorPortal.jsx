@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2, CreditCard } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2, CreditCard, Send, Check } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -38,6 +38,47 @@ function LenderBadge({ name }) {
     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
       {name}
     </span>
+  );
+}
+
+// ── Invite Button ────────────────────────────────────────────────────────────
+const PORTAL_URL = 'https://investor.lotlinehomes.com';
+
+function InviteButton({ investor }) {
+  const [sent, setSent] = useState(false);
+
+  if (!investor.email) {
+    return <span className="text-xs text-gray-300">No email</span>;
+  }
+
+  const subject = encodeURIComponent(`You're invited to the LotLine Investor Portal`);
+  const body = encodeURIComponent(
+    `Hi ${investor.contact || investor.name},\n\n` +
+    `You've been invited to access the LotLine Investor Portal, where you can view your active deals, track capital deployed, and monitor project progress in real time.\n\n` +
+    `Click the link below to create your login and get started:\n` +
+    `${PORTAL_URL}\n\n` +
+    `If you have any questions, feel free to reply to this email.\n\n` +
+    `Best,\nThe LotLine Team`
+  );
+
+  function handleClick() {
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+  }
+
+  return (
+    <a
+      href={`mailto:${investor.email}?subject=${subject}&body=${body}`}
+      onClick={handleClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+        sent
+          ? 'bg-green-50 text-green-600 border border-green-200'
+          : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
+      }`}
+    >
+      {sent ? <Check size={12} /> : <Send size={12} />}
+      {sent ? 'Opened' : 'Send Invite'}
+    </a>
   );
 }
 
@@ -137,9 +178,12 @@ function InvestorCard({ investor, onDealClick, contextDeals = [] }) {
               </div>
             </div>
           </div>
-          <span className="bg-accent/10 text-accent text-xs font-bold px-2.5 py-1 rounded-full">
-            {allInvestorDeals.length} {allInvestorDeals.length === 1 ? 'deal' : 'deals'}
-          </span>
+          <div className="flex items-center gap-2">
+            {!isCash && <InviteButton investor={investor} />}
+            <span className="bg-accent/10 text-accent text-xs font-bold px-2.5 py-1 rounded-full">
+              {allInvestorDeals.length} {allInvestorDeals.length === 1 ? 'deal' : 'deals'}
+            </span>
+          </div>
         </div>
 
         {/* Stats grid */}
@@ -1066,12 +1110,13 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Phone</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Deals</th>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Standard Terms</th>
+            <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Portal Invite</th>
             <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
           {contacts.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-6 text-xs text-gray-400 text-center">No investors yet</td></tr>
+            <tr><td colSpan={8} className="px-4 py-6 text-xs text-gray-400 text-center">No investors yet</td></tr>
           )}
           {contacts.map(inv => {
             const hasTerms = hasStandardTerms(inv);
@@ -1103,6 +1148,9 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
               </td>
               <td className="px-4 py-3">
                 <span className="text-xs font-medium text-accent">{inv.activeDeals} {inv.activeDeals === 1 ? 'deal' : 'deals'}</span>
+              </td>
+              <td className="px-4 py-3">
+                <InviteButton investor={inv} />
               </td>
               <td className="px-4 py-3">
                 {hasTerms ? (
