@@ -777,18 +777,6 @@ function FinancingScenarioPanel({
               {showHmAdvanced && (
                 <>
                   <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (%)</p>
-                    <DecimalInput value={profitSharePct || 0} onChange={setProfitSharePct} className={iCls} />
-                  </div>
-                  <div className="py-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (calc)</p>
-                    <span className="text-sm font-medium text-gray-800">
-                      {profitSharePct > 0
-                        ? `${profitSharePct}% of net profit`
-                        : <span className="text-gray-400">—</span>}
-                    </span>
-                  </div>
-                  <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Servicing Fee ($)</p>
                     <DecimalInput value={servicingFeeFlat || 0} onChange={setServicingFeeFlat} className={iCls} />
                   </div>
@@ -807,6 +795,10 @@ function FinancingScenarioPanel({
                   <div className="py-2">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Appraisal Fee ($)</p>
                     <DecimalInput value={appraisalFeeHm || 0} onChange={setAppraisalFeeHm} className={iCls} />
+                  </div>
+                  <div className="py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (%)</p>
+                    <DecimalInput value={profitSharePct || 0} onChange={setProfitSharePct} className={iCls} />
                   </div>
                 </>
               )}
