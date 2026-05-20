@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -40,15 +40,23 @@ function Steps({ current, total }) {
 export default function InvestorSignup() {
   const { refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [step,         setStep]         = useState(1);
-  const [email,        setEmail]        = useState('');
-  const [password,     setPassword]     = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [firstName,    setFirstName]    = useState('');
-  const [lastName,     setLastName]     = useState('');
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState('');
+  const inviteEmail = searchParams.get('email') || '';
+
+  const [step,            setStep]            = useState(1);
+  const [email,           setEmail]           = useState('');
+  const [password,        setPassword]        = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword,    setShowPassword]    = useState(false);
+  const [firstName,       setFirstName]       = useState('');
+  const [lastName,        setLastName]        = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState('');
+
+  useEffect(() => {
+    if (inviteEmail) setEmail(inviteEmail);
+  }, [inviteEmail]);
 
   const score = passwordScore(password);
 
@@ -57,6 +65,7 @@ export default function InvestorSignup() {
     setError('');
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (score < 1) { setError('Please choose a stronger password.'); return; }
+    if (password !== confirmPassword) { setError("Passwords don't match."); return; }
     setStep(2);
   }
 
@@ -128,7 +137,19 @@ export default function InvestorSignup() {
             <form onSubmit={handleStep1} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Email address</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus className={inputClass} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => !inviteEmail && setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoFocus={!inviteEmail}
+                  readOnly={!!inviteEmail}
+                  className={`${inputClass} ${inviteEmail ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
+                />
+                {inviteEmail && (
+                  <p className="text-xs text-gray-400 mt-1">Email pre-filled from your invite link.</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Password</label>
@@ -139,6 +160,7 @@ export default function InvestorSignup() {
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Min 8 characters"
                     required
+                    autoFocus={!!inviteEmail}
                     className={`${inputClass} pr-11`}
                   />
                   <button type="button" onClick={() => setShowPassword(v => !v)} tabIndex={-1}
@@ -171,10 +193,28 @@ export default function InvestorSignup() {
                 )}
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Confirm Password</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  required
+                  className={`${inputClass} ${confirmPassword && confirmPassword !== password ? 'border-red-300 focus:ring-red-200' : ''}`}
+                />
+                {confirmPassword && confirmPassword !== password && (
+                  <p className="text-xs text-red-500 mt-1">Passwords don't match.</p>
+                )}
+                {confirmPassword && confirmPassword === password && (
+                  <p className="text-xs text-green-600 mt-1">Passwords match.</p>
+                )}
+              </div>
+
               {error && <ErrorBox>{error}</ErrorBox>}
 
-              <button type="submit" disabled={!email || !password} className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: !email || !password ? '#94a3b8' : '#c9703a' }}>
+              <button type="submit" disabled={!email || !password || !confirmPassword || password !== confirmPassword} className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: (!email || !password || !confirmPassword || password !== confirmPassword) ? '#94a3b8' : '#c9703a' }}>
                 Continue
               </button>
             </form>

@@ -51,12 +51,13 @@ function InviteButton({ investor }) {
     return <span className="text-xs text-gray-300">No email</span>;
   }
 
+  const signupUrl = `${PORTAL_URL}?email=${encodeURIComponent(investor.email)}`;
   const subject = encodeURIComponent(`You're invited to the LotLine Investor Portal`);
   const body = encodeURIComponent(
     `Hi ${investor.contact || investor.name},\n\n` +
     `You've been invited to access the LotLine Investor Portal, where you can view your active deals, track capital deployed, and monitor project progress in real time.\n\n` +
     `Click the link below to create your login and get started:\n` +
-    `${PORTAL_URL}\n\n` +
+    `${signupUrl}\n\n` +
     `If you have any questions, feel free to reply to this email.\n\n` +
     `Best,\nThe LotLine Team`
   );
