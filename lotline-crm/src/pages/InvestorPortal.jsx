@@ -19,6 +19,7 @@ import InvestorActionBar from '../components/investor-portal/InvestorActionBar.j
 import InvestorTable from '../components/investor-portal/InvestorTable.jsx';
 import InvestorDrawer from '../components/investor-portal/InvestorDrawer.jsx';
 import InvestorFilterChips from '../components/investor-portal/InvestorFilterChips.jsx';
+import { computeDealInvestorCapital } from '../lib/dealCapital';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -2068,14 +2069,9 @@ export default function InvestorPortal() {
       if (d.isArchived) return false;
       return (d.allocations || []).some(a => a.investorId === inv.id);
     });
-    const capitalInvested = matchedDeals.reduce((sum, d) => {
-      const cap = d.investorCapitalContributed != null
-        ? Number(d.investorCapitalContributed)
-        : d.totalActual != null
-          ? Number(d.totalActual)
-          : (d.land || 0) + (d.mobileHome || 0) + (d.permits || 0) + (d.sitework || 0) + (d.utilities || 0) + (d.other || 0);
-      return sum + cap;
-    }, 0);
+    // Pull each deal's capital from the live financing scenario, not from
+    // the allocation row (which is stale the moment any cost changes).
+    const capitalInvested = matchedDeals.reduce((sum, d) => sum + computeDealInvestorCapital(d), 0);
 
     // ── ROI computed live from each matched deal ─────────────────────────────
     // roiDollars = sum of projected net profit (after financing) across deals
@@ -2086,9 +2082,7 @@ export default function InvestorPortal() {
     const annualized = matchedDeals.reduce((acc, d) => {
       const months = Number(d.holdPeriod ?? d.holdingMonths ?? d.scenarioData?.holdPeriod ?? 0);
       if (months <= 0) return acc;
-      const cap = d.investorCapitalContributed != null
-        ? Number(d.investorCapitalContributed)
-        : d.totalActual != null ? Number(d.totalActual) : 0;
+      const cap = computeDealInvestorCapital(d);
       const profit = Number(calcNetProfit(d)) || 0;
       const dealRoiPct = cap > 0 ? (profit / cap) * 100 : 0;
       const dealAnnRoi = dealRoiPct * (12 / months);

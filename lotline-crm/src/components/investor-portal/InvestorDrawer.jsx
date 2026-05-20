@@ -12,6 +12,7 @@ import {
   fetchMyDocuments,
   fetchNotifications,
 } from '../../lib/investorPortalData';
+import { computeDealInvestorCapital } from '../../lib/dealCapital';
 
 const TABS = [
   { key: 'overview',      label: 'Overview'      },
@@ -38,13 +39,10 @@ function buildDealsForInvestor(investor, contextDeals) {
         id: d.id,
         address: d.address,
         stage: d.stage,
-        totalCapital: alloc.amount != null
-          ? Number(alloc.amount)
-          : d.investorCapitalContributed != null
-          ? Number(d.investorCapitalContributed)
-          : d.totalActual != null
-          ? Number(d.totalActual)
-          : 0,
+        // Capital is computed live from the deal's financing scenario so it
+        // tracks any edit on the deal page. The allocation row is intentionally
+        // not consulted here — it goes stale the moment a cost changes.
+        totalCapital: computeDealInvestorCapital(d),
         arv: d.arv || 0,
         closeDate: d.closeDate || null,
         equityPct: alloc.profitSharePct ?? null,
