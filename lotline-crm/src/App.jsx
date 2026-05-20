@@ -90,7 +90,6 @@ import ResetPassword from './pages/ResetPassword';
 import SignUp from './pages/SignUp';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
-import BigRocks from './pages/BigRocks';
 import PnlDashboard from './pages/PnlDashboard';
 import Analytics from './pages/Analytics';
 import MarketResearch from './pages/MarketResearch';
@@ -381,7 +380,6 @@ export default function App() {
               <Route index element={<AgentIndexRoute />} />
               {/* /dashboard is the CRM home for authenticated users (post-login redirect target) */}
               <Route path="dashboard" element={<AgentIndexRoute />} />
-              <Route path="big-rocks"   element={<AgentRoute path="big-rocks"><BigRocks /></AgentRoute>} />
               <Route path="pnl"         element={<AgentRoute path="pnl"><PnlDashboard /></AgentRoute>} />
               <Route path="analytics"   element={<AgentRoute path="analytics"><Analytics /></AgentRoute>} />
               <Route path="intelligence" element={<AgentRoute path="intelligence"><MarketResearch /></AgentRoute>} />

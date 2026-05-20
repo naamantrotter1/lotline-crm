@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Target, TrendingUp, BarChart2, Map, Users, Zap,
+  LayoutDashboard, TrendingUp, BarChart2, Map, Users, Zap,
   Home, Leaf, Search, Wrench, DollarSign,
   Calculator, Building, Archive,
   Globe, Landmark, Building2, BookUser, CheckSquare, PieChart, MessageSquare, Calendar,
@@ -16,7 +16,6 @@ const BASE_NAV_SECTIONS = [
     label: 'Overview',
     items: [
       { icon: LayoutDashboard, label: 'Dashboard',       to: '/dashboard'  },
-      { icon: Target,          label: 'Big Rock',        to: '/big-rocks'  },
       { icon: TrendingUp,      label: 'P&L Dashboard',   to: '/pnl'        },
       { icon: BarChart2,       label: 'Analytics',       to: '/analytics'  },
       { icon: Users,           label: 'Investor Portal', to: '/investors'  },
