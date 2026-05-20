@@ -773,6 +773,18 @@ function FinancingScenarioPanel({
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Origination Amount (calc)</p>
                 <span className="text-sm font-medium text-gray-800">${Math.round(originationFee).toLocaleString()}</span>
               </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (%)</p>
+                <DecimalInput value={profitSharePct || 0} onChange={setProfitSharePct} className={iCls} />
+              </div>
+              <div className="py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Profit Split (calc)</p>
+                <span className="text-sm font-medium text-gray-800">
+                  {profitSharePct > 0
+                    ? `${profitSharePct}% of net profit`
+                    : <span className="text-gray-400">—</span>}
+                </span>
+              </div>
               {showHmAdvanced && (
                 <>
                   <div className="py-2">
