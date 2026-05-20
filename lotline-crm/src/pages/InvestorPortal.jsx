@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2, CreditCard, Send, Check } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2, CreditCard, Send, Check, Sun, Moon, LayoutDashboard, BarChart2 } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
 import { loadInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
@@ -1717,6 +1717,13 @@ export default function InvestorPortal() {
 
   const scopeIds = jvScopeOrgIds?.length > 0 ? jvScopeOrgIds : (activeOrgId ? [activeOrgId] : []);
 
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('investor-portal-theme') === 'dark');
+  const toggleTheme = () => setIsDark(v => {
+    const next = !v;
+    localStorage.setItem('investor-portal-theme', next ? 'dark' : 'light');
+    return next;
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const VALID_TABS = ['all-deals', 'needs-funding', 'by-investor', 'payments', 'commitments', 'directory', 'available-investments'];
   const activeTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'by-investor';
@@ -1870,91 +1877,116 @@ export default function InvestorPortal() {
   const totalROI = enrichedInvestors.reduce((s, i) => s + i.roiDollars, 0);
 
   const TABS = isInvestor
-    ? [{ key: 'by-investor', label: 'My Deals' }]
+    ? [{ key: 'by-investor', label: 'My Deals', icon: Briefcase }]
     : [
-        { key: 'all-deals',            label: 'All Deals'            },
-        { key: 'needs-funding',        label: 'Needs Funding'         },
-        { key: 'by-investor',          label: 'By Investor'          },
-        { key: 'payments',             label: 'Payments'             },
-        { key: 'commitments',          label: 'Commitments'          },
-        { key: 'directory',            label: 'Directory'            },
-        { key: 'available-investments',label: 'Available Investments' },
+        { key: 'all-deals',            label: 'All Deals',            icon: LayoutDashboard },
+        { key: 'needs-funding',        label: 'Needs Funding',        icon: DollarSign      },
+        { key: 'by-investor',          label: 'By Investor',          icon: Users           },
+        { key: 'payments',             label: 'Payments',             icon: CreditCard      },
+        { key: 'commitments',          label: 'Commitments',          icon: Handshake       },
+        { key: 'directory',            label: 'Directory',            icon: Landmark        },
+        { key: 'available-investments',label: 'Available Investments', icon: TrendingUp      },
       ];
 
   return (
-    <div className="min-h-screen" style={{ background: '#f5f3ee' }}>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-xl font-bold text-[#1a2332]">Investor Portal</h1>
-          <Link
-            to="/investor/home"
-            className="flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
-          >
-            <ExternalLink size={14} /> Investor View
-          </Link>
-        </div>
-        <p className="text-sm text-gray-400">
-          {isInvestor
-            ? linkedInvestor ? `Viewing deals for ${linkedInvestor}` : 'Your account has not been linked to an investor yet'
-            : 'Manage capital sources and investor relationships'}
-        </p>
+    <div className={isDark ? 'dark' : ''}>
+    <div className="min-h-screen flex bg-[#f5f3ee] dark:bg-[#0f1117] text-gray-900 dark:text-white">
 
-        {/* Tabs */}
-        <div className="flex gap-0 mt-4">
-          {TABS.map(tab => (
+      {/* ── Sidebar ───────────────────────────────────────────── */}
+      <aside className="w-60 flex-shrink-0 bg-[#161b22] border-r border-white/10 flex flex-col">
+        {/* Branding */}
+        <div className="px-5 py-5 border-b border-white/10">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-1">Investor Portal</p>
+          <p className="text-sm font-bold text-white leading-snug">Capital Management</p>
+          {isInvestor && linkedInvestor && (
+            <p className="text-xs text-accent mt-1 truncate">{linkedInvestor}</p>
+          )}
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {TABS.map(({ key, label, icon: Icon }) => (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                activeTab === key
+                  ? 'bg-accent/15 text-accent'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {tab.label}
+              <Icon size={16} className="flex-shrink-0" />
+              {label}
             </button>
           ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-3 py-4 border-t border-white/10 space-y-1">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            {isDark ? 'Light mode' : 'Dark mode'}
+          </button>
+          <Link
+            to="/investor/home"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ExternalLink size={16} /> Investor View
+          </Link>
         </div>
-      </div>
+      </aside>
 
-      {/* Summary stats — hidden for investor-role users */}
-      <div className="px-6 pt-5">
-        {!isInvestor && activeTab !== 'available-investments' && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-          {[
-            { label: 'Active Investors', value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users },
-            { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`, icon: DollarSign },
-            { label: 'Active Deals Funded', value: totalDeals, icon: Briefcase },
-            { label: 'Total Projected ROI', value: `$${totalROI.toLocaleString()}`, icon: TrendingUp },
-          ].map(stat => (
-            <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                <stat.icon size={18} />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-[#1a2332]">{stat.value}</p>
-                <p className="text-xs text-gray-400">{stat.label}</p>
-              </div>
+      {/* ── Main content ──────────────────────────────────────── */}
+      <main className="flex-1 overflow-auto">
+        <div className="p-6 md:p-8 space-y-6 w-full max-w-[1600px]">
+
+          {/* Page heading */}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {TABS.find(t => t.key === activeTab)?.label ?? 'Investor Portal'}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              {isInvestor
+                ? linkedInvestor ? `Viewing deals for ${linkedInvestor}` : 'Your account has not been linked to an investor yet'
+                : 'Manage capital sources and investor relationships'}
+            </p>
+          </div>
+
+          {/* Summary stats — operator only */}
+          {!isInvestor && activeTab !== 'available-investments' && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Active Investors',      value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,    color: 'text-accent'      },
+                { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign, color: 'text-green-400'  },
+                { label: 'Active Deals Funded',   value: totalDeals,                                              icon: Briefcase,  color: 'text-blue-400'   },
+                { label: 'Total Projected ROI',   value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,  color: 'text-purple-400' },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-5">
+                  <div className={`flex items-center gap-2 mb-2 ${color}`}>
+                    <Icon size={15} />
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>}
+          )}
 
-        {/* Tab content */}
-        {activeTab === 'all-deals' && <AllDealsTab onDealClick={handleDealClick} />}
-        {activeTab === 'needs-funding' && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={enrichedInvestors} />}
-        {activeTab === 'by-investor' && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} />}
-        {activeTab === 'payments' && <PaymentsAdminTab orgId={activeOrgId} />}
-        {activeTab === 'commitments' && <CommitmentsTab />}
-        {activeTab === 'directory' && (
-          <DirectoryTab
-            investors={enrichedInvestors}
-            onUpdate={handleUpdateInvestor}
-            onDelete={handleDeleteInvestor}
-          />
-        )}
-        {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
-      </div>
+          {/* Tab content */}
+          {activeTab === 'all-deals'             && <AllDealsTab onDealClick={handleDealClick} />}
+          {activeTab === 'needs-funding'         && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={enrichedInvestors} />}
+          {activeTab === 'by-investor'           && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} />}
+          {activeTab === 'payments'              && <PaymentsAdminTab orgId={activeOrgId} />}
+          {activeTab === 'commitments'           && <CommitmentsTab />}
+          {activeTab === 'directory'             && <DirectoryTab investors={enrichedInvestors} onUpdate={handleUpdateInvestor} onDelete={handleDeleteInvestor} />}
+          {activeTab === 'available-investments' && <AvailableInvestmentsTab onDealClick={handleDealClick} />}
 
+        </div>
+      </main>
+    </div>
     </div>
   );
 }

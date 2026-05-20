@@ -15,9 +15,11 @@
     }
     ,{
       "name": "crm",
-      "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["lotline-crm/run-crm.sh"],
-      "port": 3000
+      "runtimeExecutable": "/Users/naamantrotter/.nvm/versions/node/v22.22.2/bin/npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "/Users/naamantrotter/Downloads/lotline-crm/.claude/worktrees/admiring-poitras/lotline-crm",
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }
