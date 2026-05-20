@@ -94,42 +94,87 @@ function TableScroll({ children }) {
 }
 
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
-function AllDealsTab({ onDealClick }) {
-  const { orgSlug } = useAuth();
-  const { jvScope } = useJv();
-  const staticDealsTable = (orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : [];
+function AllDealsTab({ onDealClick, deals = [], investors = [] }) {
+  // Lookup map for investor name by id (used to derive the "Lender" column
+  // from each deal's primary allocation).
+  const investorNameById = useMemo(() => {
+    const m = new Map();
+    (investors || []).forEach(i => m.set(String(i.id), i.name));
+    return m;
+  }, [investors]);
+
+  const rows = useMemo(() => {
+    return (deals || [])
+      .filter(d => !d.isArchived)
+      .map(d => {
+        const primary = (d.allocations || []).find(a => a.position === '1st Position') || (d.allocations || [])[0];
+        const lender = primary?.investorId
+          ? investorNameById.get(String(primary.investorId)) || '—'
+          : (d.financing === 'Cash' ? 'Cash' : '—');
+        const land = Number(d.land || 0);
+        const totalActual = Number(d.totalActual ?? 0);
+        const construction = totalActual > 0
+          ? Math.max(0, totalActual - land)
+          : (Number(d.mobileHome || 0) + Number(d.permits || 0) + Number(d.sitework || 0) + Number(d.utilities || 0) + Number(d.other || 0));
+        const totalCapital = d.investorCapitalContributed != null
+          ? Number(d.investorCapitalContributed)
+          : totalActual > 0
+            ? totalActual
+            : land + construction;
+        return {
+          id: d.id,
+          address: d.address || '—',
+          pipeline: d.pipeline || '—',
+          stage: d.stage || '—',
+          lender,
+          landCost: land,
+          construction,
+          totalCapital,
+          arv: Number(d.arv || 0),
+          closeDate: d.closeDate || null,
+        };
+      })
+      .sort((a, b) => String(a.address).localeCompare(String(b.address)));
+  }, [deals, investorNameById]);
+
   return (
     <div>
-      <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+      <div className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-100 dark:border-white/8 overflow-x-auto">
         <table className="w-full text-xs min-w-[680px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/8">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Address</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Pipeline</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Stage</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Lender / Capital</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium">Land Cost</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium">Construction</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium">Total Capital</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium">ARV</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium">Close Date</th>
+              <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Address</th>
+              <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Pipeline</th>
+              <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Stage</th>
+              <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Lender / Capital</th>
+              <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Land Cost</th>
+              <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Construction</th>
+              <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Total Capital</th>
+              <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">ARV</th>
+              <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Close Date</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
-            {staticDealsTable.map((deal, i) => (
-              <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => onDealClick(deal)}>
-                <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px]">{deal.address}</td>
-                <td className="px-4 py-2.5 text-gray-600">{deal.pipeline}</td>
+          <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  No deals yet.
+                </td>
+              </tr>
+            ) : rows.map(deal => (
+              <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.03] cursor-pointer" onClick={() => onDealClick(deal)}>
+                <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200 max-w-[200px]">{deal.address}</td>
+                <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{deal.pipeline}</td>
                 <td className="px-4 py-2.5">
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{deal.stage}</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">{deal.stage}</span>
                 </td>
                 <td className="px-4 py-2.5">
                   <LenderBadge name={deal.lender} />
                 </td>
-                <td className="px-4 py-2.5 text-right text-gray-600">${deal.landCost.toLocaleString()}</td>
-                <td className="px-4 py-2.5 text-right text-gray-600">${deal.construction.toLocaleString()}</td>
-                <td className="px-4 py-2.5 text-right font-semibold text-gray-800">${deal.totalCapital.toLocaleString()}</td>
-                <td className="px-4 py-2.5 text-right text-gray-600">${deal.arv.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-400">${deal.landCost.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-400">${deal.construction.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right font-semibold text-gray-800 dark:text-gray-200">${deal.totalCapital.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-400">${deal.arv.toLocaleString()}</td>
                 <td className="px-4 py-2.5 text-right text-gray-500">{deal.closeDate || '—'}</td>
               </tr>
             ))}
@@ -2203,7 +2248,7 @@ export default function InvestorPortal() {
           )}
 
           {/* Tab content */}
-          {activeTab === 'all-deals'             && <AllDealsTab onDealClick={handleDealClick} />}
+          {activeTab === 'all-deals'             && <AllDealsTab onDealClick={handleDealClick} deals={customDeals} investors={enrichedInvestors} />}
           {activeTab === 'needs-funding'         && <NeedsFundingTab onDealClick={handleDealClick} orgId={activeOrgId} orgSlug={orgSlug} investors={enrichedInvestors} />}
           {activeTab === 'by-investor'           && <ByInvestorTab onDealClick={handleDealClick} linkedInvestor={linkedInvestor} investors={enrichedInvestors} contextDeals={customDeals} onUpdateInvestor={handleUpdateInvestor} />}
           {activeTab === 'payments'              && <PaymentsAdminTab orgId={activeOrgId} />}
