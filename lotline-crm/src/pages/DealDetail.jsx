@@ -811,8 +811,8 @@ function FinancingScenarioPanel({
                     <input
                       type="number" step="1" min="1" max="100"
                       className={`${iCls} w-16 text-center`}
-                      value={ltvCapPctHm ?? 60}
-                      onChange={e => setLtvCapPctHm(parseFloat(e.target.value) || 60)}
+                      value={ltvCapPctHm ?? ''}
+                      onChange={e => setLtvCapPctHm(e.target.value === '' ? null : parseFloat(e.target.value))}
                       disabled={readOnly}
                     />
                     <span className="text-xs text-gray-400">% of ARV</span>
@@ -836,6 +836,29 @@ function FinancingScenarioPanel({
                   );
                 })()}
                 {arvVal === 0 && <p className="text-[11px] text-gray-400 mt-1">Set deal ARV to enable LTV check</p>}
+              </div>
+
+              {/* LTC Calculator */}
+              <div className="py-2 col-span-2 border-t border-gray-100 pt-3">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2 font-medium">LTC Calculator</p>
+                {_allInCost > 0 && effectiveLoanAmount > 0 ? (() => {
+                  const ltcPct = (effectiveLoanAmount / _allInCost) * 100;
+                  const ok = ltcPct <= 100;
+                  return (
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-500">
+                        LTC: <span className={`font-semibold ${ok ? 'text-green-600' : 'text-red-500'}`}>{ltcPct.toFixed(1)}%</span>
+                        <span className="text-gray-400 ml-1">(Loan ${Math.round(effectiveLoanAmount).toLocaleString()} ÷ Cost ${Math.round(_allInCost).toLocaleString()})</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-green-600' : 'text-red-500'}`}>
+                        {ok ? <Check size={12} /> : <AlertCircle size={12} />}
+                        {ok ? `Loan within total cost` : `Loan exceeds total cost`}
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <p className="text-[11px] text-gray-400">Enter loan amount and cost breakdown to calculate LTC</p>
+                )}
               </div>
 
               <div className="py-2">

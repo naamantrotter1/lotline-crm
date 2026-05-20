@@ -604,7 +604,7 @@ export default function HMCBPanel({ dealId, data, onChange, readOnly = false, in
                 type="number" step="1" min="1" max="100"
                 className="w-16 px-2 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-accent/30 text-center"
                 value={ltvCapPct}
-                onChange={e => set('ltvCapPct', parseFloat(e.target.value) || 60)}
+                onChange={e => set('ltvCapPct', e.target.value === '' ? null : parseFloat(e.target.value))}
                 disabled={readOnly}
               />
               <span className="text-xs text-gray-400">% of ARV</span>
