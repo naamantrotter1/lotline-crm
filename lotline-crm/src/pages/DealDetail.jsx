@@ -3309,7 +3309,7 @@ function DealDetailContent({ deal }) {
     realtor, dateListed, dealOwner,
     investorCapitalContributed, investorEquityPct, projectedPayoutDate, estimatedSaleDate,
     capitalDeployedDate, capitalReturnedDate,
-    loanAmountOverride, investorProfitSplitPct, selectedScenario,
+    loanAmountOverride, loanLocked, loanTermMonths, investorProfitSplitPct, selectedScenario,
     interestRate, originationFeeType, originationFeePct, originationFeeFlat,
     servicingFeeType, servicingFeeFlat, servicingFeePct, balloonTerm,
     profitSharePct, ltcPct, originationPoints, creditLimit, drawPct, annualFeePct,
