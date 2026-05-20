@@ -2,7 +2,7 @@
 // Add Investor button / filter chips are deferred to later phases.
 
 import { useEffect, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 
 export const SORT_OPTIONS = [
   { value: 'capital_desc',     label: 'Capital Invested ↓' },
@@ -19,6 +19,8 @@ export default function InvestorActionBar({
   onSortChange,
   totalCount,
   filteredCount,
+  onRefresh,
+  isRefreshing,
 }) {
   // Local mirror so we can debounce the upward search emit.
   const [localSearch, setLocalSearch] = useState(searchValue || '');
@@ -66,13 +68,24 @@ export default function InvestorActionBar({
         />
       </div>
 
-      {/* Right side: count + sort */}
+      {/* Right side: count + refresh + sort */}
       <div className="flex items-center gap-3">
         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
           {showingFiltered
             ? `${filteredCount} of ${totalCount}`
             : `${totalCount} ${totalCount === 1 ? 'investor' : 'investors'}`}
         </span>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-accent hover:border-accent/40 disabled:opacity-50 transition-colors"
+            title="Refresh investor data"
+            aria-label="Refresh"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+        )}
         <select
           value={sortValue}
           onChange={e => onSortChange?.(e.target.value)}

@@ -219,6 +219,22 @@ export function DealsProvider({ children }) {
 
   // Bind orgId so callers don't need to pass it
   const saveDeal    = useCallback((deal)   => syncSaveDeal(deal, activeOrgId),    [activeOrgId]);
+
+  // Re-fetch deals + allocations on demand (consumers call this after
+  // navigating into a heavy view to defend against a dropped realtime
+  // subscription or a freshly-edited row that hasn't echoed yet).
+  const refresh = useCallback(async () => {
+    if (!session?.user?.id || !activeOrgId || !jvLoaded) return;
+    const ids = (scopeIds || []);
+    if (ids.length === 0) return;
+    const fresh = await loadAllDeals(ids);
+    setDeals(fresh);
+    const dealIds = fresh.map(x => x.id).filter(Boolean);
+    if (dealIds.length > 0) {
+      const allocs = await fetchAllocationsForDeals(dealIds);
+      setAllocationsByDealId(allocs);
+    }
+  }, [session?.user?.id, activeOrgId, jvLoaded, scopeIds]);
   const deleteDeal  = useCallback((id)     => syncDeleteDeal(id, activeOrgId),     [activeOrgId]);
   const archiveDeal = useCallback((deal)   => syncArchiveDeal(deal, activeOrgId),  [activeOrgId]);
 
@@ -231,7 +247,7 @@ export function DealsProvider({ children }) {
   );
 
   return (
-    <DealsContext.Provider value={{ deals: dealsWithAllocations, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal }}>
+    <DealsContext.Provider value={{ deals: dealsWithAllocations, setDeals, archivedDeals, setArchivedDeals, dealsLoading, realtimeStatus, saveDeal, deleteDeal, archiveDeal, refresh }}>
       {children}
     </DealsContext.Provider>
   );

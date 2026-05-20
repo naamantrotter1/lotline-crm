@@ -766,17 +766,33 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, onUpdateInvestor }) {
   const navigate = useNavigate();
   const { setImpersonating } = useImpersonation();
+  const { refresh: refreshDeals } = useDeals();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState('');
   const [sortValue, setSortValue] = useState(() => {
     try { return localStorage.getItem('byInvestorSort') || 'capital_desc'; } catch { return 'capital_desc'; }
   });
   const [editingTermsInvestor, setEditingTermsInvestor] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Persist sort preference so it survives a reload.
   useEffect(() => {
     try { localStorage.setItem('byInvestorSort', sortValue); } catch { /* ignore */ }
   }, [sortValue]);
+
+  // Defensive re-fetch on mount — guarantees a fresh view of deals +
+  // allocations even if a realtime echo was missed while the user was
+  // editing on the deal detail page.
+  useEffect(() => {
+    refreshDeals?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRefresh = async () => {
+    if (!refreshDeals) return;
+    setIsRefreshing(true);
+    try { await refreshDeals(); } finally { setIsRefreshing(false); }
+  };
 
   // ── URL-driven filter state ─────────────────────────────────────────────
   // ?status=active,pending_invite
@@ -871,6 +887,8 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals, o
         onSortChange={setSortValue}
         totalCount={displayInvestors.length}
         filteredCount={filteredCount}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
       />
       <InvestorFilterChips
         statusFilter={statusFilter}
