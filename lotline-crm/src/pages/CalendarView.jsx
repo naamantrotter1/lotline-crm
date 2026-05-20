@@ -114,7 +114,7 @@ function MeetingModal({ orgId, userId, meeting, onSaved, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">{meeting ? 'Edit Meeting' : 'New Meeting'}</h2>
         </div>
@@ -192,7 +192,7 @@ function GCalEventPopover({ event, color, currentUserId, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-[380px] overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[380px] mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Color stripe */}
         <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
         <div className="px-5 py-4 space-y-3">
@@ -259,7 +259,7 @@ function DealEventPopover({ event, dealAddress, onClose, navigate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-[380px] overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[380px] mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
         <div className="px-5 py-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
@@ -368,30 +368,47 @@ function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, memberCol
     <div>
       <div className="grid grid-cols-7 mb-1">
         {DAYS.map(d => (
-          <div key={d} className="text-center py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">{d}</div>
+          <div key={d} className="text-center py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <span className="md:hidden">{d[0]}</span>
+            <span className="hidden md:inline">{d}</span>
+          </div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white min-h-[120px]" />;
+          if (!day) return <div key={`empty-${i}`} className="bg-white min-h-[52px] md:min-h-[100px] lg:min-h-[120px]" />;
           const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
           const dayEvents = eventsForDay(day);
           return (
             <div key={day} onClick={() => onDayClick(day)}
-              className="bg-white min-h-[120px] p-2 cursor-pointer hover:bg-orange-50/50 transition-colors group">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold mb-1.5 ${
+              className="bg-white min-h-[52px] md:min-h-[100px] lg:min-h-[120px] p-1 md:p-2 cursor-pointer hover:bg-orange-50/50 transition-colors group touch-manipulation">
+              <div className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold mb-1 md:mb-1.5 ${
                 isToday ? 'bg-accent text-white' : 'text-gray-600 group-hover:bg-accent/10'
               }`}>
                 {day}
               </div>
-              <div className="space-y-1">
-                {dayEvents.slice(0, 4).map(ev =>
-                  renderEventPill(ev, e => { e.stopPropagation(); onEventClick(ev); })
+              <div className="space-y-0.5 md:space-y-1">
+                {dayEvents.slice(0, 1).map(ev => (
+                  <div key={ev.id + '-mob'} className="md:hidden">
+                    {renderEventPill(ev, e => { e.stopPropagation(); onEventClick(ev); })}
+                  </div>
+                ))}
+                {dayEvents.slice(0, 4).map(ev => (
+                  <div key={ev.id + '-desk'} className="hidden md:block">
+                    {renderEventPill(ev, e => { e.stopPropagation(); onEventClick(ev); })}
+                  </div>
+                ))}
+                {dayEvents.length > 1 && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setOverflowDay(day); }}
+                    className="text-[9px] md:text-xs text-accent hover:text-accent/70 px-0.5 md:px-1 font-medium transition-colors md:hidden">
+                    +{dayEvents.length - 1}
+                  </button>
                 )}
                 {dayEvents.length > 4 && (
                   <button
                     onClick={e => { e.stopPropagation(); setOverflowDay(day); }}
-                    className="text-xs text-accent hover:text-accent/70 px-1 font-medium transition-colors">
+                    className="text-xs text-accent hover:text-accent/70 px-1 font-medium transition-colors hidden md:block">
                     +{dayEvents.length - 4} more
                   </button>
                 )}
@@ -404,7 +421,7 @@ function MonthGrid({ year, month, allEvents, onDayClick, onEventClick, memberCol
       {/* Overflow day modal */}
       {overflowDay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setOverflowDay(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-[340px] max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[340px] mx-4 max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-800">{MONTH_NAMES[month]} {overflowDay}</h3>
               <button onClick={() => setOverflowDay(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
@@ -675,25 +692,25 @@ export default function CalendarView() {
     setVisibleMembers(prev => ({ ...prev, [uid]: !prev[uid] }));
 
   return (
-    <div className="w-full flex gap-6">
+    <div className="w-full flex flex-col md:flex-row gap-4 md:gap-6">
       {/* ── Left: Calendar ────────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 space-y-4">
+      <div className="flex-1 min-w-0 space-y-3 md:space-y-4">
         {/* Google Calendar connection banners */}
         {!connection && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex items-center justify-between">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-blue-800">Google Calendar not connected</p>
               <p className="text-xs text-blue-600 mt-0.5">Connect your Google account in Settings → Integrations to sync your events to the team calendar.</p>
             </div>
             <a href="/settings?tab=integrations"
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-xl whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-xl whitespace-nowrap touch-manipulation"
               style={{ backgroundColor: '#4285f4' }}>
               Go to Settings
             </a>
           </div>
         )}
         {connection && (
-          <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-3 flex items-center justify-between">
+          <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full" />
               <p className="text-xs font-medium text-green-700">Google Calendar connected — {connection.gmail_email}</p>
@@ -709,25 +726,31 @@ export default function CalendarView() {
         {/* Calendar card */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           {/* Month nav */}
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">{MONTHS[month]} {year}</h2>
-            <div className="flex items-center gap-2">
-              <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={16} /></button>
+          <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+            <h2 className="text-base md:text-lg font-bold text-gray-800 min-w-0 truncate">{MONTHS[month]} {year}</h2>
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <button onClick={prevMonth} className="p-2.5 md:p-2 rounded-xl hover:bg-gray-100 touch-manipulation"><ChevronLeft size={16} /></button>
               <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
-                className="px-3 py-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-xl hover:bg-accent/5">
+                className="px-2.5 md:px-3 py-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-xl hover:bg-accent/5 touch-manipulation">
                 Today
               </button>
-              <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={16} /></button>
+              <button onClick={nextMonth} className="p-2.5 md:p-2 rounded-xl hover:bg-gray-100 touch-manipulation"><ChevronRight size={16} /></button>
               {canManage && (
                 <>
                   <button onClick={() => setShowNew(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-xl hover:bg-gray-50 ml-1">
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-xl hover:bg-gray-50 ml-1 touch-manipulation">
                     <Plus size={12} /> Meeting
                   </button>
                   <button onClick={() => setShowAddEvent(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl"
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl touch-manipulation"
                     style={{ backgroundColor: '#c9703a' }}>
                     <Plus size={12} /> Event
+                  </button>
+                  {/* Mobile: combined + button */}
+                  <button onClick={() => setShowNew(true)}
+                    className="sm:hidden p-2.5 rounded-xl text-white touch-manipulation"
+                    style={{ backgroundColor: '#c9703a' }}>
+                    <Plus size={16} />
                   </button>
                 </>
               )}
@@ -789,7 +812,7 @@ export default function CalendarView() {
       </div>
 
       {/* ── Right panel ───────────────────────────────────────────────────── */}
-      <div className="w-72 flex-shrink-0 space-y-4">
+      <div className="w-full md:w-72 md:flex-shrink-0 space-y-4">
         {/* Upcoming */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Upcoming</p>
@@ -924,7 +947,7 @@ export default function CalendarView() {
         <div className="fixed inset-0 z-50">
           {editing ? (
             <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setEditing(null)}>
-              <div className="bg-white rounded-2xl shadow-2xl w-[500px] overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-gray-800">{editing.title}</h2>
@@ -1004,7 +1027,7 @@ export default function CalendarView() {
       {/* ── Add Event modal ───────────────────────────────────────────────── */}
       {showAddEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[360px] text-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-[360px] mx-4 text-center">
             <p className="text-sm font-semibold text-gray-800 mb-2">Add Event</p>
             <p className="text-xs text-gray-500 mb-4">
               To add an event, navigate to a deal and click the <strong>Event</strong> button in the deal actions bar, or use the <strong>Events</strong> tab.
