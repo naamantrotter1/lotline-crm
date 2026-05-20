@@ -745,29 +745,6 @@ function InviteSection() {
         </div>
       )}
 
-      {/* Past invitations (accepted/revoked) */}
-      {!loadingInvs && past.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100">
-            <span className="text-sm font-semibold text-[#1a2332]">Past Invitations</span>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {past.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{inv.invitee_email}</p>
-                  <p className="text-xs text-gray-400">Sent {fmtDate(inv.created_at)}</p>
-                </div>
-                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
-                  inv.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100'
-                }`}>
-                  {inv.status === 'accepted' ? 'Accepted' : 'Revoked'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
