@@ -105,7 +105,13 @@ function AllDealsTab({ onDealClick, deals = [], investors = [] }) {
 
   const rows = useMemo(() => {
     return (deals || [])
-      .filter(d => !d.isArchived)
+      .filter(d => {
+        if (d.isArchived) return false;
+        // Active deals only — exclude pre-deal Land Acquisition leads.
+        // Keep Deal Overview (in-execution) and Sales (selling stage).
+        const p = String(d.pipeline || '').toLowerCase();
+        return p === 'deal-overview' || p === 'deal overview' || p === 'sales';
+      })
       .map(d => {
         const primary = (d.allocations || []).find(a => a.position === '1st Position') || (d.allocations || [])[0];
         const lender = primary?.investorId
