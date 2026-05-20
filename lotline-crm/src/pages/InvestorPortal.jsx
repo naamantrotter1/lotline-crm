@@ -71,7 +71,7 @@ function InviteButton({ investor }) {
     <a
       href={`mailto:${investor.email}?subject=${subject}&body=${body}`}
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors touch-manipulation ${
         sent
           ? 'bg-green-50 text-green-600 border border-green-200'
           : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
@@ -83,6 +83,11 @@ function InviteButton({ investor }) {
   );
 }
 
+// Scrollable table wrapper for mobile
+function TableScroll({ children }) {
+  return <div className="overflow-x-auto -webkit-overflow-scrolling-touch">{children}</div>;
+}
+
 // ── Tab: All Deals ──────────────────────────────────────────────────────────
 function AllDealsTab({ onDealClick }) {
   const { orgSlug } = useAuth();
@@ -90,8 +95,8 @@ function AllDealsTab({ onDealClick }) {
   const staticDealsTable = (orgSlug === 'lotline-homes' && jvScope.mode === 'own_only') ? ALL_DEALS_TABLE : [];
   return (
     <div>
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+        <table className="w-full text-xs min-w-[680px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Address</th>
@@ -671,8 +676,8 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
           All deals have a funder assigned.
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+          <table className="w-full text-xs min-w-[560px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Address</th>
@@ -1101,8 +1106,8 @@ function DirectoryTab({ investors, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(null);
   const [termsFor, setTermsFor] = useState(null);
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+      <table className="w-full text-sm min-w-[720px]">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Investor</th>
@@ -1280,8 +1285,8 @@ function AvailableInvestmentsTab({ onDealClick }) {
             <h3 className="text-sm font-bold text-[#1a2332]">Financing Requests</h3>
             <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">{loanRequests.length}</span>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+            <table className="w-full text-xs min-w-[560px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Ref #', 'Address', 'Loan Amount', 'Loan Type', 'Date Submitted', 'Status'].map(h => (
@@ -1318,8 +1323,8 @@ function AvailableInvestmentsTab({ onDealClick }) {
             <h3 className="text-sm font-bold text-[#1a2332]">Partnership Submissions</h3>
             <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">{partnerships.length}</span>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+            <table className="w-full text-xs min-w-[560px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Ref #', 'Address', 'Deal Type', 'Projected Profit', 'Date Submitted', 'Status'].map(h => (
@@ -1522,7 +1527,8 @@ function PaymentsAdminTab({ orgId }) {
             No {filter === 'all' ? '' : filter} payments.
           </div>
         ) : (
-          <table className="w-full text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full text-xs min-w-[640px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Investor</th>
@@ -1569,6 +1575,7 @@ function PaymentsAdminTab({ orgId }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -1631,14 +1638,14 @@ function CommitmentsTab() {
         return (
           <div key={investorName} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             {/* Investor header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-5 py-3 border-b border-gray-100 bg-gray-50 gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
                   <Users size={12} className="text-accent" />
                 </div>
                 <span className="text-sm font-semibold text-[#1a2332]">{investorName}</span>
               </div>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                 <span>Committed: <span className="font-semibold text-gray-800">{fmt(totalCommitted)}</span></span>
                 <span>Deployed: <span className="font-semibold text-gray-800">{fmt(totalDeployed)}</span></span>
                 <span className={anyOver ? 'text-red-600 font-semibold' : 'text-gray-800 font-semibold'}>
@@ -1651,7 +1658,8 @@ function CommitmentsTab() {
             </div>
 
             {/* Commitment rows */}
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[520px]">
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="text-left px-5 py-2 text-gray-400 font-medium">Commitment</th>
@@ -1698,6 +1706,7 @@ function CommitmentsTab() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         );
       })}
@@ -1890,10 +1899,10 @@ export default function InvestorPortal() {
 
   return (
     <div className={isDark ? 'dark' : ''}>
-    <div className="min-h-screen flex bg-[#f5f3ee] dark:bg-[#0f1117] text-gray-900 dark:text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#f5f3ee] dark:bg-[#0f1117] text-gray-900 dark:text-white">
 
-      {/* ── Sidebar ───────────────────────────────────────────── */}
-      <aside className="w-60 flex-shrink-0 bg-[#161b22] border-r border-white/10 flex flex-col">
+      {/* ── Sidebar (desktop only) ─────────────────────────── */}
+      <aside className="hidden md:flex flex-col w-60 flex-shrink-0 bg-[#161b22] border-r border-white/10">
         {/* Branding */}
         <div className="px-5 py-5 border-b border-white/10">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-1">Investor Portal</p>
@@ -1940,11 +1949,28 @@ export default function InvestorPortal() {
       </aside>
 
       {/* ── Main content ──────────────────────────────────────── */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-6 md:p-8 space-y-6 w-full max-w-[1600px]">
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
 
-          {/* Page heading */}
+        {/* Mobile top bar */}
+        <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-[#161b22] border-b border-white/10">
           <div>
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest leading-none mb-0.5">Investor Portal</p>
+            <p className="text-sm font-bold text-white leading-tight">
+              {TABS.find(t => t.key === activeTab)?.label ?? 'Portal'}
+            </p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors touch-manipulation"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
+
+        <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 w-full max-w-[1600px]">
+
+          {/* Page heading — desktop only */}
+          <div className="hidden md:block">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {TABS.find(t => t.key === activeTab)?.label ?? 'Investor Portal'}
             </h1>
@@ -1957,19 +1983,19 @@ export default function InvestorPortal() {
 
           {/* Summary stats — operator only */}
           {!isInvestor && activeTab !== 'available-investments' && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {[
-                { label: 'Active Investors',      value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,    color: 'text-accent'      },
-                { label: 'Total Capital Deployed', value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign, color: 'text-green-400'  },
-                { label: 'Active Deals Funded',   value: totalDeals,                                              icon: Briefcase,  color: 'text-blue-400'   },
-                { label: 'Total Projected ROI',   value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,  color: 'text-purple-400' },
+                { label: 'Active Investors',       value: enrichedInvestors.filter(i => i.name !== 'Cash').length, icon: Users,      color: 'text-accent'      },
+                { label: 'Capital Deployed',        value: `$${totalCapital.toLocaleString()}`,                    icon: DollarSign,  color: 'text-green-400'  },
+                { label: 'Deals Funded',            value: totalDeals,                                              icon: Briefcase,   color: 'text-blue-400'   },
+                { label: 'Projected ROI',           value: `$${totalROI.toLocaleString()}`,                         icon: BarChart2,   color: 'text-purple-400' },
               ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-5">
-                  <div className={`flex items-center gap-2 mb-2 ${color}`}>
-                    <Icon size={15} />
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+                <div key={label} className="bg-white dark:bg-[#1c2130] rounded-xl border border-gray-200 dark:border-white/8 p-4 md:p-5">
+                  <div className={`flex items-center gap-1.5 mb-1.5 md:mb-2 ${color}`}>
+                    <Icon size={14} />
+                    <span className="text-[11px] md:text-xs font-medium text-gray-500 dark:text-gray-400 leading-tight">{label}</span>
                   </div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">{value}</p>
                 </div>
               ))}
             </div>
@@ -1986,6 +2012,28 @@ export default function InvestorPortal() {
 
         </div>
       </main>
+
+      {/* ── Mobile bottom nav ──────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#161b22] border-t border-white/10">
+        <div className="flex overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 py-3 px-2 min-w-[60px] transition-colors touch-manipulation ${
+                activeTab === key ? 'text-accent' : 'text-gray-500 active:text-gray-300'
+              }`}
+            >
+              <Icon size={20} />
+              <span className="text-[9px] font-medium leading-tight text-center w-full truncate px-1">
+                {label.split(' ')[0]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+      </nav>
+
     </div>
     </div>
   );
