@@ -341,6 +341,7 @@ function FinancingScenarioPanel({
   // General loan terms
   lenderName, setLenderName,
   interestRate, setInterestRate,
+  loanTermMonths, setLoanTermMonths,
   holdPeriod, setHoldPeriod,
   loanAmountOverride, setLoanAmountOverride,
   // Origination & fees (HM)
@@ -3844,6 +3845,7 @@ function DealDetailContent({ deal }) {
             servicingFeeFlat={servicingFeeFlat} setServicingFeeFlat={setServicingFeeFlat}
             servicingFeePct={servicingFeePct} setServicingFeePct={setServicingFeePct}
             balloonTerm={balloonTerm} setBalloonTerm={setBalloonTerm}
+            loanTermMonths={loanTermMonths} setLoanTermMonths={setLoanTermMonths}
             holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
             monthlyHoldCost={monthlyHoldCost} setMonthlyHoldCost={setMonthlyHoldCost}
             profitSharePct={profitSharePct} setProfitSharePct={setProfitSharePct}
@@ -3978,6 +3980,7 @@ function DealDetailContent({ deal }) {
             selectedScenario={selectedScenario} applyScenario={applyScenario}
             lenderName={lenderName} setLenderName={setLenderName}
             interestRate={interestRate} setInterestRate={setInterestRate}
+            loanTermMonths={loanTermMonths} setLoanTermMonths={setLoanTermMonths}
             holdPeriod={holdPeriod} setHoldPeriod={setHoldPeriod}
             loanAmountOverride={loanAmountOverride} setLoanAmountOverride={setLoanAmountOverride}
             originationFeePct={originationFeePct} setOriginationFeePct={setOriginationFeePct}
