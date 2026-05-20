@@ -42,7 +42,7 @@ function LenderBadge({ name }) {
 }
 
 // ── Invite Button ────────────────────────────────────────────────────────────
-const PORTAL_URL = 'https://lotline-crm.vercel.app';
+const PORTAL_URL = 'https://lotline-crm.vercel.app/investor/signup';
 
 function InviteButton({ investor }) {
   const [sent, setSent] = useState(false);
