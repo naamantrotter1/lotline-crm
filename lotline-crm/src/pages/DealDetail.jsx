@@ -650,13 +650,42 @@ function FinancingScenarioPanel({
             </div>
             <div>
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Estimated Sale Date</p>
-              <input
-                type="date"
-                value={estimatedSaleDate || ''}
-                onChange={e => setEstimatedSaleDate(e.target.value)}
-                className={iCls}
-                readOnly={readOnly}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={estimatedSaleDate || ''}
+                  onChange={e => setEstimatedSaleDate(e.target.value)}
+                  className={iCls}
+                  readOnly={readOnly}
+                />
+                {!readOnly && capitalDeployedDate && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <input
+                      type="number"
+                      min="1"
+                      max="120"
+                      placeholder="mo"
+                      defaultValue={capitalDeployedDate && estimatedSaleDate ? (() => {
+                        const a = new Date(capitalDeployedDate + 'T12:00:00');
+                        const b = new Date(estimatedSaleDate + 'T12:00:00');
+                        return Math.round((b - a) / (1000 * 60 * 60 * 24 * 30.44));
+                      })() : ''}
+                      onChange={e => {
+                        const n = parseInt(e.target.value);
+                        if (!n || n < 1) return;
+                        const base = new Date(capitalDeployedDate + 'T12:00:00');
+                        base.setMonth(base.getMonth() + n);
+                        const y = base.getFullYear();
+                        const m = String(base.getMonth() + 1).padStart(2, '0');
+                        const d = String(base.getDate()).padStart(2, '0');
+                        setEstimatedSaleDate(`${y}-${m}-${d}`);
+                      }}
+                      className="w-12 text-center text-xs px-1 py-1.5 border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-accent/30"
+                    />
+                    <span className="text-[10px] text-gray-400">mo</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {(() => {
