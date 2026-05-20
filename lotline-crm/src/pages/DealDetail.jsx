@@ -815,12 +815,6 @@ function FinancingScenarioPanel({
                                 Use
                               </button>
                             )}
-                            {ok !== null && currentPct !== null && (
-                              <span className={`ml-auto text-[10px] font-medium flex items-center gap-0.5 ${ok ? 'text-green-600' : 'text-red-500'}`}>
-                                {ok ? <Check size={9} /> : <AlertCircle size={9} />}
-                                {currentPct.toFixed(1)}%
-                              </span>
-                            )}
                           </>
                         ) : null}
                       </div>
