@@ -826,6 +826,15 @@ function FinancingScenarioPanel({
                 <span className="text-sm font-medium text-gray-800">${Math.round(monthlyInterestHm).toLocaleString()}</span>
               </div>
               <div className="py-2 col-span-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
+                <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
+                  <option>Interest Only</option>
+                  <option>Profit Split %</option>
+                  <option>Flat Fee</option>
+                  <option>Pooled</option>
+                </select>
+              </div>
+              <div className="py-2 col-span-2">
                 <PaymentDueDayPicker
                   value={paymentDueDay}
                   onChange={setPaymentDueDay}
@@ -1299,15 +1308,6 @@ function FinancingScenarioPanel({
                 ))}
               </select>
               <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
-              <select value={investorReturnType} onChange={e => setInvestorReturnType(e.target.value)} className={iCls} disabled={readOnly}>
-                <option>Interest Only</option>
-                <option>Profit Split %</option>
-                <option>Flat Fee</option>
-                <option>Pooled</option>
-              </select>
             </div>
             {investorReturnType === 'Profit Split %' && (
               <div className="py-2">

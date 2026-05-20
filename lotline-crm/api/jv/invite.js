@@ -5,7 +5,7 @@ import { requireJvHubAuth, isAdmin } from '../_lib/teamAuth.js';
 import crypto from 'crypto';
 
 const RESEND_API = 'https://api.resend.com/emails';
-const FROM       = 'LotLine Homes <no-reply@lotlinehomes.com>';
+const FROM       = 'LotLine Homes <naaman@lotlinehomes.com>';
 
 function inviteEmailHtml({ hubOrgName, inviterName, inviteUrl, notes }) {
   const notesHtml = notes
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       adminClient.from('profiles').select('name').eq('id', userId).single(),
     ]);
 
-    await fetch(RESEND_API, {
+    const emailRes = await fetch(RESEND_API, {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -99,7 +99,12 @@ export default async function handler(req, res) {
         }),
       }),
     });
+    if (!emailRes.ok) {
+      const emailErr = await emailRes.json().catch(() => ({}));
+      console.error('[jv/invite] Resend error:', emailRes.status, emailErr);
+    }
+    return res.status(201).json({ invitation, inviteUrl, emailSent: emailRes.ok });
   }
 
-  return res.status(201).json({ invitation, inviteUrl });
+  return res.status(201).json({ invitation, inviteUrl, emailSent: false });
 }

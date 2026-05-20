@@ -692,11 +692,11 @@ function InviteSection() {
 
         {/* Success: show the link */}
         {result?.inviteUrl && (
-          <div className="mt-4 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
-            <p className="text-xs font-semibold text-green-700 mb-1 flex items-center gap-1">
-              <CheckCircle size={12} /> Invitation sent!
+          <div className={`mt-4 border rounded-xl px-4 py-3 ${result.emailSent === false ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
+            <p className={`text-xs font-semibold mb-1 flex items-center gap-1 ${result.emailSent === false ? 'text-amber-700' : 'text-green-700'}`}>
+              <CheckCircle size={12} /> {result.emailSent === false ? 'Invitation created — email could not be sent' : 'Invitation sent!'}
             </p>
-            <p className="text-xs text-gray-600 mb-2">Share this link directly if the email doesn't arrive:</p>
+            <p className="text-xs text-gray-600 mb-2">Share this link directly with your partner:</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-[11px] bg-white border border-green-200 rounded-lg px-2 py-1.5 truncate text-gray-700">
                 {result.inviteUrl}
