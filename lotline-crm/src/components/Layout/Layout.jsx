@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import JvScopeBanner from '../JV/JvScopeBanner';
-import OnboardingChecklist from '../Onboarding/OnboardingChecklist';
 
 const AUTO_COLLAPSE_ROUTES = ['/flood-map'];
 
@@ -66,7 +65,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-      <OnboardingChecklist />
     </div>
   );
 }
