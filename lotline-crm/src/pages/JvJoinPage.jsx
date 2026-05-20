@@ -107,10 +107,8 @@ export default function JvJoinPage() {
         return;
       }
 
-      // Advance to step 2 — pre-fill org name from first name
+      // Advance to step 2
       setNewOrgId(json.orgId);
-      setOrgName(`${firstName.trim()} Organization`);
-      setSlug(slugify(`${firstName.trim()} Organization`));
       setStep(2);
     } catch {
       setFormErr('Network error. Please check your connection and try again.');
