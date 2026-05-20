@@ -42,6 +42,7 @@ import HMCBPanel, { HMCB_DEFAULTS } from '../components/financing/HMCBPanel';
 import PaymentDueDayPicker from '../components/financing/PaymentDueDayPicker';
 import PaymentScheduleSection from '../components/financing/PaymentScheduleSection';
 import { fetchAllInvestors, upsertInvestor } from '../lib/investorPortalData';
+import { computeDealInvestorCapital } from '../lib/dealCapital';
 
 // ── DD tasks ─────────────────────────────────────────────────────────────────
 const DD_COLS = [
@@ -406,13 +407,6 @@ function FinancingScenarioPanel({
   const [autoFilledInvestor, setAutoFilledInvestor] = useState(null);
   const [autoFilledFields, setAutoFilledFields] = useState([]);
 
-
-  // For HM scenarios, keep investorCapitalContributed in sync with effectiveLoanAmount
-  useEffect(() => {
-    if (isHardMoney && effectiveLoanAmount > 0) {
-      setInvestorCapitalContributed(effectiveLoanAmount);
-    }
-  }, [isHardMoney, effectiveLoanAmount]);
 
   // Wraps the investor dropdown onChange — applies standard terms if available.
   function handleInvestorSelect(name) {
@@ -2768,7 +2762,7 @@ function DealDetailContent({ deal }) {
             dealId:             d.id,
             organizationId:     activeOrgId,
             investorId:         inv.id,
-            amount:             Number(d.investorCapitalContributed) || 1,
+            amount:             computeDealInvestorCapital(d) || 1,
             preferredReturnPct: sd.interestRate ?? null,
             profitSharePct:     sd.investorProfitSplitPct ?? d.investorEquityPct ?? null,
             sourceScenario:     d.financingScenarioType ?? d.financing ?? null,
@@ -3187,7 +3181,7 @@ function DealDetailContent({ deal }) {
           dealId:             deal.id,
           organizationId:     activeOrgId,
           investorId:         inv.id,
-          amount:             Number(deal.investorCapitalContributed) || 1,
+          amount:             (Number(hmcbData?.purchasePrice || 0) + Number(hmcbData?.holdbackAmount || 0)) || computeDealInvestorCapital(deal) || 1,
           preferredReturnPct: hmcbData?.interestRate ?? null,
           sourceScenario:     'hmcb',
           status:             'committed',
