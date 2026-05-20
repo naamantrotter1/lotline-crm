@@ -407,6 +407,13 @@ function FinancingScenarioPanel({
   const [autoFilledFields, setAutoFilledFields] = useState([]);
 
 
+  // For HM scenarios, keep investorCapitalContributed in sync with effectiveLoanAmount
+  useEffect(() => {
+    if (isHardMoney && effectiveLoanAmount > 0) {
+      setInvestorCapitalContributed(effectiveLoanAmount);
+    }
+  }, [isHardMoney, effectiveLoanAmount]);
+
   // Wraps the investor dropdown onChange — applies standard terms if available.
   function handleInvestorSelect(name) {
     setInvestor(name);
@@ -1298,21 +1305,6 @@ function FinancingScenarioPanel({
                 ))}
               </select>
               <StandardTermsIndicator investor={autoFilledInvestor} fields={autoFilledFields} onClear={clearAutoFilled} />
-            </div>
-            <div className="py-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Capital Contributed</p>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={investorCapitalContributed != null && investorCapitalContributed !== '' ? `$${Number(investorCapitalContributed).toLocaleString()}` : ''}
-                onChange={e => {
-                  const raw = e.target.value.replace(/[^0-9]/g, '');
-                  setInvestorCapitalContributed(raw === '' ? null : Number(raw));
-                }}
-                placeholder="$50,000"
-                className={iCls}
-                readOnly={readOnly}
-              />
             </div>
             <div className="py-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Return Type</p>
