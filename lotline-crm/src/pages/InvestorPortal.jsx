@@ -17,6 +17,7 @@ import { markPaymentPaid, formatPaymentType, STATUS_LABEL, STATUS_PILL, applyOve
 import { fetchLendingRequests, fetchLendingPartnerships } from '../lib/lendingData';
 import InvestorActionBar from '../components/investor-portal/InvestorActionBar.jsx';
 import InvestorTable from '../components/investor-portal/InvestorTable.jsx';
+import InvestorDrawer from '../components/investor-portal/InvestorDrawer.jsx';
 
 function formatPhone(raw) {
   if (!raw) return raw;
@@ -764,6 +765,7 @@ function NeedsFundingTab({ onDealClick, orgId, orgSlug, investors: investorsProp
 function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals }) {
   const navigate = useNavigate();
   const { setImpersonating } = useImpersonation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState('');
   const [sortValue, setSortValue] = useState(() => {
     try { return localStorage.getItem('byInvestorSort') || 'capital_desc'; } catch { return 'capital_desc'; }
@@ -773,6 +775,24 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
   useEffect(() => {
     try { localStorage.setItem('byInvestorSort', sortValue); } catch { /* ignore */ }
   }, [sortValue]);
+
+  // Drawer state — driven by ?investor=<id> for deep-linking + reload survival.
+  const drawerInvestorId = searchParams.get('investor') || null;
+  const drawerInvestor = drawerInvestorId
+    ? investors.find(i => String(i.id) === String(drawerInvestorId)) || null
+    : null;
+
+  const openDrawer = (investor) => {
+    if (!investor?.id) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('investor', String(investor.id));
+    setSearchParams(next, { replace: false });
+  };
+  const closeDrawer = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('investor');
+    setSearchParams(next, { replace: false });
+  };
 
   const displayInvestors = linkedInvestor
     ? investors.filter(inv => inv.name === linkedInvestor)
@@ -823,8 +843,19 @@ function ByInvestorTab({ onDealClick, linkedInvestor, investors, contextDeals })
         contextDeals={contextDeals}
         searchValue={searchValue}
         sortValue={sortValue}
+        onRowClick={openDrawer}
         onDealClick={onDealClick}
         onViewPortal={handleViewPortal}
+        hasStandardTerms={hasStandardTerms}
+        termsBadgeText={termsBadgeText}
+      />
+      <InvestorDrawer
+        investor={drawerInvestor}
+        contextDeals={contextDeals}
+        open={!!drawerInvestor}
+        onClose={closeDrawer}
+        onViewPortal={handleViewPortal}
+        onDealClick={onDealClick}
         hasStandardTerms={hasStandardTerms}
         termsBadgeText={termsBadgeText}
       />
