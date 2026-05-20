@@ -48,7 +48,7 @@ export const HMCB_DEFAULTS = {
   loanBasisFlags: { land: false, home: false, allIn: true },
 };
 
-const DEFAULT_CHECKLIST = [
+export const DEFAULT_CHECKLIST = [
   { label: 'Fully executed purchase agreement',              auto_trigger: null },
   { label: 'Detailed construction / rehab budget',           auto_trigger: null },
   { label: 'Property inspection by lender or authorized rep', auto_trigger: null },
@@ -60,7 +60,7 @@ const DEFAULT_CHECKLIST = [
   { label: 'Draw fee schedule confirmed and first draw fee collected', auto_trigger: null },
 ];
 
-const LENDER_PROTECTION_DEFAULTS = [
+export const LENDER_PROTECTION_DEFAULTS = [
   { item_key: 'personal_guarantee',  label: 'Personal Guarantee',                sort_order: 0, auto_trigger: null },
   { item_key: 'title_insurance',     label: 'Title Insurance (Lender\'s Policy)', sort_order: 1, auto_trigger: null },
   { item_key: 'builders_risk_ins',   label: 'Hazard / Builder\'s Risk Insurance', sort_order: 2, auto_trigger: null },

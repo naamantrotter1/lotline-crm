@@ -878,7 +878,7 @@ function FinancingScenarioPanel({
                 <input type="text" inputMode="numeric" placeholder="e.g. 12" value={loanTermMonths ?? ''} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); setLoanTermMonths(v === '' ? null : Number(v)); }} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Hold Period (months)</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 font-medium">Expected Hold Period (months)</p>
                 <input type="text" inputMode="numeric" value={holdPeriod || ''} onChange={e => setHoldPeriod(Number(e.target.value) || 0)} onFocus={e => e.target.select()} className={iCls} readOnly={readOnly} />
               </div>
               <div className="py-2">
@@ -3273,7 +3273,7 @@ function DealDetailContent({ deal }) {
   const [loanLocked, setLoanLocked] = useState(sd.loanLocked ?? false);
   const [loanBasisFlags, setLoanBasisFlags] = useState(sd.loanBasisFlags ?? { land: false, home: false, allIn: true });
   // Payment Due Day — drives schedule/calendar generator (HM Loan, HM L+H, HMCB, LoC).
-  const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? 'same_as_closing');
+  const [paymentDueDay, setPaymentDueDay] = useState(sd.paymentDueDay ?? '1st_of_following_month');
   // Optional override: anchor the schedule on a user-picked first payment date.
   const [firstPaymentDate, setFirstPaymentDate] = useState(sd.firstPaymentDate ?? null);
 

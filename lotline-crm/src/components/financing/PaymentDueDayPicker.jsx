@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 const OPTIONS = [
+  { value: '1st_of_following_month', label: '1st Day of the Following Month' },
   { value: 'same_as_closing', label: 'Same day as closing' },
   { value: 'one_month_after_closing', label: '1 month after closing' },
   { value: '1', label: '1st of month' },
@@ -51,7 +52,7 @@ export default function PaymentDueDayPicker({
   onFirstPaymentDateChange,
   readOnly = false,
 }) {
-  const effectiveValue = value || 'same_as_closing';
+  const effectiveValue = value || '1st_of_following_month';
   const isCustom = !PRESET_VALUES.has(effectiveValue) && /^\d+$/.test(String(effectiveValue));
   const selectValue = isCustom ? 'custom' : effectiveValue;
 
@@ -60,6 +61,10 @@ export default function PaymentDueDayPicker({
     const start = parseLocalDate(deployedDate);
     if (!start) return '';
     if (dueDay === 'same_as_closing') return toIsoDate(start);
+    if (dueDay === '1st_of_following_month') {
+      const d = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+      return toIsoDate(d);
+    }
     const next = new Date(start);
     next.setMonth(next.getMonth() + 1);
     if (dueDay === 'one_month_after_closing') return toIsoDate(next);
