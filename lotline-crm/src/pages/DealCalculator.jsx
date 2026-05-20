@@ -274,7 +274,7 @@ const defaultValues = {
   hudEngineer: 500,
   mailbox: 170,
   mobileTax: 0,
-  arv: 230000,
+  arv: 260000,
   sellingCostPct: 3.5,
   holdingPerMonth: 250,
   holdingMonths: 4,
