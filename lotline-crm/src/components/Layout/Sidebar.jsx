@@ -53,7 +53,7 @@ const BASE_NAV_SECTIONS = [
       { icon: Building2,  label: 'Joint Ventures',         to: '/settings/joint-ventures',    jvHubOnly: true  },
       { icon: Calculator,    label: 'Deal Calculator',        to: '/calculator'      },
       { icon: Building,      label: 'Home Models',            to: '/home-models'     },
-      { icon: GraduationCap, label: 'University',             to: '/university'      },
+      { icon: GraduationCap, label: 'Land Home University',   to: '/university'      },
       { icon: Archive,       label: 'Archived Deals',         to: '/archived'        },
     ],
   },
