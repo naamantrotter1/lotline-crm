@@ -197,19 +197,22 @@ export default function Dashboard() {
   }, [doCompleteThisYear]);
 
   // ── Deal Pipeline Conversion ─────────────────────────────────────────────────
-  // Numerator:   active deals that had contract signed (still progressing).
-  // Denominator: active deals with contract signed + dead deals with contract signed.
+  // Numerator:   active deals in the Deal Overview pipeline (still progressing).
+  // Denominator: active DO deals + dead deals whose last stage was in Deal Overview.
   // e.g. 25 active + 5 dead = 83% conversion.
-  const activeWithContract = useMemo(
-    () => (deals || []).filter(d => d.contractSignedAt),
+  const DO_PIPELINE_STAGES = new Set([
+    'Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold',
+  ]);
+  const activeInDOPipeline = useMemo(
+    () => (deals || []).filter(d => DO_PIPELINE_STAGES.has(d.stage) || d.contractSignedAt),
     [deals],
   );
-  const deadWithContract = useMemo(
-    () => (archivedDeals || []).filter(d => d.contractSignedAt && d.deadDeal),
+  const deadFromDO = useMemo(
+    () => (archivedDeals || []).filter(d => d.deadDeal && (DO_PIPELINE_STAGES.has(d.stage) || d.contractSignedAt)),
     [archivedDeals],
   );
-  const conversionPct = (activeWithContract.length + deadWithContract.length) > 0
-    ? Math.round((activeWithContract.length / (activeWithContract.length + deadWithContract.length)) * 100)
+  const conversionPct = (activeInDOPipeline.length + deadFromDO.length) > 0
+    ? Math.round((activeInDOPipeline.length / (activeInDOPipeline.length + deadFromDO.length)) * 100)
     : null;
 
   // ── Pipeline summary ─────────────────────────────────────────────────────────
@@ -299,7 +302,7 @@ export default function Dashboard() {
         <StatCard
           label="Deal Conversion"
           value={conversionPct != null ? `${conversionPct}%` : '—'}
-          subtext={`${activeWithContract.length} active · ${deadWithContract.length} dead deal${deadWithContract.length !== 1 ? 's' : ''}`}
+          subtext={`${activeInDOPipeline.length} active · ${deadFromDO.length} dead deal${deadFromDO.length !== 1 ? 's' : ''}`}
           icon={Percent}
           color="text-emerald-500"
         />
