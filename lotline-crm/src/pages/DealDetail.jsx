@@ -269,7 +269,16 @@ function hasStandardTermsLocal(inv) {
     n.defaultDrawFee ||
     n.defaultServicingFee ||
     n.defaultExtensionAvailable ||
-    n.defaultProfitSharePct
+    n.defaultProfitSharePct ||
+    n.defaultReturnType ||
+    n.defaultPaymentDueDay ||
+    n.defaultLtvPct ||
+    n.defaultLtcPct ||
+    n.defaultPreferredReturnPct ||
+    n.defaultUnderwritingFee ||
+    n.defaultAttorneyDocFee ||
+    n.defaultAppraisalFee ||
+    n.defaultLegalFee
   );
 }
 
