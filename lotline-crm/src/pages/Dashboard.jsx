@@ -197,24 +197,28 @@ export default function Dashboard() {
   }, [doCompleteThisYear]);
 
   // ── Deal Pipeline Conversion ─────────────────────────────────────────────────
-  // Numerator:   active deals in the Deal Overview pipeline (still progressing).
-  // Denominator: active DO deals + dead deals whose last stage was in Deal Overview.
-  // e.g. 25 active + 5 dead = 83% conversion.
+  // Numerator:   active deals past land acquisition, excluding On Hold.
+  // Denominator: active (excl. On Hold) + On Hold deals + archived dead deals from DO.
+  // On Hold counts against conversion same as a dead deal.
   const DO_DEAD_STAGES = new Set([
     'Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold',
     'Listed', 'Under Contract', 'Closed',
   ]);
-  // All active deals past land acquisition (DO pipeline + sales stages + on hold).
   const activeInDOPipeline = useMemo(
-    () => (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage)),
+    () => (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage) && d.stage !== 'On Hold'),
+    [deals],
+  );
+  const onHoldDeals = useMemo(
+    () => (deals || []).filter(d => d.stage === 'On Hold'),
     [deals],
   );
   const deadFromDO = useMemo(
     () => (archivedDeals || []).filter(d => d.deadDeal && (DO_DEAD_STAGES.has(d.stage) || d.contractSignedAt)),
     [archivedDeals],
   );
-  const conversionPct = (activeInDOPipeline.length + deadFromDO.length) > 0
-    ? Math.round((activeInDOPipeline.length / (activeInDOPipeline.length + deadFromDO.length)) * 100)
+  const totalNegative = onHoldDeals.length + deadFromDO.length;
+  const conversionPct = (activeInDOPipeline.length + totalNegative) > 0
+    ? Math.round((activeInDOPipeline.length / (activeInDOPipeline.length + totalNegative)) * 100)
     : null;
 
   // ── Pipeline summary ─────────────────────────────────────────────────────────
@@ -304,7 +308,7 @@ export default function Dashboard() {
         <StatCard
           label="Deal Conversion"
           value={conversionPct != null ? `${conversionPct}%` : '—'}
-          subtext={`${activeInDOPipeline.length} active · ${deadFromDO.length} dead deal${deadFromDO.length !== 1 ? 's' : ''}`}
+          subtext={`${activeInDOPipeline.length} active · ${totalNegative} on hold/dead`}
           icon={Percent}
           color="text-emerald-500"
         />
