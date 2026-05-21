@@ -200,15 +200,17 @@ export default function Dashboard() {
   // Numerator:   active deals in the Deal Overview pipeline (still progressing).
   // Denominator: active DO deals + dead deals whose last stage was in Deal Overview.
   // e.g. 25 active + 5 dead = 83% conversion.
-  const DO_PIPELINE_STAGES = new Set([
+  const DO_DEAD_STAGES = new Set([
     'Contract Signed', 'Due Diligence', 'Development', 'Complete', 'On Hold',
+    'Listed', 'Under Contract', 'Closed',
   ]);
+  // All active deals past land acquisition (DO pipeline + sales stages + on hold).
   const activeInDOPipeline = useMemo(
-    () => (deals || []).filter(d => DO_PIPELINE_STAGES.has(d.stage) || d.contractSignedAt),
+    () => (deals || []).filter(d => !LAND_ACQ_ONLY.has(d.stage)),
     [deals],
   );
   const deadFromDO = useMemo(
-    () => (archivedDeals || []).filter(d => d.deadDeal && (DO_PIPELINE_STAGES.has(d.stage) || d.contractSignedAt)),
+    () => (archivedDeals || []).filter(d => d.deadDeal && (DO_DEAD_STAGES.has(d.stage) || d.contractSignedAt)),
     [archivedDeals],
   );
   const conversionPct = (activeInDOPipeline.length + deadFromDO.length) > 0
