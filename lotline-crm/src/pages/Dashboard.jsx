@@ -197,26 +197,24 @@ export default function Dashboard() {
   }, [doCompleteThisYear]);
 
   // ── Deal Pipeline Conversion ─────────────────────────────────────────────────
-  // "Entered Deal Overview" = any deal (active or archived) with contractSignedAt set.
-  // contract_signed_at is stamped the moment a deal moves to Contract Signed stage.
+  // Conversion = deals that had contract signed AND made it all the way to Closed (sales sold).
+  // Dead deals with a signed contract count against the rate (raise the denominator, not numerator).
   const allDealsEver = useMemo(
     () => [...(deals || []), ...(archivedDeals || [])],
     [deals, archivedDeals],
   );
+  // Denominator: every deal that entered the Deal Overview pipeline (contract was signed).
   const enteredDO = useMemo(
     () => allDealsEver.filter(d => d.contractSignedAt),
     [allDealsEver],
   );
-  const DO_SALES = new Set([
-    'Contract Signed', 'Due Diligence', 'Development', 'Complete',
-    'Listed', 'Under Contract', 'Closed',
-  ]);
-  const activeInDO = useMemo(
-    () => (deals || []).filter(d => DO_SALES.has(d.stage)),
-    [deals],
+  // Numerator: contract-signed deals that fully converted to a sale (stage === 'Closed').
+  const soldDeals = useMemo(
+    () => allDealsEver.filter(d => d.contractSignedAt && d.stage === 'Closed'),
+    [allDealsEver],
   );
   const conversionPct = enteredDO.length
-    ? Math.round((activeInDO.length / enteredDO.length) * 100)
+    ? Math.round((soldDeals.length / enteredDO.length) * 100)
     : null;
 
   // ── Pipeline summary ─────────────────────────────────────────────────────────
@@ -306,7 +304,7 @@ export default function Dashboard() {
         <StatCard
           label="Deal Conversion"
           value={conversionPct != null ? `${conversionPct}%` : '—'}
-          subtext={`${activeInDO.length} active of ${enteredDO.length} entered Deal Overview`}
+          subtext={`${soldDeals.length} sold of ${enteredDO.length} entered Deal Overview`}
           icon={Percent}
           color="text-emerald-500"
         />
