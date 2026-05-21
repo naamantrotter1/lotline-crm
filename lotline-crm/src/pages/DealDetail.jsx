@@ -252,6 +252,7 @@ function normaliseInvestorTerms(inv) {
     defaultAppraisalFee:       inv.defaultAppraisalFee       ?? inv.default_appraisal_fee       ?? null,
     defaultLegalFee:           inv.defaultLegalFee           ?? inv.default_legal_fee           ?? null,
     defaultLtvPct:             inv.defaultLtvPct             ?? inv.default_ltv_pct             ?? null,
+    defaultLtcPct:             inv.defaultLtcPct             ?? inv.default_ltc_pct             ?? null,
   };
 }
 
@@ -359,9 +360,15 @@ function applyInvestorStandardTerms(inv, ctx) {
     ctx.setLegalFeeHm?.(Number(n.defaultLegalFee));
     filled.push('legal fee');
   }
-  if (n.defaultLtvPct != null && shouldFill(ctx.ltvCapPctHm)) {
+  // LTV/LTC: apply if unset OR at factory default (60/80), since those defaults
+  // are not user-entered values and should be overrideable by standard terms.
+  if (n.defaultLtvPct != null && (shouldFill(ctx.ltvCapPctHm) || ctx.ltvCapPctHm === 60)) {
     ctx.setLtvCapPctHm?.(Number(n.defaultLtvPct));
     filled.push('LTV');
+  }
+  if (n.defaultLtcPct != null && (shouldFill(ctx.ltcCapPctHm) || ctx.ltcCapPctHm === 80)) {
+    ctx.setLtcCapPctHm?.(Number(n.defaultLtcPct));
+    filled.push('LTC');
   }
   return filled;
 }
@@ -461,6 +468,7 @@ function FinancingScenarioPanel({
       appraisalFeeHm, setAppraisalFeeHm,
       legalFeeHm, setLegalFeeHm,
       ltvCapPctHm, setLtvCapPctHm,
+      ltcCapPctHm, setLtcCapPctHm,
     });
     if (filled.length) {
       setAutoFilledInvestor(inv);
