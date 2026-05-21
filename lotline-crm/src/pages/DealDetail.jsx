@@ -298,84 +298,80 @@ function StandardTermsIndicator({ investor, fields, onClear }) {
 }
 
 // Apply an investor's standard terms to the current deal financing state.
-// Only fills empty/zero fields by default — never overwrites user-entered values.
-// Returns the list of field labels that were actually filled (for the toast/indicator).
+// Always applies any non-null standard term — overwrites existing deal values so
+// selecting a lender fully stamps their terms onto the deal.
+// Returns the list of field labels that were applied (for the indicator).
 function applyInvestorStandardTerms(inv, ctx) {
   const n = normaliseInvestorTerms(inv);
   if (!n) return [];
   const filled = [];
-  const shouldFill = (cur) => cur === null || cur === undefined || cur === '' || cur === 0;
 
-  // Switch scenario if investor has one set and current is empty
-  if (n.defaultScenarioType && !ctx.selectedScenario) {
+  if (n.defaultScenarioType) {
     ctx.applyScenario?.(n.defaultScenarioType);
     filled.push('scenario');
   }
-
-  if (n.defaultInterestRate != null && shouldFill(ctx.interestRate)) {
+  if (n.defaultInterestRate != null) {
     ctx.setInterestRate?.(Number(n.defaultInterestRate));
     filled.push('rate');
   }
-  if (n.defaultHoldPeriodMonths != null && shouldFill(ctx.holdPeriod)) {
+  if (n.defaultHoldPeriodMonths != null) {
     ctx.setHoldPeriod?.(Number(n.defaultHoldPeriodMonths));
     filled.push('hold period');
-  } else if (n.defaultTermMonths != null && shouldFill(ctx.holdPeriod)) {
+  } else if (n.defaultTermMonths != null) {
     ctx.setHoldPeriod?.(Number(n.defaultTermMonths));
     filled.push('term');
   }
-  if (n.defaultOriginationFeePct != null && shouldFill(ctx.originationFeePct)) {
+  if (n.defaultOriginationFeePct != null) {
     ctx.setOriginationFeePct?.(Number(n.defaultOriginationFeePct));
     filled.push('origination');
   }
-  if (n.defaultDrawFee != null && shouldFill(ctx.drawFeeHm)) {
+  if (n.defaultDrawFee != null) {
     ctx.setDrawFeeHm?.(Number(n.defaultDrawFee));
     filled.push('draw fee');
   }
-  if (n.defaultServicingFee != null && shouldFill(ctx.servicingFeeFlat)) {
+  if (n.defaultServicingFee != null) {
     ctx.setServicingFeeFlat?.(Number(n.defaultServicingFee));
     filled.push('servicing fee');
   }
-  if (n.defaultExtensionAvailable && !ctx.extensionAvailable) {
+  if (n.defaultExtensionAvailable) {
     ctx.setExtensionAvailable?.(true);
     if (n.defaultExtensionMonths != null) ctx.setExtensionMonths?.(Number(n.defaultExtensionMonths));
     if (n.defaultExtensionFeePoints != null) ctx.setExtensionFee?.(Number(n.defaultExtensionFeePoints));
     filled.push('extension');
   }
-  if (n.defaultPaymentDueDay && (ctx.paymentDueDay === 'same_as_closing' || !ctx.paymentDueDay)) {
+  if (n.defaultPaymentDueDay) {
     ctx.setPaymentDueDay?.(n.defaultPaymentDueDay);
     filled.push('due day');
   }
-  if (n.defaultProfitSharePct != null && shouldFill(ctx.investorProfitSplitPct)) {
+  if (n.defaultProfitSharePct != null) {
     ctx.setInvestorProfitSplitPct?.(Number(n.defaultProfitSharePct));
     filled.push('profit share');
   }
-  if (n.defaultReturnType && ctx.setInvestorReturnType) {
-    ctx.setInvestorReturnType(n.defaultReturnType);
+  if (n.defaultReturnType) {
+    ctx.setInvestorReturnType?.(n.defaultReturnType);
     filled.push('return type');
   }
-  if (n.defaultUnderwritingFee != null && shouldFill(ctx.underwritingFee)) {
+  if (n.defaultUnderwritingFee != null) {
     ctx.setUnderwritingFee?.(Number(n.defaultUnderwritingFee));
     filled.push('underwriting fee');
   }
-  if (n.defaultAttorneyDocFee != null && shouldFill(ctx.attorneyDocFee)) {
+  if (n.defaultAttorneyDocFee != null) {
     ctx.setAttorneyDocFee?.(Number(n.defaultAttorneyDocFee));
     filled.push('attorney doc fee');
   }
-  if (n.defaultAppraisalFee != null && shouldFill(ctx.appraisalFeeHm)) {
+  if (n.defaultAppraisalFee != null) {
     ctx.setAppraisalFeeHm?.(Number(n.defaultAppraisalFee));
     filled.push('appraisal fee');
   }
-  if (n.defaultLegalFee != null && shouldFill(ctx.legalFeeHm)) {
+  if (n.defaultLegalFee != null) {
     ctx.setLegalFeeHm?.(Number(n.defaultLegalFee));
     filled.push('legal fee');
   }
-  // LTV/LTC: apply if unset OR at factory default (60/80), since those defaults
-  // are not user-entered values and should be overrideable by standard terms.
-  if (n.defaultLtvPct != null && (shouldFill(ctx.ltvCapPctHm) || ctx.ltvCapPctHm === 60)) {
+  if (n.defaultLtvPct != null) {
     ctx.setLtvCapPctHm?.(Number(n.defaultLtvPct));
     filled.push('LTV');
   }
-  if (n.defaultLtcPct != null && (shouldFill(ctx.ltcCapPctHm) || ctx.ltcCapPctHm === 80)) {
+  if (n.defaultLtcPct != null) {
     ctx.setLtcCapPctHm?.(Number(n.defaultLtcPct));
     filled.push('LTC');
   }
