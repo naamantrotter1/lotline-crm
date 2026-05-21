@@ -1044,7 +1044,16 @@ const SCENARIO_SHORT = {
   'committed-capital-partner': 'CCP',
 };
 
-const PAYMENT_DUE_DAYS = ['1st', '5th', '10th', '15th', '20th', '25th', 'same_as_closing'];
+const PAYMENT_DUE_DAY_OPTIONS = [
+  { value: '1st_of_following_month',  label: '1st Day of the Following Month' },
+  { value: 'same_as_closing',         label: 'Same day as closing' },
+  { value: 'one_month_after_closing', label: '1 month after closing' },
+  { value: '1',                       label: '1st of month' },
+  { value: '5',                       label: '5th of month' },
+  { value: '10',                      label: '10th of month' },
+  { value: '15',                      label: '15th of month' },
+  { value: 'last_day',                label: 'Last day of month' },
+];
 
 function hasStandardTerms(inv) {
   return Boolean(
@@ -1217,7 +1226,7 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
                         <select className={inp} value={form.defaultPaymentDueDay}
                           onChange={e => update('defaultPaymentDueDay', e.target.value)}>
                           <option value="">— Not set —</option>
-                          {PAYMENT_DUE_DAYS.map(d => <option key={d} value={d}>{d === 'same_as_closing' ? 'Same as closing' : d + ' of month'}</option>)}
+                          {PAYMENT_DUE_DAY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
