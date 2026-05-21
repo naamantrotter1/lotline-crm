@@ -109,6 +109,10 @@ export async function updateInvestor(id, patch, orgId) {
     if (patch.defaultExtensionFeePoints !== undefined) dbPatch.default_extension_fee_points = patch.defaultExtensionFeePoints;
     if (patch.termsNotes !== undefined)                dbPatch.terms_notes                  = patch.termsNotes;
     if (patch.defaultReturnType !== undefined)         dbPatch.default_return_type          = patch.defaultReturnType || null;
+    if (patch.defaultUnderwritingFee !== undefined)    dbPatch.default_underwriting_fee     = patch.defaultUnderwritingFee;
+    if (patch.defaultAttorneyDocFee !== undefined)     dbPatch.default_attorney_doc_fee     = patch.defaultAttorneyDocFee;
+    if (patch.defaultAppraisalFee !== undefined)       dbPatch.default_appraisal_fee        = patch.defaultAppraisalFee;
+    if (patch.defaultLegalFee !== undefined)           dbPatch.default_legal_fee            = patch.defaultLegalFee;
     if (Object.keys(dbPatch).length > 0) {
       const { error } = await supabase
         .from('investors')

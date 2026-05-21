@@ -1099,6 +1099,10 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
     defaultPreferredReturnPct: investor?.defaultPreferredReturnPct ?? '',
     defaultProfitSharePct:     investor?.defaultProfitSharePct     ?? '',
     defaultReturnType:         investor?.defaultReturnType         || '',
+    defaultUnderwritingFee:    investor?.defaultUnderwritingFee    ?? '',
+    defaultAttorneyDocFee:     investor?.defaultAttorneyDocFee     ?? '',
+    defaultAppraisalFee:       investor?.defaultAppraisalFee       ?? '',
+    defaultLegalFee:           investor?.defaultLegalFee           ?? '',
     termsNotes:                investor?.termsNotes                || '',
   });
   const [saving, setSaving] = useState(false);
@@ -1129,6 +1133,10 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
       defaultPreferredReturnPct: numOrNull(form.defaultPreferredReturnPct),
       defaultProfitSharePct:     numOrNull(form.defaultProfitSharePct),
       defaultReturnType:         form.defaultReturnType || null,
+      defaultUnderwritingFee:    numOrNull(form.defaultUnderwritingFee),
+      defaultAttorneyDocFee:     numOrNull(form.defaultAttorneyDocFee),
+      defaultAppraisalFee:       numOrNull(form.defaultAppraisalFee),
+      defaultLegalFee:           numOrNull(form.defaultLegalFee),
       termsNotes:                form.termsNotes || '',
     };
     await onSave(patch);
@@ -1284,6 +1292,26 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
                                   <label className={lbl}>Draw Fee ($ per draw)</label>
                                   <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
                                     onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Underwriting / Admin Fee ($)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultUnderwritingFee}
+                                    onChange={e => update('defaultUnderwritingFee', e.target.value)} placeholder="0" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Attorney Doc Prep Fee ($)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultAttorneyDocFee}
+                                    onChange={e => update('defaultAttorneyDocFee', e.target.value)} placeholder="0" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Appraisal Fee ($)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultAppraisalFee}
+                                    onChange={e => update('defaultAppraisalFee', e.target.value)} placeholder="0" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Legal Fee ($)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultLegalFee}
+                                    onChange={e => update('defaultLegalFee', e.target.value)} placeholder="0" />
                                 </div>
                               </div>
                               <div>

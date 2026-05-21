@@ -247,6 +247,10 @@ function normaliseInvestorTerms(inv) {
     defaultProfitSharePct:     inv.defaultProfitSharePct     ?? inv.default_profit_share_pct    ?? null,
     defaultPosition:           inv.defaultPosition           ?? inv.default_position            ?? null,
     defaultReturnType:         inv.defaultReturnType         ?? inv.default_return_type         ?? null,
+    defaultUnderwritingFee:    inv.defaultUnderwritingFee    ?? inv.default_underwriting_fee    ?? null,
+    defaultAttorneyDocFee:     inv.defaultAttorneyDocFee     ?? inv.default_attorney_doc_fee    ?? null,
+    defaultAppraisalFee:       inv.defaultAppraisalFee       ?? inv.default_appraisal_fee       ?? null,
+    defaultLegalFee:           inv.defaultLegalFee           ?? inv.default_legal_fee           ?? null,
   };
 }
 
@@ -337,6 +341,22 @@ function applyInvestorStandardTerms(inv, ctx) {
   if (n.defaultReturnType && ctx.setInvestorReturnType) {
     ctx.setInvestorReturnType(n.defaultReturnType);
     filled.push('return type');
+  }
+  if (n.defaultUnderwritingFee != null && shouldFill(ctx.underwritingFee)) {
+    ctx.setUnderwritingFee?.(Number(n.defaultUnderwritingFee));
+    filled.push('underwriting fee');
+  }
+  if (n.defaultAttorneyDocFee != null && shouldFill(ctx.attorneyDocFee)) {
+    ctx.setAttorneyDocFee?.(Number(n.defaultAttorneyDocFee));
+    filled.push('attorney doc fee');
+  }
+  if (n.defaultAppraisalFee != null && shouldFill(ctx.appraisalFeeHm)) {
+    ctx.setAppraisalFeeHm?.(Number(n.defaultAppraisalFee));
+    filled.push('appraisal fee');
+  }
+  if (n.defaultLegalFee != null && shouldFill(ctx.legalFeeHm)) {
+    ctx.setLegalFeeHm?.(Number(n.defaultLegalFee));
+    filled.push('legal fee');
   }
   return filled;
 }
@@ -431,6 +451,10 @@ function FinancingScenarioPanel({
       paymentDueDay, setPaymentDueDay,
       investorProfitSplitPct, setInvestorProfitSplitPct,
       setInvestorReturnType,
+      underwritingFee, setUnderwritingFee,
+      attorneyDocFee, setAttorneyDocFee,
+      appraisalFeeHm, setAppraisalFeeHm,
+      legalFeeHm, setLegalFeeHm,
     });
     if (filled.length) {
       setAutoFilledInvestor(inv);
