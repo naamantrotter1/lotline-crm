@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Briefcase, ChevronDown, ChevronUp, Mail, Phone, X, UserPlus, Landmark, Handshake, Clock, CheckCircle, AlertCircle, ExternalLink, Pencil, Trash2, CreditCard, Send, Check, Sun, Moon, LayoutDashboard, BarChart2 } from 'lucide-react';
 import { INVESTORS, ALL_DEALS_TABLE } from '../data/investors';
-import { loadInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
+import { loadInvestors, saveInvestors, addInvestor as storeAddInvestor, updateInvestor as storeUpdateInvestor, deleteInvestor as storeDeleteInvestor } from '../lib/investorsStore';
 import { useDeals } from '../lib/DealsContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth, useImpersonation } from '../lib/AuthContext';
@@ -2191,7 +2191,11 @@ export default function InvestorPortal() {
       // Include any local-only investors not yet pushed to Supabase (offline adds).
       const dbNames = new Set(rows.map(r => r.name));
       const localOnly = cached.filter(c => !dbNames.has(c.name));
-      setInvestors([...merged, ...localOnly]);
+      const all = [...merged, ...localOnly];
+      // Sync Supabase UUIDs into localStorage so handleUpdateInvestor can find
+      // investors by the correct ID on subsequent saves.
+      if (includesOwn && activeOrgId) saveInvestors(all, activeOrgId);
+      setInvestors(all);
     }).catch(err => {
       console.warn('Failed to fetch investors from Supabase, falling back to cache', err);
       setInvestors(cached);
@@ -2201,7 +2205,14 @@ export default function InvestorPortal() {
   // Directory tab actions — edit/delete update both Supabase and the local list
   // optimistically, and the delete path also clears any deal.investor refs.
   const handleUpdateInvestor = async (id, patch) => {
-    setInvestors(prev => prev.map(i => String(i.id) === String(id) ? { ...i, ...patch } : i));
+    setInvestors(prev => {
+      const updated = prev.map(i => String(i.id) === String(id) ? { ...i, ...patch } : i);
+      // Persist directly from in-memory state so UUID IDs are preserved in localStorage.
+      // storeUpdateInvestor looks up by ID in localStorage which may have mismatched
+      // seeded IDs — saving here ensures future updates can find the right investor.
+      if (activeOrgId) saveInvestors(updated, activeOrgId);
+      return updated;
+    });
     await storeUpdateInvestor(id, patch, activeOrgId);
   };
   const handleDeleteInvestor = async (inv) => {
