@@ -1094,6 +1094,7 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
     defaultPaymentDueDay:      investor?.defaultPaymentDueDay      || '',
     defaultPaymentTiming:      investor?.defaultPaymentTiming      || 'at_exit',
     defaultLtcPct:             investor?.defaultLtcPct             ?? '',
+    defaultLtvPct:             investor?.defaultLtvPct             ?? '',
     defaultMaxLoanAmount:      investor?.defaultMaxLoanAmount      ?? '',
     defaultPosition:           investor?.defaultPosition           || '1st Position',
     defaultPreferredReturnPct: investor?.defaultPreferredReturnPct ?? '',
@@ -1128,6 +1129,7 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
       defaultPaymentDueDay:      form.defaultPaymentDueDay || null,
       defaultPaymentTiming:      form.defaultPaymentTiming || 'at_exit',
       defaultLtcPct:             numOrNull(form.defaultLtcPct),
+      defaultLtvPct:             numOrNull(form.defaultLtvPct),
       defaultMaxLoanAmount:      numOrNull(form.defaultMaxLoanAmount),
       defaultPosition:           form.defaultPosition || '1st Position',
       defaultPreferredReturnPct: numOrNull(form.defaultPreferredReturnPct),
@@ -1327,6 +1329,11 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
                                   <label className={lbl}>LTC (%)</label>
                                   <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
                                     onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>LTV (%)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultLtvPct}
+                                    onChange={e => update('defaultLtvPct', e.target.value)} placeholder="60" />
                                 </div>
                                 <div>
                                   <label className={lbl}>Max Loan Amount ($)</label>
@@ -2161,10 +2168,16 @@ export default function InvestorPortal() {
           defaultDrawFee:            r.default_draw_fee             ?? null,
           defaultServicingFee:       r.default_servicing_fee        ?? null,
           defaultLtcPct:             r.default_ltc_pct              ?? null,
+          defaultLtvPct:             r.default_ltv_pct              ?? null,
           defaultMaxLoanAmount:      r.default_max_loan_amount      ?? null,
           defaultExtensionAvailable: r.default_extension_available  ?? false,
           defaultExtensionMonths:    r.default_extension_months     ?? null,
           defaultExtensionFeePoints: r.default_extension_fee_points ?? null,
+          defaultReturnType:         r.default_return_type          ?? null,
+          defaultUnderwritingFee:    r.default_underwriting_fee     ?? null,
+          defaultAttorneyDocFee:     r.default_attorney_doc_fee     ?? null,
+          defaultAppraisalFee:       r.default_appraisal_fee        ?? null,
+          defaultLegalFee:           r.default_legal_fee            ?? null,
           termsNotes:                r.terms_notes                  ?? '',
           activeDeals:      c.activeDeals      ?? 0,
           capitalInvested:  c.capitalInvested  ?? 0,

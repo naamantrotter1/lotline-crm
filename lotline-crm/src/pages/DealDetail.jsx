@@ -251,6 +251,7 @@ function normaliseInvestorTerms(inv) {
     defaultAttorneyDocFee:     inv.defaultAttorneyDocFee     ?? inv.default_attorney_doc_fee    ?? null,
     defaultAppraisalFee:       inv.defaultAppraisalFee       ?? inv.default_appraisal_fee       ?? null,
     defaultLegalFee:           inv.defaultLegalFee           ?? inv.default_legal_fee           ?? null,
+    defaultLtvPct:             inv.defaultLtvPct             ?? inv.default_ltv_pct             ?? null,
   };
 }
 
@@ -358,6 +359,10 @@ function applyInvestorStandardTerms(inv, ctx) {
     ctx.setLegalFeeHm?.(Number(n.defaultLegalFee));
     filled.push('legal fee');
   }
+  if (n.defaultLtvPct != null && shouldFill(ctx.ltvCapPctHm)) {
+    ctx.setLtvCapPctHm?.(Number(n.defaultLtvPct));
+    filled.push('LTV');
+  }
   return filled;
 }
 
@@ -455,6 +460,7 @@ function FinancingScenarioPanel({
       attorneyDocFee, setAttorneyDocFee,
       appraisalFeeHm, setAppraisalFeeHm,
       legalFeeHm, setLegalFeeHm,
+      ltvCapPctHm, setLtvCapPctHm,
     });
     if (filled.length) {
       setAutoFilledInvestor(inv);

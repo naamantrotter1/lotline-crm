@@ -103,6 +103,7 @@ export async function updateInvestor(id, patch, orgId) {
     if (patch.defaultDrawFee !== undefined)            dbPatch.default_draw_fee             = patch.defaultDrawFee;
     if (patch.defaultServicingFee !== undefined)       dbPatch.default_servicing_fee        = patch.defaultServicingFee;
     if (patch.defaultLtcPct !== undefined)             dbPatch.default_ltc_pct              = patch.defaultLtcPct;
+    if (patch.defaultLtvPct !== undefined)             dbPatch.default_ltv_pct              = patch.defaultLtvPct;
     if (patch.defaultMaxLoanAmount !== undefined)      dbPatch.default_max_loan_amount      = patch.defaultMaxLoanAmount;
     if (patch.defaultExtensionAvailable !== undefined) dbPatch.default_extension_available  = patch.defaultExtensionAvailable;
     if (patch.defaultExtensionMonths !== undefined)    dbPatch.default_extension_months     = patch.defaultExtensionMonths;
