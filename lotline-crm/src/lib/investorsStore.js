@@ -108,6 +108,7 @@ export async function updateInvestor(id, patch, orgId) {
     if (patch.defaultExtensionMonths !== undefined)    dbPatch.default_extension_months     = patch.defaultExtensionMonths;
     if (patch.defaultExtensionFeePoints !== undefined) dbPatch.default_extension_fee_points = patch.defaultExtensionFeePoints;
     if (patch.termsNotes !== undefined)                dbPatch.terms_notes                  = patch.termsNotes;
+    if (patch.defaultReturnType !== undefined)         dbPatch.default_return_type          = patch.defaultReturnType || null;
     if (Object.keys(dbPatch).length > 0) {
       const { error } = await supabase
         .from('investors')

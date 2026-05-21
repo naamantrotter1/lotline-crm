@@ -246,6 +246,7 @@ function normaliseInvestorTerms(inv) {
     defaultPaymentDueDay:      inv.defaultPaymentDueDay      ?? inv.default_payment_due_day     ?? null,
     defaultProfitSharePct:     inv.defaultProfitSharePct     ?? inv.default_profit_share_pct    ?? null,
     defaultPosition:           inv.defaultPosition           ?? inv.default_position            ?? null,
+    defaultReturnType:         inv.defaultReturnType         ?? inv.default_return_type         ?? null,
   };
 }
 
@@ -332,6 +333,10 @@ function applyInvestorStandardTerms(inv, ctx) {
   if (n.defaultProfitSharePct != null && shouldFill(ctx.investorProfitSplitPct)) {
     ctx.setInvestorProfitSplitPct?.(Number(n.defaultProfitSharePct));
     filled.push('profit share');
+  }
+  if (n.defaultReturnType && ctx.setInvestorReturnType) {
+    ctx.setInvestorReturnType(n.defaultReturnType);
+    filled.push('return type');
   }
   return filled;
 }
@@ -425,6 +430,7 @@ function FinancingScenarioPanel({
       extensionAvailable, setExtensionAvailable, setExtensionMonths, setExtensionFee,
       paymentDueDay, setPaymentDueDay,
       investorProfitSplitPct, setInvestorProfitSplitPct,
+      setInvestorReturnType,
     });
     if (filled.length) {
       setAutoFilledInvestor(inv);
