@@ -1174,7 +1174,7 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
             const showFees       = isHM || isCCP || blank;
             const showExtension  = isHM || blank;
             const showLimits     = isHM || blank;
-            const showProfitPref = isPS || isCCP || blank;
+            const showProfitPref = isHM || isPS || isCCP || blank;
 
             return (
               <>
