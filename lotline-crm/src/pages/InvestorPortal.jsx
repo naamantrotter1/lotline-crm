@@ -1143,182 +1143,221 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
         </div>
 
         <div className="p-5 flex-1 space-y-5">
+          {(() => {
+            const s = form.defaultScenarioType;
+            const isHM  = ['hard-money-loan', 'hard-money-land-home', 'hmcb', 'loc'].includes(s);
+            const isPS  = s === 'profit-split';
+            const isCCP = s === 'committed-capital-partner';
+            const blank = !s;
 
-          {/* ── Lender & Loan Terms ──────────────────────────────────── */}
-          <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Annual Interest Rate (%)</label>
-                  <input type="number" step="0.01" className={inp} value={form.defaultInterestRate}
-                    onChange={e => update('defaultInterestRate', e.target.value)} placeholder="13.5" />
-                </div>
-                <div>
-                  <label className={lbl}>Position</label>
-                  <select className={inp} value={form.defaultPosition} onChange={e => update('defaultPosition', e.target.value)}>
-                    <option>1st Position</option>
-                    <option>2nd Position</option>
-                    <option>Pari-passu</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className={lbl}>Return Type</label>
-                <select className={inp} value={form.defaultReturnType} onChange={e => update('defaultReturnType', e.target.value)}>
-                  <option value="">— No default —</option>
-                  <option value="Interest Only">Interest Only</option>
-                  <option value="Profit Split %">Profit Split %</option>
-                  <option value="Flat Fee">Flat Fee</option>
-                  <option value="Pooled">Pooled</option>
-                </select>
-              </div>
-              <div>
-                <label className={lbl}>Payment Due Day</label>
-                <select className={inp} value={form.defaultPaymentDueDay}
-                  onChange={e => update('defaultPaymentDueDay', e.target.value)}>
-                  <option value="">— Not set —</option>
-                  {PAYMENT_DUE_DAYS.map(d => <option key={d} value={d}>{d === 'same_as_closing' ? 'Same as closing' : d + ' of month'}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Loan Term (Months)</label>
-                  <input type="number" className={inp} value={form.defaultTermMonths}
-                    onChange={e => update('defaultTermMonths', e.target.value)} placeholder="9" />
-                </div>
-                <div>
-                  <label className={lbl}>Expected Hold Period (Months)</label>
-                  <input type="number" className={inp} value={form.defaultHoldPeriodMonths}
-                    onChange={e => update('defaultHoldPeriodMonths', e.target.value)} placeholder="6" />
-                </div>
-              </div>
-            </div>
-          </div>
+            const showLoanTerms  = isHM || isCCP || blank;
+            const showFees       = isHM || isCCP || blank;
+            const showExtension  = isHM || blank;
+            const showLimits     = isHM || blank;
+            const showProfitPref = isPS || isCCP || blank;
 
-          {/* ── Fees & Closing Costs ─────────────────────────────────── */}
-          <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees & Closing Costs</p>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Origination Fee Type</label>
-                  <select className={inp} value={form.defaultOriginationFeeType}
-                    onChange={e => update('defaultOriginationFeeType', e.target.value)}>
-                    <option value="percentage">% of loan</option>
-                    <option value="flat">Flat $</option>
+            return (
+              <>
+                {/* ── Financing Scenario ──────────────────────────────── */}
+                <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Financing Scenario</p>
+                  <select className={inp} value={form.defaultScenarioType}
+                    onChange={e => update('defaultScenarioType', e.target.value)}>
+                    <option value="">— No default —</option>
+                    {Object.entries(SCENARIO_LABELS).map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
                   </select>
+                  {s && (
+                    <p className="text-[11px] text-gray-400 mt-2">
+                      {s === 'hard-money-loan'      && 'Short-term loan secured by the property. Interest accrues on the deployed loan amount.'}
+                      {s === 'hard-money-land-home' && 'Hard money covering land + home as a single blended loan.'}
+                      {s === 'hmcb'                 && 'Hard money with a construction holdback — funds released in draws.'}
+                      {s === 'loc'                  && 'Revolving credit line. Interest accrues only on the drawn balance.'}
+                      {s === 'profit-split'         && 'Investor gets a share of net profit. No fixed interest — paid when you get paid.'}
+                      {s === 'committed-capital-partner' && 'Investor commits capital per deal with deal-specific preferred return and profit split.'}
+                    </p>
+                  )}
                 </div>
-                {form.defaultOriginationFeeType === 'percentage' ? (
-                  <div>
-                    <label className={lbl}>Origination Fee (%)</label>
-                    <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeePct}
-                      onChange={e => update('defaultOriginationFeePct', e.target.value)} placeholder="2.75" />
-                  </div>
-                ) : (
-                  <div>
-                    <label className={lbl}>Origination Fee ($)</label>
-                    <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeeFlat}
-                      onChange={e => update('defaultOriginationFeeFlat', e.target.value)} placeholder="2500" />
+
+                {/* ── Lender & Loan Terms ─────────────────────────────── */}
+                {showLoanTerms && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={lbl}>Annual Interest Rate (%)</label>
+                          <input type="number" step="0.01" className={inp} value={form.defaultInterestRate}
+                            onChange={e => update('defaultInterestRate', e.target.value)} placeholder="13.5" />
+                        </div>
+                        <div>
+                          <label className={lbl}>Position</label>
+                          <select className={inp} value={form.defaultPosition} onChange={e => update('defaultPosition', e.target.value)}>
+                            <option>1st Position</option>
+                            <option>2nd Position</option>
+                            <option>Pari-passu</option>
+                          </select>
+                        </div>
+                      </div>
+                      {(isHM || blank) && (
+                        <div>
+                          <label className={lbl}>Return Type</label>
+                          <select className={inp} value={form.defaultReturnType} onChange={e => update('defaultReturnType', e.target.value)}>
+                            <option value="">— No default —</option>
+                            <option value="Interest Only">Interest Only</option>
+                            <option value="Profit Split %">Profit Split %</option>
+                            <option value="Flat Fee">Flat Fee</option>
+                            <option value="Pooled">Pooled</option>
+                          </select>
+                        </div>
+                      )}
+                      <div>
+                        <label className={lbl}>Payment Due Day</label>
+                        <select className={inp} value={form.defaultPaymentDueDay}
+                          onChange={e => update('defaultPaymentDueDay', e.target.value)}>
+                          <option value="">— Not set —</option>
+                          {PAYMENT_DUE_DAYS.map(d => <option key={d} value={d}>{d === 'same_as_closing' ? 'Same as closing' : d + ' of month'}</option>)}
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={lbl}>Loan Term (Months)</label>
+                          <input type="number" className={inp} value={form.defaultTermMonths}
+                            onChange={e => update('defaultTermMonths', e.target.value)} placeholder="9" />
+                        </div>
+                        <div>
+                          <label className={lbl}>Expected Hold Period (Months)</label>
+                          <input type="number" className={inp} value={form.defaultHoldPeriodMonths}
+                            onChange={e => update('defaultHoldPeriodMonths', e.target.value)} placeholder="6" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Servicing Fee ($)</label>
-                  <input type="number" step="0.01" className={inp} value={form.defaultServicingFee}
-                    onChange={e => update('defaultServicingFee', e.target.value)} placeholder="400" />
-                </div>
-                <div>
-                  <label className={lbl}>Draw Fee ($ per draw)</label>
-                  <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
-                    onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* ── Extension ───────────────────────────────────────────── */}
-          <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Extension</p>
-            <label className="flex items-center gap-2 mb-3 cursor-pointer">
-              <input type="checkbox" checked={!!form.defaultExtensionAvailable}
-                onChange={e => update('defaultExtensionAvailable', e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent/50" />
-              <span className="text-sm text-gray-700">Extension available</span>
-            </label>
-            {form.defaultExtensionAvailable && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Extension Months</label>
-                  <input type="number" className={inp} value={form.defaultExtensionMonths}
-                    onChange={e => update('defaultExtensionMonths', e.target.value)} placeholder="3" />
-                </div>
-                <div>
-                  <label className={lbl}>Extension Fee (points)</label>
-                  <input type="number" step="0.25" className={inp} value={form.defaultExtensionFeePoints}
-                    onChange={e => update('defaultExtensionFeePoints', e.target.value)} placeholder="1" />
-                </div>
-              </div>
-            )}
-          </div>
+                {/* ── Fees & Closing Costs ─────────────────────────────── */}
+                {showFees && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fees & Closing Costs</p>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={lbl}>Origination Fee Type</label>
+                          <select className={inp} value={form.defaultOriginationFeeType}
+                            onChange={e => update('defaultOriginationFeeType', e.target.value)}>
+                            <option value="percentage">% of loan</option>
+                            <option value="flat">Flat $</option>
+                          </select>
+                        </div>
+                        {form.defaultOriginationFeeType === 'percentage' ? (
+                          <div>
+                            <label className={lbl}>Origination Fee (%)</label>
+                            <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeePct}
+                              onChange={e => update('defaultOriginationFeePct', e.target.value)} placeholder="2.75" />
+                          </div>
+                        ) : (
+                          <div>
+                            <label className={lbl}>Origination Fee ($)</label>
+                            <input type="number" step="0.01" className={inp} value={form.defaultOriginationFeeFlat}
+                              onChange={e => update('defaultOriginationFeeFlat', e.target.value)} placeholder="2500" />
+                          </div>
+                        )}
+                      </div>
+                      {(isHM || blank) && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={lbl}>Servicing Fee ($)</label>
+                            <input type="number" step="0.01" className={inp} value={form.defaultServicingFee}
+                              onChange={e => update('defaultServicingFee', e.target.value)} placeholder="400" />
+                          </div>
+                          <div>
+                            <label className={lbl}>Draw Fee ($ per draw)</label>
+                            <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
+                              onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-          {/* ── Limits ──────────────────────────────────────────────── */}
-          <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Limits</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>LTC (%)</label>
-                <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
-                  onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
-              </div>
-              <div>
-                <label className={lbl}>Max Loan Amount ($)</label>
-                <input type="number" className={inp} value={form.defaultMaxLoanAmount}
-                  onChange={e => update('defaultMaxLoanAmount', e.target.value)} placeholder="500000" />
-              </div>
-            </div>
-          </div>
+                {/* ── Extension ───────────────────────────────────────── */}
+                {showExtension && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Extension</p>
+                    <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                      <input type="checkbox" checked={!!form.defaultExtensionAvailable}
+                        onChange={e => update('defaultExtensionAvailable', e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent/50" />
+                      <span className="text-sm text-gray-700">Extension available</span>
+                    </label>
+                    {form.defaultExtensionAvailable && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={lbl}>Extension Months</label>
+                          <input type="number" className={inp} value={form.defaultExtensionMonths}
+                            onChange={e => update('defaultExtensionMonths', e.target.value)} placeholder="3" />
+                        </div>
+                        <div>
+                          <label className={lbl}>Extension Fee (points)</label>
+                          <input type="number" step="0.25" className={inp} value={form.defaultExtensionFeePoints}
+                            onChange={e => update('defaultExtensionFeePoints', e.target.value)} placeholder="1" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-          {/* ── Default Scenario ────────────────────────────────────── */}
-          <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Default Scenario</p>
-            <select className={inp} value={form.defaultScenarioType}
-              onChange={e => update('defaultScenarioType', e.target.value)}>
-              <option value="">— No default —</option>
-              {Object.entries(SCENARIO_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>{label}</option>
-              ))}
-            </select>
-          </div>
+                {/* ── Limits ──────────────────────────────────────────── */}
+                {showLimits && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Limits</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={lbl}>LTC (%)</label>
+                        <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
+                          onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
+                      </div>
+                      <div>
+                        <label className={lbl}>Max Loan Amount ($)</label>
+                        <input type="number" className={inp} value={form.defaultMaxLoanAmount}
+                          onChange={e => update('defaultMaxLoanAmount', e.target.value)} placeholder="500000" />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-          {/* ── Profit / Pref (conditional) ─────────────────────────── */}
-          {(form.defaultScenarioType === 'profit-split' || form.defaultScenarioType === 'committed-capital-partner') && (
-            <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Profit / Pref</p>
-              <div className="grid grid-cols-2 gap-3">
+                {/* ── Profit / Pref ────────────────────────────────────── */}
+                {showProfitPref && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Profit / Pref</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={lbl}>Preferred Return (%)</label>
+                        <input type="number" step="0.01" className={inp} value={form.defaultPreferredReturnPct}
+                          onChange={e => update('defaultPreferredReturnPct', e.target.value)} placeholder="12" />
+                      </div>
+                      <div>
+                        <label className={lbl}>Profit Share (%)</label>
+                        <input type="number" step="0.01" className={inp} value={form.defaultProfitSharePct}
+                          onChange={e => update('defaultProfitSharePct', e.target.value)} placeholder="50" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Terms Notes ──────────────────────────────────────── */}
                 <div>
-                  <label className={lbl}>Preferred Return (%)</label>
-                  <input type="number" step="0.01" className={inp} value={form.defaultPreferredReturnPct}
-                    onChange={e => update('defaultPreferredReturnPct', e.target.value)} placeholder="12" />
+                  <label className={lbl}>Terms Notes (optional)</label>
+                  <textarea rows={4} className={inp} value={form.termsNotes}
+                    onChange={e => update('termsNotes', e.target.value)}
+                    placeholder="Anything else? E.g. Requires MCO, property inspection, insurance with lender as mortgagee, clear title."
+                  />
                 </div>
-                <div>
-                  <label className={lbl}>Profit Share (%)</label>
-                  <input type="number" step="0.01" className={inp} value={form.defaultProfitSharePct}
-                    onChange={e => update('defaultProfitSharePct', e.target.value)} placeholder="50" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Terms Notes ─────────────────────────────────────────── */}
-          <div>
-            <label className={lbl}>Terms Notes (optional)</label>
-            <textarea rows={4} className={inp} value={form.termsNotes}
-              onChange={e => update('termsNotes', e.target.value)}
-              placeholder="Anything else? E.g. Requires MCO, property inspection, insurance with lender as mortgagee, clear title."
-            />
-          </div>
+              </>
+            );
+          })()}
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 bg-white sticky bottom-0">
