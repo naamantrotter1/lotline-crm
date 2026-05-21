@@ -197,24 +197,19 @@ export default function Dashboard() {
   }, [doCompleteThisYear]);
 
   // ── Deal Pipeline Conversion ─────────────────────────────────────────────────
-  // Conversion = deals that had contract signed AND made it all the way to Closed (sales sold).
-  // Dead deals with a signed contract count against the rate (raise the denominator, not numerator).
-  const allDealsEver = useMemo(
-    () => [...(deals || []), ...(archivedDeals || [])],
-    [deals, archivedDeals],
+  // Numerator:   active deals that had contract signed (still progressing).
+  // Denominator: active deals with contract signed + dead deals with contract signed.
+  // e.g. 25 active + 5 dead = 83% conversion.
+  const activeWithContract = useMemo(
+    () => (deals || []).filter(d => d.contractSignedAt),
+    [deals],
   );
-  // Denominator: every deal that entered the Deal Overview pipeline (contract was signed).
-  const enteredDO = useMemo(
-    () => allDealsEver.filter(d => d.contractSignedAt),
-    [allDealsEver],
+  const deadWithContract = useMemo(
+    () => (archivedDeals || []).filter(d => d.contractSignedAt && d.deadDeal),
+    [archivedDeals],
   );
-  // Numerator: contract-signed deals that fully converted to a sale (stage === 'Closed').
-  const soldDeals = useMemo(
-    () => allDealsEver.filter(d => d.contractSignedAt && d.stage === 'Closed'),
-    [allDealsEver],
-  );
-  const conversionPct = enteredDO.length
-    ? Math.round((soldDeals.length / enteredDO.length) * 100)
+  const conversionPct = (activeWithContract.length + deadWithContract.length) > 0
+    ? Math.round((activeWithContract.length / (activeWithContract.length + deadWithContract.length)) * 100)
     : null;
 
   // ── Pipeline summary ─────────────────────────────────────────────────────────
@@ -304,7 +299,7 @@ export default function Dashboard() {
         <StatCard
           label="Deal Conversion"
           value={conversionPct != null ? `${conversionPct}%` : '—'}
-          subtext={`${soldDeals.length} sold of ${enteredDO.length} entered Deal Overview`}
+          subtext={`${activeWithContract.length} active · ${deadWithContract.length} dead deal${deadWithContract.length !== 1 ? 's' : ''}`}
           icon={Percent}
           color="text-emerald-500"
         />
