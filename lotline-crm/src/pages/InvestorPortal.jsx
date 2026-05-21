@@ -1102,6 +1102,7 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
     termsNotes:                investor?.termsNotes                || '',
   });
   const [saving, setSaving] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
 
@@ -1194,20 +1195,10 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
                   <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lender & Loan Terms</p>
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={lbl}>Annual Interest Rate (%)</label>
-                          <input type="number" step="0.01" className={inp} value={form.defaultInterestRate}
-                            onChange={e => update('defaultInterestRate', e.target.value)} placeholder="13.5" />
-                        </div>
-                        <div>
-                          <label className={lbl}>Position</label>
-                          <select className={inp} value={form.defaultPosition} onChange={e => update('defaultPosition', e.target.value)}>
-                            <option>1st Position</option>
-                            <option>2nd Position</option>
-                            <option>Pari-passu</option>
-                          </select>
-                        </div>
+                      <div>
+                        <label className={lbl}>Annual Interest Rate (%)</label>
+                        <input type="number" step="0.01" className={inp} value={form.defaultInterestRate}
+                          onChange={e => update('defaultInterestRate', e.target.value)} placeholder="13.5" />
                       </div>
                       {(isHM || blank) && (
                         <div>
@@ -1273,66 +1264,74 @@ function StandardTermsSlideover({ investor, onClose, onSave }) {
                           </div>
                         )}
                       </div>
+
+                      {/* Advanced fees toggle */}
                       {(isHM || blank) && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className={lbl}>Servicing Fee ($)</label>
-                            <input type="number" step="0.01" className={inp} value={form.defaultServicingFee}
-                              onChange={e => update('defaultServicingFee', e.target.value)} placeholder="400" />
-                          </div>
-                          <div>
-                            <label className={lbl}>Draw Fee ($ per draw)</label>
-                            <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
-                              onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
-                          </div>
-                        </div>
+                        <>
+                          <button type="button" onClick={() => setShowAdvanced(v => !v)}
+                            className="text-xs text-accent hover:text-accent/80 font-medium">
+                            {showAdvanced ? '− Hide advanced fees' : '+ Show advanced fees'}
+                          </button>
+                          {showAdvanced && (
+                            <div className="space-y-3 pt-1 border-t border-gray-100">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className={lbl}>Servicing Fee ($)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultServicingFee}
+                                    onChange={e => update('defaultServicingFee', e.target.value)} placeholder="400" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Draw Fee ($ per draw)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultDrawFee}
+                                    onChange={e => update('defaultDrawFee', e.target.value)} placeholder="115" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className={lbl}>Position</label>
+                                <select className={inp} value={form.defaultPosition} onChange={e => update('defaultPosition', e.target.value)}>
+                                  <option>1st Position</option>
+                                  <option>2nd Position</option>
+                                  <option>Pari-passu</option>
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className={lbl}>LTC (%)</label>
+                                  <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
+                                    onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
+                                </div>
+                                <div>
+                                  <label className={lbl}>Max Loan Amount ($)</label>
+                                  <input type="number" className={inp} value={form.defaultMaxLoanAmount}
+                                    onChange={e => update('defaultMaxLoanAmount', e.target.value)} placeholder="500000" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" checked={!!form.defaultExtensionAvailable}
+                                    onChange={e => update('defaultExtensionAvailable', e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent/50" />
+                                  <span className="text-sm text-gray-700">Extension available</span>
+                                </label>
+                                {form.defaultExtensionAvailable && (
+                                  <div className="grid grid-cols-2 gap-3 mt-2">
+                                    <div>
+                                      <label className={lbl}>Extension Months</label>
+                                      <input type="number" className={inp} value={form.defaultExtensionMonths}
+                                        onChange={e => update('defaultExtensionMonths', e.target.value)} placeholder="3" />
+                                    </div>
+                                    <div>
+                                      <label className={lbl}>Extension Fee (points)</label>
+                                      <input type="number" step="0.25" className={inp} value={form.defaultExtensionFeePoints}
+                                        onChange={e => update('defaultExtensionFeePoints', e.target.value)} placeholder="1" />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Extension ───────────────────────────────────────── */}
-                {showExtension && (
-                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Extension</p>
-                    <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                      <input type="checkbox" checked={!!form.defaultExtensionAvailable}
-                        onChange={e => update('defaultExtensionAvailable', e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent/50" />
-                      <span className="text-sm text-gray-700">Extension available</span>
-                    </label>
-                    {form.defaultExtensionAvailable && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={lbl}>Extension Months</label>
-                          <input type="number" className={inp} value={form.defaultExtensionMonths}
-                            onChange={e => update('defaultExtensionMonths', e.target.value)} placeholder="3" />
-                        </div>
-                        <div>
-                          <label className={lbl}>Extension Fee (points)</label>
-                          <input type="number" step="0.25" className={inp} value={form.defaultExtensionFeePoints}
-                            onChange={e => update('defaultExtensionFeePoints', e.target.value)} placeholder="1" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Limits ──────────────────────────────────────────── */}
-                {showLimits && (
-                  <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Limits</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={lbl}>LTC (%)</label>
-                        <input type="number" step="0.01" className={inp} value={form.defaultLtcPct}
-                          onChange={e => update('defaultLtcPct', e.target.value)} placeholder="80" />
-                      </div>
-                      <div>
-                        <label className={lbl}>Max Loan Amount ($)</label>
-                        <input type="number" className={inp} value={form.defaultMaxLoanAmount}
-                          onChange={e => update('defaultMaxLoanAmount', e.target.value)} placeholder="500000" />
-                      </div>
                     </div>
                   </div>
                 )}
